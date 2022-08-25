@@ -1,0 +1,114 @@
+# Dyntrace Extension Developer (VSCode Extension)
+
+This is a VSCode extension providing an example implementation of workflows for Dynatrace Extension (2.0) Developers.
+
+## Dependencies
+
+This current implementation of the project depends on the Dynatrace [`dt-cli`](https://github.com/dynatrace-oss/dt-cli) utility.
+This is not the intention going forward, but cryptography is hard :)
+
+## Settings
+
+This extension can leverage the following VSCode settings (global or workspace level):
+
+- `dynatrace.certificate.location.developerKey` - File path. Bring your own developer key instead of generating a new one.
+- `dynatrace.certificate.location.developerCertificate` - File path. Bring your own developer certificate instead of generating a new one.
+- `dynatrace.certificate.location.rootOrCaCertificate` - File path. Bring your own root (CA) certificate instead of generating a new one.
+- `dynatrace.certificate.commonName` - Specifies the common name (CN) attribute of the certificate. Defaults to "Extension Developer"
+- `dynatrace.certificate.organization` - Specifies the organization (O) attribute of the certificate.
+- `dynatrace.certificate.organizationUnit` - Specifies the organization unit (OU) attribute of the certificate.
+- `dynatrace.certificate.stateOrProvince` - Specifies the state or province (ST) attribute of the certificate.
+- `dynatrace.certificate.countryCode` - Specifies the country code (C) attribute of the certificate.
+
+## Workflows (Commands)
+
+This extension implements the following commands.
+Most of them, unless specified otherwise should be run from within a VSCode workspace.
+
+### Initialize Workspace
+
+Initializes a new workspace for Dynatrace Extension (2.0) Development.
+This includes loading up schemas, creating extension folder and stub, and creating an empty dist folder.
+This will also configure the `yaml.schema` extension to validate `extension.yaml` with your chosen schema version.
+
+### Load schemas
+
+Downloads schema files of a specific version and updates the `yaml.schema` extension to validate `extension.yaml` with this version.
+
+### Generate certificates
+
+Generates all the required keys and certificates needed for signing and validating Extensions 2.0.
+
+### Upload certificate
+
+Uploads the workspace's root certificate to the Dynatrace Credential Vault.
+
+### Build extension
+
+Calls onto `dt-cli` to build your extension. The archive is placed inside the `dist` folder of the workspace.
+
+### Upload extension to tenant
+
+Uploads the most recent package from your workspace's `dist` folder to the Dynatrace tenant associated with the workspace.
+After upload, you are also prompted to activate this latest version. In the case that you reached the maximum allowed 
+number of extension versions, you will be prompted to delete the oldest one.
+
+### Activate extension on tenant
+
+Activate a version of your workspace's extension on the tenant associated with the workspace. The tenant is polled for all
+available versions of the extension and you are prompted to choose which to activate.
+
+### Create documentation
+
+Reads through the `extension.yaml` file and creates a README.md next to the `extension` folder, documenting (as best as possible) the extension package.
+
+## Assisted extension development
+
+### Code completions
+
+The extension will trigger suggestions for code completion where possible.
+
+Currently implemented completions trigger:
+
+- on `fromType` and `toType` attributes of any `topology.relationships` item
+- on `sourceAttribute` and `destinationAttribute` attributes of any relationship based on entity mapping rules (provided you have already filled in `fromType` and `toType` respectively)
+- on `entityType` and `entityTypes` anywhere in the yaml, relevant entity types are suggested
+- on lists of attribute type properties, on `key` the keys of relevant entity attributes are suggested
+- on `entitySelectorTemplate` can make use of Ctrl+Space to trigger completions as the selector is being built
+
+### Code actions
+
+The extension will highlight actions to add snippets of code where possible.
+On specific keywords, the _lightbulb_ icon will show to list things that can be automatically added to the code.
+
+Currently implemented actions trigger:
+
+- inside `propertiesCard` when clicking on `properties` - you can automatically add entry for the relevant entity attribute properties
+
+## Custom Views
+
+### Extension 2.0 Workspaces
+
+Once you initialize a workspace, this becomes available from the new "Dynatrace" menu that was added to the activity bar.
+
+The Extensions 2.0 Workspaces view offers a high level overview of all registered workspaces and the extensions within them.
+Buttons within this view enable quick actions for:
+
+- Adding and initializing a new workspace (plus button at the top)
+- Quickly opening one of the extension.yaml files (file button next to the extension name)
+- Opening one of the registered workspaces (folder button next to the workspace name)
+
+### Dynatrace Environments
+
+Use the Dynatrace Environments view to register all the Dynatrace (SaaS/Managed) environments that you work with.
+This enables you to save connection details and quickly select which environment you're working with (for API-based operations).
+
+Buttons within this view enable quick actions for:
+
+- Adding, editing, or removing an environment
+- Switching connection to a different environment
+
+# How to use it?
+
+Currently, the extension is not published to the marketplace so you'll have to install it from the [dynatrace-extension-developer-0.8.0.vsix](dist/dynatrace-extension-developer-0.8.0.vsix) file.
+In VSCode open the Extensions menu, click the "..." and choose "Install from VSIX.."

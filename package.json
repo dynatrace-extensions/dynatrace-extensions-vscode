@@ -1,0 +1,312 @@
+{
+	"name": "dynatrace-extension-developer",
+	"displayName": "Dynatrace Extension Developer",
+	"description": "Support for Dynatrace Extension 2.0 development",
+	"version": "0.8.0",
+	"repository": {
+		"type": "git",
+		"url": "https://bitbucket.lab.dynatrace.org/scm/~radu.stefan/dynatrace-extension-developer.git"
+	},
+	"engines": {
+		"vscode": "^1.67.0"
+	},
+	"categories": [
+		"Other"
+	],
+	"icon": "out/assets/logos/dynatrace_logo.png",
+	"galleryBanner": {
+		"color": "#1e3142",
+		"theme": "light"
+	},
+	"activationEvents": [
+		"onView:dynatrace-extension-developer-workspaces",
+		"workspaceContains:**/extension/extension.yaml",
+		"onCommand:dynatrace-extension-developer.loadSchemas",
+		"onCommand:dynatrace-extension-developer.initWorkspace",
+		"onCommand:dynatrace-extension-developer.generateCertificates",
+		"onCommand:dynatrace-extension-developer.uploadCertificate",
+		"onCommand:dynatrace-extension-developer.createDocumentation",
+		"onCommand:dynatrace-extension-developer.buildExtension",
+		"onCommand:dynatrace-extension-developer.uploadExtension",
+		"onCommand:dynatrace-extension-developer.activateExtension"
+	],
+	"main": "./out/extension.js",
+	"contributes": {
+		"commands": [
+			{
+				"command": "dynatrace-extension-developer.loadSchemas",
+				"title": "Load schemas",
+				"category": "Dynatrace"
+			},
+			{
+				"command": "dynatrace-extension-developer.initWorkspace",
+				"title": "Initialize workspace",
+				"category": "Dynatrace"
+			},
+			{
+				"command": "dynatrace-extension-developer.generateCertificates",
+				"title": "Generate certificates",
+				"category": "Dynatrace"
+			},
+			{
+				"command": "dynatrace-extension-developer.uploadCertificate",
+				"title": "Upload certificate",
+				"category": "Dynatrace"
+			},
+			{
+				"command": "dynatrace-extension-developer.createDocumentation",
+				"title": "Create documentation",
+				"category": "Dynatrace"
+			},
+			{
+				"command": "dynatrace-extension-developer.buildExtension",
+				"title": "Build extension",
+				"category": "Dynatrace"
+			},
+			{
+				"command": "dynatrace-extension-developer.uploadExtension",
+				"title": "Upload extension to tenant",
+				"category": "Dynatrace"
+			},
+			{
+				"command": "dynatrace-extension-developer.activateExtension",
+				"title": "Activate extension on tenant",
+				"category": "Dynatrace"
+			},
+			{
+				"command": "dynatrace-extension-developer-workspaces.refresh",
+				"title": "Refresh",
+				"icon": "$(refresh)"
+			},
+			{
+				"command": "dynatrace-extension-developer-workspaces.addWorkspace",
+				"title": "Add & initialize a workspace",
+				"icon": "$(plus)"
+			},
+			{
+				"command": "dynatrace-extension-developer-workspaces.openWorkspace",
+				"title": "Open workspace",
+				"icon": "$(folder-opened)"
+			},
+			{
+				"command": "dynatrace-extension-developer-workspaces.editExtension",
+				"title": "Open extension in editor",
+				"icon": "$(notebook-open-as-text)"
+			},
+			{
+				"command": "dynatrace-extension-developer-environments.refresh",
+				"title": "Refresh",
+				"icon": "$(refresh)"
+			},
+			{
+				"command": "dynatrace-extension-developer-environments.addEnvironment",
+				"title": "Add a tenant",
+				"icon": "$(plus)"
+			},
+			{
+				"command": "dynatrace-extension-developer-environments.useEnvironment",
+				"title": "Use environment",
+				"icon": "$(plug)"
+			},
+			{
+				"command": "dynatrace-extension-developer-environments.editEnvironment",
+				"title": "Edit environment",
+				"icon": "$(pencil)"
+			},
+			{
+				"command": "dynatrace-extension-developer-environments.deleteEnvironment",
+				"title": "Remove environment",
+				"icon": "$(trash)"
+			}
+		],
+		"configuration": [
+			{
+				"title": "Dynatrace",
+				"properties": {
+					"dynatrace.certificate.location.developerKey": {
+						"type": "string",
+						"description": "Bring your own: use the developer key file at this path instead of generating a new one.",
+						"order": 3,
+						"scope": "resource"
+					},
+					"dynatrace.certificate.location.developerCertificate": {
+						"type": "string",
+						"description": "Bring your own: use the developer certificate file at this path instead of generating a new one.",
+						"order": 4,
+						"scope": "resource"
+					},
+					"dynatrace.certificate.location.rootOrCaCertificate": {
+						"type": "string",
+						"description": "Bring your own: use the root (CA) certificate file at this path instead of generating a new one.",
+						"order": 5,
+						"scope": "resource"
+					},
+					"dynatrace.certificate.details.commonName": {
+						"type": "string",
+						"description": "Specifies the common name (CN) attribute of the certificate.",
+						"order": 6,
+						"scope": "resource",
+						"default": "Extension Developer"
+					},
+					"dynatrace.certificate.details.organization": {
+						"type": "string",
+						"description": "Specifies the organization (O) attribute of the certificate.",
+						"order": 7,
+						"scope": "resource"
+					},
+					"dynatrace.certificate.details.organizationUnit": {
+						"type": "string",
+						"description": "Specifies the organization unit (OU) attribute of the certificate.",
+						"order": 8,
+						"scope": "resource"
+					},
+					"dynatrace.certificate.details.stateOrProvince": {
+						"type": "string",
+						"description": "Specifies the state or province (ST) attribute of the certificate.",
+						"order": 9,
+						"scope": "resource"
+					},
+					"dynatrace.certificate.details.countryCode": {
+						"type": "string",
+						"description": "Specifies the country code (C) attribute of the certificate.",
+						"order": 10,
+						"scope": "resource"
+					}
+				}
+			}
+		],
+		"menus": {
+			"view/title": [
+				{
+					"command": "dynatrace-extension-developer-workspaces.addWorkspace",
+					"when": "view == dynatrace-extension-developer-workspaces",
+					"group": "navigation"
+				},
+				{
+					"command": "dynatrace-extension-developer-workspaces.refresh",
+					"when": "view == dynatrace-extension-developer-workspaces",
+					"group": "navigation"
+				},
+				{
+					"command": "dynatrace-extension-developer-environments.addEnvironment",
+					"when": "view == dynatrace-extension-developer-environments",
+					"group": "navigation"
+				},
+				{
+					"command": "dynatrace-extension-developer-environments.refresh",
+					"when": "view == dynatrace-extension-developer-environments",
+					"group": "navigation"
+				}
+			],
+			"view/item/context": [
+				{
+					"command": "dynatrace-extension-developer-workspaces.openWorkspace",
+					"when": "view == dynatrace-extension-developer-workspaces && viewItem == extensionWorkspace",
+					"group": "inline"
+				},
+				{
+					"command": "dynatrace-extension-developer-workspaces.editExtension",
+					"when": "view == dynatrace-extension-developer-workspaces && viewItem == extension",
+					"group": "inline"
+				},
+				{
+					"command": "dynatrace-extension-developer-environments.useEnvironment",
+					"when": "view == dynatrace-extension-developer-environments && viewItem == dynatraceEnvironment",
+					"group": "inline@1"
+				},
+				{
+					"command": "dynatrace-extension-developer-environments.editEnvironment",
+					"when": "view == dynatrace-extension-developer-environments && viewItem == dynatraceEnvironment || viewItem == currentDynatraceEnvironment",
+					"group": "inline@2"
+				},
+				{
+					"command": "dynatrace-extension-developer-environments.deleteEnvironment",
+					"when": "view == dynatrace-extension-developer-environments && viewItem == dynatraceEnvironment || viewItem == currentDynatraceEnvironment",
+					"group": "inline@3"
+				}
+			]
+		},
+		"viewsContainers": {
+			"activitybar": [
+				{
+					"id": "dynatrace-extensions",
+					"title": "Dynatrace",
+					"icon": "out/assets/icons/dynatrace_signet.png"
+				}
+			]
+		},
+		"views": {
+			"dynatrace-extensions": [
+				{
+					"id": "dynatrace-extension-developer-workspaces",
+					"name": "Extension 2.0 Workspaces"
+				},
+				{
+					"id": "dynatrace-extension-developer-environments",
+					"name": "Environments"
+				}
+			]
+		},
+		"viewsWelcome": [
+			{
+				"view": "dynatrace-extension-developer-workspaces",
+				"contents": "Hello. You don't seem to have any extension workspaces initialized.\nStart by opening a folder and running the Initialize Workspace command.\n[Open folder](command:vscode.openFolder)",
+				"when": "workbenchState == empty && dynatrace-extension-developer.numWorkspaces == 0"
+			},
+			{
+				"view": "dynatrace-extension-developer-workspaces",
+				"contents": "Hello. You don't seem to have any extension workspaces initialized.\nRun the Initialize Workspace command to initialize your current workspace.\n[Initialize workspace](command:dynatrace-extension-developer.initWorkspace)\nOr open a different workspace first.\n[Open folder](command:vscode.openFolder)",
+				"when": "workbenchState != empty && dynatrace-extension-developer.numWorkspaces == 0 && !dynatrace-extension-developer.extensionWorkspace"
+			},
+			{
+				"view": "dynatrace-extension-developer-workspaces",
+				"contents": "Hello. You don't seem to have any extension workspaces initialized.\nYou seem to already be in an extensions workspace - want to initialize it now?\n[Initialize workspace](command:dynatrace-extension-developer.initWorkspace)\nOtherwise, open a different workspace first.\n[Open folder](command:vscode.openFolder)",
+				"when": "workbenchState != empty && dynatrace-extension-developer.numWorkspaces == 0 && dynatrace-extension-developer.extensionWorkspace"
+			},
+			{
+				"view": "dynatrace-extension-developer-environments",
+				"contents": "Hello. You don't have any Dynatrace Environments saved.\nWould you like to add one now?\n[Add environment](command:dynatrace-extension-developer-environments.addEnvironment)",
+				"when": "dynatrace-extension-developer.numEnvironments == 0"
+			}
+		],
+		"icons": {
+			"dt-signet":{
+				"description": "Dynatrace signet",
+				"default": {
+					"fontPath": "out/assets/fonts/dt-custom-icons.woff",
+					"fontCharacter": "A"
+				}
+			}
+		}
+	},
+	"scripts": {
+		"vscode:prepublish": "npm run compile",
+		"compile": "tsc -p ./",
+		"watch": "tsc -watch -p ./",
+		"pretest": "npm run compile && npm run lint",
+		"lint": "eslint src --ext ts",
+		"test": "node ./out/test/runTest.js"
+	},
+	"devDependencies": {
+		"@types/glob": "^7.2.0",
+		"@types/mocha": "^9.1.1",
+		"@types/node": "^14.18.21",
+		"@types/node-forge": "^1.0.2",
+		"@types/vscode": "^1.67.0",
+		"@typescript-eslint/eslint-plugin": "^5.21.0",
+		"@typescript-eslint/parser": "^5.21.0",
+		"@vscode/test-electron": "^2.1.3",
+		"eslint": "^8.14.0",
+		"mocha": "^9.2.2",
+		"typescript": "^4.6.4"
+	},
+	"dependencies": {
+		"adm-zip": "^0.5.9",
+		"axios": "^0.27.2",
+		"crypto": "^1.0.1",
+		"form-data": "^4.0.0",
+		"glob": "^8.0.3",
+		"node-forge": "^1.3.1",
+		"yaml": "^2.1.1"
+	}
+}
