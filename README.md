@@ -110,5 +110,5 @@ Buttons within this view enable quick actions for:
 
 # How to use it?
 
-Currently, the extension is not published to the marketplace so you'll have to install it from the [dynatrace-extension-developer-0.8.0.vsix](dist/dynatrace-extension-developer-0.8.0.vsix) file.
+Currently, the extension is not published to the marketplace so you'll have to install it from the `.vsix` file packaged in every [release](https://github.com/dynatrace-extensions/dynatrace-extension-developer/releases).
 In VSCode open the Extensions menu, click the "..." and choose "Install from VSIX.."
