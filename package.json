@@ -5,7 +5,7 @@
 	"version": "0.8.0",
 	"repository": {
 		"type": "git",
-		"url": "https://bitbucket.lab.dynatrace.org/scm/~radu.stefan/dynatrace-extension-developer.git"
+		"url": "https://github.com/dynatrace-extensions/dynatrace-extension-developer.git"
 	},
 	"engines": {
 		"vscode": "^1.67.0"
