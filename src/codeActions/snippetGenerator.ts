@@ -1,6 +1,11 @@
 import * as vscode from "vscode";
 import * as yaml from "yaml";
-import { buildAttributePropertySnippet } from "../utils/snippetBuilding";
+import {
+  getAttributesFromTopology,
+  getEntityMetrics,
+  getMetricKeysFromChartCard,
+} from "../utils/extensionParsing";
+import { buildAttributePropertySnippet, buildGraphChartSnippet } from "../utils/snippetBuilding";
 import { getBlockItemIndexAtLine, getParentBlocks } from "../utils/yamlParsing";
 
 /**
@@ -25,11 +30,20 @@ export class SnippetGenerator implements vscode.CodeActionProvider {
     var extension = yaml.parse(document.getText()) as ExtensionStub;
     var parentBlocks = getParentBlocks(range.start.line, document.getText());
 
+    // add attribute properties in properties card
     if (
       parentBlocks[parentBlocks.length - 1] === "propertiesCard" &&
       document.lineAt(range.start.line).text.includes("properties:")
     ) {
       codeActions.push(...this.createPropertyInsertions(document, range, extension));
+    }
+
+    // add charts within chartCards
+    if (
+      parentBlocks[parentBlocks.length - 1] === "chartsCards" &&
+      document.lineAt(range.start.line).text.includes("charts:")
+    ) {
+      codeActions.push(...this.createChartInsertions(document, range, extension));
     }
 
     return codeActions;
@@ -78,27 +92,47 @@ export class SnippetGenerator implements vscode.CodeActionProvider {
     if (propertiesInserted) {
       propertiesInserted = propertiesInserted.map((property: any) => property.attribute.key);
     }
-    var propertiesToInsert: { key: string; displayName: string }[] = [];
-    extension.topology.types
-      .filter((type) => type.name.toLowerCase() === entityType)
-      .forEach((type) => {
-        type.rules.forEach((rule) => {
-          rule.attributes
-            .filter((property) =>
-              propertiesInserted ? !propertiesInserted.includes(property.key) : true
-            )
-            .forEach((property) => {
-              propertiesToInsert.push({
-                key: property.key,
-                displayName: property.displayName,
-              });
-            });
-        });
-      });
+    var propertiesToInsert = getAttributesFromTopology(entityType, extension, propertiesInserted);
     return propertiesToInsert.map((property) =>
       this.createInsertAction(
         `Insert ${property.key} property`,
         buildAttributePropertySnippet(property.key, property.displayName, indent),
+        document,
+        range
+      )
+    );
+  }
+
+  /**
+   * Creates Code Actions for each metric belonging to the surrounding entity so that it can
+   * be added as a chart.
+   * @param document the document that triggered the action
+   * @param range the range that triggered the action
+   * @param extension extension yaml serialized as object
+   * @returns list of Code Actions
+   */
+  private createChartInsertions(
+    document: vscode.TextDocument,
+    range: vscode.Range,
+    extension: ExtensionStub
+  ) {
+    var indent = /[a-z]/i.exec(document.lineAt(range.start.line).text)!.index;
+    var screenIdx = getBlockItemIndexAtLine("screens", range.start.line, document.getText());
+    var cardIdx = getBlockItemIndexAtLine("chartsCards", range.start.line, document.getText());
+    var entityType = extension.screens![screenIdx].entityType;
+    var typeIdx = -1;
+    extension.topology.types.forEach((type, idx) => {
+      if (type.name === entityType) {
+        typeIdx = idx;
+      }
+    });
+    var metricsInserted = getMetricKeysFromChartCard(screenIdx, cardIdx, extension);
+    var metricsToInsert = getEntityMetrics(typeIdx, extension, metricsInserted);
+
+    return metricsToInsert.map((metric) =>
+      this.createInsertAction(
+        `Insert chart for ${metric}`,
+        buildGraphChartSnippet(metric, entityType, indent),
         document,
         range
       )
