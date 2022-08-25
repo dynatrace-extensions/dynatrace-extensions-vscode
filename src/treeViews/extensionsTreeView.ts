@@ -55,6 +55,7 @@ export class ExtensionsTreeDataProvider implements vscode.TreeDataProvider<Exten
                 dark: path.join(__filename, "..", "..", "assets", "icons", "plugin_dark.png"),
               },
               "extension",
+              `${extension.name}-${extension.version}`,
               extension.version
             )
           );
@@ -73,7 +74,8 @@ export class ExtensionsTreeDataProvider implements vscode.TreeDataProvider<Exten
             (workspace.folder as vscode.Uri).fsPath
             ? path.join(__filename, "..", "..", "assets", "icons", "workspace_current.png")
             : path.join(__filename, "..", "..", "assets", "icons", "workspace.png"),
-          "extensionWorkspace"
+          "extensionWorkspace",
+          workspace.id
         )
     );
   }
@@ -84,8 +86,9 @@ export class ExtensionsTreeDataProvider implements vscode.TreeDataProvider<Exten
  * either an extensions workspace or an actual extension within the workspace.
  */
 export class ExtensionProjectItem extends vscode.TreeItem {
-  version?: string;
+  id: string;
   path: vscode.Uri;
+  version?: string;
 
   /**
    * @param label the label to be shown in the tree view (as node)
@@ -105,10 +108,12 @@ export class ExtensionProjectItem extends vscode.TreeItem {
       | { light: string | vscode.Uri; dark: string | vscode.Uri }
       | vscode.ThemeIcon,
     contextValue: string,
+    id: string,
     version?: string
   ) {
     super(label, collapsibleState);
 
+    this.id = id;
     this.version = version;
     this.tooltip = version ? `${label}-${version}` : label;
     this.description = this.version;

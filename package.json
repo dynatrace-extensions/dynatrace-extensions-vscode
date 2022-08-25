@@ -84,6 +84,11 @@
 				"icon": "$(plus)"
 			},
 			{
+				"command": "dynatrace-extension-developer-workspaces.deleteWorkspace",
+				"title": "Remove workspace",
+				"icon": "$(trash)"
+			},
+			{
 				"command": "dynatrace-extension-developer-workspaces.openWorkspace",
 				"title": "Open workspace",
 				"icon": "$(folder-opened)"
@@ -202,7 +207,12 @@
 				{
 					"command": "dynatrace-extension-developer-workspaces.openWorkspace",
 					"when": "view == dynatrace-extension-developer-workspaces && viewItem == extensionWorkspace",
-					"group": "inline"
+					"group": "inline@1"
+				},
+				{
+					"command": "dynatrace-extension-developer-workspaces.deleteWorkspace",
+					"when": "view == dynatrace-extension-developer-workspaces && viewItem == extensionWorkspace",
+					"group": "inline@2"
 				},
 				{
 					"command": "dynatrace-extension-developer-workspaces.editExtension",

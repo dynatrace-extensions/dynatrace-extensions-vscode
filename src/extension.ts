@@ -37,6 +37,7 @@ import {
 } from "./treeViews/commands/environments";
 import { encryptToken } from "./utils/cryptography";
 import { ConnectionStatusManager } from "./statusBar/connection";
+import { deleteWorkspace } from "./treeViews/commands/workspaces";
 
 /**
  * Sets up the VSCode extension by registering all the available functionality as disposable objects.
@@ -179,6 +180,12 @@ export function activate(context: vscode.ExtensionContext) {
       "dynatrace-extension-developer-workspaces.openWorkspace",
       (workspace: ExtensionProjectItem) => {
         vscode.commands.executeCommand("vscode.openFolder", workspace.path);
+      }
+    ),
+    vscode.commands.registerCommand(
+      "dynatrace-extension-developer-workspaces.deleteWorkspace",
+      (workspace: ExtensionProjectItem) => {
+        deleteWorkspace(context, workspace).then(() => extensionsTreeViewProvider.refresh());
       }
     ),
     vscode.commands.registerCommand(

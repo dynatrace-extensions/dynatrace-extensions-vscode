@@ -201,6 +201,26 @@ export function removeEnvironment(context: vscode.ExtensionContext, environmentI
   vscode.commands.executeCommand(
     "setContext",
     "dynatrace-extension-developer.numEnvironments",
-    environments.length-1
+    environments.length - 1
+  );
+}
+
+/**
+ * Removes an Extension Workspace from global extension storage, thus unregistering it from
+ * the extension. The workspace is specified by path.
+ * @param context VSCode Extension Context
+ * @param workspaceId id of the workspace to remove
+ */
+export function removeWorkspace(context: vscode.ExtensionContext, workspaceId: string) {
+  var workspacesJson = path.join(context.globalStorageUri.fsPath, "extensionWorkspaces.json");
+  var workspaces: ExtensionWorkspace[] = JSON.parse(readFileSync(workspacesJson).toString());
+
+  writeFileSync(workspacesJson, JSON.stringify(workspaces.filter((w) => w.id !== workspaceId)));
+
+  // Update the state
+  vscode.commands.executeCommand(
+    "setContext",
+    "dynatrace-extension-developer.numWorkspaces",
+    workspaces.length - 1
   );
 }
