@@ -7,7 +7,6 @@ import { getBlockItemIndexAtLine, getParentBlocks } from "../utils/yamlParsing";
  * Provider for Code Actions that insert snippets of code into the existing extension yaml.
  */
 export class SnippetGenerator implements vscode.CodeActionProvider {
-
   /**
    * Provides Code Actions that insert code snippets relevant to the triggered context.
    * @param document document that activated the provider
@@ -58,7 +57,7 @@ export class SnippetGenerator implements vscode.CodeActionProvider {
   }
 
   /**
-   * Assuming the triggering range is within a `propertiesCard`, creates Code Actions for 
+   * Assuming the triggering range is within a `propertiesCard`, creates Code Actions for
    * each attribute property that hasn't been inserted into the card yet.
    * @param document the document that triggered the action
    * @param range the range that triggered the action
@@ -73,7 +72,9 @@ export class SnippetGenerator implements vscode.CodeActionProvider {
     var indent = /[a-z]/i.exec(document.lineAt(range.start.line).text)!.index;
     var screenIdx = getBlockItemIndexAtLine("screens", range.start.line, document.getText());
     var entityType = extension.screens![screenIdx].entityType;
-    var propertiesInserted = extension.screens![screenIdx].propertiesCard.properties;
+    var propertiesInserted = extension.screens![screenIdx].propertiesCard.properties.filter(
+      (prop: any) => prop.type === "ATTRIBUTE"
+    );
     if (propertiesInserted) {
       propertiesInserted = propertiesInserted.map((property: any) => property.attribute.key);
     }
