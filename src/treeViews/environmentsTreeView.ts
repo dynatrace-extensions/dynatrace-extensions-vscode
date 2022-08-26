@@ -8,7 +8,7 @@ import { getAllEnvironments } from "../utils/fileSystem";
 
 /**
  * A tree data provider that renders all Dynatrace Environments that have been registered
- * with the VSCode Extension. Extensions available in the environment, as well as their 
+ * with the VSCode Extension. Extensions available in the environment, as well as their
  * monitoring configurations are rendered as children.
  * Any environment in the list may be used for API-based operations.
  */
@@ -124,7 +124,7 @@ export class EnvironmentsTreeDataProvider implements vscode.TreeDataProvider<Env
    */
   async getCurrentEnvironment(): Promise<EnvironmentTreeItem | undefined> {
     return await this.getChildren()
-      .then((children) => children.filter((c) => c.contextValue === "dynatraceEnvironment" && c.current))
+      .then((children) => children.filter((c) => c.contextValue === "currentDynatraceEnvironment"))
       .then((children) => children.pop());
   }
 
