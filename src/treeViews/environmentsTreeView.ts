@@ -8,15 +8,17 @@ import { getAllEnvironments } from "../utils/fileSystem";
 
 /**
  * A tree data provider that renders all Dynatrace Environments that have been registered
- * with the VSCode Extension. Any environment in the list may be used for API-based operations.
+ * with the VSCode Extension. Extensions available in the environment, as well as their 
+ * monitoring configurations are rendered as children.
+ * Any environment in the list may be used for API-based operations.
  */
 export class EnvironmentsTreeDataProvider implements vscode.TreeDataProvider<EnvironmentTreeItem> {
   context: vscode.ExtensionContext;
   connectionStatus: ConnectionStatusManager;
-  private _onDidChangeTreeData: vscode.EventEmitter<EnvironmentTreeItem | undefined | void> =
-    new vscode.EventEmitter<EnvironmentTreeItem | undefined | void>();
-  readonly onDidChangeTreeData: vscode.Event<EnvironmentTreeItem | undefined | void> =
-    this._onDidChangeTreeData.event;
+  private _onDidChangeTreeData: vscode.EventEmitter<EnvironmentTreeItem | undefined | void> = new vscode.EventEmitter<
+    EnvironmentTreeItem | undefined | void
+  >();
+  readonly onDidChangeTreeData: vscode.Event<EnvironmentTreeItem | undefined | void> = this._onDidChangeTreeData.event;
 
   /**
    * @param context VSCode Extension Context
@@ -25,10 +27,8 @@ export class EnvironmentsTreeDataProvider implements vscode.TreeDataProvider<Env
   constructor(context: vscode.ExtensionContext, connectionStatus: ConnectionStatusManager) {
     this.context = context;
     this.connectionStatus = connectionStatus;
-    let currentEnvironment = this.getCurrentEnvironment();
-    this.connectionStatus.updateStatusBar(
-      Boolean(currentEnvironment),
-      currentEnvironment?.label?.toString()
+    this.getCurrentEnvironment().then((environment) =>
+      this.connectionStatus.updateStatusBar(Boolean(environment), environment?.label?.toString())
     );
   }
 
@@ -40,20 +40,68 @@ export class EnvironmentsTreeDataProvider implements vscode.TreeDataProvider<Env
     return element;
   }
 
-  getChildren(element?: EnvironmentTreeItem | undefined): EnvironmentTreeItem[] {
+  async getChildren(element?: EnvironmentTreeItem | undefined): Promise<EnvironmentTreeItem[]> {
     if (element) {
-      // TODO:
-      // Parse and return the extensions available
-      // Potentially parse and return monitoring configurations?
-      return [];
+      switch (element.contextValue) {
+        case "dynatraceEnvironment":
+        case "currentDynatraceEnvironment":
+          return await element.dt.extensionsV2.list().then((list) =>
+            list.map(
+              (extension) =>
+                new EnvironmentTreeItem(
+                  vscode.TreeItemCollapsibleState.Collapsed,
+                  element.url,
+                  element.token,
+                  "tenantExtension",
+                  {
+                    light: path.join(__filename, "..", "..", "assets", "icons", "plugin_light.png"),
+                    dark: path.join(__filename, "..", "..", "assets", "icons", "plugin_dark.png"),
+                  },
+                  `${extension.extensionName}-${extension.version}`,
+                  `${extension.extensionName} (${extension.version})`
+                )
+            )
+          );
+        case "tenantExtension":
+          let extensionName = element.label!.toString().split(" ")[0];
+          return await element.dt.extensionsV2.listMonitoringConfigurations(extensionName).then(
+            async (configs) =>
+              await Promise.all(
+                configs.map(async (config) => {
+                  let status = await element.dt.extensionsV2
+                    .getMonitoringConfigurationStatus(extensionName, config.objectId)
+                    .then((statusObj) => {
+                      switch (statusObj.status) {
+                        case "ERROR":
+                          return "🔴";
+                        case "OK":
+                          return "🟢";
+                        case "UNKNOWN":
+                          return "⚫";
+                        default:
+                          return "⚪";
+                      }
+                    });
+                  return new EnvironmentTreeItem(
+                    vscode.TreeItemCollapsibleState.None,
+                    element.url,
+                    element.token,
+                    "monitoringConfiguration",
+                    new vscode.ThemeIcon("gear"),
+                    config.objectId,
+                    `${config.value.description} (${config.value.version}) ${status}`
+                  );
+                })
+              )
+          );
+        default:
+          return [];
+      }
     }
 
     return getAllEnvironments(this.context).map((environment: DynatraceEnvironmentData) => {
       if (environment.current) {
-        this.connectionStatus.updateStatusBar(
-          true,
-          environment.name ? environment.name : environment.id
-        );
+        this.connectionStatus.updateStatusBar(true, environment.name ? environment.name : environment.id);
       }
       return new EnvironmentTreeItem(
         vscode.TreeItemCollapsibleState.Collapsed,
@@ -72,27 +120,22 @@ export class EnvironmentsTreeDataProvider implements vscode.TreeDataProvider<Env
 
   /**
    * Gets the currently conneted environment (if any).
+   * @return environment or undefined if none is connected
    */
-  getCurrentEnvironment() {
-    return this.getChildren()
-      .filter((e) => e.current)
-      .pop();
+  async getCurrentEnvironment(): Promise<EnvironmentTreeItem | undefined> {
+    return await this.getChildren()
+      .then((children) => children.filter((c) => c.contextValue === "dynatraceEnvironment" && c.current))
+      .then((children) => children.pop());
   }
 
   /**
-   * Gets an instance of a Dynatrace API Client based on the currently connected environment.
+   * Gets an instance of a Dynatrace API Client.
+   * If no environment is specified, the currently connected environment is used.
+   * @param environment specific environment to get the client for
+   * @return API Client instance or undefined if none could be created
    */
-  getDynatraceClient() {
-    var dt;
-    const currentEnvironment = this.getCurrentEnvironment();
-    if (currentEnvironment) {
-      try {
-        dt = new Dynatrace(currentEnvironment.url, currentEnvironment.token);
-      } catch (err: any) {
-        vscode.window.showErrorMessage(`Failed to create API Client. Error: ${err.message}`);
-      }
-      return dt;
-    }
+  async getDynatraceClient(environment?: EnvironmentTreeItem): Promise<Dynatrace | undefined> {
+    return environment ? environment.dt : await this.getCurrentEnvironment().then((e) => e?.dt);
   }
 }
 
@@ -107,6 +150,7 @@ export class EnvironmentTreeItem extends vscode.TreeItem {
   id: string;
   token: string;
   current: boolean;
+  dt: Dynatrace;
 
   /**
    * @param collapsibleState whether the item supports children and is either collapsed or expanded
@@ -123,11 +167,7 @@ export class EnvironmentTreeItem extends vscode.TreeItem {
     url: string,
     token: string,
     contextValue: string,
-    icon:
-      | string
-      | vscode.Uri
-      | { light: string | vscode.Uri; dark: string | vscode.Uri }
-      | vscode.ThemeIcon,
+    icon: string | vscode.Uri | { light: string | vscode.Uri; dark: string | vscode.Uri } | vscode.ThemeIcon,
     id: string,
     name?: string,
     current: boolean = false
@@ -139,6 +179,7 @@ export class EnvironmentTreeItem extends vscode.TreeItem {
     this.url = url;
     this.token = token;
     this.id = id;
+    this.dt = new Dynatrace(this.url, this.token);
     this.tooltip = id;
     this.current = current;
     this.iconPath = icon;

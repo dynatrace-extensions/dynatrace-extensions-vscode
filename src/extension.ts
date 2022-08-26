@@ -79,16 +79,16 @@ export function activate(context: vscode.ExtensionContext) {
 
   context.subscriptions.push(
     // Load extension schemas of a given version
-    vscode.commands.registerCommand("dynatrace-extension-developer.loadSchemas", () => {
+    vscode.commands.registerCommand("dynatrace-extension-developer.loadSchemas", async () => {
       if (checkEnvironmentConnected(tenantsTreeViewProvider)) {
-        loadSchemas(context, tenantsTreeViewProvider.getDynatraceClient()!);
+        loadSchemas(context, (await tenantsTreeViewProvider.getDynatraceClient())!);
       }
     }),
     // Initialize a new workspace for extension development
-    vscode.commands.registerCommand("dynatrace-extension-developer.initWorkspace", () => {
+    vscode.commands.registerCommand("dynatrace-extension-developer.initWorkspace", async () => {
       if (checkWorkspaceOpen() && checkEnvironmentConnected(tenantsTreeViewProvider)) {
         initWorkspaceStorage(context);
-        initWorkspace(context, tenantsTreeViewProvider.getDynatraceClient()!, () => {
+        initWorkspace(context, (await tenantsTreeViewProvider.getDynatraceClient())!, () => {
           extensionsTreeViewProvider.refresh();
         });
       }
@@ -105,11 +105,11 @@ export function activate(context: vscode.ExtensionContext) {
       }
     }),
     // Upload certificate to Dynatrace credential vault
-    vscode.commands.registerCommand("dynatrace-extension-developer.uploadCertificate", () => {
+    vscode.commands.registerCommand("dynatrace-extension-developer.uploadCertificate", async () => {
       if (checkWorkspaceOpen() && checkEnvironmentConnected(tenantsTreeViewProvider)) {
         initWorkspaceStorage(context);
         if (checkCertificateExists("ca", context)) {
-          uploadCertificate(context, tenantsTreeViewProvider.getDynatraceClient()!);
+          uploadCertificate(context, (await tenantsTreeViewProvider.getDynatraceClient())!);
         }
       }
     }),
@@ -124,26 +124,26 @@ export function activate(context: vscode.ExtensionContext) {
       }
     }),
     // Upload an extension to the tenant
-    vscode.commands.registerCommand("dynatrace-extension-developer.uploadExtension", () => {
+    vscode.commands.registerCommand("dynatrace-extension-developer.uploadExtension", async () => {
       if (
         checkWorkspaceOpen() &&
         isExtensionsWorkspace(context) &&
         checkEnvironmentConnected(tenantsTreeViewProvider) &&
         checkExtensionZipExists()
       ) {
-        uploadExtension(tenantsTreeViewProvider.getDynatraceClient()!);
+        uploadExtension((await tenantsTreeViewProvider.getDynatraceClient())!);
       }
     }),
     // Activate a given version of extension 2.0
     vscode.commands.registerCommand(
       "dynatrace-extension-developer.activateExtension",
-      (version?: string) => {
+      async (version?: string) => {
         if (
           checkWorkspaceOpen() &&
           isExtensionsWorkspace(context) &&
           checkEnvironmentConnected(tenantsTreeViewProvider)
         ) {
-          activateExtension(tenantsTreeViewProvider.getDynatraceClient()!, version);
+          activateExtension((await tenantsTreeViewProvider.getDynatraceClient())!, version);
         }
       }
     ),
