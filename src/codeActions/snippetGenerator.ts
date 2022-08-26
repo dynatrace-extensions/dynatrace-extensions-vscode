@@ -1,11 +1,17 @@
 import * as vscode from "vscode";
 import * as yaml from "yaml";
 import {
+  getAllMetricsByFeatureSet,
   getAttributesFromTopology,
+  getEntityChartCardKeys,
   getEntityMetrics,
   getMetricKeysFromChartCard,
 } from "../utils/extensionParsing";
-import { buildAttributePropertySnippet, buildGraphChartSnippet } from "../utils/snippetBuilding";
+import {
+  buildAttributePropertySnippet,
+  buildChartCardSnippet,
+  buildGraphChartSnippet,
+} from "../utils/snippetBuilding";
 import { getBlockItemIndexAtLine, getParentBlocks } from "../utils/yamlParsing";
 
 /**
@@ -44,6 +50,11 @@ export class SnippetGenerator implements vscode.CodeActionProvider {
       document.lineAt(range.start.line).text.includes("charts:")
     ) {
       codeActions.push(...this.createChartInsertions(document, range, extension));
+    }
+
+    // add whole chart cards
+    if (document.lineAt(range.start.line).text.includes("chartsCards:")) {
+      codeActions.push(...this.createChartCardInsertions(document, range, extension));
     }
 
     return codeActions;
@@ -111,11 +122,7 @@ export class SnippetGenerator implements vscode.CodeActionProvider {
    * @param extension extension yaml serialized as object
    * @returns list of Code Actions
    */
-  private createChartInsertions(
-    document: vscode.TextDocument,
-    range: vscode.Range,
-    extension: ExtensionStub
-  ) {
+  private createChartInsertions(document: vscode.TextDocument, range: vscode.Range, extension: ExtensionStub) {
     var indent = /[a-z]/i.exec(document.lineAt(range.start.line).text)!.index;
     var screenIdx = getBlockItemIndexAtLine("screens", range.start.line, document.getText());
     var cardIdx = getBlockItemIndexAtLine("chartsCards", range.start.line, document.getText());
@@ -133,6 +140,51 @@ export class SnippetGenerator implements vscode.CodeActionProvider {
       this.createInsertAction(
         `Insert chart for ${metric}`,
         buildGraphChartSnippet(metric, entityType, indent),
+        document,
+        range
+      )
+    );
+  }
+
+  /**
+   * Creates Code Actions for generating entire chart cards for an entity. The cards are generated
+   * to cover entire feature sets of metrics that are associated with the entity surrounding the 
+   * triggering section of yaml.
+   * @param document the document that triggered the action
+   * @param range the range that triggered the action
+   * @param extension extension yaml serialized as object
+   * @returns list of Code Actions
+   */
+  private createChartCardInsertions(document: vscode.TextDocument, range: vscode.Range, extension: ExtensionStub) {
+    var indent = /[a-z]/i.exec(document.lineAt(range.start.line).text)!.index;
+    var screenIdx = getBlockItemIndexAtLine("screens", range.start.line, document.getText());
+    var entityType = extension.screens![screenIdx].entityType;
+    var typeIdx = -1;
+    extension.topology.types.forEach((type, idx) => {
+      if (type.name === entityType) {
+        typeIdx = idx;
+      }
+    });
+    var cardsInserted = getEntityChartCardKeys(screenIdx, extension);
+    var entityMetrics = getEntityMetrics(typeIdx, extension);
+    var cardsToInsert: { key: string; featureSet: string; metrics: string[] }[] = [];
+    getAllMetricsByFeatureSet(extension)
+      .filter((fs) => !cardsInserted.includes(`${entityType}-charts-${fs.name}`))
+      .forEach((fs) => {
+        let metrics = fs.metrics.filter((m) => entityMetrics.includes(m));
+        if (metrics.length > 0) {
+          cardsToInsert.push({
+            key: `${entityType}-charts-${fs.name}`,
+            featureSet: fs.name,
+            metrics: metrics,
+          });
+        }
+      });
+
+    return cardsToInsert.map((card) =>
+      this.createInsertAction(
+        `Insert card for ${card.featureSet} metrics`,
+        buildChartCardSnippet(card.key, card.featureSet, card.metrics, entityType, indent),
         document,
         range
       )
