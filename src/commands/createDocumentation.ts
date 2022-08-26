@@ -2,6 +2,7 @@ import * as vscode from "vscode";
 import * as yaml from "yaml";
 import * as path from "path";
 import { readFileSync, writeFileSync } from "fs";
+import { getAllMetricsByFeatureSet } from "../utils/extensionParsing";
 
 /**
  * Delivers the "Create documentation" command functionality.
@@ -39,7 +40,7 @@ function writeDocumentation(extension: ExtensionStub, extensionDir: string) {
   var metrics = extractMetrics(extension);
   var dashboards = extractDashboards(extension, extensionDir);
   var alerts = extractAlerts(extension, extensionDir);
-  var featureSets = extractFeatureSets(extension);
+  var featureSets = getAllMetricsByFeatureSet(extension);
   var metricsMap = mapEntitiesToMetrics(entities, metrics);
 
   // Translate data to readable content
@@ -199,82 +200,6 @@ function extractMetrics(extension: ExtensionStub): MetricDoc[] {
       entities: [],
     };
   });
-}
-
-/**
- * Reads through extension.yaml data and extracts relevant details for documenting feature sets.
- * Feature sets are documented alongside the metrics included with them.
- * @param extension extension.yaml content parsed into an object
- * @returns
- */
-function extractFeatureSets(extension: ExtensionStub): FeatureSetDoc[] {
-  var featureSets: FeatureSetDoc[] = [{ name: "default", metrics: [] }];
-  var datasource: DatasourceGroup[];
-
-  // Extract datasource
-  if (extension.wmi) {
-    datasource = extension.wmi;
-  } else if (extension.snmp) {
-    datasource = extension.snmp;
-  } else if (extension.prometheus) {
-    datasource = extension.prometheus;
-  } else if (extension.sql) {
-    datasource = extension.sql;
-  } else {
-    datasource = [];
-  }
-
-  // Loop through groups, subgroups, and metrics to extract feature sets
-  datasource.forEach((group) => {
-    if (group.featureSet && !featureSets.map((fs) => fs.name).includes(group.featureSet)) {
-      featureSets.push({
-        name: group.featureSet,
-        metrics: [],
-      });
-    }
-
-    group.subgroups?.forEach((sg) => {
-      if (sg.featureSet && !featureSets.map((fs) => fs.name).includes(sg.featureSet)) {
-        featureSets.push({
-          name: sg.featureSet,
-          metrics: [],
-        });
-      }
-
-      sg.metrics.forEach((m) => {
-        if (m.featureSet) {
-          if (!featureSets.map((fs) => fs.name).includes(m.featureSet)) {
-            featureSets.push({
-              name: m.featureSet,
-              metrics: [m.key],
-            });
-          } else {
-            let fsIdx = featureSets.findIndex((fs) => fs.name === "default");
-            if (fsIdx !== -1) {
-              featureSets[fsIdx].metrics.push(m.key);
-            }
-          }
-        } else if (sg.featureSet) {
-          let fsIdx = featureSets.findIndex((fs) => fs.name === sg.featureSet);
-          if (fsIdx !== -1) {
-            featureSets[fsIdx].metrics.push(m.key);
-          }
-        } else if (group.featureSet) {
-          let fsIdx = featureSets.findIndex((fs) => fs.name === group.featureSet);
-          if (fsIdx !== -1) {
-            featureSets[fsIdx].metrics.push(m.key);
-          }
-        } else {
-          let fsIdx = featureSets.findIndex((fs) => fs.name === "default");
-          if (fsIdx !== -1) {
-            featureSets[fsIdx].metrics.push(m.key);
-          }
-        }
-      });
-    });
-  });
-
-  return featureSets;
 }
 
 /**

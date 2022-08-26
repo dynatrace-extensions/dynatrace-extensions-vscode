@@ -34,10 +34,10 @@ interface DimensionStub {
   filter?: string;
 }
 interface MetricStub {
-  key: string,
-  value: string,
-  type?: string,
-  featureSet?: string
+  key: string;
+  value: string;
+  type?: string;
+  featureSet?: string;
 }
 
 interface DatasourceGroup {
@@ -73,8 +73,32 @@ interface ScreenStub {
   listSettings?: any;
   detailsSettings?: any;
   entitiesListCards?: any[];
-  chartsCards?: any[];
+  chartsCards?: ChartsCardStub[];
   messageCards?: any[];
+}
+
+interface ChartsCardStub {
+  key: string;
+  charts: ChartStub[];
+}
+
+interface ChartStub {
+  graphChartConfig?: GraphConfigStub;
+  pieChartConfig?: SingleMetricConfig;
+  singleValueConfig?: SingleMetricConfig;
+}
+
+interface ChartConfigStub {
+  metrics: { metricSelector: string }[];
+  visualization: any;
+}
+
+interface GraphConfigStub {
+  metrics: { metricSelector: string }[];
+}
+
+interface SingleMetricConfig {
+  metric: { metricSelector: string };
 }
 
 interface ExtensionStub {

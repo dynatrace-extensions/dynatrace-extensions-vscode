@@ -2,7 +2,7 @@
 	"name": "dynatrace-extension-developer",
 	"displayName": "Dynatrace Extension Developer",
 	"description": "Support for Dynatrace Extension 2.0 development",
-	"version": "0.8.0",
+	"version": "0.9.0",
 	"repository": {
 		"type": "git",
 		"url": "https://github.com/dynatrace-extensions/dynatrace-extension-developer.git"
@@ -82,6 +82,11 @@
 				"command": "dynatrace-extension-developer-workspaces.addWorkspace",
 				"title": "Add & initialize a workspace",
 				"icon": "$(plus)"
+			},
+			{
+				"command": "dynatrace-extension-developer-workspaces.deleteWorkspace",
+				"title": "Remove workspace",
+				"icon": "$(trash)"
 			},
 			{
 				"command": "dynatrace-extension-developer-workspaces.openWorkspace",
@@ -202,7 +207,12 @@
 				{
 					"command": "dynatrace-extension-developer-workspaces.openWorkspace",
 					"when": "view == dynatrace-extension-developer-workspaces && viewItem == extensionWorkspace",
-					"group": "inline"
+					"group": "inline@1"
+				},
+				{
+					"command": "dynatrace-extension-developer-workspaces.deleteWorkspace",
+					"when": "view == dynatrace-extension-developer-workspaces && viewItem == extensionWorkspace",
+					"group": "inline@2"
 				},
 				{
 					"command": "dynatrace-extension-developer-workspaces.editExtension",
@@ -270,7 +280,7 @@
 			}
 		],
 		"icons": {
-			"dt-signet":{
+			"dt-signet": {
 				"description": "Dynatrace signet",
 				"default": {
 					"fontPath": "out/assets/fonts/dt-custom-icons.woff",
@@ -288,6 +298,7 @@
 		"test": "node ./out/test/runTest.js"
 	},
 	"devDependencies": {
+		"@types/adm-zip": "^0.5.0",
 		"@types/glob": "^7.2.0",
 		"@types/mocha": "^9.1.1",
 		"@types/node": "^14.18.21",

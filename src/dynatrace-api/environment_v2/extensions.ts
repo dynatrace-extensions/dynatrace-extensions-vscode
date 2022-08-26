@@ -19,9 +19,7 @@ export class ExtensionsServiceV2 {
    * @returns list of versions
    */
   async listSchemaVersions(): Promise<string[]> {
-    return this.httpClient
-      .makeRequest(this.schemaEndpoint)
-      .then((res: SchemaList) => res.versions.reverse());
+    return this.httpClient.makeRequest(this.schemaEndpoint).then((res: SchemaList) => res.versions.reverse());
   }
 
   /**
@@ -63,11 +61,7 @@ export class ExtensionsServiceV2 {
    * @returns response data
    */
   async deleteVersion(extensionName: string, version: string) {
-    return this.httpClient.makeRequest(
-      `${this.endpoint}/${extensionName}/${version}`,
-      {},
-      "DELETE"
-    );
+    return this.httpClient.makeRequest(`${this.endpoint}/${extensionName}/${version}`, {}, "DELETE");
   }
 
   /**
@@ -98,6 +92,46 @@ export class ExtensionsServiceV2 {
       `${this.endpoint}/${extensionName}/environmentConfiguration`,
       { version: version },
       "PUT"
+    );
+  }
+
+  /**
+   * Lists all the extensions 2.0 available in the environment.
+   * @param name Filters the resulting set of extensions 2.0 by name.
+   *             You can specify a partial name. In that case, the CONTAINS operator is used.
+   * @returns the list of extensions
+   */
+  async list(name?: string): Promise<MinimalExtension[]> {
+    return this.httpClient.paginatedCall(`${this.endpoint}`, "extensions", { name: name });
+  }
+
+  /**
+   * Lists all the monitoring configurations of the specified Extension 2.0
+   * @param extensionName the name of the requested extension 2.0
+   * @param version Filters the resulting set of configurations by extension 2.0 version.
+   * @param activeOnly Filters the resulting set of configurations by the active state.
+   * @returns list of monitoring configurations
+   */
+  async listMonitoringConfigurations(
+    extensionName: string,
+    version?: string,
+    activeOnly?: boolean
+  ): Promise<ExtensionMonitoringConfiguration[]> {
+    return this.httpClient.paginatedCall(`${this.endpoint}/${extensionName}/monitoringConfigurations`, "items", {
+      version: version,
+      active: activeOnly,
+    });
+  }
+
+  /**
+   * Gets the most recent status of the execution of given monitoring configuration.
+   * @param extensionName The name of the requested extension 2.0.
+   * @param configurationId The ID of the requested monitoring configuration.
+   * @returns the status and timestamp as object
+   */
+  async getMonitoringConfigurationStatus(extensionName: string, configurationId: string): Promise<ExtensionStatusDto> {
+    return this.httpClient.makeRequest(
+      `${this.endpoint}/${extensionName}/monitoringConfigurations/${configurationId}/status`
     );
   }
 }

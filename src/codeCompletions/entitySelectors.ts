@@ -78,14 +78,13 @@ export class EntitySelectorCompletionProvider implements vscode.CompletionItemPr
    * Loads the details of all entity types available in Dynatrace
    */
   private loadBuiltinEntities() {
-    if (this.environments.getDynatraceClient()) {
-      this.environments
-        .getDynatraceClient()!
-        .entitiesV2.listTypes()
-        .then((types: EntityType[]) => {
+    this.environments.getDynatraceClient().then((dt) => {
+      if (dt) {
+        dt.entitiesV2.listTypes().then((types: EntityType[]) => {
           this.builtinEntities.push(...types);
         });
-    }
+      }
+    });
   }
 
   /**

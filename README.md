@@ -84,6 +84,8 @@ On specific keywords, the _lightbulb_ icon will show to list things that can be 
 Currently implemented actions trigger:
 
 - inside `propertiesCard` when clicking on `properties` - you can automatically add entry for the relevant entity attribute properties
+- inside `chartsCards` when clicking on `charts` inside a card - you can automatically add charts for metrics that aren't already in the card
+- inside `screens` when clicking on `chartsCards` - you can automatically add chart cards for entire feature sets of metrics
 
 ## Custom Views
 
@@ -103,10 +105,16 @@ Buttons within this view enable quick actions for:
 Use the Dynatrace Environments view to register all the Dynatrace (SaaS/Managed) environments that you work with.
 This enables you to save connection details and quickly select which environment you're working with (for API-based operations).
 
-Buttons within this view enable quick actions for:
+Once environments are added, you get a view into all extensions available in that environment.
 
-- Adding, editing, or removing an environment
-- Switching connection to a different environment
+At a glance:
+
+- See what extensions are deployed and what version is active
+- See what monitoring configurations are configured and what is the latest state
+- Quickly select which environment's details you want to use for API-based operations
+
+You can edit or remove environment details from the same list.
+
 
 # How to use it?
 

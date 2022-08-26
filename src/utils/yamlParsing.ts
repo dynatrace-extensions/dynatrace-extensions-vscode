@@ -17,8 +17,8 @@ export function getBlockItemIndexAtLine(blockLabel: string, blockLineIdx: number
       break;
     }
     // Block declaration found
-    if (line.indexOf(blockLabel) >= 0) {
-      index++;
+    if (line.replace(/ /g, "").startsWith(`${blockLabel}:`)) {
+      index = -1;
       continue;
     }
     // First line inside block is first list item

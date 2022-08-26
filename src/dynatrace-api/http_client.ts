@@ -51,8 +51,8 @@ export class HttpClient {
     headers["Authorization"] = `Api-Token ${this.apiToken}`;
 
     console.debug(
-      `Making ${method} request to ${url} ${params ? "with params " + params.toString() : ""} ${
-        body ? " and body " + body : ""
+      `Making ${method} request to ${url} ${params ? "with params " + JSON.stringify(params) : ""} ${
+        body ? " and body " + JSON.stringify(body) : ""
       }`
     );
 
