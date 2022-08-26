@@ -1,28 +1,40 @@
-const attributeSnippet = `\
-- type: ATTRIBUTE
-  attribute:
-    key: <attribute-key>
-    displayName: <attribute-name>`;
+import { attributeSnippet, chartCardSnippet, graphChartSnippet } from "./snippets";
 
-const graphChartSnippet = `\
-- displayName: <metric-key>
-  visualizationType: GRAPH_CHART
-  graphChartConfig:
-    metrics:
-      - metricSelector: <metric-key>:splitBy("dt.entity.<entity-type>")`;
+/**
+ * Builds a YAML snippet for a charts card, with desiered indentation.
+ * Details like feature set and entity type allow building more relevant and easy to understand cards.
+ * @param key the chart card's key
+ * @param featureSet the feature set it covers
+ * @param metrics the metrics that should be translated to charts
+ * @param entityType the type of entity the metrics are assocaited with
+ * @param indent level of indentation required
+ * @returns the formatted and indented snippet
+ */
+export function buildChartCardSnippet(
+  key: string,
+  featureSet: string,
+  metrics: string[],
+  entityType: string,
+  indent: number
+): string {
+  let snippet = chartCardSnippet;
+  let charts = metrics.map((m) => buildGraphChartSnippet(m, entityType, indent-2)).join("");
+
+  snippet = snippet.replace("<card-key>", key);
+  snippet = snippet.replace("<card-name>", `${featureSet} metrics`);
+  snippet = snippet.replace("<charts>", charts);
+
+  return indentSnippet(snippet, indent);
+}
 
 /**
  * Builds a YAML snippet for an `attribute` type of property, with desired indentation.
  * @param key the attribute's key
  * @param displayName the attribute's display name
- * @param indent indentation of this snippet (number of spaces)
+ * @param indent level of indentation required
  * @returns the formatted and indented snippet
  */
-export function buildAttributePropertySnippet(
-  key: string,
-  displayName: string,
-  indent: number
-): string {
+export function buildAttributePropertySnippet(key: string, displayName: string, indent: number): string {
   let snippet = attributeSnippet;
 
   snippet = snippet.replace("<attribute-key>", key);
@@ -39,11 +51,7 @@ export function buildAttributePropertySnippet(
  * @param indent level of indentation required
  * @returns the formatted and indented snippet
  */
-export function buildGraphChartSnippet(
-  metricKey: string,
-  entityType: string,
-  indent: number
-): string {
+export function buildGraphChartSnippet(metricKey: string, entityType: string, indent: number): string {
   let snippet = graphChartSnippet;
 
   snippet = snippet.replace(/<metric-key>/g, metricKey);
@@ -55,7 +63,7 @@ export function buildGraphChartSnippet(
 /**
  * Indents a snippet by a given indentation level (indent is of two characters).
  * @param snippet snippet to indent
- * @param indent indent level
+ * @param indent level of indentation required
  * @returns the indentend snippet
  */
 function indentSnippet(snippet: string, indent: number): string {
