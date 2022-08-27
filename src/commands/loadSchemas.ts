@@ -14,13 +14,12 @@ import { Dynatrace } from "../dynatrace-api/dynatrace";
  */
 export async function loadSchemas(context: vscode.ExtensionContext, dt: Dynatrace) {
   // Fetch available schema versions from cluster
-  const availableVersions = await dt.extensionsV2
-    .listSchemaVersions()
-    .catch((err) => {
-      vscode.window.showErrorMessage(err.message);
-      return [];
-    });
+  const availableVersions = await dt.extensionsV2.listSchemaVersions().catch((err) => {
+    vscode.window.showErrorMessage(err.message);
+    return [];
+  });
   if (availableVersions.length === 0) {
+    vscode.window.showErrorMessage("No schemas available. Operation cancelled.");
     return;
   }
 
@@ -29,6 +28,7 @@ export async function loadSchemas(context: vscode.ExtensionContext, dt: Dynatrac
     placeHolder: "Choose a schema version",
   })) as string;
   if (!version) {
+    vscode.window.showErrorMessage("No schema was selected. Operation cancelled.");
     return;
   }
   context.workspaceState.update("schemaVersion", version);
@@ -41,6 +41,7 @@ export async function loadSchemas(context: vscode.ExtensionContext, dt: Dynatrac
     });
 
     if (download !== "Yes") {
+      vscode.window.showInformationMessage("Schema loading completed.");
       return;
     }
   }
@@ -62,23 +63,22 @@ export async function loadSchemas(context: vscode.ExtensionContext, dt: Dynatrac
       await axios
         .all(schemaFiles.map((file) => dt.extensionsV2.getSchemaFile(version, file)))
         .then(
-          axios.spread((...responses) =>
+          axios.spread((...responses) => {
             responses.forEach((resp) => {
               try {
                 let parts = resp.$id.split("/");
                 let fileName = parts[parts.length - 1];
                 writeFile(`${location}/${fileName}`, JSON.stringify(resp), (err) => {
                   if (err) {
-                    vscode.window.showErrorMessage(
-                      `Error writing file ${fileName}:\n${err.message}`
-                    );
+                    vscode.window.showErrorMessage(`Error writing file ${fileName}:\n${err.message}`);
                   }
                 });
               } catch (err) {
                 vscode.window.showErrorMessage(`Error writing file:\n${(err as Error).message}`);
               }
-            })
-          )
+            });
+            vscode.window.showInformationMessage("Schema loading completed.");
+          })
         )
         .catch((err) => vscode.window.showErrorMessage(err.message));
     }

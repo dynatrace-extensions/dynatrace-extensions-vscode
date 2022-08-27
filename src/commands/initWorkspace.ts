@@ -14,19 +14,22 @@ import { Dynatrace } from "../dynatrace-api/dynatrace";
  * @param context VSCode Extension Context
  * @param dt Dynatrace API Client
  * @param callback optional callback function to call once initialization complete
- * @returns void
+ * @returns
  */
-export async function initWorkspace(
-  context: vscode.ExtensionContext,
-  dt: Dynatrace,
-  callback?: () => any
-) {
+export async function initWorkspace(context: vscode.ExtensionContext, dt: Dynatrace, callback?: () => any) {
   // Load schemas if needed
-  await loadSchemas(context, dt);
-  // Set up schema validation
   var schemaVersion = context.workspaceState.get("schemaVersion") as string;
   if (!schemaVersion) {
-    vscode.window.showErrorMessage("Operation cancelled. Workspace not initialized");
+    await loadSchemas(context, dt);
+    schemaVersion = context.workspaceState.get("schemaVersion") as string;
+    vscode.window.showInformationMessage(`Loaded schemas version ${schemaVersion}`);
+  } else {
+    vscode.window.showInformationMessage(`Using cached schema version ${schemaVersion}`);
+  }
+
+  // Set up schema validation
+  if (!schemaVersion) {
+    vscode.window.showErrorMessage("No schema found. Workspace not initialized.");
     return;
   }
   var schemaLocation = path.join(context.globalStorageUri.fsPath, schemaVersion);
@@ -53,19 +56,16 @@ export async function initWorkspace(
     }
   });
 
+  // Now that the workspace exists, storage can be created
   initWorkspaceStorage(context);
 
   // Which certificates to use?
-  var certChoice = await vscode.window.showQuickPick(
-    ["Use your own certificates", "Generate new ones"],
-    {
-      canPickMany: false,
-      ignoreFocusOut: true,
-      title: "Certificate selection",
-      placeHolder:
-        "What certificates would you like to use for signing extensions in this workspace?",
-    }
-  );
+  var certChoice = await vscode.window.showQuickPick(["Use your own certificates", "Generate new ones"], {
+    canPickMany: false,
+    ignoreFocusOut: true,
+    title: "Certificate selection",
+    placeHolder: "What certificates would you like to use for signing extensions in this workspace?",
+  });
   switch (certChoice) {
     case "Use your own certificates":
       if (
@@ -74,6 +74,7 @@ export async function initWorkspace(
           "dynatrace.certificate.location.developerCertificate"
         )
       ) {
+        vscode.window.showErrorMessage("Personal certificates not found. Workspace not initialized.");
         return;
       }
       break;
@@ -81,13 +82,14 @@ export async function initWorkspace(
       await vscode.commands.executeCommand("dynatrace-extension-developer.generateCertificates");
       break;
     default:
-      vscode.window.showErrorMessage(
-        "Workspace could not be initialized due to missing certificates. Try again later."
-      );
+      vscode.window.showErrorMessage("No certificate choice made. Workspace not initialized.");
+      return;
   }
 
+  // Register the workspace by saving its metadata
   registerWorkspace(context);
 
+  // Run any callbacks as needed
   if (callback) {
     callback();
   }
