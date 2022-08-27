@@ -48,7 +48,7 @@ export function initWorkspaceStorage(context: vscode.ExtensionContext) {
  */
 export function registerWorkspace(context: vscode.ExtensionContext) {
   var workspacesJson = path.join(context.globalStorageUri.fsPath, "extensionWorkspaces.json");
-  var workspaces: any[] = JSON.parse(readFileSync(workspacesJson).toString());
+  var workspaces: ExtensionWorkspace[] = JSON.parse(readFileSync(workspacesJson).toString());
   var workspace: ExtensionWorkspace = {
     name: vscode.workspace.name!,
     id: path.basename(path.dirname(context.storageUri!.fsPath)),
