@@ -23,7 +23,11 @@ jobs:
         with:
           node-version: ${{ matrix.node-version }}
           cache: 'npm'
-      - run: npm install
-      - run: npm install -g vsce
-      - run: npm run pretest
-      - run: npm run test
+      - name: Install app and dependencies
+        run: npm install
+      - name: Build the app
+        run: npm run build
+      - name: Pre-test activities
+        run: npm run pretest
+      - name: Run the tests
+        run: npm run test
