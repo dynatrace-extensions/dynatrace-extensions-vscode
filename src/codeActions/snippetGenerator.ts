@@ -10,6 +10,7 @@ import {
 import {
   buildAttributePropertySnippet,
   buildChartCardSnippet,
+  buildEntitiesListCardSnippet,
   buildGraphChartSnippet,
 } from "../utils/snippetBuilding";
 import { getBlockItemIndexAtLine, getParentBlocks } from "../utils/yamlParsing";
@@ -55,6 +56,11 @@ export class SnippetGenerator implements vscode.CodeActionProvider {
     // add whole chart cards
     if (document.lineAt(range.start.line).text.includes("chartsCards:")) {
       codeActions.push(...this.createChartCardInsertions(document, range, extension));
+    }
+
+    // add entity list cards
+    if (document.lineAt(range.start.line).text.includes("entitiesListCards:")) {
+      codeActions.push(...this.createEntitiesListCardInsertions(document, range, extension));
     }
 
     return codeActions;
@@ -148,7 +154,7 @@ export class SnippetGenerator implements vscode.CodeActionProvider {
 
   /**
    * Creates Code Actions for generating entire chart cards for an entity. The cards are generated
-   * to cover entire feature sets of metrics that are associated with the entity surrounding the 
+   * to cover entire feature sets of metrics that are associated with the entity surrounding the
    * triggering section of yaml.
    * @param document the document that triggered the action
    * @param range the range that triggered the action
@@ -189,5 +195,24 @@ export class SnippetGenerator implements vscode.CodeActionProvider {
         range
       )
     );
+  }
+
+  private createEntitiesListCardInsertions(
+    document: vscode.TextDocument,
+    range: vscode.Range,
+    extension: ExtensionStub
+  ) {
+    var indent = /[a-z]/i.exec(document.lineAt(range.start.line).text)!.index;
+    var screenIdx = getBlockItemIndexAtLine("screens", range.start.line, document.getText());
+    var entityType = extension.screens![screenIdx].entityType;
+
+    return [
+      this.createInsertAction(
+        `Insert card for ${entityType} entity`,
+        buildEntitiesListCardSnippet(indent, entityType),
+        document,
+        range
+      ),
+    ];
   }
 }

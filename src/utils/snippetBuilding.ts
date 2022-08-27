@@ -1,4 +1,30 @@
-import { attributeSnippet, chartCardSnippet, graphChartSnippet } from "./snippets";
+import { attributeSnippet, chartCardSnippet, entitiesListCardSnippet, graphChartSnippet } from "./snippets";
+
+export function buildEntitiesListCardSnippet(
+  indent: number,
+  entity: string,
+  listedEntity?: string,
+  metrics?: string[]
+) {
+  let snippet = entitiesListCardSnippet;
+
+  if (listedEntity) {
+    snippet = snippet.replace("<card-key>", `${entity}-list-${listedEntity}`);
+    snippet = snippet.replace("<page-size>", "5");
+    snippet = snippet.replace("<card-name>", `List of related ${listedEntity} entities`);
+    snippet = snippet.replace("<entity-selector>", `type(${listedEntity}),fromRelationships.Blabla...`);
+  } else {
+    snippet = snippet.replace("<card-key>", `${entity}-list-self`);
+    snippet = snippet.replace("<page-size>", "15");
+    snippet = snippet.replace("<card-name>", `List of ${entity} entities`);
+    snippet = snippet.replace("entitySelectorTemplate: <entity-selector>\n", "");
+  }
+
+  snippet = snippet.replace("<display-charts>", metrics ? "true" : "false");
+  snippet = snippet.replace("<charts>", "[]");
+
+  return indentSnippet(snippet, indent);
+}
 
 /**
  * Builds a YAML snippet for a charts card, with desiered indentation.
@@ -18,7 +44,7 @@ export function buildChartCardSnippet(
   indent: number
 ): string {
   let snippet = chartCardSnippet;
-  let charts = metrics.map((m) => buildGraphChartSnippet(m, entityType, indent-2)).join("");
+  let charts = metrics.map((m) => buildGraphChartSnippet(m, entityType, indent - 2)).join("");
 
   snippet = snippet.replace("<card-key>", key);
   snippet = snippet.replace("<card-name>", `${featureSet} metrics`);
