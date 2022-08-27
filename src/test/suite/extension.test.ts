@@ -1,15 +1,32 @@
-import * as assert from 'assert';
+import * as assert from "assert";
+import * as path from "path";
+import * as dtExt from "../../extension";
+import { existsSync, readFileSync, rmSync } from "fs";
+import { testContext, testGlobalStorage, testWkspaceStorage } from "../mock/vscode";
 
-// You can import and use all API from the 'vscode' module
-// as well as import your extension to test it
-import * as vscode from 'vscode';
-// import * as myExtension from '../../extension';
+/**
+ * Simple test suite for extension tests.
+ */
+suite("Extension Test Suite", () => {
 
-suite('Extension Test Suite', () => {
-	vscode.window.showInformationMessage('Start all tests.');
+  /**
+   * Tests the activation of the extension, along with storage creation.
+   */
+  test("Test extension activation", () => {
+    dtExt.activate(testContext);
 
-	test('Sample test', () => {
-		assert.strictEqual(-1, [1, 2, 3].indexOf(5));
-		assert.strictEqual(-1, [1, 2, 3].indexOf(0));
-	});
+    const globalStoragePath = testContext.globalStorageUri.fsPath;
+    const extensionWorkspacesJson = path.join(globalStoragePath, "extensionWorkspaces.json");
+    const dynatraceEnvironmentsJson = path.join(globalStoragePath, "dynatraceEnvironments.json");
+
+    assert.strictEqual(existsSync(globalStoragePath), true);
+    assert.strictEqual(existsSync(extensionWorkspacesJson), true);
+    assert.strictEqual(existsSync(dynatraceEnvironmentsJson), true);
+
+    assert.strictEqual(readFileSync(extensionWorkspacesJson).toString(), "[]");
+    assert.strictEqual(readFileSync(dynatraceEnvironmentsJson).toString(), "[]");
+
+    rmSync(testGlobalStorage, { recursive: true, force: true});
+    rmSync(testWkspaceStorage, { recursive: true, force: true});
+  });
 });
