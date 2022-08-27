@@ -25,8 +25,6 @@ jobs:
           cache: 'npm'
       - name: Install app and dependencies
         run: npm install
-      - name: Build the app
-        run: npm run build
       - name: Pre-test activities
         run: npm run pretest
       - name: Run the tests
