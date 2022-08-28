@@ -22,8 +22,6 @@ export function buildEntitiesListCardSnippet(
   snippet = snippet.replace("<card-key>", key);
   snippet = snippet.replace("<page-size>", String(pageSize));
   snippet = snippet.replace("<card-name>", cardName);
-  snippet = snippet.replace("<display-charts>", "false");
-  snippet = snippet.replace("<charts>", "[]");
 
   if (entitySelector) {
     snippet = snippet.replace("<entity-selector>", entitySelector);

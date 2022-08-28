@@ -22,11 +22,11 @@ export const entitiesListCardSnippet = `\
 - key: <card-key>
   pageSize: <page-size>
   displayName: <card-name>
-  displayCharts: <display-charts>
+  displayCharts: false
   enableDetailsExpandability: true
   numberOfVisibleCharts: 3
   displayIcons: true
   entitySelectorTemplate: <entity-selector>
   hideEmptyCharts: true
   columns: []
-  charts: <charts>`;
+  charts: []`;
