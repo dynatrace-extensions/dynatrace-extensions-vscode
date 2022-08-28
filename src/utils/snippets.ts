@@ -23,7 +23,7 @@ export const entitiesListCardSnippet = `\
   pageSize: <page-size>
   displayName: <card-name>
   displayCharts: <display-charts>
-  enableDetailsExpandibility: true
+  enableDetailsExpandability: true
   numberOfVisibleCharts: 3
   displayIcons: true
   entitySelectorTemplate: <entity-selector>

@@ -3,9 +3,12 @@ import * as yaml from "yaml";
 import {
   getAllMetricsByFeatureSet,
   getAttributesFromTopology,
+  getEntitiesListCardKeys,
   getEntityChartCardKeys,
   getEntityMetrics,
+  getEntityName,
   getMetricKeysFromChartCard,
+  getRelationships,
 } from "../utils/extensionParsing";
 import {
   buildAttributePropertySnippet,
@@ -197,6 +200,14 @@ export class SnippetGenerator implements vscode.CodeActionProvider {
     );
   }
 
+  /**
+   * Creates Code Actions that insert entities lists cards for the current entity as well
+   * as the directly related entities.
+   * @param document the document that triggered the action
+   * @param range the range that triggered the action
+   * @param extension extension yaml serialized as object
+   * @returns list of Code Actions
+   */
   private createEntitiesListCardInsertions(
     document: vscode.TextDocument,
     range: vscode.Range,
@@ -205,14 +216,45 @@ export class SnippetGenerator implements vscode.CodeActionProvider {
     var indent = /[a-z]/i.exec(document.lineAt(range.start.line).text)!.index;
     var screenIdx = getBlockItemIndexAtLine("screens", range.start.line, document.getText());
     var entityType = extension.screens![screenIdx].entityType;
+    var entityName = getEntityName(entityType, extension);
 
-    return [
-      this.createInsertAction(
-        `Insert card for ${entityType} entity`,
-        buildEntitiesListCardSnippet(indent, entityType),
-        document,
-        range
-      ),
-    ];
+    // TODO: Filter out only the list-able relationships (e.g. to many)
+    var relationships = getRelationships(entityType, extension);
+    var cardsInserted = getEntitiesListCardKeys(screenIdx, extension);
+    var cardsToInsert = [];
+
+    if (!cardsInserted.includes(`${entityType}-list-self`)) {
+      cardsToInsert.push(
+        this.createInsertAction(
+          `Insert list of ${entityName}s`,
+          buildEntitiesListCardSnippet(`${entityType}-list-self`, 15, `List of ${entityName}s`, indent),
+          document,
+          range
+        )
+      );
+    }
+
+    relationships
+      .filter((rel) => !cardsInserted.includes(`${entityType}-list-${rel.entity}`))
+      .forEach((rel) => {
+        cardsToInsert.push(
+          this.createInsertAction(
+            `Insert list of related ${getEntityName(rel.entity, extension)}s`,
+            buildEntitiesListCardSnippet(
+              `${entityType}-list-${rel.entity}`,
+              5,
+              `List of related ${getEntityName(rel.entity, extension)}s`,
+              indent,
+              `type(${rel.entity}),${rel.direction === "to" ? "from" : "to"}Relationships.${
+                rel.relation
+              }($(entityConditions))`
+            ),
+            document,
+            range
+          )
+        );
+      });
+
+    return cardsToInsert;
   }
 }

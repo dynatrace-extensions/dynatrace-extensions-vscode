@@ -1,27 +1,35 @@
 import { attributeSnippet, chartCardSnippet, entitiesListCardSnippet, graphChartSnippet } from "./snippets";
 
+/**
+ * Builds a YAML snippet for an entities list card. If no entity selector is provided then
+ * it is assumed to be a "self" listing card for the same entity as the screen definition.
+ * @param key the key for this card
+ * @param pageSize page size of the entity list
+ * @param cardName the name for this card
+ * @param indent level of indentation required
+ * @param entitySelector optional entity selector in case of related entities
+ * @returns the formatted and indented snippet
+ */
 export function buildEntitiesListCardSnippet(
+  key: string,
+  pageSize: number,
+  cardName: string,
   indent: number,
-  entity: string,
-  listedEntity?: string,
-  metrics?: string[]
+  entitySelector?: string
 ) {
   let snippet = entitiesListCardSnippet;
 
-  if (listedEntity) {
-    snippet = snippet.replace("<card-key>", `${entity}-list-${listedEntity}`);
-    snippet = snippet.replace("<page-size>", "5");
-    snippet = snippet.replace("<card-name>", `List of related ${listedEntity} entities`);
-    snippet = snippet.replace("<entity-selector>", `type(${listedEntity}),fromRelationships.Blabla...`);
-  } else {
-    snippet = snippet.replace("<card-key>", `${entity}-list-self`);
-    snippet = snippet.replace("<page-size>", "15");
-    snippet = snippet.replace("<card-name>", `List of ${entity} entities`);
-    snippet = snippet.replace("entitySelectorTemplate: <entity-selector>\n", "");
-  }
-
-  snippet = snippet.replace("<display-charts>", metrics ? "true" : "false");
+  snippet = snippet.replace("<card-key>", key);
+  snippet = snippet.replace("<page-size>", String(pageSize));
+  snippet = snippet.replace("<card-name>", cardName);
+  snippet = snippet.replace("<display-charts>", "false");
   snippet = snippet.replace("<charts>", "[]");
+
+  if (entitySelector) {
+    snippet = snippet.replace("<entity-selector>", entitySelector);
+  } else {
+    snippet = snippet.replace("entitySelectorTemplate: <entity-selector>\n  ", "");
+  }
 
   return indentSnippet(snippet, indent);
 }
