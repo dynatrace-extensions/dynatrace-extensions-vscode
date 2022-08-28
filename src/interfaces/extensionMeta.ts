@@ -72,13 +72,23 @@ interface ScreenStub {
   propertiesCard?: any;
   listSettings?: any;
   detailsSettings?: any;
-  entitiesListCards?: any[];
+  entitiesListCards?: EntitiesListCardStub[];
   chartsCards?: ChartsCardStub[];
   messageCards?: any[];
 }
 
+interface EntitiesListCardStub {
+  key: string;
+  displayName?: string;
+  entitySelectorTemplate?: string;
+  filtering?: any;
+  columns?: any[]
+  charts?: ChartStub[];
+}
+
 interface ChartsCardStub {
   key: string;
+  displayName?: string;
   charts: ChartStub[];
 }
 

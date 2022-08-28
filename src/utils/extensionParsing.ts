@@ -53,7 +53,7 @@ export function getAttributesFromTopology(
 }
 
 /**
- * Extracts all metric keys from metric selectors found in the charts of a given card.
+ * Extracts all metric keys from metric selectors found in the charts of a given chart card.
  * The card and screen definition must be referenced by index.
  * @param screenIdx index of the screen definition
  * @param cardIdx index of the chart card definition
@@ -63,6 +63,43 @@ export function getAttributesFromTopology(
 export function getMetricKeysFromChartCard(screenIdx: number, cardIdx: number, extension: ExtensionStub): string[] {
   var metrics: string[] = [];
   extension.screens![screenIdx].chartsCards![cardIdx].charts.forEach((c) => {
+    if (c.graphChartConfig) {
+      c.graphChartConfig.metrics.forEach((ms) => {
+        metrics.push(ms.metricSelector.split(":")[0]);
+      });
+    }
+    if (c.pieChartConfig) {
+      metrics.push(c.pieChartConfig.metric.metricSelector.split(":")[0]);
+    }
+    if (c.singleValueConfig) {
+      metrics.push(c.singleValueConfig.metric.metricSelector.split(":")[0]);
+    }
+  });
+  return metrics;
+}
+
+/**
+ * Extracts all metric keys from metric selectors found in the charts of a given entities list card.
+ * The card and screen definition must be referenced by index.
+ * @param screenIdx index of the screen definition
+ * @param cardIdx index of the entities list card definition
+ * @param extension extension.yaml serialized as object
+ * @returns list of metric keys
+ */
+export function getMetricKeysFromEntitiesListCard(
+  screenIdx: number,
+  cardIdx: number,
+  extension: ExtensionStub
+): string[] {
+  var metrics: string[] = [];
+  if (
+    !extension.screens ||
+    !extension.screens[screenIdx].entitiesListCards ||
+    !extension.screens[screenIdx].entitiesListCards![cardIdx].charts
+  ) {
+    return [];
+  }
+  extension.screens![screenIdx].entitiesListCards![cardIdx].charts!.forEach((c) => {
     if (c.graphChartConfig) {
       c.graphChartConfig.metrics.forEach((ms) => {
         metrics.push(ms.metricSelector.split(":")[0]);

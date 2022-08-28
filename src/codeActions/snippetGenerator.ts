@@ -8,6 +8,7 @@ import {
   getEntityMetrics,
   getEntityName,
   getMetricKeysFromChartCard,
+  getMetricKeysFromEntitiesListCard,
   getRelationships,
 } from "../utils/extensionParsing";
 import {
@@ -48,12 +49,16 @@ export class SnippetGenerator implements vscode.CodeActionProvider {
       codeActions.push(...this.createPropertyInsertions(document, range, extension));
     }
 
-    // add charts within chartCards
-    if (
-      parentBlocks[parentBlocks.length - 1] === "chartsCards" &&
-      document.lineAt(range.start.line).text.includes("charts:")
-    ) {
-      codeActions.push(...this.createChartInsertions(document, range, extension));
+    // add charts
+    if (document.lineAt(range.start.line).text.includes("charts:")) {
+      // in chartsCard
+      if (parentBlocks[parentBlocks.length - 1] === "chartsCards") {
+        codeActions.push(...this.createChartInsertions("chartCard", document, range, extension));
+      }
+      // in entitiesListCard
+      if (parentBlocks[parentBlocks.length - 1] === "entitiesListCards") {
+        codeActions.push(...this.createChartInsertions("entitiesListCard", document, range, extension));
+      }
     }
 
     // add whole chart cards
@@ -126,23 +131,44 @@ export class SnippetGenerator implements vscode.CodeActionProvider {
   /**
    * Creates Code Actions for each metric belonging to the surrounding entity so that it can
    * be added as a chart.
+   * @param cardType the type of card these charts are meant for
    * @param document the document that triggered the action
    * @param range the range that triggered the action
    * @param extension extension yaml serialized as object
    * @returns list of Code Actions
    */
-  private createChartInsertions(document: vscode.TextDocument, range: vscode.Range, extension: ExtensionStub) {
+  private createChartInsertions(
+    cardType: "chartCard" | "entitiesListCard",
+    document: vscode.TextDocument,
+    range: vscode.Range,
+    extension: ExtensionStub
+  ) {
     var indent = /[a-z]/i.exec(document.lineAt(range.start.line).text)!.index;
     var screenIdx = getBlockItemIndexAtLine("screens", range.start.line, document.getText());
-    var cardIdx = getBlockItemIndexAtLine("chartsCards", range.start.line, document.getText());
-    var entityType = extension.screens![screenIdx].entityType;
+    var cardIdx = getBlockItemIndexAtLine(`${cardType}s`, range.start.line, document.getText());
+
+    var entityType: string;
+    if (cardType === "chartCard") {
+      entityType = extension.screens![screenIdx].entityType;
+    } else {
+      let entitySelector = extension.screens![screenIdx].entitiesListCards![cardIdx].entitySelectorTemplate;
+      if (entitySelector) {
+        entityType = entitySelector.split("type(")[1].split(")")[0];
+      } else {
+        entityType = extension.screens![screenIdx].entityType;
+      }
+    }
+
     var typeIdx = -1;
     extension.topology.types.forEach((type, idx) => {
       if (type.name === entityType) {
         typeIdx = idx;
       }
     });
-    var metricsInserted = getMetricKeysFromChartCard(screenIdx, cardIdx, extension);
+    var metricsInserted =
+      cardType === "chartCard"
+        ? getMetricKeysFromChartCard(screenIdx, cardIdx, extension)
+        : getMetricKeysFromEntitiesListCard(screenIdx, cardIdx, extension);
     var metricsToInsert = getEntityMetrics(typeIdx, extension, metricsInserted);
 
     return metricsToInsert.map((metric) =>
