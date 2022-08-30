@@ -1,5 +1,6 @@
 import axios from "axios";
 import * as FormData from "form-data";
+import { DynatraceAPIError } from "./errors";
 
 /**
  * Implementation of a HTTP Client specialised for accessing Dynatrace APIs
@@ -66,12 +67,23 @@ export class HttpClient {
       })
       .then((res) => {
         if (res.status >= 400) {
-          throw new Error(`Error making request to ${url}: ${res.status}. Response: ${res.data}`);
+          let message = `Error making request to ${url}: ${res.status}. Response: ${res.data}`;
+          console.log(message);
+          throw new DynatraceAPIError(message, {
+            code: res.data.error.code,
+            data: res.data.error.message,
+          });
         }
         return res.data;
       })
       .catch((err) => {
-        throw new Error(`Error making request to ${url}: ${err.message}`);
+        let message = `Error making request to ${url}: ${err.message}.`;
+        console.log(message);
+        console.log(err.response);
+        throw new DynatraceAPIError(message, {
+          code: err.response.data.error.code,
+          data: err.response.data.error.message,
+        });
       });
   }
 
