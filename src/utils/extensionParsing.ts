@@ -53,7 +53,7 @@ export function getAttributesFromTopology(
 }
 
 /**
- * Extracts all metric keys from metric selectors found in the charts of a given card.
+ * Extracts all metric keys from metric selectors found in the charts of a given chart card.
  * The card and screen definition must be referenced by index.
  * @param screenIdx index of the screen definition
  * @param cardIdx index of the chart card definition
@@ -63,6 +63,43 @@ export function getAttributesFromTopology(
 export function getMetricKeysFromChartCard(screenIdx: number, cardIdx: number, extension: ExtensionStub): string[] {
   var metrics: string[] = [];
   extension.screens![screenIdx].chartsCards![cardIdx].charts.forEach((c) => {
+    if (c.graphChartConfig) {
+      c.graphChartConfig.metrics.forEach((ms) => {
+        metrics.push(ms.metricSelector.split(":")[0]);
+      });
+    }
+    if (c.pieChartConfig) {
+      metrics.push(c.pieChartConfig.metric.metricSelector.split(":")[0]);
+    }
+    if (c.singleValueConfig) {
+      metrics.push(c.singleValueConfig.metric.metricSelector.split(":")[0]);
+    }
+  });
+  return metrics;
+}
+
+/**
+ * Extracts all metric keys from metric selectors found in the charts of a given entities list card.
+ * The card and screen definition must be referenced by index.
+ * @param screenIdx index of the screen definition
+ * @param cardIdx index of the entities list card definition
+ * @param extension extension.yaml serialized as object
+ * @returns list of metric keys
+ */
+export function getMetricKeysFromEntitiesListCard(
+  screenIdx: number,
+  cardIdx: number,
+  extension: ExtensionStub
+): string[] {
+  var metrics: string[] = [];
+  if (
+    !extension.screens ||
+    !extension.screens[screenIdx].entitiesListCards ||
+    !extension.screens[screenIdx].entitiesListCards![cardIdx].charts
+  ) {
+    return [];
+  }
+  extension.screens![screenIdx].entitiesListCards![cardIdx].charts!.forEach((c) => {
     if (c.graphChartConfig) {
       c.graphChartConfig.metrics.forEach((ms) => {
         metrics.push(ms.metricSelector.split(":")[0]);
@@ -330,7 +367,7 @@ export function getRequiredDimensions(typeIdx: number, ruleIdx: number, extensio
 }
 
 /**
- * Extracts all the relationships of a given entity type in a particular direction.
+ * Extracts all the types of relations of a given entity type in a particular direction.
  * The relationship types are converted to camel case to match the format required
  * for entity selectors.
  * @param entityType entity type to extract for
@@ -338,10 +375,58 @@ export function getRequiredDimensions(typeIdx: number, ruleIdx: number, extensio
  * @param extension extension.yaml serialized as object
  * @returns list of relationships
  */
-export function getRelationships(entityType: string, direction: "to" | "from", extension: ExtensionStub): string[] {
+export function getRelationshipTypes(entityType: string, direction: "to" | "from", extension: ExtensionStub): string[] {
   return extension.topology.relationships
     .filter((rel) => (direction === "to" ? rel.toType === entityType : rel.fromType === entityType))
     .map((rel) => toCamelCase(rel.typeOfRelation));
+}
+
+/**
+ * Extracts all the topology relationships (to and from) for a given entity.
+ * @param entityType entity type to exract the rules for
+ * @param extension extension.yaml serialized as object
+ * @returns
+ */
+export function getRelationships(
+  entityType: string,
+  extension: ExtensionStub
+): { entity: string; relation: string; direction: "to" | "from" }[] {
+  return extension.topology.relationships
+    .filter((rel) => rel.toType === entityType || rel.fromType === entityType)
+    .map((rel) => ({
+      entity: rel.toType === entityType ? rel.fromType : rel.toType,
+      relation: toCamelCase(rel.typeOfRelation),
+      direction: rel.toType === entityType ? "to" : "from",
+    }));
+}
+
+/**
+ * Extracts the display name of a given entity type.
+ * @param entityType type of entity
+ * @param extension extension.yaml serialized as object
+ * @returns displayName of type if found in topology
+ */
+export function getEntityName(entityType: string, extension: ExtensionStub) {
+  let foundType = extension.topology.types.filter((t) => t.name === entityType).pop();
+  if (foundType) {
+    return foundType.displayName;
+  }
+
+  return "";
+}
+
+/**
+ * Extracts the keys of entities list cards of a given entity type.
+ * The entity type is referenced by the index of its screen definition.
+ * @param screenIdx index of the entity's screen definition
+ * @param extension extension.yaml serialized as object
+ * @returns list of card keys
+ */
+export function getEntitiesListCardKeys(screenIdx: number, extension: ExtensionStub) {
+  if (!extension.screens || !extension.screens[screenIdx].entitiesListCards) {
+    return [];
+  }
+  return extension.screens[screenIdx].entitiesListCards!.map((elc) => elc.key);
 }
 
 /**

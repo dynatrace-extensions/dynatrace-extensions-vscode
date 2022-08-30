@@ -1,4 +1,36 @@
-import { attributeSnippet, chartCardSnippet, graphChartSnippet } from "./snippets";
+import { attributeSnippet, chartCardSnippet, entitiesListCardSnippet, graphChartSnippet } from "./snippets";
+
+/**
+ * Builds a YAML snippet for an entities list card. If no entity selector is provided then
+ * it is assumed to be a "self" listing card for the same entity as the screen definition.
+ * @param key the key for this card
+ * @param pageSize page size of the entity list
+ * @param cardName the name for this card
+ * @param indent level of indentation required
+ * @param entitySelector optional entity selector in case of related entities
+ * @returns the formatted and indented snippet
+ */
+export function buildEntitiesListCardSnippet(
+  key: string,
+  pageSize: number,
+  cardName: string,
+  indent: number,
+  entitySelector?: string
+) {
+  let snippet = entitiesListCardSnippet;
+
+  snippet = snippet.replace("<card-key>", key);
+  snippet = snippet.replace("<page-size>", String(pageSize));
+  snippet = snippet.replace("<card-name>", cardName);
+
+  if (entitySelector) {
+    snippet = snippet.replace("<entity-selector>", entitySelector);
+  } else {
+    snippet = snippet.replace("entitySelectorTemplate: <entity-selector>\n  ", "");
+  }
+
+  return indentSnippet(snippet, indent);
+}
 
 /**
  * Builds a YAML snippet for a charts card, with desiered indentation.
@@ -18,7 +50,7 @@ export function buildChartCardSnippet(
   indent: number
 ): string {
   let snippet = chartCardSnippet;
-  let charts = metrics.map((m) => buildGraphChartSnippet(m, entityType, indent-2)).join("");
+  let charts = metrics.map((m) => buildGraphChartSnippet(m, entityType, indent - 2)).join("");
 
   snippet = snippet.replace("<card-key>", key);
   snippet = snippet.replace("<card-name>", `${featureSet} metrics`);

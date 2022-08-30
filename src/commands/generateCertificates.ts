@@ -115,22 +115,29 @@ export async function generateCerts(context: vscode.ExtensionContext) {
   writeFileSync(path.join(certsDir, "ca.pem"), pki.certificateToPem(caCert));
   console.log(`Wrote all certificates at location ${certsDir}`);
 
-  vscode.workspace.getConfiguration().update("dynatrace.certificate.location.developerKey", path.join(certsDir, "dev.key"));
-  vscode.workspace.getConfiguration().update("dynatrace.certificate.location.developerCertificate", path.join(certsDir, "dev.pem"));
-  vscode.workspace.getConfiguration().update("dynatrace.certificate.location.rootOrCaCertificate", path.join(certsDir, "ca.pem"));
+  vscode.workspace
+    .getConfiguration()
+    .update("dynatrace.certificate.location.developerKey", path.join(certsDir, "dev.key"));
+  vscode.workspace
+    .getConfiguration()
+    .update("dynatrace.certificate.location.developerCertificate", path.join(certsDir, "dev.pem"));
+  vscode.workspace
+    .getConfiguration()
+    .update("dynatrace.certificate.location.rootOrCaCertificate", path.join(certsDir, "ca.pem"));
 
   // Link command - Upload Certificates
-  vscode.window
-    .showInformationMessage(
-      "Certificates generated successfully. Would you like to upload to Dynatrace?",
-      "Yes",
-      "No"
-    )
-    .then((choice) => {
-      if (choice && choice === "Yes") {
-        vscode.commands.executeCommand("dynatrace-extension-developer.uploadCertificate");
-      }
-    });
+  var choice = await vscode.window.showInformationMessage(
+    "Certificates generated successfully. Would you like to upload to Dynatrace?",
+    "Yes",
+    "No"
+  );
+
+  if (choice !== "Yes") {
+    vscode.window.showInformationMessage("Operation completed.");
+    return;
+  }
+
+  vscode.commands.executeCommand("dynatrace-extension-developer.uploadCertificate");
 }
 
 /**

@@ -85,9 +85,7 @@ export async function uploadCertificate(
           vscode.window.showInformationMessage("Certificate uploaded successfully.");
         })
         .catch((err) => {
-          console.log(err.message);
-          console.log(err);
-          vscode.window.showErrorMessage("Certificate upload failed.");
+          vscode.window.showErrorMessage(`Certificate upload failed: ${err.message}`);
         });
     }
   }

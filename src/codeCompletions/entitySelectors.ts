@@ -1,8 +1,7 @@
 import * as vscode from "vscode";
 import * as yaml from "yaml";
-import { Dynatrace } from "../dynatrace-api/dynatrace";
 import { EnvironmentsTreeDataProvider } from "../treeViews/environmentsTreeView";
-import { getAttributesKeysFromTopology, getRelationships } from "../utils/extensionParsing";
+import { getAttributesKeysFromTopology, getRelationshipTypes } from "../utils/extensionParsing";
 import { isCursorAt } from "../utils/yamlParsing";
 
 const TRIGGER_SUGGEST_CMD: vscode.Command = {
@@ -180,7 +179,7 @@ export class EntitySelectorCompletionProvider implements vscode.CompletionItemPr
       relationshipCompletion.detail = "Browse relationships";
       relationshipCompletion.insertText = new vscode.SnippetString();
 
-      let relations = getRelationships(
+      let relations = getRelationshipTypes(
         entityType,
         selector.endsWith("fromRelationships.") ? "from" : "to",
         extension

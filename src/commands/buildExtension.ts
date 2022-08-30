@@ -52,9 +52,9 @@ export async function buildExtension(context: vscode.ExtensionContext) {
         console.log("stdout: " + stdout);
         console.log("stderr: " + stderr);
         vscode.window.showInformationMessage("Extension built successfully.");
-        if (err) {
+        if (err || stdout.includes("failed")) {
           console.log("error: " + err);
-          vscode.window.showErrorMessage("Failed to build extension.");
+          vscode.window.showErrorMessage(`Failed to build extension. Output: ${stdout}`);
         }
       }
     );

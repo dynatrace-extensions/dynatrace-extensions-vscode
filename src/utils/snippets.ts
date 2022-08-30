@@ -17,3 +17,16 @@ export const chartCardSnippet = `\
   displayName: <card-name>
   charts:
 <charts>`;
+
+export const entitiesListCardSnippet = `\
+- key: <card-key>
+  pageSize: <page-size>
+  displayName: <card-name>
+  displayCharts: false
+  enableDetailsExpandability: true
+  numberOfVisibleCharts: 3
+  displayIcons: true
+  entitySelectorTemplate: <entity-selector>
+  hideEmptyCharts: true
+  columns: []
+  charts: []`;

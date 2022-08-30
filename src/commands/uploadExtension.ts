@@ -47,6 +47,7 @@ export async function uploadExtension(dt: Dynatrace) {
       "No"
     );
     if (choice !== "Yes") {
+      vscode.window.showErrorMessage("Operation cancelled.");
       return;
     }
 
@@ -71,6 +72,7 @@ export async function uploadExtension(dt: Dynatrace) {
         "No"
       );
       if (choice !== "Yes") {
+        vscode.window.showInformationMessage("Operation completed.");
         return;
       }
       vscode.commands.executeCommand(
