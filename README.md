@@ -1,6 +1,28 @@
-# Dyntrace Extension Developer (VSCode Extension)
+![illustration](previews/proj-illustration.png)
 
-This is a VSCode extension providing an example implementation of workflows for Dynatrace Extension (2.0) Developers.
+# Dyntrace Extension Developer
+
+This is a VisualStudio Code Extension that aims to provide support for all aspects of developing Dynatrace Extensions 2.0. It provides a specialised toolkit to facilitate extension & environment management, lifecycle operation automation, content validation and automation, and more.
+
+- [Dyntrace Extension Developer](#dyntrace-extension-developer)
+  - [Dependencies](#dependencies)
+  - [Settings](#settings)
+  - [Workflows (Commands)](#workflows-commands)
+    - [Initialize workspace](#initialize-workspace)
+    - [Load schemas](#load-schemas)
+    - [Generate certificates](#generate-certificates)
+    - [Upload certificate](#upload-certificate)
+    - [Build extension](#build-extension)
+    - [Upload extension to tenant](#upload-extension-to-tenant)
+    - [Activate extension on tenant](#activate-extension-on-tenant)
+    - [Create documentation](#create-documentation)
+  - [Assisted extension development](#assisted-extension-development)
+    - [Code completions](#code-completions)
+    - [Code actions](#code-actions)
+  - [Custom Views](#custom-views)
+    - [Extension 2.0 Workspaces](#extension-20-workspaces)
+    - [Dynatrace Environments](#dynatrace-environments)
+- [How to use it?](#how-to-use-it)
 
 ## Dependencies
 
@@ -25,7 +47,7 @@ This extension can leverage the following VSCode settings (global or workspace l
 This extension implements the following commands.
 Most of them, unless specified otherwise should be run from within a VSCode workspace.
 
-### Initialize Workspace
+### Initialize workspace
 
 Initializes a new workspace for Dynatrace Extension (2.0) Development.
 This includes loading up schemas, creating extension folder and stub, and creating an empty dist folder.
@@ -81,11 +103,12 @@ Currently implemented completions trigger:
 The extension will highlight actions to add snippets of code where possible.
 On specific keywords, the _lightbulb_ icon will show to list things that can be automatically added to the code.
 
-Currently implemented actions trigger:
+Currently implemented action triggers:
 
 - inside `propertiesCard` when clicking on `properties` - you can automatically add entry for the relevant entity attribute properties
-- inside `chartsCards` when clicking on `charts` inside a card - you can automatically add charts for metrics that aren't already in the card
+- inside `chartsCards` and `entitiesListCards` when clicking on `charts` inside a card - you can automatically add charts for metrics that aren't already in the card
 - inside `screens` when clicking on `chartsCards` - you can automatically add chart cards for entire feature sets of metrics
+- inside `screens` when clicking on `entitiesListCards` - you can automatically add cards for listing this entity as well as the related ones
 
 ## Custom Views
 
