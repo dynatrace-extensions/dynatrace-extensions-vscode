@@ -22,7 +22,7 @@ This is a VisualStudio Code Extension that aims to provide support for all aspec
   - [Custom Views](#custom-views)
     - [Extension 2.0 Workspaces](#extension-20-workspaces)
     - [Dynatrace Environments](#dynatrace-environments)
-- [How to use it?](#how-to-use-it)
+- [Start using it!](#start-using-it)
 
 ## Dependencies
 
@@ -139,7 +139,14 @@ At a glance:
 You can edit or remove environment details from the same list.
 
 
-# How to use it?
+# Start using it!
 
-Currently, the extension is not published to the marketplace so you'll have to install it from the `.vsix` file packaged in every [release](https://github.com/dynatrace-extensions/dynatrace-extension-developer/releases).
-In VSCode open the Extensions menu, click the "..." and choose "Install from VSIX.."
+Currently, this project is in alpha stage - this means there is heavy development still happening, things may break, or change completely between versions.
+Bugs are expected, however, during this stage please provide any feedback to radu.stefan@dynatrace.com regarding:
+* full feature ideas
+* workflow ideas
+* ease of use of current features
+* usefulness (or lack of) for current features
+
+Right now, the extension is not published to the marketplace so you'll have to install it from the `.vsix` file packaged in every [release](https://github.com/dynatrace-extensions/dynatrace-extension-developer/releases).
+In VSCode, open the Extensions menu, click the "..." and choose "Install from VSIX..".
