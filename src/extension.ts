@@ -32,6 +32,8 @@ import { encryptToken } from "./utils/cryptography";
 import { ConnectionStatusManager } from "./statusBar/connection";
 import { deleteWorkspace } from "./treeViews/commands/workspaces";
 import { MetricCodeLensProvider, validateMetricSelector } from "./codeLens/metricCodeLens";
+import { MetricResultsPanel } from "./webviews/metricResults";
+import { DynatraceAPIError } from "./dynatrace-api/errors";
 
 /**
  * Sets up the VSCode extension by registering all the available functionality as disposable objects.
@@ -236,8 +238,21 @@ export function activate(context: vscode.ExtensionContext) {
         tenantsTreeViewProvider
           .getDynatraceClient()
           .then((dt) => dt!.metrics.query(selector))
-          .then((res: MetricSeriesCollection[]) => res);
+          .then((res: MetricSeriesCollection[]) => {
+            MetricResultsPanel.createOrShow(res);
+          })
+          .catch((err: DynatraceAPIError) => {
+            MetricResultsPanel.createOrShow(err.errorParams);
+          });
       }
+    }),
+    // Web view panel
+    vscode.window.registerWebviewPanelSerializer(MetricResultsPanel.viewType, {
+      async deserializeWebviewPanel(webviewPanel: vscode.WebviewPanel, state: any) {
+        console.log(`Got state: ${state}`);
+        webviewPanel.webview.options = { enableScripts: true };
+        MetricResultsPanel.revive(webviewPanel, {});
+      },
     })
   );
 }
