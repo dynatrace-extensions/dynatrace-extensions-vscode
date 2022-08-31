@@ -2,7 +2,7 @@
 	"name": "dynatrace-extension-developer",
 	"displayName": "Dynatrace Extension Developer",
 	"description": "Support for Dynatrace Extension 2.0 development",
-	"version": "0.10.0",
+	"version": "0.11.0",
 	"repository": {
 		"type": "git",
 		"url": "https://github.com/dynatrace-extensions/dynatrace-extension-developer.git"
