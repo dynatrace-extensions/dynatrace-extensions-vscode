@@ -8,14 +8,14 @@ This is a VisualStudio Code Extension that aims to provide support for all aspec
   - [Dependencies](#dependencies)
   - [Settings](#settings)
   - [Workflows (Commands)](#workflows-commands)
-    - [Initialize workspace](#initialize-workspace)
-    - [Load schemas](#load-schemas)
-    - [Generate certificates](#generate-certificates)
-    - [Upload certificate](#upload-certificate)
-    - [Build extension](#build-extension)
-    - [Upload extension to tenant](#upload-extension-to-tenant)
-    - [Activate extension on tenant](#activate-extension-on-tenant)
-    - [Create documentation](#create-documentation)
+    - [🚀 Initialize workspace](#-initialize-workspace)
+    - [📄 Load schemas](#-load-schemas)
+    - [🔐 Generate certificates](#-generate-certificates)
+    - [🔗 Upload certificate](#-upload-certificate)
+    - [🎁 Build extension](#-build-extension)
+    - [📤 Upload extension to tenant](#-upload-extension-to-tenant)
+    - [🔂 Activate extension on tenant](#-activate-extension-on-tenant)
+    - [📑 Create documentation](#-create-documentation)
   - [Assisted extension development](#assisted-extension-development)
     - [Code completions](#code-completions)
     - [Code actions](#code-actions)
@@ -48,43 +48,47 @@ This extension implements the following commands.
 Most of them, unless specified otherwise should be run from within a VSCode workspace.
 Commands are invoked from the command palette (`Ctrl + Shift + P`). All commands are prefixed with `Dynatrace`.
 
-### Initialize workspace
+![commands](previews/commands.gif) 
+
+### 🚀 Initialize workspace
 
 Initializes a new workspace for Dynatrace Extension (2.0) Development.
 This includes loading up schemas, creating extension folder and stub, and creating an empty dist folder.
 This will also configure the `yaml.schema` extension to validate `extension.yaml` with your chosen schema version.
 Once finished, the workspace appears in the new Dynatrace view.
 
-### Load schemas
+### 📄 Load schemas
 
 Downloads schema files of a specific version and updates the `yaml.schema` extension to validate `extension.yaml` with this version.
 
-### Generate certificates
+### 🔐 Generate certificates
 
 Generates all the required keys and certificates needed for signing and validating Extensions 2.0.
 At the end, you can upload your newly generated root certificate to the Dynatrace Credentials Vault.
 
-### Upload certificate
+### 🔗 Upload certificate
 
 Uploads the workspace's root certificate to the Dynatrace Credential Vault.
 
-### Build extension
+### 🎁 Build extension
 
 Calls onto `dt-cli` to build your extension. The archive is placed inside the `dist` folder of the workspace.
 Building extensions is not supported for non-custom extensions (i.e. name must start with `custom:`).
 
-### Upload extension to tenant
+![build_command](previews/build_command.gif)
+
+### 📤 Upload extension to tenant
 
 Uploads the most recent package from your workspace's `dist` folder to the Dynatrace tenant associated with the workspace.
 After upload, you are also prompted to activate this latest version. In the case that you reached the maximum allowed 
 number of extension versions, you will be prompted to delete the oldest one.
 
-### Activate extension on tenant
+### 🔂 Activate extension on tenant
 
 Activate a version of your workspace's extension on the tenant associated with the workspace. The tenant is polled for all
 available versions of the extension and you are prompted to choose which to activate.
 
-### Create documentation
+### 📑 Create documentation
 
 Reads through the `extension.yaml` file and creates a README.md next to the `extension` folder, documenting (as best as possible) the extension package.
 
@@ -102,6 +106,8 @@ Currently implemented completions trigger:
 - on lists of attribute type properties, on `key` the keys of relevant entity attributes are suggested
 - on `entitySelectorTemplate` can make use of Ctrl+Space to trigger completions as the selector is being built
 
+![intellisense](previews/intellisense.gif)
+
 ### Code actions
 
 The extension will highlight actions to add snippets of code where possible.
@@ -118,8 +124,6 @@ Currently implemented action triggers:
 
 ## Custom Dynatrace View
 
-![dynatrace_view](previews/dynatrace_view.png)
-
 ### Extension 2.0 Workspaces
 
 Once you initialize a workspace, this becomes available from the new "Dynatrace" menu that was added to the activity bar.
@@ -130,6 +134,8 @@ Buttons within this view enable quick actions for:
 - Adding and initializing a new workspace (plus button at the top)
 - Quickly opening one of the extension.yaml files (file button next to the extension name)
 - Opening one of the registered workspaces (folder button next to the workspace name)
+
+![workspaces_view](previews/extensions_view.png)
 
 ### Dynatrace Environments
 
@@ -146,6 +152,7 @@ At a glance:
 
 You can edit or remove environment details from the same list.
 
+![environments_view](previews/tenants_view.png)
 
 # Start using it!
 
