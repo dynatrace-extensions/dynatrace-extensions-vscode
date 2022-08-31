@@ -237,21 +237,21 @@ export function activate(context: vscode.ExtensionContext) {
       if (checkEnvironmentConnected(tenantsTreeViewProvider)) {
         tenantsTreeViewProvider
           .getDynatraceClient()
-          .then((dt) => dt!.metrics.query(selector))
+          .then((dt) => dt!.metrics.query(selector, "5m"))
           .then((res: MetricSeriesCollection[]) => {
             MetricResultsPanel.createOrShow(res);
           })
           .catch((err: DynatraceAPIError) => {
-            MetricResultsPanel.createOrShow(err.errorParams);
+            MetricResultsPanel.createOrShow(JSON.stringify(err.errorParams, undefined, 2));
           });
       }
     }),
-    // Web view panel
+    // Web view panel - metric query results
     vscode.window.registerWebviewPanelSerializer(MetricResultsPanel.viewType, {
       async deserializeWebviewPanel(webviewPanel: vscode.WebviewPanel, state: any) {
         console.log(`Got state: ${state}`);
         webviewPanel.webview.options = { enableScripts: true };
-        MetricResultsPanel.revive(webviewPanel, {});
+        MetricResultsPanel.revive(webviewPanel, "No data to display. Close the tab and trigger the action again.");
       },
     })
   );

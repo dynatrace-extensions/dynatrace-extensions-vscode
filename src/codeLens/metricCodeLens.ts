@@ -27,6 +27,12 @@ class ValidationStatusLens extends vscode.CodeLens {
     this.command = this.getStatusAsCommand(status);
   }
 
+  /**
+   * Interprets a ValidationStatus and translates it to a vscode.Command to be used
+   * inside the code lens.
+   * @param status status of the metric selector
+   * @returns command object
+   */
   private getStatusAsCommand(status: ValidationStatus): vscode.Command {
     switch (status.status) {
       case "valid":
@@ -126,27 +132,45 @@ export class MetricCodeLensProvider implements vscode.CodeLensProvider {
    * @returns list of code lenses
    */
   public provideCodeLenses(document: vscode.TextDocument, token: vscode.CancellationToken): vscode.CodeLens[] {
-    if (this.codeLenses.length === 0) {
-      const regex = new RegExp(this.regex);
-      const text = document.getText();
-      let matches;
-      while ((matches = regex.exec(text)) !== null) {
-        const line = document.lineAt(document.positionAt(matches.index).line);
-        const indexOf = line.text.indexOf(matches[0]);
-        const position = new vscode.Position(line.lineNumber, indexOf);
-        const range = document.getWordRangeAtPosition(position, new RegExp(this.regex));
+    const regex = new RegExp(this.regex);
+    const text = document.getText();
+    let matches;
+    while ((matches = regex.exec(text)) !== null) {
+      const line = document.lineAt(document.positionAt(matches.index).line);
+      const indexOf = line.text.indexOf(matches[0]);
+      const position = new vscode.Position(line.lineNumber, indexOf);
+      const range = document.getWordRangeAtPosition(position, new RegExp(this.regex));
 
-        if (range) {
-          const selector = line.text.split("metricSelector: ")[1];
-          this.codeLenses.push(
-            new SelectorRunnerLens(range, selector),
-            new SelectorValidationLens(range, selector),
-            new ValidationStatusLens(range, selector, { status: "unknown" })
-          );
-        }
+      if (range) {
+        const selector = line.text.split("metricSelector: ")[1];
+
+        this.createOrUpdateLens(new SelectorRunnerLens(range, selector));
+        this.createOrUpdateLens(new SelectorValidationLens(range, selector));
+        this.createOrUpdateLens(new ValidationStatusLens(range, selector, { status: "unknown" }));
       }
     }
     return this.codeLenses;
+  }
+
+  /**
+   * Checks the knwown Code Lenses and either creates the provided lens or updates the existing
+   * entry in case the details match.
+   * @param newLens a Metric Selector code lens
+   */
+  private createOrUpdateLens(newLens: SelectorRunnerLens | SelectorValidationLens | ValidationStatusLens) {
+    let prevLensIdx = this.codeLenses.findIndex(
+      (lens) => lens.constructor === newLens.constructor && lens.range.isEqual(newLens.range)
+    );
+    if (prevLensIdx === -1) {
+      this.codeLenses.push(newLens);
+    } else {
+      if (
+        (this.codeLenses[prevLensIdx] as SelectorRunnerLens | SelectorValidationLens | ValidationStatusLens)
+          .selector !== newLens.selector
+      ) {
+        this.codeLenses[prevLensIdx] = newLens;
+      }
+    }
   }
 
   /**
