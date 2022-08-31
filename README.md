@@ -1,10 +1,10 @@
 ![illustration](previews/proj-illustration.png)
 
-# Dyntrace Extension Developer
+# Dynatrace Extension Developer
 
 This is a VisualStudio Code Extension that aims to provide support for all aspects of developing Dynatrace Extensions 2.0. It provides a specialised toolkit to facilitate extension & environment management, lifecycle operation automation, content validation and automation, and more.
 
-- [Dyntrace Extension Developer](#dyntrace-extension-developer)
+- [Dynatrace Extension Developer](#dynatrace-extension-developer)
   - [Dependencies](#dependencies)
   - [Settings](#settings)
   - [Workflows (Commands)](#workflows-commands)
