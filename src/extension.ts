@@ -26,18 +26,14 @@ import { SnippetGenerator } from "./codeActions/snippetGenerator";
 import { uploadExtension } from "./commands/uploadExtension";
 import { activateExtension } from "./commands/activateExtension";
 import { EntitySelectorCompletionProvider } from "./codeCompletions/entitySelectors";
-import {
-  EnvironmentsTreeDataProvider,
-  EnvironmentTreeItem,
-} from "./treeViews/environmentsTreeView";
-import {
-  addEnvironment,
-  deleteEnvironment,
-  editEnvironment,
-} from "./treeViews/commands/environments";
+import { EnvironmentsTreeDataProvider, EnvironmentTreeItem } from "./treeViews/environmentsTreeView";
+import { addEnvironment, deleteEnvironment, editEnvironment } from "./treeViews/commands/environments";
 import { encryptToken } from "./utils/cryptography";
 import { ConnectionStatusManager } from "./statusBar/connection";
 import { deleteWorkspace } from "./treeViews/commands/workspaces";
+import { MetricCodeLensProvider, validateMetricSelector } from "./codeLens/metricCodeLens";
+import { MetricResultsPanel } from "./webviews/metricResults";
+import { DynatraceAPIError } from "./dynatrace-api/errors";
 
 /**
  * Sets up the VSCode extension by registering all the available functionality as disposable objects.
@@ -71,11 +67,9 @@ export function activate(context: vscode.ExtensionContext) {
   // Create feature/data providers
   const extensionsTreeViewProvider = new ExtensionsTreeDataProvider(context);
   const connectionStatusManager = new ConnectionStatusManager();
-  const tenantsTreeViewProvider = new EnvironmentsTreeDataProvider(
-    context,
-    connectionStatusManager
-  );
+  const tenantsTreeViewProvider = new EnvironmentsTreeDataProvider(context, connectionStatusManager);
   const snippetCodeActionProvider = new SnippetGenerator();
+  const codeLensProvider = new MetricCodeLensProvider();
 
   context.subscriptions.push(
     // Load extension schemas of a given version
@@ -115,11 +109,7 @@ export function activate(context: vscode.ExtensionContext) {
     }),
     // Build Extension 2.0 package
     vscode.commands.registerCommand("dynatrace-extension-developer.buildExtension", () => {
-      if (
-        checkWorkspaceOpen() &&
-        isExtensionsWorkspace(context) &&
-        checkCertificateExists("dev", context)
-      ) {
+      if (checkWorkspaceOpen() && isExtensionsWorkspace(context) && checkCertificateExists("dev", context)) {
         buildExtension(context);
       }
     }),
@@ -135,18 +125,15 @@ export function activate(context: vscode.ExtensionContext) {
       }
     }),
     // Activate a given version of extension 2.0
-    vscode.commands.registerCommand(
-      "dynatrace-extension-developer.activateExtension",
-      async (version?: string) => {
-        if (
-          checkWorkspaceOpen() &&
-          isExtensionsWorkspace(context) &&
-          checkEnvironmentConnected(tenantsTreeViewProvider)
-        ) {
-          activateExtension((await tenantsTreeViewProvider.getDynatraceClient())!, version);
-        }
+    vscode.commands.registerCommand("dynatrace-extension-developer.activateExtension", async (version?: string) => {
+      if (
+        checkWorkspaceOpen() &&
+        isExtensionsWorkspace(context) &&
+        checkEnvironmentConnected(tenantsTreeViewProvider)
+      ) {
+        activateExtension((await tenantsTreeViewProvider.getDynatraceClient())!, version);
       }
-    ),
+    }),
     // Create Extension documentation
     vscode.commands.registerCommand("dynatrace-extension-developer.createDocumentation", () => {
       createDocumentation();
@@ -164,10 +151,7 @@ export function activate(context: vscode.ExtensionContext) {
       ":"
     ),
     // Extension 2.0 Workspaces Tree View
-    vscode.window.registerTreeDataProvider(
-      "dynatrace-extension-developer-workspaces",
-      extensionsTreeViewProvider
-    ),
+    vscode.window.registerTreeDataProvider("dynatrace-extension-developer-workspaces", extensionsTreeViewProvider),
     vscode.commands.registerCommand("dynatrace-extension-developer-workspaces.refresh", () =>
       extensionsTreeViewProvider.refresh()
     ),
@@ -195,16 +179,12 @@ export function activate(context: vscode.ExtensionContext) {
       }
     ),
     // Dynatrace Environments Tree View
-    vscode.window.registerTreeDataProvider(
-      "dynatrace-extension-developer-environments",
-      tenantsTreeViewProvider
-    ),
+    vscode.window.registerTreeDataProvider("dynatrace-extension-developer-environments", tenantsTreeViewProvider),
     vscode.commands.registerCommand("dynatrace-extension-developer-environments.refresh", () =>
       tenantsTreeViewProvider.refresh()
     ),
-    vscode.commands.registerCommand(
-      "dynatrace-extension-developer-environments.addEnvironment",
-      () => addEnvironment(context).then(() => tenantsTreeViewProvider.refresh())
+    vscode.commands.registerCommand("dynatrace-extension-developer-environments.addEnvironment", () =>
+      addEnvironment(context).then(() => tenantsTreeViewProvider.refresh())
     ),
     vscode.commands.registerCommand(
       "dynatrace-extension-developer-environments.useEnvironment",
@@ -238,7 +218,42 @@ export function activate(context: vscode.ExtensionContext) {
       { providedCodeActionKinds: [vscode.CodeActionKind.QuickFix] }
     ),
     // Connection Status Bar Item
-    connectionStatusManager.getStatusBarItem()
+    connectionStatusManager.getStatusBarItem(),
+    // Code Lens
+    vscode.languages.registerCodeLensProvider(
+      { language: "yaml", pattern: "**/extension/extension.yaml" },
+      codeLensProvider
+    ),
+    vscode.commands.registerCommand(
+      "dynatrace-extension-developer.metric-codelens.validateSelector",
+      async (selector: string) => {
+        if (checkEnvironmentConnected(tenantsTreeViewProvider)) {
+          const status = await validateMetricSelector(selector, (await tenantsTreeViewProvider.getDynatraceClient())!);
+          codeLensProvider.updateValidationStatus(selector, status);
+        }
+      }
+    ),
+    vscode.commands.registerCommand("dynatrace-extension-developer.metric-codelens.runSelector", (selector: string) => {
+      if (checkEnvironmentConnected(tenantsTreeViewProvider)) {
+        tenantsTreeViewProvider
+          .getDynatraceClient()
+          .then((dt) => dt!.metrics.query(selector, "5m"))
+          .then((res: MetricSeriesCollection[]) => {
+            MetricResultsPanel.createOrShow(res);
+          })
+          .catch((err: DynatraceAPIError) => {
+            MetricResultsPanel.createOrShow(JSON.stringify(err.errorParams, undefined, 2));
+          });
+      }
+    }),
+    // Web view panel - metric query results
+    vscode.window.registerWebviewPanelSerializer(MetricResultsPanel.viewType, {
+      async deserializeWebviewPanel(webviewPanel: vscode.WebviewPanel, state: any) {
+        console.log(`Got state: ${state}`);
+        webviewPanel.webview.options = { enableScripts: true };
+        MetricResultsPanel.revive(webviewPanel, "No data to display. Close the tab and trigger the action again.");
+      },
+    })
   );
 }
 
