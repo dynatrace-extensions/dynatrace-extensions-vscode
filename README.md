@@ -19,6 +19,7 @@ This is a VisualStudio Code Extension that aims to provide support for all aspec
   - [Assisted extension development](#assisted-extension-development)
     - [Code completions](#code-completions)
     - [Code actions](#code-actions)
+    - [Code lens](#code-lens)
   - [Custom Dynatrace View](#custom-dynatrace-view)
     - [Extension 2.0 Workspaces](#extension-20-workspaces)
     - [Dynatrace Environments](#dynatrace-environments)
@@ -121,6 +122,18 @@ Currently implemented action triggers:
 - inside `screens` when clicking on `entitiesListCards` - you can automatically add cards for listing this entity as well as the related ones
 
 ![auto_charts](previews/pro_chart_building.gif)
+
+### Code lens
+
+Code Lens are actionable, contextual information, interspersed with your code. For Dynatrace Extensions, these can help trigger some code-related action to your tenant.
+
+**Metric Selector Code Lenses**
+
+- See the last validation status of any metric selector
+- Validate any metric selector against a connected Dynatrace tenant
+- Run any metric selector and visualize the query results
+
+![metric_codelens](previews/metric_code_lens.gif)
 
 ## Custom Dynatrace View
 
