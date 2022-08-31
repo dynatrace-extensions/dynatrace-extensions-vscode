@@ -19,7 +19,7 @@ This is a VisualStudio Code Extension that aims to provide support for all aspec
   - [Assisted extension development](#assisted-extension-development)
     - [Code completions](#code-completions)
     - [Code actions](#code-actions)
-  - [Custom Views](#custom-views)
+  - [Custom Dynatrace View](#custom-dynatrace-view)
     - [Extension 2.0 Workspaces](#extension-20-workspaces)
     - [Dynatrace Environments](#dynatrace-environments)
 - [Start using it!](#start-using-it)
@@ -46,12 +46,14 @@ This extension can leverage the following VSCode settings (global or workspace l
 
 This extension implements the following commands.
 Most of them, unless specified otherwise should be run from within a VSCode workspace.
+Commands are invoked from the command palette (`Ctrl + Shift + P`). All commands are prefixed with `Dynatrace`.
 
 ### Initialize workspace
 
 Initializes a new workspace for Dynatrace Extension (2.0) Development.
 This includes loading up schemas, creating extension folder and stub, and creating an empty dist folder.
 This will also configure the `yaml.schema` extension to validate `extension.yaml` with your chosen schema version.
+Once finished, the workspace appears in the new Dynatrace view.
 
 ### Load schemas
 
@@ -60,6 +62,7 @@ Downloads schema files of a specific version and updates the `yaml.schema` exten
 ### Generate certificates
 
 Generates all the required keys and certificates needed for signing and validating Extensions 2.0.
+At the end, you can upload your newly generated root certificate to the Dynatrace Credentials Vault.
 
 ### Upload certificate
 
@@ -68,6 +71,7 @@ Uploads the workspace's root certificate to the Dynatrace Credential Vault.
 ### Build extension
 
 Calls onto `dt-cli` to build your extension. The archive is placed inside the `dist` folder of the workspace.
+Building extensions is not supported for non-custom extensions (i.e. name must start with `custom:`).
 
 ### Upload extension to tenant
 
@@ -110,7 +114,11 @@ Currently implemented action triggers:
 - inside `screens` when clicking on `chartsCards` - you can automatically add chart cards for entire feature sets of metrics
 - inside `screens` when clicking on `entitiesListCards` - you can automatically add cards for listing this entity as well as the related ones
 
-## Custom Views
+![auto_charts](previews/pro_chart_building.gif)
+
+## Custom Dynatrace View
+
+![dynatrace_view](previews/dynatrace_view.png)
 
 ### Extension 2.0 Workspaces
 
