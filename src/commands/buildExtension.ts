@@ -5,26 +5,24 @@ import * as yaml from "yaml";
 import { existsSync, readdirSync, readFileSync, writeFileSync } from "fs";
 import { sign } from "../utils/cryptography";
 
-
-var crypto = require('crypto');
 /**
  * THIS FUNCTIONALITY IS WORK IN PROGRESS. IT MAY OR MAY NOT WORK.
  * @param context
  * @returns
  */
 export async function buildExtension(context: vscode.ExtensionContext) {
-  var extensionFile = await vscode.workspace.findFiles("**/extension.yaml");
+  const extensionFile = await vscode.workspace.findFiles("**/extension.yaml");
 
   if (vscode.workspace.workspaceFolders) {
     // Create the dist folder if it doesn't exist
-    var rootPath = vscode.workspace.workspaceFolders[0].uri.fsPath;
-    var distDir = vscode.Uri.file(path.resolve(path.join(rootPath, "dist")));
+    const rootPath = vscode.workspace.workspaceFolders[0].uri.fsPath;
+    const distDir = vscode.Uri.file(path.resolve(path.join(rootPath, "dist")));
     if (!vscode.workspace.getWorkspaceFolder(distDir)) {
       vscode.workspace.fs.createDirectory(distDir);
     }
-    var extensionDir = path.dirname(extensionFile[0].fsPath);
-    var devKeyPath;
-    var devCertPath;
+    const extensionDir = path.dirname(extensionFile[0].fsPath);
+    let devKeyPath;
+    let devCertPath;
 
     // WORKAROUND UNTIL DIY SNIPPET IS FIXED
     if (
@@ -63,7 +61,7 @@ export async function buildExtension(context: vscode.ExtensionContext) {
     console.log(`Wrote the signature file: ${sigatureFilePath}`);
 
     // Build the outer .zip that includes the inner .zip and the signature file
-    var outerZip = new AdmZip();
+    const outerZip = new AdmZip();
     const outerZipPath = path.join(distDir.fsPath, `${extension.name.replace(":", "_")}-${extension.version}.zip`)
     outerZip.addLocalFile(innerZipPath);
     outerZip.addLocalFile(sigatureFilePath);
