@@ -25,7 +25,7 @@ export async function buildExtension(context: vscode.ExtensionContext) {
     let devCertPath = path.join(context.storageUri!.fsPath, "certificates", "dev.pem");
 
     // WORKAROUND UNTIL DIY SNIPPET IS FIXED
-    if (!existsSync(devCertPath) && !existsSync(devKeyPath)) { {
+    if (!existsSync(devCertPath) && !existsSync(devKeyPath)) {
       devKeyPath = path.resolve(
         vscode.workspace
           .getConfiguration()
@@ -66,5 +66,3 @@ export async function buildExtension(context: vscode.ExtensionContext) {
     vscode.window.showInformationMessage("Extension built successfully to the dist folder.");
   }
 }
-
-
