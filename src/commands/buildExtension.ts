@@ -57,7 +57,7 @@ export async function buildExtension(context: vscode.ExtensionContext) {
 
     // Build the outer .zip that includes the inner .zip and the signature file
     const outerZip = new AdmZip();
-    const outerZipPath = path.join(distDir.fsPath, `${extension.name.replace(":", "_")}-${extension.version}.zip`)
+    const outerZipPath = path.join(distDir.fsPath, `${extension.name.replace(":", "_")}-${extension.version}.zip`);
     outerZip.addLocalFile(innerZipPath);
     outerZip.addLocalFile(sigatureFilePath);
     outerZip.writeZip(outerZipPath);
