@@ -20,18 +20,12 @@ export async function buildExtension(context: vscode.ExtensionContext) {
     if (!vscode.workspace.getWorkspaceFolder(distDir)) {
       vscode.workspace.fs.createDirectory(distDir);
     }
-    const extensionDir = path.dirname(extensionFile[0].fsPath);
-    let devKeyPath;
-    let devCertPath;
+
+    let devKeyPath = path.join(context.storageUri!.fsPath, "certificates", "dev.key");
+    let devCertPath = path.join(context.storageUri!.fsPath, "certificates", "dev.pem");
 
     // WORKAROUND UNTIL DIY SNIPPET IS FIXED
-    if (
-      existsSync(path.join(context.storageUri!.fsPath, "certificates", "dev.key")) &&
-      existsSync(path.join(context.storageUri!.fsPath, "certificates", "dev.pem"))
-    ) {
-      devKeyPath = path.join(context.storageUri!.fsPath, "certificates", "dev.key");
-      devCertPath = path.join(context.storageUri!.fsPath, "certificates", "dev.pem");
-    } else {
+    if (!existsSync(devCertPath) && !existsSync(devKeyPath)) { {
       devKeyPath = path.resolve(
         vscode.workspace
           .getConfiguration()
@@ -45,6 +39,7 @@ export async function buildExtension(context: vscode.ExtensionContext) {
     }
 
     // Extension meta
+    const extensionDir = path.dirname(extensionFile[0].fsPath);
     const extension = yaml.parse(readFileSync(extensionFile[0].fsPath).toString());
 
     // Build the inner .zip archive
