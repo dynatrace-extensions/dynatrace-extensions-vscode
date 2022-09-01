@@ -179,10 +179,10 @@ export function sign(inputFilePath: string, outputFilePath: string, keyPath: str
   });
 
   // The raw data for the CMS signature
-  const ber_bytes = asn1obj.toSchema().toBER();
+  const berBytes = asn1obj.toSchema().toBER();
 
   // Put it around a CMS tag (pem file)
-  const cmsPem = toPEM(ber_bytes, "CMS");
+  const cmsPem = toPEM(berBytes, "CMS");
   return cmsPem;
 
 }
