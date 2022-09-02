@@ -313,10 +313,13 @@
 	},
 	"dependencies": {
 		"adm-zip": "^0.5.9",
+		"asn1js": "^3.0.5",
 		"axios": "^0.27.2",
 		"form-data": "^4.0.0",
 		"glob": "^8.0.3",
 		"node-forge": "^1.3.1",
+		"pkijs": "^3.0.8",
+		"pvtsutils": "^1.3.2",
 		"yaml": "^2.1.1"
 	}
 }
