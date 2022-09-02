@@ -17,12 +17,12 @@ This is a VisualStudio Code Extension that aims to provide support for all aspec
     - [🔂 Activate extension on tenant](#-activate-extension-on-tenant)
     - [📑 Create documentation](#-create-documentation)
   - [Assisted extension development](#assisted-extension-development)
-    - [Code completions](#code-completions)
-    - [Code actions](#code-actions)
-    - [Code lens](#code-lens)
+    - [🎹 Code completions](#-code-completions)
+    - [💡 Code actions](#-code-actions)
+    - [🔎 Code lens](#-code-lens)
   - [Custom Dynatrace View](#custom-dynatrace-view)
-    - [Extension 2.0 Workspaces](#extension-20-workspaces)
-    - [Dynatrace Environments](#dynatrace-environments)
+    - [📂 Extension 2.0 Workspaces](#-extension-20-workspaces)
+    - [⚡ Dynatrace Environments](#-dynatrace-environments)
 - [Start using it!](#start-using-it)
 
 ## Dependencies
@@ -95,7 +95,7 @@ Reads through the `extension.yaml` file and creates a README.md next to the `ext
 
 ## Assisted extension development
 
-### Code completions
+### 🎹 Code completions
 
 The extension will trigger suggestions for code completion where possible.
 
@@ -109,7 +109,7 @@ Currently implemented completions trigger:
 
 ![intellisense](previews/intellisense.gif)
 
-### Code actions
+### 💡 Code actions
 
 The extension will highlight actions to add snippets of code where possible.
 On specific keywords, the _lightbulb_ icon will show to list things that can be automatically added to the code.
@@ -123,7 +123,7 @@ Currently implemented action triggers:
 
 ![auto_charts](previews/pro_chart_building.gif)
 
-### Code lens
+### 🔎 Code lens
 
 Code Lens are actionable, contextual information, interspersed with your code. For Dynatrace Extensions, these can help trigger some code-related action to your tenant.
 
@@ -137,7 +137,7 @@ Code Lens are actionable, contextual information, interspersed with your code. F
 
 ## Custom Dynatrace View
 
-### Extension 2.0 Workspaces
+### 📂 Extension 2.0 Workspaces
 
 Once you initialize a workspace, this becomes available from the new "Dynatrace" menu that was added to the activity bar.
 
@@ -150,7 +150,7 @@ Buttons within this view enable quick actions for:
 
 ![workspaces_view](previews/extensions_view.png)
 
-### Dynatrace Environments
+### ⚡ Dynatrace Environments
 
 Use the Dynatrace Environments view to register all the Dynatrace (SaaS/Managed) environments that you work with.
 This enables you to save connection details and quickly select which environment you're working with (for API-based operations).
