@@ -2,10 +2,8 @@ import * as vscode from "vscode";
 import * as path from "path";
 import AdmZip = require("adm-zip");
 import * as yaml from "yaml";
-import { pki, md, util, asn1, pkcs7 } from "node-forge";
-import { constants, createHash, createSign } from "crypto";
 import { existsSync, readdirSync, readFileSync, writeFileSync } from "fs";
-import { exec } from "child_process";
+import { sign } from "../utils/cryptography";
 
 /**
  * THIS FUNCTIONALITY IS WORK IN PROGRESS. IT MAY OR MAY NOT WORK.
@@ -13,27 +11,21 @@ import { exec } from "child_process";
  * @returns
  */
 export async function buildExtension(context: vscode.ExtensionContext) {
-  var extensionFile = await vscode.workspace.findFiles("**/extension.yaml");
+  const extensionFile = await vscode.workspace.findFiles("**/extension.yaml");
 
   if (vscode.workspace.workspaceFolders) {
     // Create the dist folder if it doesn't exist
-    var rootPath = vscode.workspace.workspaceFolders[0].uri.fsPath;
-    var distDir = vscode.Uri.file(path.resolve(path.join(rootPath, "dist")));
+    const rootPath = vscode.workspace.workspaceFolders[0].uri.fsPath;
+    const distDir = vscode.Uri.file(path.resolve(path.join(rootPath, "dist")));
     if (!vscode.workspace.getWorkspaceFolder(distDir)) {
       vscode.workspace.fs.createDirectory(distDir);
     }
-    var extensionDir = path.dirname(extensionFile[0].fsPath);
-    var devKeyPath;
-    var devCertPath;
+
+    let devKeyPath = path.join(context.storageUri!.fsPath, "certificates", "dev.key");
+    let devCertPath = path.join(context.storageUri!.fsPath, "certificates", "dev.pem");
 
     // WORKAROUND UNTIL DIY SNIPPET IS FIXED
-    if (
-      existsSync(path.join(context.storageUri!.fsPath, "certificates", "dev.key")) &&
-      existsSync(path.join(context.storageUri!.fsPath, "certificates", "dev.pem"))
-    ) {
-      devKeyPath = path.join(context.storageUri!.fsPath, "certificates", "dev.key");
-      devCertPath = path.join(context.storageUri!.fsPath, "certificates", "dev.pem");
-    } else {
+    if (!existsSync(devCertPath) && !existsSync(devKeyPath)) {
       devKeyPath = path.resolve(
         vscode.workspace
           .getConfiguration()
@@ -46,74 +38,31 @@ export async function buildExtension(context: vscode.ExtensionContext) {
       );
     }
 
-    exec(
-      `dt ext build --extension-directory="${extensionDir}" --target-directory="${distDir.fsPath}" --certificate="${devCertPath}" --private-key="${devKeyPath}" --no-dev-passphrase`,
-      (err, stdout, stderr) => {
-        console.log("stdout: " + stdout);
-        console.log("stderr: " + stderr);
-        vscode.window.showInformationMessage("Extension built successfully.");
-        if (err || stdout.includes("failed")) {
-          console.log("error: " + err);
-          vscode.window.showErrorMessage(`Failed to build extension. Output: ${stdout}`);
-        }
-      }
-    );
+    // Extension meta
+    const extensionDir = path.dirname(extensionFile[0].fsPath);
+    const extension = yaml.parse(readFileSync(extensionFile[0].fsPath).toString());
 
-    // ------------ DIY SNIPPET - NEEDS FIXING ------------------------------------
-    //   // Extension meta
-    //   var extension = yaml.parse(readFileSync(extensionFile[0].fsPath).toString());
+    // Build the inner .zip archive
+    const innerZip = new AdmZip();
+    innerZip.addLocalFolder(extensionDir);
+    const innerZipPath = path.join(context.storageUri!.fsPath, "extension.zip");
+    innerZip.writeZip(innerZipPath);
+    console.log(`Built the inner archive: ${innerZipPath}`);
 
-    //   // Build the inner .zip archive
-    //   var innerZip = new AdmZip();
-    //   innerZip.addLocalFolder(extensionDir);
-    //   innerZip.writeZip(path.join(context.storageUri!.fsPath, "extension.zip"));
+    // Sign the inner .zip archive and write the signature file
+    const signature = sign(innerZipPath, distDir.fsPath, devKeyPath, devCertPath);
+    const sigatureFilePath = path.join(context.storageUri!.fsPath, "extension.zip.sig");
+    writeFileSync(sigatureFilePath, signature);
+    console.log(`Wrote the signature file: ${sigatureFilePath}`);
 
-    //   console.log("Built the inner archive");
+    // Build the outer .zip that includes the inner .zip and the signature file
+    const outerZip = new AdmZip();
+    const outerZipPath = path.join(distDir.fsPath, `${extension.name.replace(":", "_")}-${extension.version}.zip`);
+    outerZip.addLocalFile(innerZipPath);
+    outerZip.addLocalFile(sigatureFilePath);
+    outerZip.writeZip(outerZipPath);
+    console.log(`Wrote the outer zip: ${outerZipPath}`);
 
-    //   // Sign the inner .innerZip
-    //   var devKey = pki.privateKeyFromPem(
-    //     readFileSync(path.join(context.storageUri!.fsPath, "certificates", "dev.key")).toString()
-    //   );
-    //   var devCert = pki.certificateFromPem(
-    //     readFileSync(path.join(context.storageUri!.fsPath, "certificates", "dev.pem")).toString()
-    //   );
-    //   var extensionHash = createHash("sha256").update(
-    //     readFileSync(path.join(context.storageUri!.fsPath, "extension.zip"))
-    //   );
-    //   var digest = md.sha256.create();
-    //   digest.update(util.encodeUtf8(extensionHash.digest().toString()), "utf8");
-    //   var signedData = pkcs7.createSignedData();
-    //   signedData.content = digest.digest();
-    //   signedData.addCertificate(devCert);
-    //   signedData.addSigner({
-    //     key: devKey,
-    //     certificate: devCert,
-    //     digestAlgorithm: pki.oids.sha256,
-    //     authenticatedAttributes: [
-    //       {
-    //         type: pki.oids.contentType,
-    //         value: pki.oids.data,
-    //       },
-    //       {
-    //         type: pki.oids.messageDigest,
-    //       },
-    //       {
-    //         type: pki.oids.signingTime,
-    //       },
-    //     ],
-    //   });
-    //   signedData.sign({ detached: true });
-    //   var signature = pkcs7.messageToPem(signedData);
-    //   writeFileSync(path.join(context.storageUri!.fsPath, "extension.zip.sig"), signature);
-
-    //   // Build the outer .zip
-    //   var outerZip = new AdmZip();
-    //   outerZip.addLocalFile(path.join(context.storageUri!.fsPath, "extension.zip"));
-    //   outerZip.addLocalFile(path.join(context.storageUri!.fsPath, "extension.zip.sig"));
-    //   outerZip.writeZip(
-    //     path.join(distDir.fsPath, `${extension.name.replace(":", "_")}-${extension.version}.zip`)
-    //   );
-
-    //   console.log("Wrote the outer zip");
+    vscode.window.showInformationMessage("Extension built successfully to the dist folder.");
   }
 }
