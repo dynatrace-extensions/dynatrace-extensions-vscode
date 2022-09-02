@@ -72,6 +72,7 @@ export function activate(context: vscode.ExtensionContext) {
   const codeLensProvider = new MetricCodeLensProvider();
 
   context.subscriptions.push(
+    // Commands for the Command Palette
     // Load extension schemas of a given version
     vscode.commands.registerCommand("dynatrace-extension-developer.loadSchemas", async () => {
       if (checkEnvironmentConnected(tenantsTreeViewProvider)) {

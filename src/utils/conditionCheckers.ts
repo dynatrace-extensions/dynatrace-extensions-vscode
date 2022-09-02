@@ -17,10 +17,7 @@ export function checkSettings(...settings: string[]): boolean {
   settings.forEach((setting) => {
     if (!config.get(setting)) {
       vscode.window
-        .showErrorMessage(
-          `Missing one or more required settings. Check ${setting}`,
-          "Open settings"
-        )
+        .showErrorMessage(`Missing one or more required settings. Check ${setting}`, "Open settings")
         .then((opt) => {
           if (opt === "Open settings") {
             vscode.commands.executeCommand("workbench.action.openSettings", "Dynatrace");
@@ -39,9 +36,7 @@ export function checkSettings(...settings: string[]): boolean {
  */
 export function checkEnvironmentConnected(environmentsTree: EnvironmentsTreeDataProvider): boolean {
   if (!environmentsTree.getCurrentEnvironment()) {
-    vscode.window.showErrorMessage(
-      "You must be connected to a Dynatrace Environment to use this command."
-    );
+    vscode.window.showErrorMessage("You must be connected to a Dynatrace Environment to use this command.");
     return false;
   }
 
@@ -55,13 +50,11 @@ export function checkEnvironmentConnected(environmentsTree: EnvironmentsTreeData
 export function checkWorkspaceOpen(): boolean {
   var status = true;
   if (!vscode.workspace.workspaceFolders || vscode.workspace.workspaceFolders.length === 0) {
-    vscode.window
-      .showErrorMessage("You must be inside a workspace to use this command.", "Open folder")
-      .then((opt) => {
-        if (opt === "Open folder") {
-          vscode.commands.executeCommand("vscode.openFolder");
-        }
-      });
+    vscode.window.showErrorMessage("You must be inside a workspace to use this command.", "Open folder").then((opt) => {
+      if (opt === "Open folder") {
+        vscode.commands.executeCommand("vscode.openFolder");
+      }
+    });
     status = false;
   }
   console.log(`Check - is a workspace open? > ${status}`);
@@ -80,11 +73,8 @@ export function isExtensionsWorkspace(context: vscode.ExtensionContext): boolean
       glob.sync("**/extension/extension.yaml", {
         cwd: vscode.Uri.parse(
           decodeURI(
-            JSON.parse(
-              readFileSync(
-                path.join(path.dirname(context.storageUri.fsPath), "workspace.json")
-              ).toString()
-            ).folder
+            JSON.parse(readFileSync(path.join(path.dirname(context.storageUri.fsPath), "workspace.json")).toString())
+              .folder
           )
         ).fsPath,
       }).length > 0;
@@ -100,9 +90,7 @@ export function isExtensionsWorkspace(context: vscode.ExtensionContext): boolean
  * @param context
  * @returns true if operation should continue, false for cancellation
  */
-export async function checkOverwriteCertificates(
-  context: vscode.ExtensionContext
-): Promise<boolean> {
+export async function checkOverwriteCertificates(context: vscode.ExtensionContext): Promise<boolean> {
   var status = true;
   var certsDir = path.join(context.storageUri!.fsPath, "certificates");
   if (existsSync(certsDir)) {
@@ -129,10 +117,7 @@ export async function checkOverwriteCertificates(
  * @param context VSCode Extension Context
  * @returns status of check
  */
-export function checkCertificateExists(
-  type: "ca" | "dev" | "all",
-  context: vscode.ExtensionContext
-): boolean {
+export function checkCertificateExists(type: "ca" | "dev" | "all", context: vscode.ExtensionContext): boolean {
   var allExist = true;
   var certsDir = path.join(context.storageUri!.fsPath, "certificates");
   var byoDevPem = vscode.workspace
@@ -151,10 +136,7 @@ export function checkCertificateExists(
     ) {
       allExist = false;
     }
-    if (
-      (type === "dev" || type === "all") &&
-      !(existsSync(path.join(certsDir, "dev.pem")) || existsSync(byoDevPem))
-    ) {
+    if ((type === "dev" || type === "all") && !(existsSync(path.join(certsDir, "dev.pem")) || existsSync(byoDevPem))) {
       allExist = false;
     }
   }
@@ -171,10 +153,7 @@ export function checkCertificateExists(
             vscode.commands.executeCommand("dynatrace-extension-developer.generateCertificates");
             break;
           case "Open settings":
-            vscode.commands.executeCommand(
-              "workbench.action.openSettings",
-              "Dynatrace Certificate Location"
-            );
+            vscode.commands.executeCommand("workbench.action.openSettings", "Dynatrace Certificate Location");
             break;
         }
       });
@@ -197,4 +176,26 @@ export function checkExtensionZipExists(): boolean {
     return true;
   }
   return false;
+}
+
+/**
+ * Checks whether an extension name is valid from Dynatrace perspective.
+ * Valid names are up to 50 characters, start with `custom:` and follow the metric ingestion
+ * protocol format for dimensions.
+ * @param name the name to check
+ * @returns the status of check
+ */
+export function checkValidExtensionName(name: string): boolean {
+  const nameRegex = /^custom:(?!\.)(?!.*\.\.)(?!.*\.$)[a-z0-9-_\.]+$/;
+  if (name.length > 50) {
+    vscode.window.showErrorMessage("Extension name is invalid. Name must not be longer than 50 characters.");
+    return false;
+  }
+  if (!nameRegex.test(name)) {
+    vscode.window.showErrorMessage(
+      'Extension name is invalid. Name must start with "custom:" and only contain lowercase letters, numbers, hyphens, underscores, or dots.'
+    );
+    return false;
+  }
+  return true;
 }
