@@ -4,6 +4,7 @@ import * as vscode from "vscode";
 import * as AdmZip from "adm-zip";
 import * as yaml from "yaml";
 import { Dynatrace } from "../dynatrace-api/dynatrace";
+import { DynatraceAPIError } from "../dynatrace-api/errors";
 
 /**
  * Uploads the latest avaialable extension 2.0 package from the `dist` folder of
@@ -39,7 +40,9 @@ export async function uploadExtension(dt: Dynatrace) {
   var extensionName = extension.name;
 
   // Check for maximum number of allowed versions and prompt for deletion
-  var existingVersions = await dt.extensionsV2.listVersions(extensionName);
+  var existingVersions = await dt.extensionsV2.listVersions(extensionName).catch((err) => {
+    return [];
+  });
   if (existingVersions.length >= 10) {
     var choice = await vscode.window.showWarningMessage(
       "Maximum number of extensions detected. Would you like to remove the last one?",
@@ -75,12 +78,10 @@ export async function uploadExtension(dt: Dynatrace) {
         vscode.window.showInformationMessage("Operation completed.");
         return;
       }
-      vscode.commands.executeCommand(
-        "dynatrace-extension-developer.activateExtension",
-        extensionVersion
-      );
+      vscode.commands.executeCommand("dynatrace-extension-developer.activateExtension", extensionVersion);
     })
-    .catch((err) => {
-      vscode.window.showErrorMessage(err.message);
+    .catch((err: DynatraceAPIError) => {
+      vscode.window.showErrorMessage("Extension upload failed.");
+      vscode.window.showErrorMessage(err.errorParams.data);
     });
 }

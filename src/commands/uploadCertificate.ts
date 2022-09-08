@@ -2,6 +2,7 @@ import { readdirSync, readFileSync } from "fs";
 import path = require("path");
 import * as vscode from "vscode";
 import { Dynatrace } from "../dynatrace-api/dynatrace";
+import { DynatraceAPIError } from "../dynatrace-api/errors";
 
 /**
  * Delivers the "Upload certificate" command functionality.
@@ -51,10 +52,9 @@ export async function uploadCertificate(
         .then(() => {
           vscode.window.showInformationMessage("Certificate uploaded successfully.");
         })
-        .catch((err) => {
-          console.log(err.message);
-          console.log(err);
+        .catch((err: DynatraceAPIError) => {
           vscode.window.showErrorMessage("Certificate upload failed.");
+          vscode.window.showErrorMessage(err.errorParams.data);
         });
       // Upload new certificate with given Name and Description
     } else {
@@ -84,8 +84,9 @@ export async function uploadCertificate(
           context.workspaceState.update("caCertId", res.id);
           vscode.window.showInformationMessage("Certificate uploaded successfully.");
         })
-        .catch((err) => {
+        .catch((err: DynatraceAPIError) => {
           vscode.window.showErrorMessage(`Certificate upload failed: ${err.message}`);
+          vscode.window.showErrorMessage(err.errorParams.data);
         });
     }
   }
