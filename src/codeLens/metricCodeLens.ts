@@ -117,10 +117,12 @@ class SelectorRunnerLens extends vscode.CodeLens {
 export class MetricCodeLensProvider implements vscode.CodeLensProvider {
   private codeLenses: vscode.CodeLens[];
   private regex: RegExp;
+  private numLines: number;
   private _onDidChangeCodeLenses: vscode.EventEmitter<void> = new vscode.EventEmitter<void>();
   public readonly onDidChangeCodeLenses: vscode.Event<void> = this._onDidChangeCodeLenses.event;
 
   constructor() {
+    this.numLines = -1;
     this.codeLenses = [];
     this.regex = /(metricSelector:)/g;
   }
@@ -134,6 +136,15 @@ export class MetricCodeLensProvider implements vscode.CodeLensProvider {
   public provideCodeLenses(document: vscode.TextDocument, token: vscode.CancellationToken): vscode.CodeLens[] {
     const regex = new RegExp(this.regex);
     const text = document.getText();
+    const numLines = document.lineCount;
+
+    // If new lines have been entered/deleted, reset the previous lenses
+    // so we don't create inaccurate duplicates
+    if (numLines !== this.numLines) {
+      this.numLines = numLines;
+      this.codeLenses = [];
+    }
+
     let matches;
     while ((matches = regex.exec(text)) !== null) {
       const line = document.lineAt(document.positionAt(matches.index).line);
