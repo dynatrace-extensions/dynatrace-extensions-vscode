@@ -99,10 +99,11 @@ export class HttpClient {
     var items: any[] = [];
     var nextPageKey: string | undefined = "firstCall";
 
-    if (nextPageKey !== "firstCall") {
-      params = { nextPageKey: nextPageKey };
-    }
     while (nextPageKey) {
+      if (nextPageKey !== "firstCall") {
+        params = { nextPageKey: nextPageKey };
+      }
+
       await this.makeRequest(path, params, "GET", headers).then((res) => {
         nextPageKey = res.nextPageKey;
         items.push(...res[item]);
