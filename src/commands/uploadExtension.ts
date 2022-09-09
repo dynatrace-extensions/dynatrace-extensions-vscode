@@ -1,7 +1,7 @@
 import { lstatSync, readdirSync, readFile, readFileSync } from "fs";
 import * as path from "path";
 import * as vscode from "vscode";
-import * as AdmZip from "adm-zip";
+import AdmZip = require("adm-zip");
 import * as yaml from "yaml";
 import { Dynatrace } from "../dynatrace-api/dynatrace";
 import { DynatraceAPIError } from "../dynatrace-api/errors";

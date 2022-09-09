@@ -1,5 +1,5 @@
 import axios from "axios";
-import * as FormData from "form-data";
+import FormData = require("form-data");
 import { DynatraceAPIError } from "./errors";
 
 /**
