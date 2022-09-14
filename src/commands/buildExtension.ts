@@ -58,7 +58,7 @@ export async function buildExtension(context: vscode.ExtensionContext) {
   console.log(`Built the inner archive: ${innerZipPath}`);
 
   // Sign the inner .zip archive and write the signature file
-  const signature = sign(innerZipPath, distDir, devKeyPath, devCertPath);
+  const signature = sign(innerZipPath, devKeyPath, devCertPath);
   const sigatureFilePath = path.resolve(context.storageUri!.fsPath, "extension.zip.sig");
   writeFileSync(sigatureFilePath, signature);
   console.log(`Wrote the signature file: ${sigatureFilePath}`);
