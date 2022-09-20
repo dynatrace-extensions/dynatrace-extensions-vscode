@@ -34,6 +34,7 @@ import { deleteWorkspace } from "./treeViews/commands/workspaces";
 import { MetricCodeLensProvider, validateMetricSelector } from "./codeLens/metricCodeLens";
 import { MetricResultsPanel } from "./webviews/metricResults";
 import { DynatraceAPIError } from "./dynatrace-api/errors";
+import { IconCompletionProvider } from "./codeCompletions/icons";
 
 /**
  * Sets up the VSCode extension by registering all the available functionality as disposable objects.
@@ -149,6 +150,12 @@ export function activate(context: vscode.ExtensionContext) {
     vscode.languages.registerCompletionItemProvider(
       { language: "yaml", pattern: "**/extension/extension.yaml" },
       new EntitySelectorCompletionProvider(tenantsTreeViewProvider),
+      ":"
+    ),
+    // Auto-completion - Barista icons
+    vscode.languages.registerCompletionItemProvider(
+      { language: "yaml", pattern: "**/extension/extension.yaml" },
+      new IconCompletionProvider(),
       ":"
     ),
     // Extension 2.0 Workspaces Tree View
