@@ -53,7 +53,7 @@ export class SnippetGenerator implements vscode.CodeActionProvider {
     if (document.lineAt(range.start.line).text.includes("charts:")) {
       // in chartsCard
       if (parentBlocks[parentBlocks.length - 1] === "chartsCards") {
-        codeActions.push(...this.createChartInsertions("chartCard", document, range, extension));
+        codeActions.push(...this.createChartInsertions("chartsCard", document, range, extension));
       }
       // in entitiesListCard
       if (parentBlocks[parentBlocks.length - 1] === "entitiesListCards") {
@@ -138,7 +138,7 @@ export class SnippetGenerator implements vscode.CodeActionProvider {
    * @returns list of Code Actions
    */
   private createChartInsertions(
-    cardType: "chartCard" | "entitiesListCard",
+    cardType: "chartsCard" | "entitiesListCard",
     document: vscode.TextDocument,
     range: vscode.Range,
     extension: ExtensionStub
@@ -148,7 +148,7 @@ export class SnippetGenerator implements vscode.CodeActionProvider {
     var cardIdx = getBlockItemIndexAtLine(`${cardType}s`, range.start.line, document.getText());
 
     var entityType: string;
-    if (cardType === "chartCard") {
+    if (cardType === "chartsCard") {
       entityType = extension.screens![screenIdx].entityType;
     } else {
       let entitySelector = extension.screens![screenIdx].entitiesListCards![cardIdx].entitySelectorTemplate;
@@ -166,7 +166,7 @@ export class SnippetGenerator implements vscode.CodeActionProvider {
       }
     });
     var metricsInserted =
-      cardType === "chartCard"
+      cardType === "chartsCard"
         ? getMetricKeysFromChartCard(screenIdx, cardIdx, extension)
         : getMetricKeysFromEntitiesListCard(screenIdx, cardIdx, extension);
     var metricsToInsert = getEntityMetrics(typeIdx, extension, metricsInserted);

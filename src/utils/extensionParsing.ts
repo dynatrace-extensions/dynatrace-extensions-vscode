@@ -266,11 +266,13 @@ export function getAllMetricKeysFromDataSource(extension: ExtensionStub): string
     }
     if (group.subgroups) {
       group.subgroups.forEach((subgroup) => {
-        subgroup.metrics.forEach((metric) => {
-          if (!metrics.includes(metric.key)) {
-            metrics.push(metric.key);
-          }
-        });
+        if (subgroup.metrics) {
+          subgroup.metrics.forEach((metric) => {
+            if (!metrics.includes(metric.key)) {
+              metrics.push(metric.key);
+            }
+          });
+        }
       });
     }
   });
