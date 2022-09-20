@@ -1,6 +1,5 @@
 import * as vscode from "vscode";
 import * as yaml from "yaml";
-import { Dynatrace } from "../dynatrace-api/dynatrace";
 import { EnvironmentsTreeDataProvider } from "../treeViews/environmentsTreeView";
 import {
   getAttributesKeysFromTopology,
