@@ -1,6 +1,6 @@
 import * as vscode from "vscode";
 import { decryptToken, encryptToken } from "../../utils/cryptography";
-import { registerEnvironment, removeEnvironment } from "../../utils/fileSystem";
+import { getAllEnvironments, registerEnvironment, removeEnvironment } from "../../utils/fileSystem";
 import { EnvironmentTreeItem } from "../environmentsTreeView";
 
 /**
@@ -61,10 +61,7 @@ export async function addEnvironment(context: vscode.ExtensionContext) {
  * @param environment the existing environment
  * @returns
  */
-export async function editEnvironment(
-  context: vscode.ExtensionContext,
-  environment: EnvironmentTreeItem
-) {
+export async function editEnvironment(context: vscode.ExtensionContext, environment: EnvironmentTreeItem) {
   var url = await vscode.window.showInputBox({
     title: "The new URL for this environment",
     placeHolder: "The URL at which this environment is accessible...",
@@ -116,10 +113,7 @@ export async function editEnvironment(
  * @param environment the existing environment
  * @returns
  */
-export async function deleteEnvironment(
-  context: vscode.ExtensionContext,
-  environment: EnvironmentTreeItem
-) {
+export async function deleteEnvironment(context: vscode.ExtensionContext, environment: EnvironmentTreeItem) {
   const confirm = await vscode.window.showQuickPick(["Yes", "No"], {
     title: `Delete environment ${environment.label}?`,
     canPickMany: false,
@@ -132,4 +126,42 @@ export async function deleteEnvironment(
   }
 
   removeEnvironment(context, environment.id);
+}
+
+/**
+ * A workflow for changing the currently connected Dynatrace environment. The user is given
+ * a list of all the currently registered environments and may select a different one to use
+ * as the currently connected one.
+ * This is useful when you don't want to visit the Dynatrace Activity Bar item - for example
+ * when triggered from the global status bar.
+ * @param context VSCode Extension Context
+ * @returns the connected status as boolean, and name of connected environment or "" as string
+ */
+export async function changeConnection(context: vscode.ExtensionContext): Promise<[boolean, string]> {
+  const environments = getAllEnvironments(context);
+  const currentEnv = environments.find((e) => e.current);
+  const choice = await vscode.window.showQuickPick(
+    environments.map((e) => (e.current ? `⭐ ${e.name}` : (e.name as string))),
+    {
+      canPickMany: false,
+      ignoreFocusOut: true,
+      title: "Connect to a different environment",
+      placeHolder: "Select an environment from the list",
+    }
+  );
+
+  // Use the newly selected environment
+  if (choice) {
+    var environment = environments.find((e) => e.name === choice);
+    if (environment) {
+      registerEnvironment(context, environment.url, environment.token, environment.name, true);
+      return [true, environment.name as string];
+    }
+  }
+
+  // If no choice made, persist the current connection if any
+  if (currentEnv) {
+    return [true, currentEnv.name as string];
+  }
+  return [false, ""];
 }

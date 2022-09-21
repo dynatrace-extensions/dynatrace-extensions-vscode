@@ -27,7 +27,12 @@ import { uploadExtension } from "./commands/uploadExtension";
 import { activateExtension } from "./commands/activateExtension";
 import { EntitySelectorCompletionProvider } from "./codeCompletions/entitySelectors";
 import { EnvironmentsTreeDataProvider, EnvironmentTreeItem } from "./treeViews/environmentsTreeView";
-import { addEnvironment, deleteEnvironment, editEnvironment } from "./treeViews/commands/environments";
+import {
+  addEnvironment,
+  changeConnection,
+  deleteEnvironment,
+  editEnvironment,
+} from "./treeViews/commands/environments";
 import { encryptToken } from "./utils/cryptography";
 import { ConnectionStatusManager } from "./statusBar/connection";
 import { deleteWorkspace } from "./treeViews/commands/workspaces";
@@ -219,6 +224,12 @@ export function activate(context: vscode.ExtensionContext) {
         deleteEnvironment(context, environment).then(() => tenantsTreeViewProvider.refresh());
       }
     ),
+    vscode.commands.registerCommand("dynatrace-extension-developer-environments.changeConnection", () => {
+      changeConnection(context).then(([connected, environment]) => {
+        connectionStatusManager.updateStatusBar(connected, environment);
+        tenantsTreeViewProvider.refresh();
+      });
+    }),
     // Code actions for adding snippets
     vscode.languages.registerCodeActionsProvider(
       { language: "yaml", pattern: "**/extension/extension.yaml" },
