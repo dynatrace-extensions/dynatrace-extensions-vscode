@@ -40,7 +40,7 @@ export function getAttributesFromTopology(
     .forEach((type) => {
       type.rules.forEach((rule) => {
         rule.attributes
-          .filter((property) => (excludeKeys ? excludeKeys.includes(property.key) : true))
+          .filter((property) => (excludeKeys ? !excludeKeys.includes(property.key) : true))
           .forEach((property) => {
             attributes.push({
               key: property.key,
