@@ -1,6 +1,6 @@
 import * as vscode from "vscode";
 import Axios from "axios";
-import { isCursorAt } from "../utils/yamlParsing";
+import { getParentBlocks, isCursorAt } from "../utils/yamlParsing";
 
 interface BaristaMeta {
   title: string;
@@ -26,13 +26,19 @@ export class IconCompletionProvider implements vscode.CompletionItemProvider {
     context: vscode.CompletionContext
   ): Promise<vscode.CompletionItem[]> {
     var completionItems: vscode.CompletionItem[] = [];
+    var parentBlocks = getParentBlocks(position.line, document.getText());
 
     if (this.baristaIcons.length === 0) {
       this.loadBaristaIcons();
     }
 
-    if (isCursorAt(document, position, "iconPattern:") && this.baristaIcons.length > 0) {
-      completionItems.push(this.createIconCompletion());
+    if (
+      isCursorAt(document, position, "iconPattern:") ||
+      (parentBlocks[parentBlocks.length - 1] === "header" && isCursorAt(document, position, "icon:"))
+    ) {
+      if (this.baristaIcons.length > 0) {
+        completionItems.push(this.createIconCompletion());
+      }
     }
 
     return completionItems;
