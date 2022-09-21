@@ -46,10 +46,21 @@ export class SnippetGenerator implements vscode.CodeActionProvider {
     if (parentBlocks[parentBlocks.length - 1] === "propertiesCard") {
       if (document.lineAt(range.start.line).text.includes("properties:")) {
         // attribute properties
-        codeActions.push(...this.createAttributePropertyInsertions(document, range, extension));
+        codeActions.push(...this.createAttributePropertyInsertions(document, range, extension, "properties"));
         // relation properties
-        codeActions.push(...this.createRelationPropertyInsertions(document, range, extension));
+        codeActions.push(...this.createRelationPropertyInsertions(document, range, extension, "properties"));
       }
+    }
+
+    // add columns in entitiesListCards
+    if (
+      parentBlocks[parentBlocks.length - 1] === "entitiesListCards" &&
+      document.lineAt(range.start.line).text.includes("columns:")
+    ) {
+      // attribute columns
+      codeActions.push(...this.createAttributePropertyInsertions(document, range, extension, "columns"));
+      // relation columns
+      codeActions.push(...this.createRelationPropertyInsertions(document, range, extension, "columns"));
     }
 
     // add charts
@@ -99,27 +110,46 @@ export class SnippetGenerator implements vscode.CodeActionProvider {
   }
 
   /**
-   * Assuming the triggering range is within a `propertiesCard`, creates Code Actions for
-   * each attribute property that hasn't been inserted into the card yet.
+   * Creates Code Actions for each attribute of the current entity that hasn't been inserted
+   * into the YAML section yet. The YAML section can be either `propertiesCard.properties` or
+   * `entitiesListCards.columns` as both have the same structure.
    * @param document the document that triggered the action
    * @param range the range that triggered the action
    * @param extension extension yaml serialized as object
+   * @param insertionType where are the attributes inserted?
    * @returns list of Code Actions
    */
   private createAttributePropertyInsertions(
     document: vscode.TextDocument,
     range: vscode.Range,
-    extension: ExtensionStub
+    extension: ExtensionStub,
+    insertionType: "properties" | "columns"
   ): vscode.CodeAction[] {
     var indent = /[a-z]/i.exec(document.lineAt(range.start.line).text)!.index;
     var screenIdx = getBlockItemIndexAtLine("screens", range.start.line, document.getText());
     var entityType = extension.screens![screenIdx].entityType;
-    var attributesInserted = extension.screens![screenIdx].propertiesCard.properties.filter(
-      (prop: any) => prop.type === "ATTRIBUTE"
-    );
-    if (attributesInserted) {
-      attributesInserted = attributesInserted.map((property: any) => property.attribute.key);
+
+    // Find already inserted attributes
+    var attributesInserted = [];
+    if (insertionType === "properties") {
+      attributesInserted = extension.screens![screenIdx].propertiesCard.properties.filter(
+        (prop: any) => prop.type === "ATTRIBUTE"
+      );
+    } else {
+      const cardIdx = getBlockItemIndexAtLine("entitiesListCards", range.start.line, document.getText());
+      const selectorTemplate = extension.screens![screenIdx].entitiesListCards![cardIdx].entitySelectorTemplate;
+      if (selectorTemplate) {
+        entityType = selectorTemplate.split("type(")[1].split(")")[0];
+      }
+      attributesInserted = extension.screens![screenIdx].entitiesListCards![cardIdx].columns!.filter(
+        (col) => col.type === "ATTRIBUTE"
+      );
     }
+    if (attributesInserted) {
+      attributesInserted = attributesInserted.map((item: any) => item.attribute.key);
+    }
+
+    // Map available attributes to Code Actions
     var attributesToInsert = getAttributesFromTopology(entityType, extension, attributesInserted);
     return attributesToInsert.map((attribute) =>
       this.createInsertAction(
@@ -131,17 +161,42 @@ export class SnippetGenerator implements vscode.CodeActionProvider {
     );
   }
 
+/**
+   * Creates Code Actions for each relationship of the current entity that hasn't been inserted
+   * into the YAML section yet. The YAML section can be either `propertiesCard.properties` or
+   * `entitiesListCards.columns` as both have the same structure.
+   * @param document the document that triggered the action
+   * @param range the range that triggered the action
+   * @param extension extension yaml serialized as object
+   * @param insertionType where are the relations inserted?
+   * @returns list of Code Actions
+   */
   private createRelationPropertyInsertions(
     document: vscode.TextDocument,
     range: vscode.Range,
-    extension: ExtensionStub
+    extension: ExtensionStub,
+    insertionType: "properties" | "columns"
   ): vscode.CodeAction[] {
     var indent = /[a-z]/i.exec(document.lineAt(range.start.line).text)!.index;
     var screenIdx = getBlockItemIndexAtLine("screens", range.start.line, document.getText());
     var entityType = extension.screens![screenIdx].entityType;
-    var relationsInserted = extension.screens![screenIdx].propertiesCard.properties.filter(
-      (prop: any) => prop.type === "RELATION"
-    );
+
+    // Find already inserted relations    
+    var relationsInserted: any[] = [];
+    if (insertionType === "properties") {
+      relationsInserted = extension.screens![screenIdx].propertiesCard.properties.filter(
+        (prop: any) => prop.type === "RELATION"
+      );
+    } else {
+      const cardIdx = getBlockItemIndexAtLine("entitiesListCards", range.start.line, document.getText());
+      const selectorTemplate = extension.screens![screenIdx].entitiesListCards![cardIdx].entitySelectorTemplate;
+      if (selectorTemplate) {
+        entityType = selectorTemplate.split("type(")[1].split(")")[0];
+      }
+      relationsInserted = extension.screens![screenIdx].entitiesListCards![cardIdx].columns!.filter(
+        (col) => col.type === "RELATION"
+      );
+    }
     if (relationsInserted) {
       relationsInserted = relationsInserted.map((property: any) => {
         if (property.relation.entitySelectorTemplate) {
@@ -157,6 +212,8 @@ export class SnippetGenerator implements vscode.CodeActionProvider {
     var relationsToInsert = getRelationships(entityType, extension).filter(
       (rel) => !relationsInserted.includes(rel.entity)
     );
+
+    // Map available relations to Code Actions
     if (relationsToInsert.length > 0) {
       return relationsToInsert.map((rel) => {
         var relEntityName = getEntityName(rel.entity, extension) || rel.entity;
