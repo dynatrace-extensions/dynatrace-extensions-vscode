@@ -118,6 +118,7 @@ Currently implemented action triggers:
 - inside `propertiesCard` when clicking on `properties` - you can automatically add properties for the entity's attributes and relations
 - inside `entitiesListCards` when clicking on `columns` - you can automatically add columns for the listed entity's attributes and relations
 - inside `chartsCards` and `entitiesListCards` when clicking on `charts` inside a card - you can automatically add charts for metrics that aren't already in the card
+- inside `graphChartConfig` when clicking on `metrics` - you can add additional metrics to your chart, that aren't already used within the surrounding card
 - inside `screens` when clicking on `chartsCards` - you can automatically add chart cards for entire feature sets of metrics
 - inside `screens` when clicking on `entitiesListCards` - you can automatically add cards for listing this entity as well as the related ones
 
