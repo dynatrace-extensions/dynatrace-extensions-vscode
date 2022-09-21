@@ -16,6 +16,7 @@ import {
   buildChartCardSnippet,
   buildEntitiesListCardSnippet,
   buildGraphChartSnippet,
+  buildRelationPropertySnippet,
 } from "../utils/snippetBuilding";
 import { getBlockItemIndexAtLine, getParentBlocks } from "../utils/yamlParsing";
 
@@ -41,12 +42,14 @@ export class SnippetGenerator implements vscode.CodeActionProvider {
     var extension = yaml.parse(document.getText()) as ExtensionStub;
     var parentBlocks = getParentBlocks(range.start.line, document.getText());
 
-    // add attribute properties in properties card
-    if (
-      parentBlocks[parentBlocks.length - 1] === "propertiesCard" &&
-      document.lineAt(range.start.line).text.includes("properties:")
-    ) {
-      codeActions.push(...this.createPropertyInsertions(document, range, extension));
+    // add properties to properties card
+    if (parentBlocks[parentBlocks.length - 1] === "propertiesCard") {
+      if (document.lineAt(range.start.line).text.includes("properties:")) {
+        // attribute properties
+        codeActions.push(...this.createAttributePropertyInsertions(document, range, extension));
+        // relation properties
+        codeActions.push(...this.createRelationPropertyInsertions(document, range, extension));
+      }
     }
 
     // add charts
@@ -103,7 +106,7 @@ export class SnippetGenerator implements vscode.CodeActionProvider {
    * @param extension extension yaml serialized as object
    * @returns list of Code Actions
    */
-  private createPropertyInsertions(
+  private createAttributePropertyInsertions(
     document: vscode.TextDocument,
     range: vscode.Range,
     extension: ExtensionStub
@@ -111,21 +114,67 @@ export class SnippetGenerator implements vscode.CodeActionProvider {
     var indent = /[a-z]/i.exec(document.lineAt(range.start.line).text)!.index;
     var screenIdx = getBlockItemIndexAtLine("screens", range.start.line, document.getText());
     var entityType = extension.screens![screenIdx].entityType;
-    var propertiesInserted = extension.screens![screenIdx].propertiesCard.properties.filter(
+    var attributesInserted = extension.screens![screenIdx].propertiesCard.properties.filter(
       (prop: any) => prop.type === "ATTRIBUTE"
     );
-    if (propertiesInserted) {
-      propertiesInserted = propertiesInserted.map((property: any) => property.attribute.key);
+    if (attributesInserted) {
+      attributesInserted = attributesInserted.map((property: any) => property.attribute.key);
     }
-    var propertiesToInsert = getAttributesFromTopology(entityType, extension, propertiesInserted);
-    return propertiesToInsert.map((property) =>
+    var attributesToInsert = getAttributesFromTopology(entityType, extension, attributesInserted);
+    return attributesToInsert.map((attribute) =>
       this.createInsertAction(
-        `Insert ${property.key} property`,
-        buildAttributePropertySnippet(property.key, property.displayName, indent),
+        `Insert ${attribute.key} attribute`,
+        buildAttributePropertySnippet(attribute.key, attribute.displayName, indent),
         document,
         range
       )
     );
+  }
+
+  private createRelationPropertyInsertions(
+    document: vscode.TextDocument,
+    range: vscode.Range,
+    extension: ExtensionStub
+  ): vscode.CodeAction[] {
+    var indent = /[a-z]/i.exec(document.lineAt(range.start.line).text)!.index;
+    var screenIdx = getBlockItemIndexAtLine("screens", range.start.line, document.getText());
+    var entityType = extension.screens![screenIdx].entityType;
+    var relationsInserted = extension.screens![screenIdx].propertiesCard.properties.filter(
+      (prop: any) => prop.type === "RELATION"
+    );
+    if (relationsInserted) {
+      relationsInserted = relationsInserted.map((property: any) => {
+        if (property.relation.entitySelectorTemplate) {
+          try {
+            return property.relation.entitySelectorTemplate.split("type(")[1].split(")")[0];
+          } catch {
+            return "";
+          }
+        }
+      });
+    }
+    // TODO: Filter out relationships that are not suitable for properties (e.g. have many)
+    var relationsToInsert = getRelationships(entityType, extension).filter(
+      (rel) => !relationsInserted.includes(rel.entity)
+    );
+    if (relationsToInsert.length > 0) {
+      return relationsToInsert.map((rel) => {
+        var relEntityName = getEntityName(rel.entity, extension) || rel.entity;
+        return this.createInsertAction(
+          `Insert relation to ${relEntityName}`,
+          buildRelationPropertySnippet(
+            `type(${rel.entity}),${rel.direction === "to" ? "from" : "to"}Relationships.${
+              rel.relation
+            }($(entityConditions))`,
+            `Related ${relEntityName}`,
+            indent
+          ),
+          document,
+          range
+        );
+      });
+    }
+    return [];
   }
 
   /**

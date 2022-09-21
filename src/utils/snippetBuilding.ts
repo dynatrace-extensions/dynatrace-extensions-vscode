@@ -1,4 +1,4 @@
-import { attributeSnippet, chartCardSnippet, entitiesListCardSnippet, graphChartSnippet } from "./snippets";
+import { attributeSnippet, chartCardSnippet, entitiesListCardSnippet, graphChartSnippet, relationSnippet } from "./snippets";
 
 /**
  * Builds a YAML snippet for an entities list card. If no entity selector is provided then
@@ -71,6 +71,22 @@ export function buildAttributePropertySnippet(key: string, displayName: string, 
 
   snippet = snippet.replace("<attribute-key>", key);
   snippet = snippet.replace("<attribute-name>", displayName);
+
+  return indentSnippet(snippet, indent);
+}
+
+/**
+ * Builds a YAML snippet for an `attribute` type of property, with desired indentation.
+ * @param entitySelector entity selector template for pulling the related entity
+ * @param displayName the property's display name
+ * @param indent level of indentation required
+ * @returns the formatted and indented snippet
+ */
+export function buildRelationPropertySnippet(entitySelector: string, displayName: string, indent: number): string {
+  let snippet = relationSnippet;
+
+  snippet = snippet.replace("<selector>", entitySelector);
+  snippet = snippet.replace("<relation-name>", displayName);
 
   return indentSnippet(snippet, indent);
 }

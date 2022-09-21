@@ -4,6 +4,12 @@ export const attributeSnippet = `\
     key: <attribute-key>
     displayName: <attribute-name>`;
 
+export const relationSnippet = `\
+- type: RELATION
+  relation:
+    entitySelectorTemplate: <selector>
+    displayName: <relation-name>`;
+
 export const graphChartSnippet = `\
 - displayName: <metric-key>
   visualizationType: GRAPH_CHART
