@@ -101,6 +101,9 @@ export function getParentBlocks(lineNumber: number, content: string): string[] {
               let lastBlockIdx = blocks[blocks.length - 1][1];
               while (line1Label.index <= lastBlockIdx) {
                 popNext++;
+                if (popNext === blocks.length) {
+                  break;
+                }
                 lastBlockIdx = blocks[blocks.length - (popNext + 1)][1];
               }
             }
