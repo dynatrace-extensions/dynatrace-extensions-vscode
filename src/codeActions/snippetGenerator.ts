@@ -263,13 +263,14 @@ export class SnippetGenerator implements vscode.CodeActionProvider {
     relationships
       .filter((rel) => !cardsInserted.includes(`${entityType}-list-${rel.entity}`))
       .forEach((rel) => {
+        var relEntityName = getEntityName(rel.entity, extension) || rel.entity;
         cardsToInsert.push(
           this.createInsertAction(
-            `Insert list of related ${getEntityName(rel.entity, extension)}s`,
+            `Insert list of related ${relEntityName}s`,
             buildEntitiesListCardSnippet(
               `${entityType}-list-${rel.entity}`,
               5,
-              `List of related ${getEntityName(rel.entity, extension)}s`,
+              `List of related ${relEntityName}s`,
               indent,
               `type(${rel.entity}),${rel.direction === "to" ? "from" : "to"}Relationships.${
                 rel.relation
