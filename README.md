@@ -104,6 +104,7 @@ Currently implemented completions trigger:
 - on `entityType` and `entityTypes` anywhere in the yaml, relevant entity types are suggested
 - on lists of attribute-type properties, on `key` the keys of relevant entity attributes are suggested
 - on `entitySelectorTemplate` can make use of `Ctrl + Space` to trigger completions as the selector is being built
+- on `iconPattern` (within `topology.rules`) or `icon` (within `staticContent.header`) - you can browse available Barista Icon codes
 
 ![intellisense](previews/intellisense.gif)
 
@@ -114,7 +115,8 @@ On lines with specific keywords, the lightbulb (💡) icon will show up to list 
 
 Currently implemented action triggers:
 
-- inside `propertiesCard` when clicking on `properties` - you can automatically add entry for the relevant entity attribute properties
+- inside `propertiesCard` when clicking on `properties` - you can automatically add properties for the entity's attributes and relations
+- inside `entitiesListCards` when clicking on `columns` - you can automatically add columns for the listed entity's attributes and relations
 - inside `chartsCards` and `entitiesListCards` when clicking on `charts` inside a card - you can automatically add charts for metrics that aren't already in the card
 - inside `screens` when clicking on `chartsCards` - you can automatically add chart cards for entire feature sets of metrics
 - inside `screens` when clicking on `entitiesListCards` - you can automatically add cards for listing this entity as well as the related ones
