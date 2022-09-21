@@ -32,9 +32,6 @@ export async function initWorkspace(context: vscode.ExtensionContext, dt: Dynatr
     vscode.window.showErrorMessage("No schema found. Workspace not initialized.");
     return;
   }
-  var schemaLocation = path.join(context.globalStorageUri.fsPath, schemaVersion);
-  var schemaPath = path.join(schemaLocation, "extension.schema.json");
-  vscode.workspace.getConfiguration().update("yaml.schemas", { [schemaPath]: "extension.yaml" });
 
   // Create the working directories
   var rootPath = vscode.workspace.workspaceFolders![0].uri.fsPath;

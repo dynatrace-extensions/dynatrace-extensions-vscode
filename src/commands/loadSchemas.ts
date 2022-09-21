@@ -1,7 +1,8 @@
 import * as vscode from "vscode";
 import * as path from "path";
 import axios from "axios";
-import { existsSync, mkdirSync, writeFile } from "fs";
+import * as yaml from "yaml";
+import { existsSync, mkdirSync, readFileSync, writeFile, writeFileSync } from "fs";
 import { Dynatrace } from "../dynatrace-api/dynatrace";
 
 /**
@@ -31,21 +32,47 @@ export async function loadSchemas(context: vscode.ExtensionContext, dt: Dynatrac
     vscode.window.showErrorMessage("No schema was selected. Operation cancelled.");
     return;
   }
-  context.workspaceState.update("schemaVersion", version);
   var location = path.join(context.globalStorageUri.fsPath, version);
 
-  // Confirm download again
-  if (existsSync(location)) {
+  // If directory exists, assume schemas already present
+  if (!existsSync(location)) {
+    downloadSchemaFiles(location, version, dt);
+  } else {
     const download = await vscode.window.showQuickPick(["Yes", "No"], {
       placeHolder: "Schema version already available. Do you wish to download again?",
     });
 
-    if (download !== "Yes") {
-      vscode.window.showInformationMessage("Schema loading completed.");
-      return;
+    if (download === "Yes") {
+      downloadSchemaFiles(location, version, dt);
     }
   }
 
+  // Update the YAML Schema extension to use the new version
+  var mainSchema = path.join(location, "extension.schema.json");
+  vscode.workspace.getConfiguration().update("yaml.schemas", { [mainSchema]: "extension.yaml" });
+  context.workspaceState.update("schemaVersion", version);
+
+  try {
+    // If extension.yaml already exists, update the version there too
+    vscode.workspace.findFiles("**/extension/extension.yaml").then((files) => {
+      if (files.length > 0) {
+        files.forEach((file) => {
+          var extensionYaml: ExtensionStub = yaml.parse(readFileSync(file.fsPath).toString());
+          extensionYaml.minDynatraceVersion = version;
+          writeFileSync(file.fsPath, yaml.stringify(extensionYaml));
+        });
+      }
+    });
+  } catch (err: any) {
+    vscode.window.showErrorMessage("Extension YAML was not updated. Schema loading only partially complete.");
+    vscode.window.showErrorMessage(err.message);
+    return;
+  }
+
+  vscode.window.showInformationMessage("Schema loading complete.");
+}
+
+function downloadSchemaFiles(location: string, version: string, dt: Dynatrace) {
   // Download all schemas of that version
   mkdirSync(location, { recursive: true });
   vscode.window.withProgress(
@@ -77,7 +104,6 @@ export async function loadSchemas(context: vscode.ExtensionContext, dt: Dynatrac
                 vscode.window.showErrorMessage(`Error writing file:\n${(err as Error).message}`);
               }
             });
-            vscode.window.showInformationMessage("Schema loading completed.");
           })
         )
         .catch((err) => vscode.window.showErrorMessage(err.message));
