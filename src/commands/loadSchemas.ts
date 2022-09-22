@@ -11,9 +11,9 @@ import { Dynatrace } from "../dynatrace-api/dynatrace";
  * Files are written in the global shared storage.
  * @param context VSCode Extension Context
  * @param dt Dynatrace API Client
- * @returns void
+ * @returns boolean - the success of the command
  */
-export async function loadSchemas(context: vscode.ExtensionContext, dt: Dynatrace) {
+export async function loadSchemas(context: vscode.ExtensionContext, dt: Dynatrace): Promise<boolean> {
   // Fetch available schema versions from cluster
   const availableVersions = await dt.extensionsV2.listSchemaVersions().catch((err) => {
     vscode.window.showErrorMessage(err.message);
@@ -21,7 +21,7 @@ export async function loadSchemas(context: vscode.ExtensionContext, dt: Dynatrac
   });
   if (availableVersions.length === 0) {
     vscode.window.showErrorMessage("No schemas available. Operation cancelled.");
-    return;
+    return false;
   }
 
   // Prompt user for version selection
@@ -30,7 +30,7 @@ export async function loadSchemas(context: vscode.ExtensionContext, dt: Dynatrac
   })) as string;
   if (!version) {
     vscode.window.showErrorMessage("No schema was selected. Operation cancelled.");
-    return;
+    return false;
   }
   var location = path.join(context.globalStorageUri.fsPath, version);
 
@@ -66,10 +66,11 @@ export async function loadSchemas(context: vscode.ExtensionContext, dt: Dynatrac
   } catch (err: any) {
     vscode.window.showErrorMessage("Extension YAML was not updated. Schema loading only partially complete.");
     vscode.window.showErrorMessage(err.message);
-    return;
+    return false;
   }
 
   vscode.window.showInformationMessage("Schema loading complete.");
+  return true;
 }
 
 function downloadSchemaFiles(location: string, version: string, dt: Dynatrace) {

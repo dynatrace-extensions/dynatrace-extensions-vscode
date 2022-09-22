@@ -53,23 +53,11 @@ export function activate(context: vscode.ExtensionContext) {
   initGlobalStorage(context);
 
   // Additonal context: number of workspaces affects the welcome message for the extensions tree view
-  vscode.commands.executeCommand(
-    "setContext",
-    "dt-ext-copilot.numWorkspaces",
-    getAllWorkspaces(context).length
-  );
+  vscode.commands.executeCommand("setContext", "dt-ext-copilot.numWorkspaces", getAllWorkspaces(context).length);
   // Additonal context: different welcome message for the extensions tree view if inside a workspace
-  vscode.commands.executeCommand(
-    "setContext",
-    "dt-ext-copilot.extensionWorkspace",
-    isExtensionsWorkspace(context)
-  );
+  vscode.commands.executeCommand("setContext", "dt-ext-copilot.extensionWorkspace", isExtensionsWorkspace(context));
   // Additional context: number of environments affects the welcome message for the tenants tree view
-  vscode.commands.executeCommand(
-    "setContext",
-    "dt-ext-copilot.numEnvironments",
-    getAllEnvironments(context).length
-  );
+  vscode.commands.executeCommand("setContext", "dt-ext-copilot.numEnvironments", getAllEnvironments(context).length);
   // Create feature/data providers
   const extensionsTreeViewProvider = new ExtensionsTreeDataProvider(context);
   const connectionStatusManager = new ConnectionStatusManager();
@@ -95,12 +83,12 @@ export function activate(context: vscode.ExtensionContext) {
       }
     }),
     // Generate the certificates required for extension signing
-    vscode.commands.registerCommand("dt-ext-copilot.generateCertificates", () => {
+    vscode.commands.registerCommand("dt-ext-copilot.generateCertificates", async () => {
       if (checkWorkspaceOpen()) {
         initWorkspaceStorage(context);
-        checkOverwriteCertificates(context).then((approved) => {
+        return await checkOverwriteCertificates(context).then(async (approved) => {
           if (approved) {
-            generateCerts(context);
+            return await generateCerts(context);
           }
         });
       }
@@ -165,37 +153,24 @@ export function activate(context: vscode.ExtensionContext) {
     ),
     // Extension 2.0 Workspaces Tree View
     vscode.window.registerTreeDataProvider("dt-ext-copilot-workspaces", extensionsTreeViewProvider),
-    vscode.commands.registerCommand("dt-ext-copilot-workspaces.refresh", () =>
-      extensionsTreeViewProvider.refresh()
-    ),
+    vscode.commands.registerCommand("dt-ext-copilot-workspaces.refresh", () => extensionsTreeViewProvider.refresh()),
     vscode.commands.registerCommand("dt-ext-copilot-workspaces.addWorkspace", () =>
       vscode.commands.executeCommand("vscode.openFolder").then(() => {
         vscode.commands.executeCommand("dt-ext-copilot.initWorkspace");
       })
     ),
-    vscode.commands.registerCommand(
-      "dt-ext-copilot-workspaces.openWorkspace",
-      (workspace: ExtensionProjectItem) => {
-        vscode.commands.executeCommand("vscode.openFolder", workspace.path);
-      }
-    ),
-    vscode.commands.registerCommand(
-      "dt-ext-copilot-workspaces.deleteWorkspace",
-      (workspace: ExtensionProjectItem) => {
-        deleteWorkspace(context, workspace).then(() => extensionsTreeViewProvider.refresh());
-      }
-    ),
-    vscode.commands.registerCommand(
-      "dt-ext-copilot-workspaces.editExtension",
-      (extension: ExtensionProjectItem) => {
-        vscode.commands.executeCommand("vscode.open", extension.path);
-      }
-    ),
+    vscode.commands.registerCommand("dt-ext-copilot-workspaces.openWorkspace", (workspace: ExtensionProjectItem) => {
+      vscode.commands.executeCommand("vscode.openFolder", workspace.path);
+    }),
+    vscode.commands.registerCommand("dt-ext-copilot-workspaces.deleteWorkspace", (workspace: ExtensionProjectItem) => {
+      deleteWorkspace(context, workspace).then(() => extensionsTreeViewProvider.refresh());
+    }),
+    vscode.commands.registerCommand("dt-ext-copilot-workspaces.editExtension", (extension: ExtensionProjectItem) => {
+      vscode.commands.executeCommand("vscode.open", extension.path);
+    }),
     // Dynatrace Environments Tree View
     vscode.window.registerTreeDataProvider("dt-ext-copilot-environments", tenantsTreeViewProvider),
-    vscode.commands.registerCommand("dt-ext-copilot-environments.refresh", () =>
-      tenantsTreeViewProvider.refresh()
-    ),
+    vscode.commands.registerCommand("dt-ext-copilot-environments.refresh", () => tenantsTreeViewProvider.refresh()),
     vscode.commands.registerCommand("dt-ext-copilot-environments.addEnvironment", () =>
       addEnvironment(context).then(() => tenantsTreeViewProvider.refresh())
     ),
@@ -243,15 +218,12 @@ export function activate(context: vscode.ExtensionContext) {
       { language: "yaml", pattern: "**/extension/extension.yaml" },
       codeLensProvider
     ),
-    vscode.commands.registerCommand(
-      "dt-ext-copilot.metric-codelens.validateSelector",
-      async (selector: string) => {
-        if (checkEnvironmentConnected(tenantsTreeViewProvider)) {
-          const status = await validateMetricSelector(selector, (await tenantsTreeViewProvider.getDynatraceClient())!);
-          codeLensProvider.updateValidationStatus(selector, status);
-        }
+    vscode.commands.registerCommand("dt-ext-copilot.metric-codelens.validateSelector", async (selector: string) => {
+      if (checkEnvironmentConnected(tenantsTreeViewProvider)) {
+        const status = await validateMetricSelector(selector, (await tenantsTreeViewProvider.getDynatraceClient())!);
+        codeLensProvider.updateValidationStatus(selector, status);
       }
-    ),
+    }),
     vscode.commands.registerCommand("dt-ext-copilot.metric-codelens.runSelector", (selector: string) => {
       if (checkEnvironmentConnected(tenantsTreeViewProvider)) {
         tenantsTreeViewProvider

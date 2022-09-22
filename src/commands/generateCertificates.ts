@@ -10,134 +10,174 @@ import { existsSync, mkdirSync, writeFileSync } from "fs";
  * as Developer. The resulting files are stored in the workspace shared storage.
  * The logic ends with a link to "Upload certificate" command.
  * @param context VSCode Extension Context
- * @returns void
+ * @returns boolean - success of the command
  */
-export async function generateCerts(context: vscode.ExtensionContext) {
-  // Generate CA RSA key pair
-  var caKey = pki.rsa.generateKeyPair({ bits: 4096, e: 0x10001 });
-  var caSKI = pki.getPublicKeyFingerprint(caKey.publicKey, {
-    md: md.sha256.create(),
-    type: "SubjectPublicKeyInfo",
-    encoding: "hex",
-    delimiter: ":",
-  });
+export async function generateCerts(context: vscode.ExtensionContext): Promise<boolean> {
+  const success = await vscode.window.withProgress(
+    {
+      location: vscode.ProgressLocation.Notification,
+      title: "Generating certificates",
+    },
+    async (progress) => {
+      // Generate CA RSA key pair
+      progress.report({ message: "Generating RSA key pair for CA certificate" });
+      try {
+        var caKey = pki.rsa.generateKeyPair({ bits: 4096, e: 0x10001 });
+        var caSKI = pki.getPublicKeyFingerprint(caKey.publicKey, {
+          md: md.sha256.create(),
+          type: "SubjectPublicKeyInfo",
+          encoding: "hex",
+          delimiter: ":",
+        });
+      } catch (err: any) {
+        vscode.window.showErrorMessage("Error generating the RSA key pair for the CA certificate");
+        console.log(err.message);
+        return false;
+      }
 
-  // Generate CA certificate
-  var caAttrs = getCertAttributes("ca");
-  var caCert = pki.createCertificate();
-  caCert.serialNumber = generateSerialNo();
-  caCert.setSubject(caAttrs);
-  caCert.setIssuer(caAttrs);
-  caCert.publicKey = caKey.publicKey;
-  caCert.privateKey = caKey.privateKey;
-  caCert.validity.notBefore = new Date();
-  caCert.validity.notBefore.setDate(caCert.validity.notBefore.getDate() - 1);
-  caCert.validity.notAfter = new Date();
-  caCert.validity.notAfter.setFullYear(caCert.validity.notAfter.getFullYear() + 3);
-  caCert.setExtensions([
-    {
-      name: "basicConstraints",
-      cA: true,
-      pathLength: 0,
-    },
-    {
-      name: "keyUsage",
-      digitalSignature: false,
-      contentCommitment: false,
-      keyEncipherment: false,
-      dataEncipherment: false,
-      keyAgreement: false,
-      keyCertSign: true,
-      cRLSign: false,
-      encipherOnly: false,
-      decipherOnly: false,
-    },
-    {
-      name: "subjectKeyIdentifier",
-    },
-    {
-      name: "authorityKeyIdentifier",
-      keyIdentifier: caSKI,
-    },
-  ]);
-  caCert.sign(caKey.privateKey, md.sha256.create());
-  console.log("CA Cert created successfully");
+      // Generate CA certificate
+      progress.report({ message: "Generating the CA certificate" });
+      try {
+        var caAttrs = getCertAttributes("ca");
+        var caCert = pki.createCertificate();
+        caCert.serialNumber = generateSerialNo();
+        caCert.setSubject(caAttrs);
+        caCert.setIssuer(caAttrs);
+        caCert.publicKey = caKey.publicKey;
+        caCert.privateKey = caKey.privateKey;
+        caCert.validity.notBefore = new Date();
+        caCert.validity.notBefore.setDate(caCert.validity.notBefore.getDate() - 1);
+        caCert.validity.notAfter = new Date();
+        caCert.validity.notAfter.setFullYear(caCert.validity.notAfter.getFullYear() + 3);
+        caCert.setExtensions([
+          {
+            name: "basicConstraints",
+            cA: true,
+            pathLength: 0,
+          },
+          {
+            name: "keyUsage",
+            digitalSignature: false,
+            contentCommitment: false,
+            keyEncipherment: false,
+            dataEncipherment: false,
+            keyAgreement: false,
+            keyCertSign: true,
+            cRLSign: false,
+            encipherOnly: false,
+            decipherOnly: false,
+          },
+          {
+            name: "subjectKeyIdentifier",
+          },
+          {
+            name: "authorityKeyIdentifier",
+            keyIdentifier: caSKI,
+          },
+        ]);
+        caCert.sign(caKey.privateKey, md.sha256.create());
+        console.log("CA Cert created successfully");
+      } catch (err: any) {
+        vscode.window.showErrorMessage("Error generating the CA certificate");
+        console.log(err.message);
+        return false;
+      }
 
-  // Generate DEV RSA key pair
-  var devKey = pki.rsa.generateKeyPair({ bits: 4096, e: 0x10001 });
+      // Generate DEV RSA key pair
+      progress.report({ message: "Generating RSA key pair for Developer certificate" });
+      try {
+        var devKey = pki.rsa.generateKeyPair({ bits: 4096, e: 0x10001 });
+      } catch (err: any) {
+        vscode.window.showErrorMessage("Error generating the RSA key pair for the Developer certificate");
+        console.log(err.message);
+        return false;
+      }
 
-  // Generate DEV certificate
-  var devCert = pki.createCertificate();
-  devCert.serialNumber = generateSerialNo();
-  var devAttrs = getCertAttributes("dev");
-  devCert.setSubject(devAttrs);
-  devCert.setIssuer(caCert.subject.attributes);
-  devCert.publicKey = devKey.publicKey;
-  devCert.validity.notBefore = new Date();
-  devCert.validity.notBefore.setDate(caCert.validity.notBefore.getDate() - 1);
-  devCert.validity.notAfter = new Date();
-  devCert.validity.notAfter.setFullYear(caCert.validity.notAfter.getFullYear() + 3);
-  devCert.setExtensions([
-    {
-      name: "keyUsage",
-      digitalSignature: true,
-      contentCommitment: false,
-      keyEncipherment: false,
-      dataEncipherment: false,
-      keyAgreement: false,
-      keyCertSign: false,
-      cRLSign: false,
-      encipherOnly: false,
-      decipherOnly: false,
-    },
-    {
-      name: "subjectKeyIdentifier",
-    },
-    {
-      name: "authorityKeyIdentifier",
-      authorityCertIssuer: true,
-      serialNumber: caCert.serialNumber,
-    },
-  ]);
-  devCert.sign(caKey.privateKey, md.sha256.create());
-  console.log("DEV Cert created successfully");
+      // Generate DEV certificate
+      progress.report({ message: "Generating the Developer certificate" });
+      try {
+        var devCert = pki.createCertificate();
+        devCert.serialNumber = generateSerialNo();
+        var devAttrs = getCertAttributes("dev");
+        devCert.setSubject(devAttrs);
+        devCert.setIssuer(caCert.subject.attributes);
+        devCert.publicKey = devKey.publicKey;
+        devCert.validity.notBefore = new Date();
+        devCert.validity.notBefore.setDate(caCert.validity.notBefore.getDate() - 1);
+        devCert.validity.notAfter = new Date();
+        devCert.validity.notAfter.setFullYear(caCert.validity.notAfter.getFullYear() + 3);
+        devCert.setExtensions([
+          {
+            name: "keyUsage",
+            digitalSignature: true,
+            contentCommitment: false,
+            keyEncipherment: false,
+            dataEncipherment: false,
+            keyAgreement: false,
+            keyCertSign: false,
+            cRLSign: false,
+            encipherOnly: false,
+            decipherOnly: false,
+          },
+          {
+            name: "subjectKeyIdentifier",
+          },
+          {
+            name: "authorityKeyIdentifier",
+            authorityCertIssuer: true,
+            serialNumber: caCert.serialNumber,
+          },
+        ]);
+        devCert.sign(caKey.privateKey, md.sha256.create());
+        console.log("DEV Cert created successfully");
+      } catch (err: any) {
+        vscode.window.showErrorMessage("Error generating the Developer certificate");
+        console.log(err.message);
+        return false;
+      }
 
-  // Write files to workspace storage
-  var certsDir = path.join(context.storageUri!.fsPath, "certificates");
-  if (!existsSync(certsDir)) {
-    mkdirSync(certsDir);
-  }
-  writeFileSync(path.join(certsDir, "dev.key"), pki.privateKeyToPem(devKey.privateKey));
-  writeFileSync(path.join(certsDir, "dev.pub.key"), pki.publicKeyToPem(devKey.publicKey));
-  writeFileSync(path.join(certsDir, "ca.key"), pki.privateKeyToPem(caKey.privateKey));
-  writeFileSync(path.join(certsDir, "ca.pub.key"), pki.publicKeyToPem(caKey.publicKey));
-  writeFileSync(path.join(certsDir, "dev.pem"), pki.certificateToPem(devCert));
-  writeFileSync(path.join(certsDir, "ca.pem"), pki.certificateToPem(caCert));
-  console.log(`Wrote all certificates at location ${certsDir}`);
+      // Write files to workspace storage
+      progress.report({ message: "Writing your certificates to file system" });
+      var certsDir = path.join(context.storageUri!.fsPath, "certificates");
+      if (!existsSync(certsDir)) {
+        mkdirSync(certsDir);
+      }
+      writeFileSync(path.join(certsDir, "dev.key"), pki.privateKeyToPem(devKey.privateKey));
+      writeFileSync(path.join(certsDir, "dev.pub.key"), pki.publicKeyToPem(devKey.publicKey));
+      writeFileSync(path.join(certsDir, "ca.key"), pki.privateKeyToPem(caKey.privateKey));
+      writeFileSync(path.join(certsDir, "ca.pub.key"), pki.publicKeyToPem(caKey.publicKey));
+      writeFileSync(path.join(certsDir, "dev.pem"), pki.certificateToPem(devCert));
+      writeFileSync(path.join(certsDir, "ca.pem"), pki.certificateToPem(caCert));
+      console.log(`Wrote all certificates at location ${certsDir}`);
 
-  vscode.workspace
-    .getConfiguration()
-    .update("dynatrace.certificate.location.developerKey", path.join(certsDir, "dev.key"));
-  vscode.workspace
-    .getConfiguration()
-    .update("dynatrace.certificate.location.developerCertificate", path.join(certsDir, "dev.pem"));
-  vscode.workspace
-    .getConfiguration()
-    .update("dynatrace.certificate.location.rootOrCaCertificate", path.join(certsDir, "ca.pem"));
+      vscode.workspace
+        .getConfiguration()
+        .update("dynatrace.certificate.location.developerKey", path.join(certsDir, "dev.key"));
+      vscode.workspace
+        .getConfiguration()
+        .update("dynatrace.certificate.location.developerCertificate", path.join(certsDir, "dev.pem"));
+      vscode.workspace
+        .getConfiguration()
+        .update("dynatrace.certificate.location.rootOrCaCertificate", path.join(certsDir, "ca.pem"));
 
-  // Link command - Upload Certificates
-  var choice = await vscode.window.showInformationMessage(
-    "Certificates generated successfully. Would you like to upload to Dynatrace?",
-    "Yes",
-    "No"
+      return true;
+    }
   );
 
-  if (choice !== "Yes") {
-    vscode.window.showInformationMessage("Operation completed.");
-    return;
+  if (success) {
+    // Link command - Upload Certificates
+    var choice = await vscode.window.showInformationMessage(
+      "Certificates generated successfully. Would you like to upload to Dynatrace?",
+      "Yes",
+      "No"
+    );
+    if (choice === "Yes") {
+      await vscode.commands.executeCommand("dt-ext-copilot.uploadCertificate");
+    }
+    // We don't care about success of upload for the success of this command
+    return true;
   }
-
-  vscode.commands.executeCommand("dt-ext-copilot.uploadCertificate");
+  return false;
 }
 
 /**
