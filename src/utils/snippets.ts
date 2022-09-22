@@ -34,5 +34,26 @@ export const entitiesListCardSnippet = `\
   displayIcons: true
   entitySelectorTemplate: <entity-selector>
   hideEmptyCharts: true
+  filtering:
+    relationships: []
+    entityFilters: []
   columns: []
   charts: []`;
+
+export const filteringSnippet = `\
+filtering:
+  relationships: []
+  entityFilters: []`;
+
+export const entityFilterSnippet = `\
+- displayName: <group-name>
+  filters: []`;
+
+export const filterSnippet = `\
+- type: <filter-prop>
+  displayName: <filter-name>
+  freeText: <free-text>
+  modifier: <modifier>
+  distinct: <distinct>
+  entityTypes:
+    - <filtered-entity>`;
