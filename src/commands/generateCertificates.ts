@@ -137,7 +137,7 @@ export async function generateCerts(context: vscode.ExtensionContext) {
     return;
   }
 
-  vscode.commands.executeCommand("dynatrace-extension-developer.uploadCertificate");
+  vscode.commands.executeCommand("dt-ext-copilot.uploadCertificate");
 }
 
 /**

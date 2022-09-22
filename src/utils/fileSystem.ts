@@ -73,7 +73,7 @@ export function registerWorkspace(context: vscode.ExtensionContext) {
   // Update the state
   vscode.commands.executeCommand(
     "setContext",
-    "dynatrace-extension-developer.numWorkspaces",
+    "dt-ext-copilot.numWorkspaces",
     workspaces.length
   );
 }
@@ -175,7 +175,7 @@ export function registerEnvironment(
   // Update the state
   vscode.commands.executeCommand(
     "setContext",
-    "dynatrace-extension-developer.numEnvironments",
+    "dt-ext-copilot.numEnvironments",
     environments.length
   );
 }
@@ -200,7 +200,7 @@ export function removeEnvironment(context: vscode.ExtensionContext, environmentI
   // Update the state
   vscode.commands.executeCommand(
     "setContext",
-    "dynatrace-extension-developer.numEnvironments",
+    "dt-ext-copilot.numEnvironments",
     environments.length - 1
   );
 }
@@ -220,7 +220,7 @@ export function removeWorkspace(context: vscode.ExtensionContext, workspaceId: s
   // Update the state
   vscode.commands.executeCommand(
     "setContext",
-    "dynatrace-extension-developer.numWorkspaces",
+    "dt-ext-copilot.numWorkspaces",
     workspaces.length - 1
   );
 }

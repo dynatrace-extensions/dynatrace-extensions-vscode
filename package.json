@@ -1,11 +1,11 @@
 {
-	"name": "dynatrace-extension-developer",
-	"displayName": "Dynatrace Extension Developer",
+	"name": "dt-ext-copilot",
+	"displayName": "Dynatrace Extensions Copilot",
 	"description": "Support for Dynatrace Extension 2.0 development",
-	"version": "0.12.4",
+	"version": "0.13.0",
 	"repository": {
 		"type": "git",
-		"url": "https://github.com/dynatrace-extensions/dynatrace-extension-developer.git"
+		"url": "https://github.com/dynatrace-extensions/dynatrace-extensions-copilot.git"
 	},
 	"engines": {
 		"vscode": "^1.67.0"
@@ -19,107 +19,107 @@
 		"theme": "light"
 	},
 	"activationEvents": [
-		"onView:dynatrace-extension-developer-workspaces",
+		"onView:dt-ext-copilot-workspaces",
 		"workspaceContains:**/extension/extension.yaml",
-		"onCommand:dynatrace-extension-developer.loadSchemas",
-		"onCommand:dynatrace-extension-developer.initWorkspace",
-		"onCommand:dynatrace-extension-developer.generateCertificates",
-		"onCommand:dynatrace-extension-developer.uploadCertificate",
-		"onCommand:dynatrace-extension-developer.createDocumentation",
-		"onCommand:dynatrace-extension-developer.buildExtension",
-		"onCommand:dynatrace-extension-developer.uploadExtension",
-		"onCommand:dynatrace-extension-developer.activateExtension"
+		"onCommand:dt-ext-copilot.loadSchemas",
+		"onCommand:dt-ext-copilot.initWorkspace",
+		"onCommand:dt-ext-copilot.generateCertificates",
+		"onCommand:dt-ext-copilot.uploadCertificate",
+		"onCommand:dt-ext-copilot.createDocumentation",
+		"onCommand:dt-ext-copilot.buildExtension",
+		"onCommand:dt-ext-copilot.uploadExtension",
+		"onCommand:dt-ext-copilot.activateExtension"
 	],
 	"main": "./out/extension.js",
 	"contributes": {
 		"commands": [
 			{
-				"command": "dynatrace-extension-developer.loadSchemas",
+				"command": "dt-ext-copilot.loadSchemas",
 				"title": "Load schemas",
 				"category": "Dynatrace"
 			},
 			{
-				"command": "dynatrace-extension-developer.initWorkspace",
+				"command": "dt-ext-copilot.initWorkspace",
 				"title": "Initialize workspace",
 				"category": "Dynatrace"
 			},
 			{
-				"command": "dynatrace-extension-developer.generateCertificates",
+				"command": "dt-ext-copilot.generateCertificates",
 				"title": "Generate certificates",
 				"category": "Dynatrace"
 			},
 			{
-				"command": "dynatrace-extension-developer.uploadCertificate",
+				"command": "dt-ext-copilot.uploadCertificate",
 				"title": "Upload certificate",
 				"category": "Dynatrace"
 			},
 			{
-				"command": "dynatrace-extension-developer.createDocumentation",
+				"command": "dt-ext-copilot.createDocumentation",
 				"title": "Create documentation",
 				"category": "Dynatrace"
 			},
 			{
-				"command": "dynatrace-extension-developer.buildExtension",
+				"command": "dt-ext-copilot.buildExtension",
 				"title": "Build extension",
 				"category": "Dynatrace"
 			},
 			{
-				"command": "dynatrace-extension-developer.uploadExtension",
+				"command": "dt-ext-copilot.uploadExtension",
 				"title": "Upload extension to tenant",
 				"category": "Dynatrace"
 			},
 			{
-				"command": "dynatrace-extension-developer.activateExtension",
+				"command": "dt-ext-copilot.activateExtension",
 				"title": "Activate extension on tenant",
 				"category": "Dynatrace"
 			},
 			{
-				"command": "dynatrace-extension-developer-workspaces.refresh",
+				"command": "dt-ext-copilot-workspaces.refresh",
 				"title": "Refresh",
 				"icon": "$(refresh)"
 			},
 			{
-				"command": "dynatrace-extension-developer-workspaces.addWorkspace",
+				"command": "dt-ext-copilot-workspaces.addWorkspace",
 				"title": "Add & initialize a workspace",
 				"icon": "$(plus)"
 			},
 			{
-				"command": "dynatrace-extension-developer-workspaces.deleteWorkspace",
+				"command": "dt-ext-copilot-workspaces.deleteWorkspace",
 				"title": "Remove workspace",
 				"icon": "$(trash)"
 			},
 			{
-				"command": "dynatrace-extension-developer-workspaces.openWorkspace",
+				"command": "dt-ext-copilot-workspaces.openWorkspace",
 				"title": "Open workspace",
 				"icon": "$(folder-opened)"
 			},
 			{
-				"command": "dynatrace-extension-developer-workspaces.editExtension",
+				"command": "dt-ext-copilot-workspaces.editExtension",
 				"title": "Open extension in editor",
 				"icon": "$(notebook-open-as-text)"
 			},
 			{
-				"command": "dynatrace-extension-developer-environments.refresh",
+				"command": "dt-ext-copilot-environments.refresh",
 				"title": "Refresh",
 				"icon": "$(refresh)"
 			},
 			{
-				"command": "dynatrace-extension-developer-environments.addEnvironment",
+				"command": "dt-ext-copilot-environments.addEnvironment",
 				"title": "Add a tenant",
 				"icon": "$(plus)"
 			},
 			{
-				"command": "dynatrace-extension-developer-environments.useEnvironment",
+				"command": "dt-ext-copilot-environments.useEnvironment",
 				"title": "Use environment",
 				"icon": "$(plug)"
 			},
 			{
-				"command": "dynatrace-extension-developer-environments.editEnvironment",
+				"command": "dt-ext-copilot-environments.editEnvironment",
 				"title": "Edit environment",
 				"icon": "$(pencil)"
 			},
 			{
-				"command": "dynatrace-extension-developer-environments.deleteEnvironment",
+				"command": "dt-ext-copilot-environments.deleteEnvironment",
 				"title": "Remove environment",
 				"icon": "$(trash)"
 			}
@@ -183,55 +183,55 @@
 		"menus": {
 			"view/title": [
 				{
-					"command": "dynatrace-extension-developer-workspaces.addWorkspace",
-					"when": "view == dynatrace-extension-developer-workspaces",
+					"command": "dt-ext-copilot-workspaces.addWorkspace",
+					"when": "view == dt-ext-copilot-workspaces",
 					"group": "navigation"
 				},
 				{
-					"command": "dynatrace-extension-developer-workspaces.refresh",
-					"when": "view == dynatrace-extension-developer-workspaces",
+					"command": "dt-ext-copilot-workspaces.refresh",
+					"when": "view == dt-ext-copilot-workspaces",
 					"group": "navigation"
 				},
 				{
-					"command": "dynatrace-extension-developer-environments.addEnvironment",
-					"when": "view == dynatrace-extension-developer-environments",
+					"command": "dt-ext-copilot-environments.addEnvironment",
+					"when": "view == dt-ext-copilot-environments",
 					"group": "navigation"
 				},
 				{
-					"command": "dynatrace-extension-developer-environments.refresh",
-					"when": "view == dynatrace-extension-developer-environments",
+					"command": "dt-ext-copilot-environments.refresh",
+					"when": "view == dt-ext-copilot-environments",
 					"group": "navigation"
 				}
 			],
 			"view/item/context": [
 				{
-					"command": "dynatrace-extension-developer-workspaces.openWorkspace",
-					"when": "view == dynatrace-extension-developer-workspaces && viewItem == extensionWorkspace",
+					"command": "dt-ext-copilot-workspaces.openWorkspace",
+					"when": "view == dt-ext-copilot-workspaces && viewItem == extensionWorkspace",
 					"group": "inline@1"
 				},
 				{
-					"command": "dynatrace-extension-developer-workspaces.deleteWorkspace",
-					"when": "view == dynatrace-extension-developer-workspaces && viewItem == extensionWorkspace",
+					"command": "dt-ext-copilot-workspaces.deleteWorkspace",
+					"when": "view == dt-ext-copilot-workspaces && viewItem == extensionWorkspace",
 					"group": "inline@2"
 				},
 				{
-					"command": "dynatrace-extension-developer-workspaces.editExtension",
-					"when": "view == dynatrace-extension-developer-workspaces && viewItem == extension",
+					"command": "dt-ext-copilot-workspaces.editExtension",
+					"when": "view == dt-ext-copilot-workspaces && viewItem == extension",
 					"group": "inline"
 				},
 				{
-					"command": "dynatrace-extension-developer-environments.useEnvironment",
-					"when": "view == dynatrace-extension-developer-environments && viewItem == dynatraceEnvironment",
+					"command": "dt-ext-copilot-environments.useEnvironment",
+					"when": "view == dt-ext-copilot-environments && viewItem == dynatraceEnvironment",
 					"group": "inline@1"
 				},
 				{
-					"command": "dynatrace-extension-developer-environments.editEnvironment",
-					"when": "view == dynatrace-extension-developer-environments && viewItem == dynatraceEnvironment || viewItem == currentDynatraceEnvironment",
+					"command": "dt-ext-copilot-environments.editEnvironment",
+					"when": "view == dt-ext-copilot-environments && viewItem == dynatraceEnvironment || viewItem == currentDynatraceEnvironment",
 					"group": "inline@2"
 				},
 				{
-					"command": "dynatrace-extension-developer-environments.deleteEnvironment",
-					"when": "view == dynatrace-extension-developer-environments && viewItem == dynatraceEnvironment || viewItem == currentDynatraceEnvironment",
+					"command": "dt-ext-copilot-environments.deleteEnvironment",
+					"when": "view == dt-ext-copilot-environments && viewItem == dynatraceEnvironment || viewItem == currentDynatraceEnvironment",
 					"group": "inline@3"
 				}
 			]
@@ -248,35 +248,35 @@
 		"views": {
 			"dynatrace-extensions": [
 				{
-					"id": "dynatrace-extension-developer-workspaces",
+					"id": "dt-ext-copilot-workspaces",
 					"name": "Extension 2.0 Workspaces"
 				},
 				{
-					"id": "dynatrace-extension-developer-environments",
+					"id": "dt-ext-copilot-environments",
 					"name": "Environments"
 				}
 			]
 		},
 		"viewsWelcome": [
 			{
-				"view": "dynatrace-extension-developer-workspaces",
+				"view": "dt-ext-copilot-workspaces",
 				"contents": "Hello. You don't seem to have any extension workspaces initialized.\nStart by opening a folder and running the Initialize Workspace command.\n[Open folder](command:vscode.openFolder)",
-				"when": "workbenchState == empty && dynatrace-extension-developer.numWorkspaces == 0"
+				"when": "workbenchState == empty && dt-ext-copilot.numWorkspaces == 0"
 			},
 			{
-				"view": "dynatrace-extension-developer-workspaces",
-				"contents": "Hello. You don't seem to have any extension workspaces initialized.\nRun the Initialize Workspace command to initialize your current workspace.\n[Initialize workspace](command:dynatrace-extension-developer.initWorkspace)\nOr open a different workspace first.\n[Open folder](command:vscode.openFolder)",
-				"when": "workbenchState != empty && dynatrace-extension-developer.numWorkspaces == 0 && !dynatrace-extension-developer.extensionWorkspace"
+				"view": "dt-ext-copilot-workspaces",
+				"contents": "Hello. You don't seem to have any extension workspaces initialized.\nRun the Initialize Workspace command to initialize your current workspace.\n[Initialize workspace](command:dt-ext-copilot.initWorkspace)\nOr open a different workspace first.\n[Open folder](command:vscode.openFolder)",
+				"when": "workbenchState != empty && dt-ext-copilot.numWorkspaces == 0 && !dt-ext-copilot.extensionWorkspace"
 			},
 			{
-				"view": "dynatrace-extension-developer-workspaces",
-				"contents": "Hello. You don't seem to have any extension workspaces initialized.\nYou seem to already be in an extensions workspace - want to initialize it now?\n[Initialize workspace](command:dynatrace-extension-developer.initWorkspace)\nOtherwise, open a different workspace first.\n[Open folder](command:vscode.openFolder)",
-				"when": "workbenchState != empty && dynatrace-extension-developer.numWorkspaces == 0 && dynatrace-extension-developer.extensionWorkspace"
+				"view": "dt-ext-copilot-workspaces",
+				"contents": "Hello. You don't seem to have any extension workspaces initialized.\nYou seem to already be in an extensions workspace - want to initialize it now?\n[Initialize workspace](command:dt-ext-copilot.initWorkspace)\nOtherwise, open a different workspace first.\n[Open folder](command:vscode.openFolder)",
+				"when": "workbenchState != empty && dt-ext-copilot.numWorkspaces == 0 && dt-ext-copilot.extensionWorkspace"
 			},
 			{
-				"view": "dynatrace-extension-developer-environments",
-				"contents": "Hello. You don't have any Dynatrace Environments saved.\nWould you like to add one now?\n[Add environment](command:dynatrace-extension-developer-environments.addEnvironment)",
-				"when": "dynatrace-extension-developer.numEnvironments == 0"
+				"view": "dt-ext-copilot-environments",
+				"contents": "Hello. You don't have any Dynatrace Environments saved.\nWould you like to add one now?\n[Add environment](command:dt-ext-copilot-environments.addEnvironment)",
+				"when": "dt-ext-copilot.numEnvironments == 0"
 			}
 		],
 		"icons": {

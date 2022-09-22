@@ -76,7 +76,7 @@ export async function buildExtension(context: vscode.ExtensionContext) {
     .showInformationMessage("Extension built successfully. Would you like to upload it to Dynatrace?", "Yes", "No")
     .then((choice) => {
       if (choice === "Yes") {
-        vscode.commands.executeCommand("dynatrace-extension-developer.uploadExtension");
+        vscode.commands.executeCommand("dt-ext-copilot.uploadExtension");
       }
     });
 }

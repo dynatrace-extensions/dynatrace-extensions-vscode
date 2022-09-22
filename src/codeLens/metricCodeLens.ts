@@ -83,7 +83,7 @@ class SelectorValidationLens extends vscode.CodeLens {
     super(range, {
       title: "Validate selector",
       tooltip: "Run a query and check if the selector is valid",
-      command: "dynatrace-extension-developer.metric-codelens.validateSelector",
+      command: "dt-ext-copilot.metric-codelens.validateSelector",
       arguments: [selector],
     });
     this.selector = selector;
@@ -104,7 +104,7 @@ class SelectorRunnerLens extends vscode.CodeLens {
     super(range, {
       title: "Query metric data",
       tooltip: "Run the metric query and visualize its results",
-      command: "dynatrace-extension-developer.metric-codelens.runSelector",
+      command: "dt-ext-copilot.metric-codelens.runSelector",
       arguments: [selector],
     });
     this.selector = selector;

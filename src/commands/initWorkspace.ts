@@ -76,7 +76,7 @@ export async function initWorkspace(context: vscode.ExtensionContext, dt: Dynatr
       }
       break;
     case "Generate new ones":
-      await vscode.commands.executeCommand("dynatrace-extension-developer.generateCertificates");
+      await vscode.commands.executeCommand("dt-ext-copilot.generateCertificates");
       break;
     default:
       vscode.window.showErrorMessage("No certificate choice made. Workspace not initialized.");

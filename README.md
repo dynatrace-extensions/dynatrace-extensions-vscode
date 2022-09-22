@@ -1,10 +1,10 @@
 ![illustration](previews/proj-illustration.png)
 
-# Dynatrace Extension Developer
+# Dynatrace Extensions Copilot
 
-This is a VisualStudio Code Extension that aims to provide support for all aspects of developing Dynatrace Extensions 2.0. It provides a specialised toolkit to facilitate extension & environment management, lifecycle operation automation, content validation and automation, and more.
+This is a VisualStudio Code Extension that aims to provide support for all aspects of developing Dynatrace Extensions 2.0. It provides a specialised toolkit to facilitate extension & environment management, lifecycle operation automation, content validation and automation, and more. Browse through the contents below, or jump straight to [using it](#start-using-it).
 
-- [Dynatrace Extension Developer](#dynatrace-extension-developer)
+- [Dynatrace Extensions Copilot](#dynatrace-extensions-copilot)
   - [Settings](#settings)
   - [Workflows (Commands)](#workflows-commands)
     - [🚀 Initialize workspace](#-initialize-workspace)
@@ -185,3 +185,5 @@ Bugs are expected, however, during this stage please provide any feedback to rad
 
 Right now, the extension is not published to the marketplace so you'll have to install it from the `.vsix` file packaged in every [release](https://github.com/dynatrace-extensions/dynatrace-extension-developer/releases).
 In VSCode, open the Extensions menu, click the "..." and choose "Install from VSIX..".
+
+Once installed, why not initialize a new workspace, or connect a tenant? Head over to the new [Dynatrace view](#custom-dynatrace-view) to start.

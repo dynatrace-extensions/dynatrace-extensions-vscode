@@ -150,7 +150,7 @@ export function checkCertificateExists(type: "ca" | "dev" | "all", context: vsco
       .then((opt) => {
         switch (opt) {
           case "Generate new ones":
-            vscode.commands.executeCommand("dynatrace-extension-developer.generateCertificates");
+            vscode.commands.executeCommand("dt-ext-copilot.generateCertificates");
             break;
           case "Open settings":
             vscode.commands.executeCommand("workbench.action.openSettings", "Dynatrace Certificate Location");

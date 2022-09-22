@@ -8,7 +8,7 @@ export class ConnectionStatusManager {
 
   constructor() {
     this.statusBarItem = vscode.window.createStatusBarItem(vscode.StatusBarAlignment.Left, 1);
-    this.statusBarItem.command = "dynatrace-extension-developer-environments.changeConnection";
+    this.statusBarItem.command = "dt-ext-copilot-environments.changeConnection";
     this.updateStatusBar(false);
   }
 
