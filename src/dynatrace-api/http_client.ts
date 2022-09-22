@@ -81,8 +81,8 @@ export class HttpClient {
         console.log(message);
         console.log(err.response);
         throw new DynatraceAPIError(message, {
-          code: err.response.data.error.code,
-          data: err.response.data.error.message,
+          code: err.name,
+          data: err.message,
         });
       });
   }
