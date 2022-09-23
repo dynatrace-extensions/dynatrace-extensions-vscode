@@ -1,27 +1,27 @@
 import * as vscode from "vscode";
 import * as yaml from "yaml";
-import { EnvironmentsTreeDataProvider } from "../treeViews/environmentsTreeView";
+import { CachedDataProvider } from "../utils/dataCaching";
 import {
   getAttributesKeysFromTopology,
   getDimensionsFromMatchingMetrics,
   getEntityName,
   getRequiredDimensions,
 } from "../utils/extensionParsing";
-import { getBlockItemIndexAtLine, getParentBlocks, isCursorAt } from "../utils/yamlParsing";
+import { getBlockItemIndexAtLine, getParentBlocks } from "../utils/yamlParsing";
 
 /**
  * Provider for code auto-completion related to entities and entity types.
  */
 export class TopologyCompletionProvider implements vscode.CompletionItemProvider {
-  builtinEntities: EntityType[];
-  environments: EnvironmentsTreeDataProvider;
+  private builtinEntities: EntityType[];
+  private readonly cachedData: CachedDataProvider;
 
   /**
-   * @param environments Dynatrace Environments Tree Provide
+   * @param cachedDataProvider a provider for cacheable data
    */
-  constructor(environments: EnvironmentsTreeDataProvider) {
+  constructor(cachedDataProvider: CachedDataProvider) {
+    this.cachedData = cachedDataProvider;
     this.builtinEntities = [];
-    this.environments = environments;
   }
 
   /**
@@ -43,9 +43,7 @@ export class TopologyCompletionProvider implements vscode.CompletionItemProvider
     var parentBlocks = getParentBlocks(position.line, document.getText());
     var line = document.lineAt(position.line).text.substring(0, position.character);
 
-    if (this.builtinEntities.length === 0) {
-      this.loadBuiltinEntities();
-    }
+    this.builtinEntities = this.cachedData.getBuiltinEntities();
 
     // Entity types completions
     for (const keyword of ["fromType: ", "toType: ", "entityType: "]) {
@@ -96,19 +94,6 @@ export class TopologyCompletionProvider implements vscode.CompletionItemProvider
     }
 
     return completionItems;
-  }
-
-  /**
-   * Loads the details of all entity types available in Dynatrace
-   */
-  private loadBuiltinEntities() {
-    this.environments.getDynatraceClient().then((dt) => {
-      if (dt) {
-        dt.entitiesV2.listTypes().then((types: EntityType[]) => {
-          this.builtinEntities.push(...types);
-        });
-      }
-    });
   }
 
   /**

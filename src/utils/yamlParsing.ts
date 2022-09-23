@@ -36,27 +36,6 @@ export function getBlockItemIndexAtLine(blockLabel: string, blockLineIdx: number
 }
 
 /**
- * Validates if cursor is at given word by checking whether the given line
- * ends with text (including an additional space).
- * @param document the (vscode) document to check in
- * @param position the (vscode) position to check
- * @param text text to check for cursor presence
- * @returns
- */
-export function isCursorAt(
-  document: vscode.TextDocument,
-  position: vscode.Position,
-  text: string
-): boolean {
-  var line = document.lineAt(position.line).text.substring(0, position.character);
-
-  if (line.endsWith(text) || line.endsWith(`${text} `)) {
-    return true;
-  }
-  return false;
-}
-
-/**
  * Given a line number and yaml content, returns a hierarchical list of parent block
  * labels. The last item in the list is the closest parent block label.
  * @param lineNumber number of the line to find

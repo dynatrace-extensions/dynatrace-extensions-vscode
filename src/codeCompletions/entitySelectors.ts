@@ -1,8 +1,7 @@
 import * as vscode from "vscode";
 import * as yaml from "yaml";
-import { EnvironmentsTreeDataProvider } from "../treeViews/environmentsTreeView";
+import { CachedDataProvider } from "../utils/dataCaching";
 import {
-  getAttributesFromTopology,
   getAttributesKeysFromTopology,
   getEntityName,
   getRelationships,
@@ -19,15 +18,15 @@ const TRIGGER_SUGGEST_CMD: vscode.Command = {
  * Provider for code auto-completions within entity selectors.
  */
 export class EntitySelectorCompletionProvider implements vscode.CompletionItemProvider {
-  builtinEntities: EntityType[];
-  environments: EnvironmentsTreeDataProvider;
+  private builtinEntities: EntityType[];
+  private readonly cachedData: CachedDataProvider;
 
   /**
-   * @param environments Dynatrace Environments Tree Provide
+   * @param cachedDataProvider a provider for cacheable data
    */
-  constructor(environments: EnvironmentsTreeDataProvider) {
+  constructor(cachedDataProvider: CachedDataProvider) {
+    this.cachedData = cachedDataProvider;
     this.builtinEntities = [];
-    this.environments = environments;
   }
 
   /**
@@ -43,14 +42,12 @@ export class EntitySelectorCompletionProvider implements vscode.CompletionItemPr
     position: vscode.Position,
     token: vscode.CancellationToken,
     context: vscode.CompletionContext
-  ): vscode.ProviderResult<vscode.CompletionItem[] | vscode.CompletionList<vscode.CompletionItem>> {
+  ): vscode.CompletionItem[] {
     var completionItems: vscode.CompletionItem[] = [];
     var extension = yaml.parse(document.getText()) as ExtensionStub;
     var line = document.lineAt(position.line).text.substring(0, position.character);
 
-    if (this.builtinEntities.length === 0) {
-      this.loadBuiltinEntities();
-    }
+    this.builtinEntities = this.cachedData.getBuiltinEntities();
 
     // Completions are possible on any line containing `entitySelectorTemplate`
     if (line.includes("entitySelectorTemplate:")) {
@@ -80,19 +77,6 @@ export class EntitySelectorCompletionProvider implements vscode.CompletionItemPr
     }
 
     return completionItems;
-  }
-
-  /**
-   * Loads the details of all entity types available in Dynatrace
-   */
-  private loadBuiltinEntities() {
-    this.environments.getDynatraceClient().then((dt) => {
-      if (dt) {
-        dt.entitiesV2.listTypes().then((types: EntityType[]) => {
-          this.builtinEntities.push(...types);
-        });
-      }
-    });
   }
 
   /**

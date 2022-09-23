@@ -1,21 +1,19 @@
 import * as vscode from "vscode";
-import Axios from "axios";
-import { getParentBlocks, isCursorAt } from "../utils/yamlParsing";
-
-interface BaristaMeta {
-  title: string;
-  public: boolean;
-  tags: string[];
-  name: string;
-}
+import { CachedDataProvider } from "../utils/dataCaching";
+import { getParentBlocks } from "../utils/yamlParsing";
 
 /**
  * Provider for code auto-completion related to Barista icons
  */
 export class IconCompletionProvider implements vscode.CompletionItemProvider {
+  cachedData: CachedDataProvider;
   baristaIcons: string[];
 
-  constructor() {
+  /**
+   * @param cachedDataProvider a provider of cacheable data
+   */
+  constructor(cachedDataProvider: CachedDataProvider) {
+    this.cachedData = cachedDataProvider;
     this.baristaIcons = [];
   }
 
@@ -29,9 +27,7 @@ export class IconCompletionProvider implements vscode.CompletionItemProvider {
     var parentBlocks = getParentBlocks(position.line, document.getText());
     var line = document.lineAt(position.line).text.substring(0, position.character);
 
-    if (this.baristaIcons.length === 0) {
-      this.loadBaristaIcons();
-    }
+    this.baristaIcons = this.cachedData.getBaristaIcons();
 
     if (
       line.endsWith("iconPattern: ") ||
@@ -43,36 +39,6 @@ export class IconCompletionProvider implements vscode.CompletionItemProvider {
     }
 
     return completionItems;
-  }
-
-  /**
-   * Loads the names of all available Barista Icons.
-   * The internal Barista endpoint is tried first, before the public one.
-   */
-  private loadBaristaIcons() {
-    const publicURL = "https://barista.dynatrace.com/data/resources/icons.json";
-    const internalURL = "https://barista.lab.dynatrace.org/data/resources/icons.json";
-
-    Axios.get(internalURL)
-      .then((res) => {
-        if (res.data.icons) {
-          this.baristaIcons = res.data.icons.map((i: BaristaMeta) => i.name);
-        }
-      })
-      .catch(async (err) => {
-        console.log("Internal Barista not accessible. Trying public one.");
-
-        Axios.get(publicURL)
-          .then((res) => {
-            if (res.data.icons) {
-              this.baristaIcons = res.data.icons.map((i: BaristaMeta) => i.name);
-            }
-          })
-          .catch((err) => {
-            console.log("Public Barista not accessible.");
-            console.log(err.message);
-          });
-      });
   }
 
   /**
