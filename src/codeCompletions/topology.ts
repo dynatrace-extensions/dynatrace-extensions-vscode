@@ -32,12 +32,12 @@ export class TopologyCompletionProvider implements vscode.CompletionItemProvider
    * @param context
    * @returns
    */
-  async provideCompletionItems(
+  provideCompletionItems(
     document: vscode.TextDocument,
     position: vscode.Position,
     token: vscode.CancellationToken,
     context: vscode.CompletionContext
-  ): Promise<vscode.CompletionItem[]> {
+  ): vscode.CompletionItem[] {
     var completionItems: vscode.CompletionItem[] = [];
     var extension = yaml.parse(document.getText()) as ExtensionStub;
     var parentBlocks = getParentBlocks(position.line, document.getText());
