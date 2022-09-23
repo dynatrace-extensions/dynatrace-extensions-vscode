@@ -105,6 +105,7 @@ Currently implemented completions trigger:
 - on lists of attribute-type properties, on `key` the keys of relevant entity attributes are suggested
 - on `entitySelectorTemplate` can make use of `Ctrl + Space` to trigger completions as the selector is being built
 - on `iconPattern` (within `topology.rules`) or `icon` (within `staticContent.header`) - you can browse available Barista Icon codes
+- on `key` for card keys either inside `layout.cards` or individual card type lists - card keys that have not been used yet are suggested
 
 ![intellisense](previews/intellisense.gif)
 

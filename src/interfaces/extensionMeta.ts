@@ -67,14 +67,30 @@ interface VarStub {
   id: string;
 }
 
+interface ListSettings {
+  layout?: {
+    autoGenerate?: boolean;
+    cards?: [{ key: string; type: "ENTITIES_LIST" | "CHART_GROUP" | "MESSAGE" }];
+  };
+}
+
+interface DetailsSettings {
+  layout?: {
+    autoGenerate?: boolean;
+    cards?: [{ key: string; type: "ENTITIES_LIST" | "CHART_GROUP" | "MESSAGE" | "LOGS" | "EVENTS" }];
+  };
+}
+
 interface ScreenStub {
   entityType: string;
   propertiesCard?: any;
-  listSettings?: any;
-  detailsSettings?: any;
+  listSettings?: ListSettings;
+  detailsSettings?: DetailsSettings;
   entitiesListCards?: EntitiesListCardStub[];
   chartsCards?: ChartsCardStub[];
   messageCards?: any[];
+  logsCards?: any[];
+  eventsCards?: any[];
 }
 
 interface EntitiesListCardStub {
@@ -82,7 +98,7 @@ interface EntitiesListCardStub {
   displayName?: string;
   entitySelectorTemplate?: string;
   filtering?: any;
-  columns?: any[]
+  columns?: any[];
   charts?: ChartStub[];
 }
 

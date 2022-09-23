@@ -41,6 +41,7 @@ import { MetricResultsPanel } from "./webviews/metricResults";
 import { DynatraceAPIError } from "./dynatrace-api/errors";
 import { IconCompletionProvider } from "./codeCompletions/icons";
 import { CachedDataProvider } from "./utils/dataCaching";
+import { ScreensMetaCompletionProvider } from "./codeCompletions/screensMeta";
 
 /**
  * Sets up the VSCode extension by registering all the available functionality as disposable objects.
@@ -151,6 +152,12 @@ export function activate(context: vscode.ExtensionContext) {
     vscode.languages.registerCompletionItemProvider(
       { language: "yaml", pattern: "**/extension/extension.yaml" },
       new IconCompletionProvider(cachedDataProvider),
+      ":"
+    ),
+    // Auto-completion - Screens metadata/items
+    vscode.languages.registerCompletionItemProvider(
+      { language: "yaml", pattern: "**/extension/extension.yaml" },
+      new ScreensMetaCompletionProvider(),
       ":"
     ),
     // Extension 2.0 Workspaces Tree View

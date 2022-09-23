@@ -466,3 +466,115 @@ export function getEntityChartCardKeys(screenIdx: number, extension: ExtensionSt
 
   return extension.screens![screenIdx].chartsCards!.map((cc) => cc.key);
 }
+
+type CardMeta = {
+  key: string;
+  type: "ENTITIES_LIST" | "CHART_GROUP" | "MESSAGE" | "LOGS" | "EVENTS";
+};
+
+/**
+ * Extracts all the cards defined within layouts of a given screen as short representations.
+ * The screen must be referenced by index within the screens list.
+ * @param screenIdx index of the screen in list
+ * @param extension extension.yaml serialized as object
+ * @returns list of card metadatas
+ */
+export function getCardMetaFromLayout(screenIdx: number, extension: ExtensionStub): CardMeta[] {
+  var cards: CardMeta[] = [];
+
+  if (
+    extension.screens![screenIdx].listSettings &&
+    extension.screens![screenIdx].listSettings!.layout &&
+    extension.screens![screenIdx].listSettings!.layout!.cards
+  ) {
+    extension.screens![screenIdx].listSettings!.layout!.cards!.forEach((card) => {
+      if (cards.findIndex((c) => c.key === card.key) === -1) {
+        // Only add valid cards. User may have mis-typed keys.
+        if (card.key && card.type) {
+          cards.push({ key: card.key, type: card.type });
+        }
+      }
+    });
+  }
+
+  if (
+    extension.screens![screenIdx].detailsSettings &&
+    extension.screens![screenIdx].detailsSettings!.layout &&
+    extension.screens![screenIdx].detailsSettings!.layout!.cards
+  ) {
+    extension.screens![screenIdx].detailsSettings!.layout!.cards!.forEach((card) => {
+      if (cards.findIndex((c) => c.key === card.key) === -1) {
+        // Only add valid cards. User may have mis-typed keys.
+        if (card.key && card.type) {
+          cards.push({ key: card.key, type: card.type });
+        }
+      }
+    });
+  }
+
+  return cards;
+}
+
+/**
+ * Extracts all the cards as short representations, with details taken from each card's definition.
+ * The screen must be referenced by index within the screens list.
+ * @param screenIdx index of the screen in list
+ * @param extension extension.yaml serialized as object
+ * @param cardType optional - narrow down to single section of the yaml.
+ * @returns list of card metadatas
+ */
+export function getCardMetaFromDefinition(
+  screenIdx: number,
+  extension: ExtensionStub,
+  cardType?: "entitiesListCards" | "chartsCards" | "eventsCards" | "logsCards" | "messageCards"
+): CardMeta[] {
+  var cards: CardMeta[] = [];
+
+  if (!cardType || cardType === "entitiesListCards") {
+    if (extension.screens![screenIdx].entitiesListCards) {
+      extension.screens![screenIdx].entitiesListCards?.forEach((card) => {
+        if (cards.findIndex((c) => c.key === card.key) === -1) {
+          cards.push({ key: card.key, type: "ENTITIES_LIST" });
+        }
+      });
+    }
+  }
+  if (!cardType || cardType === "chartsCards") {
+    if (extension.screens![screenIdx].chartsCards) {
+      extension.screens![screenIdx].chartsCards?.forEach((card) => {
+        if (cards.findIndex((c) => c.key === card.key) === -1) {
+          cards.push({ key: card.key, type: "CHART_GROUP" });
+        }
+      });
+    }
+  }
+  if (!cardType || cardType === "messageCards") {
+    if (extension.screens![screenIdx].messageCards) {
+      extension.screens![screenIdx].messageCards?.forEach((card) => {
+        if (cards.findIndex((c) => c.key === card.key) === -1) {
+          cards.push({ key: card.key, type: "MESSAGE" });
+        }
+      });
+    }
+  }
+  if (!cardType || cardType === "logsCards") {
+    if (extension.screens![screenIdx].logsCards) {
+      extension.screens![screenIdx].logsCards?.forEach((card) => {
+        if (cards.findIndex((c) => c.key === card.key) === -1) {
+          cards.push({ key: card.key, type: "LOGS" });
+        }
+      });
+    }
+  }
+  if (!cardType || cardType === "eventsCards") {
+    if (extension.screens![screenIdx].eventsCards) {
+      extension.screens![screenIdx].eventsCards?.forEach((card) => {
+        if (cards.findIndex((c) => c.key === card.key) === -1) {
+          cards.push({ key: card.key, type: "EVENTS" });
+        }
+      });
+    }
+  }
+
+  return cards;
+}
