@@ -1,8 +1,14 @@
 import * as vscode from "vscode";
 import * as yaml from "yaml";
 import { EnvironmentsTreeDataProvider } from "../treeViews/environmentsTreeView";
-import { getAttributesKeysFromTopology, getRelationshipTypes } from "../utils/extensionParsing";
-import { isCursorAt } from "../utils/yamlParsing";
+import {
+  getAttributesFromTopology,
+  getAttributesKeysFromTopology,
+  getEntityName,
+  getRelationships,
+  getRelationshipTypes,
+} from "../utils/extensionParsing";
+import { getBlockItemIndexAtLine, getParentBlocks } from "../utils/yamlParsing";
 
 const TRIGGER_SUGGEST_CMD: vscode.Command = {
   command: "editor.action.triggerSuggest",
@@ -40,33 +46,36 @@ export class EntitySelectorCompletionProvider implements vscode.CompletionItemPr
   ): vscode.ProviderResult<vscode.CompletionItem[] | vscode.CompletionList<vscode.CompletionItem>> {
     var completionItems: vscode.CompletionItem[] = [];
     var extension = yaml.parse(document.getText()) as ExtensionStub;
+    var line = document.lineAt(position.line).text.substring(0, position.character);
 
     if (this.builtinEntities.length === 0) {
       this.loadBuiltinEntities();
     }
 
-    if (document.lineAt(position.line).text.includes("entitySelectorTemplate:")) {
-      var line = document.lineAt(position.line).text;
+    // Completions are possible on any line containing `entitySelectorTemplate`
+    if (line.includes("entitySelectorTemplate:")) {
       var currentSelector = this.getMostRecentSelector(line, position.character);
 
-      if (
-        isCursorAt(document, position, "entitySelectorTemplate:") ||
-        (isCursorAt(document, position, "(") &&
-          this.isCursorAtRelationshipStart(document, position))
-      ) {
+      // If at the start of template, offer pre-defined selectors or option to build
+      if (line.endsWith("entitySelectorTemplate: ")) {
+        completionItems.push(...this.createKnownSelectorCompletions(position, document));
         completionItems.push(this.createBaseSelectorCompletion());
       }
-      if (isCursorAt(document, position, "type(")) {
-        completionItems.push(this.createTypeCompletion(extension, currentSelector));
+      // If we just started a relationship definition, assume new selector start
+      if (line.endsWith("(") && this.isCursorAtRelationshipStart(document, position)) {
+        completionItems.push(this.createBaseSelectorCompletion());
       }
-      if (isCursorAt(document, position, "),")) {
-        completionItems.push(this.createOperatorCompletion(currentSelector, extension));
+      // `type` will always require a valid entity type
+      if (line.endsWith("type(")) {
+        completionItems.push(...this.createTypeCompletions(extension, currentSelector));
       }
-      if (
-        isCursorAt(document, position, "fromRelationships.") ||
-        isCursorAt(document, position, "toRelationships.")
-      ) {
-        this.createRelationshipCompletion(currentSelector, extension);
+      // Closing bracket and comma implies continuation, suggest valid operators
+      if (line.endsWith("),")) {
+        completionItems.push(...this.createOperatorCompletions(currentSelector, extension));
+      }
+      // Clear markers for suggesting relationships relevant to current selector context
+      if (line.endsWith("fromRelationships.") || line.endsWith("toRelationships.")) {
+        completionItems.push(this.createRelationshipCompletion(currentSelector, extension));
       }
     }
 
@@ -92,18 +101,71 @@ export class EntitySelectorCompletionProvider implements vscode.CompletionItemPr
    * @returns completion item
    */
   private createBaseSelectorCompletion(): vscode.CompletionItem {
-    const selectorCompletion = new vscode.CompletionItem(
-      "entitySelectorTemplate: ",
-      vscode.CompletionItemKind.Constant
+    const selectorCompletion = new vscode.CompletionItem("Begin building selector", vscode.CompletionItemKind.Constant);
+    selectorCompletion.detail = "Copilot suggestion";
+    selectorCompletion.documentation = new vscode.MarkdownString(
+      "Begin building an entity selector. You must start with targetting " +
+        "either an entity type or ID. `$(entityConditions)` would automatically " +
+        "target the entity of the current context."
     );
-    selectorCompletion.detail = "Begin building selector";
-
-    selectorCompletion.insertText = new vscode.SnippetString(
-      "${1|type(,entityId(,$(entityConditions)|}"
-    );
+    selectorCompletion.insertText = new vscode.SnippetString("${1|type(,entityId(,$(entityConditions|}");
+    selectorCompletion.insertText.appendText(")");
     selectorCompletion.command = TRIGGER_SUGGEST_CMD;
 
     return selectorCompletion;
+  }
+
+  /**
+   * Creates completion items for every relationships that we can deduce for the current entity.
+   * The current entity itself is deduced based on the location within the yaml.
+   * @param position VSCode Position where provider was triggered
+   * @param document VSCode TextDocument in which provider was triggered
+   * @returns list of completion items
+   */
+  private createKnownSelectorCompletions(
+    position: vscode.Position,
+    document: vscode.TextDocument
+  ): vscode.CompletionItem[] {
+    var completions: vscode.CompletionItem[] = [];
+    const extension = yaml.parse(document.getText()) as ExtensionStub;
+    const parentBlocks = getParentBlocks(position.line, document.getText());
+    const screenIdx = getBlockItemIndexAtLine("screens", position.line, document.getText());
+
+    // Figure out who $(entityConditions) is based on location in yaml
+    var entityType = extension.screens![screenIdx].entityType;
+    if (
+      parentBlocks[parentBlocks.length - 1] === "relation" &&
+      parentBlocks[parentBlocks.length - 3] === "entitiesListCards"
+    ) {
+      const cardIdx = getBlockItemIndexAtLine("entitiesListCards", position.line, document.getText());
+      const cardSelector = extension.screens![screenIdx].entitiesListCards![cardIdx].entitySelectorTemplate;
+      if (cardSelector) {
+        entityType = cardSelector.split("type(")[1].split(")")[0].replace(/"/g, "");
+        console.log(`ENTI TYPE: ${entityType}`);
+      }
+    }
+
+    // Gather relationships of that entity, and convert to completion items
+    getRelationships(entityType, extension).forEach((rel) => {
+      var relEntityName = getEntityName(rel.entity, extension);
+      if (relEntityName === "") {
+        relEntityName = rel.entity;
+      }
+      const relationCompletionItem = new vscode.CompletionItem(
+        `Insert relation to ${relEntityName}`,
+        vscode.CompletionItemKind.Function
+      );
+      relationCompletionItem.detail = "Copilot suggestion";
+      relationCompletionItem.documentation =
+        `Insert an entity selector template to pull all related ${relEntityName} entities. ` +
+        "This has been configured based on your yaml file.";
+      relationCompletionItem.insertText = `type("${rel.entity}"),${
+        rel.direction === "to" ? "from" : "to"
+      }Relationships.${rel.relation}($(entityConditions))`;
+      completions.push(relationCompletionItem);
+    });
+
+    return completions;
   }
 
   /**
@@ -113,25 +175,38 @@ export class EntitySelectorCompletionProvider implements vscode.CompletionItemPr
    * @param selector the most recent selector chunk typed already
    * @returns Completion item
    */
-  private createTypeCompletion(extension: ExtensionStub, selector: string): vscode.CompletionItem {
-    var customEntities = extension.topology.types.map((type) => type.name);
-    var entities = [
-      ...customEntities,
-      ...this.builtinEntities.map((type) => type.type!.toLowerCase()),
-    ];
+  private createTypeCompletions(extension: ExtensionStub, selector: string): vscode.CompletionItem[] {
+    var completions: vscode.CompletionItem[] = [];
     var usedTypes = this.getTypesFromSelector(selector);
-    entities = entities.filter((entity) => !usedTypes.includes(entity));
+    var customTypes = extension.topology.types.map((type) => type.name).filter((e) => !usedTypes.includes(e));
+    var builtinTypes = this.builtinEntities
+      .map((type) => type.type!.toLowerCase())
+      .filter((e) => !usedTypes.includes(e));
 
-    const typeCompletion = new vscode.CompletionItem("type(", vscode.CompletionItemKind.Constant);
-    typeCompletion.detail = "Browse detected entity types";
-    typeCompletion.insertText = new vscode.SnippetString();
-    typeCompletion.insertText.appendText('"');
-    typeCompletion.insertText.appendChoice(entities);
-    typeCompletion.insertText.appendText('")');
-    typeCompletion.commitCharacters = [","];
-    typeCompletion.command = TRIGGER_SUGGEST_CMD;
+    if (customTypes.length > 0) {
+      const customTypeCompletion = new vscode.CompletionItem("Custom entity types", vscode.CompletionItemKind.Class);
+      customTypeCompletion.detail = "Copilot suggestion";
+      customTypeCompletion.documentation = "Insert one of your custom entity types detected from this yaml file.";
+      customTypeCompletion.insertText = new vscode.SnippetString();
+      customTypeCompletion.insertText.appendText('"');
+      customTypeCompletion.insertText.appendChoice(customTypes);
+      customTypeCompletion.insertText.appendText('"');
+      customTypeCompletion.command = TRIGGER_SUGGEST_CMD;
+      completions.push(customTypeCompletion);
+    }
+    if (builtinTypes.length > 0) {
+      const builtinTypeCompletion = new vscode.CompletionItem("Built-in entity types", vscode.CompletionItemKind.Class);
+      builtinTypeCompletion.detail = "Copilot suggestion";
+      builtinTypeCompletion.documentation = "Insert one of Dynatrace's built-in entity types";
+      builtinTypeCompletion.insertText = new vscode.SnippetString();
+      builtinTypeCompletion.insertText.appendText('"');
+      builtinTypeCompletion.insertText.appendChoice(builtinTypes);
+      builtinTypeCompletion.insertText.appendText('"');
+      builtinTypeCompletion.command = TRIGGER_SUGGEST_CMD;
+      completions.push(builtinTypeCompletion);
+    }
 
-    return typeCompletion;
+    return completions;
   }
 
   /**
@@ -139,21 +214,23 @@ export class EntitySelectorCompletionProvider implements vscode.CompletionItemPr
    * position within the most recent entity selector typed already.
    * @param selector the most recent selector chunk already typed
    * @param extension extension yaml serialized as object
-   * @returns
+   * @returns list of completion items
    */
-  private createOperatorCompletion(
-    selector: string,
-    extension: ExtensionStub
-  ): vscode.CompletionItem {
+  private createOperatorCompletions(selector: string, extension: ExtensionStub): vscode.CompletionItem[] {
+    var completions: vscode.CompletionItem[] = [];
     var operators = this.getAvailableOperators(selector, extension);
 
-    const operatorCompletion = new vscode.CompletionItem("),", vscode.CompletionItemKind.Constant);
-    operatorCompletion.detail = "Continue entity selector";
-    operatorCompletion.insertText = new vscode.SnippetString();
-    operatorCompletion.insertText.appendChoice(operators);
-    operatorCompletion.command = TRIGGER_SUGGEST_CMD;
+    operators.forEach((operator) => {
+      const operatorCompletion = new vscode.CompletionItem(operator.name, vscode.CompletionItemKind.Constant);
+      operatorCompletion.detail = "Copilot suggestion";
+      operatorCompletion.documentation = operator.description;
+      operatorCompletion.insertText = new vscode.SnippetString();
+      operatorCompletion.insertText.appendChoice(operator.insertions);
+      operatorCompletion.command = TRIGGER_SUGGEST_CMD;
+      completions.push(operatorCompletion);
+    });
 
-    return operatorCompletion;
+    return completions;
   }
 
   /**
@@ -165,18 +242,15 @@ export class EntitySelectorCompletionProvider implements vscode.CompletionItemPr
    * @param extension extension yaml serialized as object
    * @returns Completion item
    */
-  private createRelationshipCompletion(
-    selector: string,
-    extension: ExtensionStub
-  ): vscode.CompletionItem {
+  private createRelationshipCompletion(selector: string, extension: ExtensionStub): vscode.CompletionItem {
     const relationshipCompletion = new vscode.CompletionItem(
-      selector.endsWith("fromRelationships.") ? "fromRelationships." : "toRelationships.",
+      selector.endsWith("Browse relationships") ? "fromRelationships." : "toRelationships.",
       vscode.CompletionItemKind.Constant
     );
 
     var entityType = this.getMostRecentEntityType(selector);
     if (entityType) {
-      relationshipCompletion.detail = "Browse relationships";
+      relationshipCompletion.detail = "Copilot suggestion";
       relationshipCompletion.insertText = new vscode.SnippetString();
 
       let relations = getRelationshipTypes(
@@ -191,7 +265,7 @@ export class EntitySelectorCompletionProvider implements vscode.CompletionItemPr
         } else {
           relationshipCompletion.insertText.appendText(relations[0]);
         }
-        relationshipCompletion.insertText.appendText("(");
+        relationshipCompletion.insertText.appendText("()");
       }
       relationshipCompletion.command = TRIGGER_SUGGEST_CMD;
     }
@@ -226,23 +300,65 @@ export class EntitySelectorCompletionProvider implements vscode.CompletionItemPr
    * @returns list of operators that can be used within the selector
    */
   private getAvailableOperators(selector: string, extension: ExtensionStub) {
-    const singleUseOperators = [
-      "type(",
-      "entityId(",
-      "fromRelationships.",
-      "toRelationships.",
-      "$(entityConditions)",
+    type Operator = { name: string; description: string; insertions: string[] };
+    const singleUseOperators: Operator[] = [
+      {
+        name: "Entity type",
+        insertions: ["type("],
+        description: "Start a new entity selector by targetting an entity type.",
+      },
+      {
+        name: "Entity ID",
+        insertions: ["entityId("],
+        description: "Start a new entity selector by targetting a specific entity by ID.",
+      },
+      {
+        name: "From relationships",
+        insertions: ["fromRelationships."],
+        description: "Refine entity selection by matching relationships going from the entity in the current context.",
+      },
+      {
+        name: "To relationships",
+        insertions: ["toRelationships."],
+        description: "Refine entity selection by matching relationships coming to the entity in the current context.",
+      },
+      {
+        name: "Current entity",
+        insertions: ["$(entityConditions)"],
+        description:
+          "Automatically map the current context entity via this variable. Must be used once for the template to be valid.",
+      },
     ];
-    const otherOperators = ["entityName", "tag(", "mzId(", "mzName(", "healthState(", "not("];
-    const attributes = getAttributesKeysFromTopology(
-      this.getMostRecentEntityType(selector),
-      extension
-    );
+    const otherOperators: Operator[] = [
+      { name: "Entity name", insertions: ["entityName"], description: "Refine entity selection by their name" },
+      { name: "Tags", insertions: ["tag("], description: "Refine entity selection by tags" },
+      {
+        name: "Management zone ID",
+        insertions: ["mzId("],
+        description: "Refine entity selection by Management Zone ID",
+      },
+      {
+        name: "Management zone name",
+        insertions: ["mzName("],
+        description: "Refine entity selection by Management Zone name",
+      },
+      {
+        name: "Health state",
+        insertions: ["healthState("],
+        description: "Refine entity selection by their current health status",
+      },
+      { name: "Add negation operator", insertions: ["not("], description: "Negate the next condition" },
+    ];
+    const attributeOperator: Operator = {
+      name: "Entity attributes",
+      description: "Refine entity selection by the value of its attributes",
+      insertions: getAttributesKeysFromTopology(this.getMostRecentEntityType(selector), extension),
+    };
 
     return [
-      ...singleUseOperators.filter((operator) => !selector.includes(operator)),
+      ...singleUseOperators.filter((operator) => !selector.includes(operator.name)),
       ...otherOperators,
-      ...attributes,
+      attributeOperator,
     ];
   }
 
@@ -252,10 +368,7 @@ export class EntitySelectorCompletionProvider implements vscode.CompletionItemPr
    * @param position position at which completion was triggered
    * @returns status of check
    */
-  private isCursorAtRelationshipStart(
-    document: vscode.TextDocument,
-    position: vscode.Position
-  ): boolean {
+  private isCursorAtRelationshipStart(document: vscode.TextDocument, position: vscode.Position): boolean {
     var cursor = position.character;
 
     for (let i = cursor; i > 0; i--) {
