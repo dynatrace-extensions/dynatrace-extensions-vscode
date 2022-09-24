@@ -68,10 +68,12 @@ export class HttpClient {
       .then((res) => {
         if (res.status >= 400) {
           let message = `Error making request to ${url}: ${res.status}. Response: ${res.data}`;
+          console.log("DYNATRACE ERROR");
           console.log(message);
           throw new DynatraceAPIError(message, {
             code: res.data.error.code,
-            data: res.data.error.message,
+            message: res.data.error.message,
+            data: res.data.error
           });
         }
         return res.data;
@@ -79,10 +81,11 @@ export class HttpClient {
       .catch((err) => {
         let message = `Error making request to ${url}: ${err.message}.`;
         console.log(message);
-        console.log(err.response);
+        console.log(err.response.data.error);
         throw new DynatraceAPIError(message, {
-          code: err.name,
-          data: err.message,
+          code: err.response.data.error ? err.response.data.error.code : err.status,
+          message: err.response.data.error ? err.response.data.error.message : err.message,
+          data: err.response.data.error || err
         });
       });
   }

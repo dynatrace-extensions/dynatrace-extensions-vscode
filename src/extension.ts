@@ -100,15 +100,15 @@ export function activate(context: vscode.ExtensionContext) {
     vscode.commands.registerCommand("dt-ext-copilot.uploadCertificate", async () => {
       if (checkWorkspaceOpen() && checkEnvironmentConnected(tenantsTreeViewProvider)) {
         initWorkspaceStorage(context);
-        if (checkCertificateExists("ca", context)) {
+        if (checkCertificateExists("ca")) {
           uploadCertificate(context, (await tenantsTreeViewProvider.getDynatraceClient())!);
         }
       }
     }),
     // Build Extension 2.0 package
-    vscode.commands.registerCommand("dt-ext-copilot.buildExtension", () => {
-      if (checkWorkspaceOpen() && isExtensionsWorkspace(context) && checkCertificateExists("dev", context)) {
-        buildExtension(context);
+    vscode.commands.registerCommand("dt-ext-copilot.buildExtension", async () => {
+      if (checkWorkspaceOpen() && isExtensionsWorkspace(context) && checkCertificateExists("dev")) {
+        buildExtension(context, await tenantsTreeViewProvider.getDynatraceClient());
       }
     }),
     // Upload an extension to the tenant

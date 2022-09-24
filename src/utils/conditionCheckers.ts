@@ -117,29 +117,27 @@ export async function checkOverwriteCertificates(context: vscode.ExtensionContex
  * @param context VSCode Extension Context
  * @returns status of check
  */
-export function checkCertificateExists(type: "ca" | "dev" | "all", context: vscode.ExtensionContext): boolean {
+export function checkCertificateExists(type: "ca" | "dev" | "all"): boolean {
   var allExist = true;
-  var certsDir = path.join(context.storageUri!.fsPath, "certificates");
-  var byoDevPem = vscode.workspace
-    .getConfiguration()
-    .get("dynatrace.certificate.location.developerCertificate") as string;
-  var byoCaPem = vscode.workspace
-    .getConfiguration()
-    .get("dynatrace.certificate.location.rootOrCaCertificate") as string;
+  var devCertPath = vscode.workspace.getConfiguration().get("dynatrace.certificate.location.developerCertificate");
+  var devKeyPath = vscode.workspace.getConfiguration().get("dynatrace.certificate.location.developerKey");
+  var caCertPath = vscode.workspace.getConfiguration().get("dynatrace.certificate.location.rootOrCaCertificate");
 
-  if (!(existsSync(certsDir) || (byoCaPem && byoDevPem))) {
-    allExist = false;
-  } else {
-    if (
-      (type === "ca" || type === "all") &&
-      !(existsSync(path.join(certsDir, "ca.pem")) || existsSync(path.resolve(byoCaPem)))
-    ) {
+  if (type === "ca" || type === "all") {
+    if (!caCertPath) {
       allExist = false;
-    }
-    if ((type === "dev" || type === "all") && !(existsSync(path.join(certsDir, "dev.pem")) || existsSync(byoDevPem))) {
+    } else if (!existsSync(caCertPath as string)) {
       allExist = false;
     }
   }
+  if (type === "dev" || type === "all") {
+    if (!(devKeyPath && devCertPath)) {
+      allExist = false;
+    } else if (!(existsSync(devKeyPath as string) && existsSync(devCertPath as string))) {
+      allExist = false;
+    }
+  }
+
   if (!allExist) {
     vscode.window
       .showErrorMessage(
