@@ -119,9 +119,11 @@ export async function checkOverwriteCertificates(context: vscode.ExtensionContex
  */
 export function checkCertificateExists(type: "ca" | "dev" | "all"): boolean {
   var allExist = true;
-  var devCertPath = vscode.workspace.getConfiguration().get("dynatrace.certificate.location.developerCertificate");
-  var devKeyPath = vscode.workspace.getConfiguration().get("dynatrace.certificate.location.developerKey");
-  var caCertPath = vscode.workspace.getConfiguration().get("dynatrace.certificate.location.rootOrCaCertificate");
+  var devCertPath = vscode.workspace
+    .getConfiguration("dynatrace", null)
+    .get("certificate.location.developerCertificate");
+  var devKeyPath = vscode.workspace.getConfiguration("dynatrace", null).get("certificate.location.developerKey");
+  var caCertPath = vscode.workspace.getConfiguration("dynatrace", null).get("certificate.location.rootOrCaCertificate");
 
   if (type === "ca" || type === "all") {
     if (!caCertPath) {

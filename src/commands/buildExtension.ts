@@ -38,11 +38,11 @@ export async function buildExtension(context: vscode.ExtensionContext, dt?: Dyna
       progress.report({ message: "Checking your certificates" });
       // Either user's certificates or generated ones will be set in settings
       const devKeyPath = vscode.workspace
-        .getConfiguration()
-        .get("dynatrace.certificate.location.developerKey") as string;
+        .getConfiguration("dynatrace", null)
+        .get("certificate.location.developerKey") as string;
       const devCertPath = vscode.workspace
-        .getConfiguration()
-        .get("dynatrace.certificate.location.developerCertificate") as string;
+        .getConfiguration("dynatrace", null)
+        .get("certificate.location.developerCertificate") as string;
 
       progress.report({ message: "Validating your extension name" });
       // Extension meta
@@ -90,7 +90,17 @@ export async function buildExtension(context: vscode.ExtensionContext, dt?: Dyna
         await dt.extensionsV2.upload(readFileSync(outerZipPath), true).catch((err: DynatraceAPIError) => {
           vscode.window.showErrorMessage(err.errorParams.message);
           var oc = vscode.window.createOutputChannel("Dynatrace", "json");
-          oc.appendLine(JSON.stringify(err.errorParams.data, null, 2));
+          oc.appendLine(
+            JSON.stringify(
+              {
+                extension: extension.name,
+                version: extension.version,
+                issues: err.errorParams.data.constraintViolations,
+              },
+              null,
+              2
+            )
+          );
           oc.show();
           valid = false;
         });
@@ -99,7 +109,7 @@ export async function buildExtension(context: vscode.ExtensionContext, dt?: Dyna
           "Your final package was not validated, since you are not connected to a Dynatrace tenant."
         );
       }
-      // Copy .zip archive into dist dir 
+      // Copy .zip archive into dist dir
       if (valid) {
         copyFileSync(outerZipPath, finalZipPath);
       }
