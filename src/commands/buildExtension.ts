@@ -37,12 +37,8 @@ export async function buildExtension(context: vscode.ExtensionContext, dt?: Dyna
 
       progress.report({ message: "Checking your certificates" });
       // Either user's certificates or generated ones will be set in settings
-      const devKeyPath = vscode.workspace
-        .getConfiguration("dynatrace", null)
-        .get("certificate.location.developerKey") as string;
-      const devCertPath = vscode.workspace
-        .getConfiguration("dynatrace", null)
-        .get("certificate.location.developerCertificate") as string;
+      const devKeyPath = vscode.workspace.getConfiguration(undefined, null).get("location.developerKey") as string;
+      const devCertPath = vscode.workspace.getConfiguration(undefined, null).get("location.developerCertificate") as string;
 
       progress.report({ message: "Validating your extension name" });
       // Extension meta
