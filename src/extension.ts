@@ -36,12 +36,12 @@ import {
 import { encryptToken } from "./utils/cryptography";
 import { ConnectionStatusManager } from "./statusBar/connection";
 import { deleteWorkspace } from "./treeViews/commands/workspaces";
-import { MetricCodeLensProvider, validateMetricSelector } from "./codeLens/metricCodeLens";
+import { SelectorCodeLensProvider } from "./codeLens/selectorCodeLens";
 import { MetricResultsPanel } from "./webviews/metricResults";
-import { DynatraceAPIError } from "./dynatrace-api/errors";
 import { IconCompletionProvider } from "./codeCompletions/icons";
 import { CachedDataProvider } from "./utils/dataCaching";
 import { ScreensMetaCompletionProvider } from "./codeCompletions/screensMeta";
+import { runSelector, validateEntitySelector, validateMetricSelector } from "./utils/selectors";
 
 /**
  * Sets up the VSCode extension by registering all the available functionality as disposable objects.
@@ -66,7 +66,8 @@ export function activate(context: vscode.ExtensionContext) {
   const tenantsTreeViewProvider = new EnvironmentsTreeDataProvider(context, connectionStatusManager);
   const cachedDataProvider = new CachedDataProvider(tenantsTreeViewProvider);
   const snippetCodeActionProvider = new SnippetGenerator();
-  const codeLensProvider = new MetricCodeLensProvider();
+  const metricLensProvider = new SelectorCodeLensProvider("metricSelector:", "codeLens.metricSelectors");
+  const entityLensProvider = new SelectorCodeLensProvider("entitySelectorTemplate:", "codeLens.entitySelectors");
 
   context.subscriptions.push(
     // Commands for the Command Palette
@@ -225,27 +226,43 @@ export function activate(context: vscode.ExtensionContext) {
     // Code Lens
     vscode.languages.registerCodeLensProvider(
       { language: "yaml", pattern: "**/extension/extension.yaml" },
-      codeLensProvider
+      metricLensProvider
     ),
-    vscode.commands.registerCommand("dt-ext-copilot.metric-codelens.validateSelector", async (selector: string) => {
-      if (checkEnvironmentConnected(tenantsTreeViewProvider)) {
-        const status = await validateMetricSelector(selector, (await tenantsTreeViewProvider.getDynatraceClient())!);
-        codeLensProvider.updateValidationStatus(selector, status);
+    vscode.languages.registerCodeLensProvider(
+      { language: "yaml", pattern: "**/extension/extension.yaml" },
+      entityLensProvider
+    ),
+    vscode.commands.registerCommand(
+      "dt-ext-copilot.codelens.validateSelector",
+      async (selector: string, type: "metric" | "entity") => {
+        if (checkEnvironmentConnected(tenantsTreeViewProvider)) {
+          switch (type) {
+            case "metric":
+              var status = await validateMetricSelector(
+                selector,
+                (await tenantsTreeViewProvider.getDynatraceClient())!
+              );
+              metricLensProvider.updateValidationStatus(selector, status);
+              break;
+            case "entity":
+              var status = await validateEntitySelector(
+                selector,
+                (await tenantsTreeViewProvider.getDynatraceClient())!
+              );
+              entityLensProvider.updateValidationStatus(selector, status);
+              break;
+          }
+        }
       }
-    }),
-    vscode.commands.registerCommand("dt-ext-copilot.metric-codelens.runSelector", (selector: string) => {
-      if (checkEnvironmentConnected(tenantsTreeViewProvider)) {
-        tenantsTreeViewProvider
-          .getDynatraceClient()
-          .then((dt) => dt!.metrics.query(selector, "5m"))
-          .then((res: MetricSeriesCollection[]) => {
-            MetricResultsPanel.createOrShow(res);
-          })
-          .catch((err: DynatraceAPIError) => {
-            MetricResultsPanel.createOrShow(JSON.stringify(err.errorParams, undefined, 2));
-          });
+    ),
+    vscode.commands.registerCommand(
+      "dt-ext-copilot.codelens.runSelector",
+      async (selector: string, type: "metric" | "entity") => {
+        if (checkEnvironmentConnected(tenantsTreeViewProvider)) {
+          runSelector(selector, type, (await tenantsTreeViewProvider.getDynatraceClient())!);
+        }
       }
-    }),
+    ),
     // Web view panel - metric query results
     vscode.window.registerWebviewPanelSerializer(MetricResultsPanel.viewType, {
       async deserializeWebviewPanel(webviewPanel: vscode.WebviewPanel, state: any) {

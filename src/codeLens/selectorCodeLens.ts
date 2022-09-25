@@ -1,25 +1,16 @@
 import * as vscode from "vscode";
-import { Dynatrace } from "../dynatrace-api/dynatrace";
-import { DynatraceAPIError } from "../dynatrace-api/errors";
-
-interface ValidationStatus {
-  status: "valid" | "invalid" | "unknown";
-  error?: {
-    code: number;
-    message: string;
-  };
-}
+import { resolveSelectorTemplate, ValidationStatus } from "../utils/selectors";
 
 /**
- * A Code Lens to display the status of validating a metric selector.
+ * A Code Lens to display the status of validating a selector.
  */
 class ValidationStatusLens extends vscode.CodeLens {
   selector: string;
 
   /**
    * @param range VSCode Range at which lens should be created
-   * @param selector metric selector relevant to this lens
-   * @param status the validation status for this lens' metric selector
+   * @param selector selector relevant to this lens
+   * @param status the validation status for this lens' selector
    */
   constructor(range: vscode.Range, selector: string, status: ValidationStatus) {
     super(range);
@@ -69,7 +60,7 @@ class ValidationStatusLens extends vscode.CodeLens {
 }
 
 /**
- * A Code Lens which allows validating a metric selector and updating its associated
+ * A Code Lens which allows validating a selector and updating its associated
  * {@link ValidationStatusLens}
  */
 class SelectorValidationLens extends vscode.CodeLens {
@@ -77,14 +68,14 @@ class SelectorValidationLens extends vscode.CodeLens {
 
   /**
    * @param range VSCode Range at which lens should be created
-   * @param selector metric selector relevant to this lens
+   * @param selector selector relevant to this lens
    */
-  constructor(range: vscode.Range, selector: string) {
+  constructor(range: vscode.Range, selector: string, selectorType: string) {
     super(range, {
       title: "Validate selector",
       tooltip: "Run a query and check if the selector is valid",
-      command: "dt-ext-copilot.metric-codelens.validateSelector",
-      arguments: [selector],
+      command: "dt-ext-copilot.codelens.validateSelector",
+      arguments: [selector, selectorType],
     });
     this.selector = selector;
   }
@@ -98,33 +89,44 @@ class SelectorRunnerLens extends vscode.CodeLens {
 
   /**
    * @param range VSCode Range at which lens should be created
-   * @param selector metric selector relevant to this lens
+   * @param selector selector relevant to this lens
    */
-  constructor(range: vscode.Range, selector: string) {
+  constructor(range: vscode.Range, selector: string, selectorType: string) {
     super(range, {
-      title: "Query metric data",
-      tooltip: "Run the metric query and visualize its results",
-      command: "dt-ext-copilot.metric-codelens.runSelector",
-      arguments: [selector],
+      title: "Query data",
+      tooltip: "Run the query and visualize its results",
+      command: "dt-ext-copilot.codelens.runSelector",
+      arguments: [selector, selectorType],
     });
     this.selector = selector;
   }
 }
 
 /**
- * Implementation of a Code Lens Provider to facilitate operations done on metrics and metric selectors.
+ * Implementation of a Code Lens Provider to facilitate operations done on metric and entities
+ * as well as their respective selectors.
  */
-export class MetricCodeLensProvider implements vscode.CodeLensProvider {
+export class SelectorCodeLensProvider implements vscode.CodeLensProvider {
   private codeLenses: vscode.CodeLens[];
   private regex: RegExp;
   private numLines: number;
   private _onDidChangeCodeLenses: vscode.EventEmitter<void> = new vscode.EventEmitter<void>();
   public readonly onDidChangeCodeLenses: vscode.Event<void> = this._onDidChangeCodeLenses.event;
+  private readonly controlSetting: string;
+  private readonly matchString: string;
+  private readonly selectorType: string;
 
-  constructor() {
+  /**
+   * @param match the text to match and extract the selector by
+   * @param controlSetting the vscode setting which controls this feature
+   */
+  constructor(match: string, controlSetting: string) {
     this.numLines = -1;
     this.codeLenses = [];
-    this.regex = /(metricSelector:)/g;
+    this.matchString = match;
+    this.controlSetting = controlSetting;
+    this.selectorType = match.startsWith("metricSelector") ? "metric" : "entity";
+    this.regex = new RegExp(`(${match})`, "g");
   }
 
   /**
@@ -137,6 +139,11 @@ export class MetricCodeLensProvider implements vscode.CodeLensProvider {
     const regex = new RegExp(this.regex);
     const text = document.getText();
     const numLines = document.lineCount;
+
+    // Honor the user's settings
+    if (!vscode.workspace.getConfiguration(undefined, null).get(this.controlSetting) as boolean) {
+      return [];
+    }
 
     // If new lines have been entered/deleted, reset the previous lenses
     // so we don't create inaccurate duplicates
@@ -153,10 +160,13 @@ export class MetricCodeLensProvider implements vscode.CodeLensProvider {
       const range = document.getWordRangeAtPosition(position, new RegExp(this.regex));
 
       if (range) {
-        const selector = line.text.split("metricSelector: ")[1];
+        var selector = line.text.split(`${this.matchString} `)[1];
+        if (selector.includes("$(entityConditions)")) {
+          selector = resolveSelectorTemplate(selector, document, position);
+        }
 
-        this.createOrUpdateLens(new SelectorRunnerLens(range, selector));
-        this.createOrUpdateLens(new SelectorValidationLens(range, selector));
+        this.createOrUpdateLens(new SelectorRunnerLens(range, selector, this.selectorType));
+        this.createOrUpdateLens(new SelectorValidationLens(range, selector, this.selectorType));
         this.createOrUpdateLens(new ValidationStatusLens(range, selector, { status: "unknown" }));
       }
     }
@@ -166,7 +176,7 @@ export class MetricCodeLensProvider implements vscode.CodeLensProvider {
   /**
    * Checks the knwown Code Lenses and either creates the provided lens or updates the existing
    * entry in case the details match.
-   * @param newLens a Metric Selector code lens
+   * @param newLens a Selector code lens
    */
   private createOrUpdateLens(newLens: SelectorRunnerLens | SelectorValidationLens | ValidationStatusLens) {
     let prevLensIdx = this.codeLenses.findIndex(
@@ -185,40 +195,17 @@ export class MetricCodeLensProvider implements vscode.CodeLensProvider {
   }
 
   /**
-   * Allows updating an already existing Validation Status code lens. This allows on-demand
-   * status updates for metric selectors.
+   * Allows updating already existing Validation Status code lens. This allows on-demand
+   * status updates for metric and entity selectors.
    * @param selector metric selector of the lens
    * @param status status object to update lens with
    */
   public updateValidationStatus(selector: string, status: ValidationStatus) {
-    const idx = this.codeLenses.findIndex((lens) => lens instanceof ValidationStatusLens && lens.selector === selector);
-    if (idx >= 0) {
-      (this.codeLenses[idx] as ValidationStatusLens).updateStatus(status);
-    }
+    this.codeLenses
+      .filter((lens) => lens instanceof ValidationStatusLens && lens.selector === selector)
+      .forEach((lens) => {
+        (lens as ValidationStatusLens).updateStatus(status);
+      });
     this._onDidChangeCodeLenses.fire();
   }
-}
-
-/**
- * Runs a metric query and reports the status of validating the result.
- * If no errors were experienced, the check is successful, otherwise it is considered failed and the details are
- * contained within the returned object.
- * @param selector metric selector to validate
- * @param dt Dynatrace API Client
- * @returns validation status
- */
-export function validateMetricSelector(selector: string, dt: Dynatrace): Promise<ValidationStatus> {
-  return dt.metrics
-    .query(selector)
-    .then(() => ({ status: "valid" } as ValidationStatus))
-    .catch(
-      (err: DynatraceAPIError) =>
-        ({
-          status: "invalid",
-          error: {
-            code: err.errorParams.code,
-            message: err.errorParams.data,
-          },
-        } as ValidationStatus)
-    );
 }
