@@ -4,9 +4,9 @@ import { HttpClient } from "../http_client";
  * Implementation of the Extensions V2 API
  */
 export class ExtensionsServiceV2 {
-  endpoint: string;
-  schemaEndpoint: string;
-  httpClient: HttpClient;
+  private readonly endpoint: string;
+  private readonly schemaEndpoint: string;
+  private readonly httpClient: HttpClient;
 
   constructor(httpClient: HttpClient) {
     this.httpClient = httpClient;

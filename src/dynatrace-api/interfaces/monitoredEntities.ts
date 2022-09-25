@@ -32,3 +32,40 @@ interface EntityTypePropertyDto {
   id: string;
   type?: string;
 }
+
+interface EntityId {
+  id: string;
+  type: string;
+}
+
+interface METag {
+  stringRepresentation: string;
+  key: string;
+  value: string;
+  context: string;
+}
+
+interface ManagementZone {
+  name: string;
+  id: string;
+}
+
+interface EntityIcon {
+  primaryIconType?: string;
+  secondaryIconType?: string;
+  customIconPath?: string;
+}
+
+interface Entity {
+  firstSeenTms: number;
+  lastSeenTms: number;
+  fromRelationships?: { [key: string]: EntityId[] };
+  toRelationships?: { [key: string]: EntityId[] };
+  tags?: METag[];
+  managementZones?: ManagementZone[];
+  entityId: string;
+  icon?: EntityIcon;
+  properties?: { [key: string]: string }[];
+  type: string;
+  displayName: string;
+}

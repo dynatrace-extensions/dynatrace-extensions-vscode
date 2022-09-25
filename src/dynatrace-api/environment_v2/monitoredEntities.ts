@@ -4,14 +4,45 @@ import { HttpClient } from "../http_client";
  * Implementation of the Monitored Entities V2 API
  */
 export class EntityServiceV2 {
-  endpoint: string;
-  typesEndpoint: string;
-  httpClient: HttpClient;
+  private readonly endpoint: string;
+  private readonly typesEndpoint: string;
+  private readonly httpClient: HttpClient;
 
   constructor(httpClient: HttpClient) {
     this.httpClient = httpClient;
     this.endpoint = "/api/v2/entities";
     this.typesEndpoint = "/api/v2/entityTypes";
+  }
+
+  /**
+   * Gets the list of all monitored entities matching the query parameters.
+   * @param entitySelector Defines the scope of the query. Only entities matching the specified criteria are included into response.
+   * @param from The start of the requested timeframe. Defaults to now-3d.
+   * @param to The end of the requested timeframe. Defaults to current timestamp.
+   * @param fields Defines the list of entity properties included in the response. The ID and the name of an entity are always included to the response.
+   * @param sort Defines the ordering of the entities returned.
+   * @returns list of entities
+   */
+  async list(entitySelector: string, from?: string, to?: string, fields?: string, sort?: string): Promise<Entity[]> {
+    return this.httpClient.paginatedCall(this.endpoint, "entities", {
+      entitySelector: entitySelector,
+      from: from,
+      to: to,
+      fields: fields,
+      sort: sort,
+    });
+  }
+
+  /**
+   * Gets the details of the specified monitored entity.
+   * @param entityId The ID of the required entity.
+   * @param from The start of the requested timeframe. Defaults to now-3d.
+   * @param to The end of the requested timeframe. Defaults to current timestamp.
+   * @param fields Defines the list of entity properties included in the response. The ID and the name of an entity are always included to the response.
+   * @returns the requested entity
+   */
+  async get(entityId: string, from?: string, to?: string, fields?: string) {
+    return this.httpClient.makeRequest(`${this.endpoint}/${entityId}`, { from: from, to: to, fields: fields });
   }
 
   /**

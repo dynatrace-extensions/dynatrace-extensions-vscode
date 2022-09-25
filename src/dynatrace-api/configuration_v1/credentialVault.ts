@@ -5,8 +5,8 @@ import { util } from "node-forge";
  * Implementation of the Dynatrace Credential Vault API.
  */
 export class CredentialVaultService {
-  endpoint: string;
-  httpClient: HttpClient;
+  private readonly endpoint: string;
+  private readonly httpClient: HttpClient;
 
   constructor(httpClient: HttpClient) {
     this.httpClient = httpClient;

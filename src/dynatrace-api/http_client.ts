@@ -6,8 +6,8 @@ import { DynatraceAPIError } from "./errors";
  * Implementation of a HTTP Client specialised for accessing Dynatrace APIs
  */
 export class HttpClient {
-  baseUrl: string;
-  apiToken: string;
+  private readonly baseUrl: string;
+  private readonly apiToken: string;
 
   constructor(baseUrl: string, apiToken: string) {
     this.baseUrl = baseUrl;

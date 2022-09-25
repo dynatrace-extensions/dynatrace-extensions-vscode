@@ -4,8 +4,8 @@ import { HttpClient } from "../http_client";
  * Implementation of the Metrics V2 API
  */
 export class MetricService {
-  endpoint: string;
-  httpClient: HttpClient;
+  private readonly endpoint: string;
+  private readonly httpClient: HttpClient;
 
   constructor(httpClient: HttpClient) {
     this.httpClient = httpClient;
