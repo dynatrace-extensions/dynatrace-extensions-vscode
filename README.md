@@ -28,14 +28,24 @@ This is a VisualStudio Code Extension that aims to provide support for all aspec
 
 This extension can leverage the following VSCode settings (global or workspace level):
 
-- `dynatrace.certificate.location.developerKey` - File path. Bring your own developer key instead of generating a new one.
-- `dynatrace.certificate.location.developerCertificate` - File path. Bring your own developer certificate instead of generating a new one.
-- `dynatrace.certificate.location.rootOrCaCertificate` - File path. Bring your own root (CA) certificate instead of generating a new one.
-- `dynatrace.certificate.commonName` - When generating new certificates, specifies the common name (CN) attribute of the certificate. Defaults to "Extension Developer".
-- `dynatrace.certificate.organization` - When generating new certificates, specifies the organization (O) attribute of the certificate.
-- `dynatrace.certificate.organizationUnit` - When generating new certificates, specifies the organization unit (OU) attribute of the certificate.
-- `dynatrace.certificate.stateOrProvince` - When generating new certificates, specifies the state or province (ST) attribute of the certificate.
-- `dynatrace.certificate.countryCode` - When generating new certificates, specifies the country code (C) attribute of the certificate.
+Extension behavior/features:
+
+- `codeLens.metricSelectors` - Controls whether Code Lenses are enabled for metric selectors
+- `codeLens.entitySelectors` - Controls whether Code Lenses are enabled for entity selectors
+
+Dynatrace certificate locations:
+
+- `location.developerKey` - File path. Bring your own developer key instead of generating a new one.
+- `location.developerCertificate` - File path. Bring your own developer certificate instead of generating a new one.
+- `location.rootOrCaCertificate` - File path. Bring your own root (CA) certificate instead of generating a new one.
+
+Dynatrace certificate details:
+
+- `details.commonName` - When generating new certificates, specifies the common name (CN) attribute of the certificate. Defaults to "Extension Developer".
+- `details.organization` - When generating new certificates, specifies the organization (O) attribute of the certificate.
+- `details.organizationUnit` - When generating new certificates, specifies the organization unit (OU) attribute of the certificate.
+- `details.stateOrProvince` - When generating new certificates, specifies the state or province (ST) attribute of the certificate.
+- `details.countryCode` - When generating new certificates, specifies the country code (C) attribute of the certificate.
 
 ## Workflows (Commands)
 
@@ -54,6 +64,7 @@ Once finished, the workspace appears in the new Dynatrace view.
 ### 📄 Load schemas
 
 Downloads schema files of a specific version and updates the `yaml.schema` extension to validate `extension.yaml` with this version.
+If repository has an `extension.yaml` file, it updates the version in there too.
 
 ### 🔐 Generate certificates
 
@@ -134,9 +145,15 @@ For Dynatrace Extensions, these can help trigger some code-related actions to yo
 
 - See the last validation status of any metric selector
 - Validate any metric selector against a connected Dynatrace tenant
-- Run any metric selector and visualize the query results
+- Run any metric selector and visualize the query results in a separate editor panel
 
 ![metric_codelens](previews/metric_code_lens.gif)
+
+**Entity Selector Code Lenses**
+
+- See the last validation status of any entity selector
+- Validate any entity selector against a connected Dynatrace tenant
+- Run any entity selector and visualize the query results in the Dynatrace output panel
 
 ## Custom Dynatrace View
 

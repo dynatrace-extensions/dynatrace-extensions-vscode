@@ -270,6 +270,16 @@ export function activate(context: vscode.ExtensionContext) {
         webviewPanel.webview.options = { enableScripts: true };
         MetricResultsPanel.revive(webviewPanel, "No data to display. Close the tab and trigger the action again.");
       },
+    }),
+    vscode.workspace.onDidSaveTextDocument((doc: vscode.TextDocument) => {
+      if (
+        doc.fileName.endsWith("extension.yaml") &&
+        vscode.workspace.getConfiguration(undefined, null).get("fastDevelopmentMode")
+      ) {
+        // Upload topology to Dynatrace
+        // Upload screens to Dynatrace
+        // Upload metadata to Dynatrace
+      }
     })
   );
 }
