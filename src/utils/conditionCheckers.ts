@@ -13,7 +13,7 @@ import { EnvironmentsTreeDataProvider } from "../treeViews/environmentsTreeView"
  * @returns check status
  */
 export function checkSettings(...settings: string[]): boolean {
-  let config = vscode.workspace.getConfiguration();
+  let config = vscode.workspace.getConfiguration(undefined, null);
   settings.forEach((setting) => {
     if (!config.get(setting)) {
       vscode.window
