@@ -77,8 +77,8 @@ export async function initWorkspace(context: vscode.ExtensionContext, dt: Dynatr
         case "Use your own certificates":
           if (
             !checkSettings(
-              "dynatrace.certificate.location.developerKey",
-              "dynatrace.certificate.location.developerCertificate"
+              "location.developerKey",
+              "location.developerCertificate"
             )
           ) {
             vscode.window.showErrorMessage("Personal certificates not found. Workspace not initialized.");
