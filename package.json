@@ -2,7 +2,7 @@
 	"name": "dt-ext-copilot",
 	"displayName": "Dynatrace Extensions Copilot",
 	"description": "Support for Dynatrace Extension 2.0 development",
-	"version": "0.14.1",
+	"version": "0.14.2",
 	"repository": {
 		"type": "git",
 		"url": "https://github.com/dynatrace-extensions/dynatrace-extensions-copilot.git"
@@ -128,21 +128,21 @@
 			{
 				"title": "Behavior",
 				"properties": {
-					"codeLens.metricSelectors": {
+					"dynatrace.codeLens.metricSelectors": {
 						"type": "boolean",
 						"description": "Enable Code Lens functionality around metric selectors",
 						"order": 1,
 						"scope": "resource",
 						"default": true
 					},
-					"codeLens.entitySelectors": {
+					"dynatrace.codeLens.entitySelectors": {
 						"type": "boolean",
 						"description": "Enable Code Lens functionality around entity selectors",
 						"order": 2,
 						"scope": "resource",
 						"default": true
 					},
-					"fastDevelopmentMode": {
+					"dynatrace.fastDevelopmentMode": {
 						"type": "boolean",
 						"description": "When enabled, static extension assets are sent to Dynatrace on every Save, and when you build an extension it will automatically get uploaded and activated immediately.",
 						"order": 3,
@@ -154,50 +154,50 @@
 			{
 				"title": "Certificates",
 				"properties": {
-					"location.developerKey": {
+					"dynatrace.certificateLocation.developerKey": {
 						"type": "string",
 						"description": "Bring your own: use the developer key file at this path instead of generating a new one.",
 						"order": 3,
 						"scope": "resource"
 					},
-					"location.developerCertificate": {
+					"dynatrace.certificateLocation.developerCertificate": {
 						"type": "string",
 						"description": "Bring your own: use the developer certificate file at this path instead of generating a new one.",
 						"order": 4,
 						"scope": "resource"
 					},
-					"location.rootOrCaCertificate": {
+					"dynatrace.certificateLocation.rootOrCaCertificate": {
 						"type": "string",
 						"description": "Bring your own: use the root (CA) certificate file at this path instead of generating a new one.",
 						"order": 5,
 						"scope": "resource"
 					},
-					"details.commonName": {
+					"dynatrace.certificateDetails.commonName": {
 						"type": "string",
 						"description": "Specifies the common name (CN) attribute of the certificate.",
 						"order": 6,
 						"scope": "resource",
 						"default": "Extension Developer"
 					},
-					"details.organization": {
+					"dynatrace.certificateDetails.organization": {
 						"type": "string",
 						"description": "Specifies the organization (O) attribute of the certificate.",
 						"order": 7,
 						"scope": "resource"
 					},
-					"details.organizationUnit": {
+					"dynatrace.certificateDetails.organizationUnit": {
 						"type": "string",
 						"description": "Specifies the organization unit (OU) attribute of the certificate.",
 						"order": 8,
 						"scope": "resource"
 					},
-					"details.stateOrProvince": {
+					"dynatrace.certificateDetails.stateOrProvince": {
 						"type": "string",
 						"description": "Specifies the state or province (ST) attribute of the certificate.",
 						"order": 9,
 						"scope": "resource"
 					},
-					"details.countryCode": {
+					"dynatrace.certificateDetails.countryCode": {
 						"type": "string",
 						"description": "Specifies the country code (C) attribute of the certificate.",
 						"order": 10,

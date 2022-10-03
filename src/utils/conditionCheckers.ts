@@ -1,9 +1,7 @@
 import * as path from "path";
 import * as vscode from "vscode";
-import { env } from "process";
 import { glob } from "glob";
 import { existsSync, readdirSync, readFileSync } from "fs";
-import { Dynatrace } from "../dynatrace-api/dynatrace";
 import { EnvironmentsTreeDataProvider } from "../treeViews/environmentsTreeView";
 
 /**
@@ -13,7 +11,9 @@ import { EnvironmentsTreeDataProvider } from "../treeViews/environmentsTreeView"
  * @returns check status
  */
 export function checkSettings(...settings: string[]): boolean {
-  let config = vscode.workspace.getConfiguration(undefined, null);
+  let config = vscode.workspace.getConfiguration("dynatrace", null);
+  console.log(config);
+  console.log(config.get(settings[0]));
   settings.forEach((setting) => {
     if (!config.get(setting)) {
       vscode.window
@@ -119,9 +119,9 @@ export async function checkOverwriteCertificates(context: vscode.ExtensionContex
  */
 export function checkCertificateExists(type: "ca" | "dev" | "all"): boolean {
   var allExist = true;
-  var devCertPath = vscode.workspace.getConfiguration(undefined, null).get("location.developerCertificate");
-  var devKeyPath = vscode.workspace.getConfiguration(undefined, null).get("location.developerKey");
-  var caCertPath = vscode.workspace.getConfiguration(undefined, null).get("location.rootOrCaCertificate");
+  var devCertPath = vscode.workspace.getConfiguration("dynatrace.certificateLocation", null).get("developerCertificate");
+  var devKeyPath = vscode.workspace.getConfiguration("dynatrace.certificateLocation", null).get("developerKey");
+  var caCertPath = vscode.workspace.getConfiguration("dynatrace.certificateLocation", null).get("rootOrCaCertificate");
 
   if (type === "ca" || type === "all") {
     if (!caCertPath) {

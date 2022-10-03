@@ -141,7 +141,7 @@ export class SelectorCodeLensProvider implements vscode.CodeLensProvider {
     const numLines = document.lineCount;
 
     // Honor the user's settings
-    if (!vscode.workspace.getConfiguration(undefined, null).get(this.controlSetting) as boolean) {
+    if (!vscode.workspace.getConfiguration("dynatrace", null).get(this.controlSetting) as boolean) {
       return [];
     }
 

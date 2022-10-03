@@ -1,6 +1,5 @@
 import * as vscode from "vscode";
 import { md, pki, random, util } from "node-forge";
-import { uploadCertificate } from "./uploadCertificate";
 import path = require("path");
 import { existsSync, mkdirSync, writeFileSync } from "fs";
 
@@ -151,14 +150,14 @@ export async function generateCerts(context: vscode.ExtensionContext): Promise<b
       console.log(`Wrote all certificates at location ${certsDir}`);
 
       vscode.workspace
-        .getConfiguration()
-        .update("dynatrace.certificate.location.developerKey", path.join(certsDir, "dev.key"));
+        .getConfiguration("dynatrace.certificateLocation", null)
+        .update("developerKey", path.join(certsDir, "dev.key"));
       vscode.workspace
-        .getConfiguration()
-        .update("dynatrace.certificate.location.developerCertificate", path.join(certsDir, "dev.pem"));
+        .getConfiguration("dynatrace.certificateLocation", null)
+        .update("developerCertificate", path.join(certsDir, "dev.pem"));
       vscode.workspace
-        .getConfiguration()
-        .update("dynatrace.certificate.location.rootOrCaCertificate", path.join(certsDir, "ca.pem"));
+        .getConfiguration("dynatrace.certificateLocation", null)
+        .update("rootOrCaCertificate", path.join(certsDir, "ca.pem"));
 
       return true;
     }
@@ -203,35 +202,35 @@ function generateSerialNo(): string {
  * @returns Array of certificate subject attributes
  */
 function getCertAttributes(type: "ca" | "dev"): pki.CertificateField[] {
-  var config = vscode.workspace.getConfiguration();
+  var config = vscode.workspace.getConfiguration("dynatrace.certificateDetails", null);
   var attrs = [
     {
       shortName: "CN",
-      value: `${config.get("dynatrace.certificate.commonName")} ${type === "ca" ? "Root" : "Dev"}`,
+      value: `${config.get("commonName")} ${type === "ca" ? "Root" : "Dev"}`,
     },
   ];
-  if (config.get("dynatrace.certificate.organization")) {
+  if (config.get("organization")) {
     attrs.push({
       shortName: "O",
-      value: config.get("dynatrace.certificate.organization") as string,
+      value: config.get("organization") as string,
     });
   }
-  if (config.get("dynatrace.certificate.organizationUnit")) {
+  if (config.get("organizationUnit")) {
     attrs.push({
       shortName: "OU",
-      value: config.get("dynatrace.certificate.organizationUnit") as string,
+      value: config.get("organizationUnit") as string,
     });
   }
-  if (config.get("dynatrace.certificate.stateOrProvince")) {
+  if (config.get("stateOrProvince")) {
     attrs.push({
       shortName: "ST",
-      value: config.get("dynatrace.certificate.stateOrProvince") as string,
+      value: config.get("stateOrProvince") as string,
     });
   }
-  if (config.get("dynatrace.certificate.countryCode")) {
+  if (config.get("countryCode")) {
     attrs.push({
       shortName: "C",
-      value: config.get("dynatrace.certificate.countryCode") as string,
+      value: config.get("countryCode") as string,
     });
   }
 

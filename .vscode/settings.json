@@ -10,9 +10,9 @@
     "typescript.tsc.autoDetect": "off",
 
     // Extension configurations:
-    "dynatrace.certificate.commonName": "Radu Stefan",
-    "dynatrace.certificate.organization": "Dynatrace",
-    "dynatrace.certificate.organizationUnit": "Platform Extensions",
-    "dynatrace.certificate.stateOrProvince": "Bristol",
-    "dynatrace.certificate.countryCode": "GB"   
+    "details.commonName": "Radu Stefan",
+    "details.organization": "Dynatrace",
+    "details.organizationUnit": "Platform Extensions",
+    "details.stateOrProvince": "Bristol",
+    "details.countryCode": "GB"   
 }

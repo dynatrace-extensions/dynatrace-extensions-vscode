@@ -1,9 +1,19 @@
 # Change Log
 
-All notable changes to the "dynatrace-extension-development" extension will be documented in this file.
+## Version 0.14.2 / Stage: alpha
 
-Check [Keep a Changelog](http://keepachangelog.com/) for recommendations on how to structure this file.
+### ✨ New in this version:
+- Code Lens for entity selectors similar to metric ones
+- Settings to enable/disable code lenses for both metric and entity selectors
+- Auto-completions for card keys in screen layouts and card lists
 
-## [Unreleased]
+### 🚀 Improved in this version:
+- Build command includes extension schema validation
+- Errors from validating extension are shown in JSON in output panel
+- Auto-completion suggestions are more readable
+- Improved error communication to user via output panel
+- Better status messging (loading indicators) in longer running commands
+- Extension .zip archive is no longer produced for invalid extensions
 
-- Initial release
+### ⚠️Breaking changes:
+- Settings have been refactored. See README.md to get new values.
