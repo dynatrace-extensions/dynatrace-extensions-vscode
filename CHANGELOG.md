@@ -1,9 +1,12 @@
 # Change Log
 
-## Version 0.14.4 / Stage: alpha (03.10.2022)
+## Version 0.14.6 / Stage: alpha (03.10.2022)
 
 ### 🚀 Improved in this version:
 - YAML re-writing does not fold lines
+
+### 🐛 Fixed in this version:
+- Build process following the refactoring
 
 ---
 
