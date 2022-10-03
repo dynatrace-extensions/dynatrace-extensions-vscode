@@ -59,7 +59,7 @@ export async function loadSchemas(context: vscode.ExtensionContext, dt: Dynatrac
         files.forEach((file) => {
           var extensionYaml: ExtensionStub = yaml.parse(readFileSync(file.fsPath).toString());
           extensionYaml.minDynatraceVersion = version;
-          writeFileSync(file.fsPath, yaml.stringify(extensionYaml));
+          writeFileSync(file.fsPath, yaml.stringify(extensionYaml, {lineWidth: 0}));
         });
       }
     });
