@@ -1,6 +1,6 @@
 # Change Log
 
-## Version 0.14.2 / Stage: alpha
+## Version 0.14.3 / Stage: alpha (03.10.2022)
 
 ### ✨ New in this version:
 - Code Lens for entity selectors similar to metric ones

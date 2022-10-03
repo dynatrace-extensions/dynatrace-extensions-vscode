@@ -2,7 +2,7 @@
 	"name": "dt-ext-copilot",
 	"displayName": "Dynatrace Extensions Copilot",
 	"description": "Support for Dynatrace Extension 2.0 development",
-	"version": "0.14.2",
+	"version": "0.14.3",
 	"repository": {
 		"type": "git",
 		"url": "https://github.com/dynatrace-extensions/dynatrace-extensions-copilot.git"
@@ -128,14 +128,14 @@
 			{
 				"title": "Behavior",
 				"properties": {
-					"dynatrace.codeLens.metricSelectors": {
+					"dynatrace.metricSelectorsCodeLens": {
 						"type": "boolean",
 						"description": "Enable Code Lens functionality around metric selectors",
 						"order": 1,
 						"scope": "resource",
 						"default": true
 					},
-					"dynatrace.codeLens.entitySelectors": {
+					"dynatrace.entitySelectorsCodeLens": {
 						"type": "boolean",
 						"description": "Enable Code Lens functionality around entity selectors",
 						"order": 2,
@@ -154,50 +154,50 @@
 			{
 				"title": "Certificates",
 				"properties": {
-					"dynatrace.certificateLocation.developerKey": {
+					"dynatrace.developerKeyLocation": {
 						"type": "string",
 						"description": "Bring your own: use the developer key file at this path instead of generating a new one.",
 						"order": 3,
 						"scope": "resource"
 					},
-					"dynatrace.certificateLocation.developerCertificate": {
+					"dynatrace.developerCertificateLocation": {
 						"type": "string",
 						"description": "Bring your own: use the developer certificate file at this path instead of generating a new one.",
 						"order": 4,
 						"scope": "resource"
 					},
-					"dynatrace.certificateLocation.rootOrCaCertificate": {
+					"dynatrace.rootOrCaCertificateLocation": {
 						"type": "string",
 						"description": "Bring your own: use the root (CA) certificate file at this path instead of generating a new one.",
 						"order": 5,
 						"scope": "resource"
 					},
-					"dynatrace.certificateDetails.commonName": {
+					"dynatrace.certificateCommonName": {
 						"type": "string",
 						"description": "Specifies the common name (CN) attribute of the certificate.",
 						"order": 6,
 						"scope": "resource",
 						"default": "Extension Developer"
 					},
-					"dynatrace.certificateDetails.organization": {
+					"dynatrace.certificateOrganization": {
 						"type": "string",
 						"description": "Specifies the organization (O) attribute of the certificate.",
 						"order": 7,
 						"scope": "resource"
 					},
-					"dynatrace.certificateDetails.organizationUnit": {
+					"dynatrace.certificateOrganizationUnit": {
 						"type": "string",
 						"description": "Specifies the organization unit (OU) attribute of the certificate.",
 						"order": 8,
 						"scope": "resource"
 					},
-					"dynatrace.certificateDetails.stateOrProvince": {
+					"dynatrace.certificateStateOrProvince": {
 						"type": "string",
 						"description": "Specifies the state or province (ST) attribute of the certificate.",
 						"order": 9,
 						"scope": "resource"
 					},
-					"dynatrace.certificateDetails.countryCode": {
+					"dynatrace.certificateCountryCode": {
 						"type": "string",
 						"description": "Specifies the country code (C) attribute of the certificate.",
 						"order": 10,

@@ -66,8 +66,8 @@ export function activate(context: vscode.ExtensionContext) {
   const tenantsTreeViewProvider = new EnvironmentsTreeDataProvider(context, connectionStatusManager);
   const cachedDataProvider = new CachedDataProvider(tenantsTreeViewProvider);
   const snippetCodeActionProvider = new SnippetGenerator();
-  const metricLensProvider = new SelectorCodeLensProvider("metricSelector:", "codeLens.metricSelectors");
-  const entityLensProvider = new SelectorCodeLensProvider("entitySelectorTemplate:", "codeLens.entitySelectors");
+  const metricLensProvider = new SelectorCodeLensProvider("metricSelector:", "metricSelectorsCodeLens");
+  const entityLensProvider = new SelectorCodeLensProvider("entitySelectorTemplate:", "entitySelectorsCodeLens");
 
   context.subscriptions.push(
     // Commands for the Command Palette

@@ -12,8 +12,7 @@ import { EnvironmentsTreeDataProvider } from "../treeViews/environmentsTreeView"
  */
 export function checkSettings(...settings: string[]): boolean {
   let config = vscode.workspace.getConfiguration("dynatrace", null);
-  console.log(config);
-  console.log(config.get(settings[0]));
+  let status = true;
   settings.forEach((setting) => {
     if (!config.get(setting)) {
       vscode.window
@@ -23,10 +22,10 @@ export function checkSettings(...settings: string[]): boolean {
             vscode.commands.executeCommand("workbench.action.openSettings", "Dynatrace");
           }
         });
-      return false;
+      status = false;
     }
   });
-  return true;
+  return status;
 }
 
 /**
@@ -119,9 +118,9 @@ export async function checkOverwriteCertificates(context: vscode.ExtensionContex
  */
 export function checkCertificateExists(type: "ca" | "dev" | "all"): boolean {
   var allExist = true;
-  var devCertPath = vscode.workspace.getConfiguration("dynatrace.certificateLocation", null).get("developerCertificate");
-  var devKeyPath = vscode.workspace.getConfiguration("dynatrace.certificateLocation", null).get("developerKey");
-  var caCertPath = vscode.workspace.getConfiguration("dynatrace.certificateLocation", null).get("rootOrCaCertificate");
+  var devCertPath = vscode.workspace.getConfiguration("dynatrace", null).get("developerCertificateLocation");
+  var devKeyPath = vscode.workspace.getConfiguration("dynatrace", null).get("developerKeyLocation");
+  var caCertPath = vscode.workspace.getConfiguration("dynatrace", null).get("rootOrCaCertificateLocation");
 
   if (type === "ca" || type === "all") {
     if (!caCertPath) {

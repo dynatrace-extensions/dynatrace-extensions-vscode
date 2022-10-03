@@ -150,14 +150,14 @@ export async function generateCerts(context: vscode.ExtensionContext): Promise<b
       console.log(`Wrote all certificates at location ${certsDir}`);
 
       vscode.workspace
-        .getConfiguration("dynatrace.certificateLocation", null)
-        .update("developerKey", path.join(certsDir, "dev.key"));
+        .getConfiguration("dynatrace", null)
+        .update("developerKeyLocation", path.join(certsDir, "dev.key"));
       vscode.workspace
-        .getConfiguration("dynatrace.certificateLocation", null)
-        .update("developerCertificate", path.join(certsDir, "dev.pem"));
+        .getConfiguration("dynatrace", null)
+        .update("developerCertificateLocation", path.join(certsDir, "dev.pem"));
       vscode.workspace
-        .getConfiguration("dynatrace.certificateLocation", null)
-        .update("rootOrCaCertificate", path.join(certsDir, "ca.pem"));
+        .getConfiguration("dynatrace", null)
+        .update("rootOrCaCertificateLocation", path.join(certsDir, "ca.pem"));
 
       return true;
     }
@@ -202,35 +202,35 @@ function generateSerialNo(): string {
  * @returns Array of certificate subject attributes
  */
 function getCertAttributes(type: "ca" | "dev"): pki.CertificateField[] {
-  var config = vscode.workspace.getConfiguration("dynatrace.certificateDetails", null);
+  var config = vscode.workspace.getConfiguration("dynatrace", null);
   var attrs = [
     {
       shortName: "CN",
-      value: `${config.get("commonName")} ${type === "ca" ? "Root" : "Dev"}`,
+      value: `${config.get("certificateCommonName")} ${type === "ca" ? "Root" : "Dev"}`,
     },
   ];
-  if (config.get("organization")) {
+  if (config.get("certificateOrganization")) {
     attrs.push({
       shortName: "O",
-      value: config.get("organization") as string,
+      value: config.get("certificateOrganization") as string,
     });
   }
-  if (config.get("organizationUnit")) {
+  if (config.get("certificateOrganizationUnit")) {
     attrs.push({
       shortName: "OU",
-      value: config.get("organizationUnit") as string,
+      value: config.get("certificateOrganizationUnit") as string,
     });
   }
-  if (config.get("stateOrProvince")) {
+  if (config.get("certificateStateOrProvince")) {
     attrs.push({
       shortName: "ST",
-      value: config.get("stateOrProvince") as string,
+      value: config.get("certificateStateOrProvince") as string,
     });
   }
-  if (config.get("countryCode")) {
+  if (config.get("certificateCountryCode")) {
     attrs.push({
       shortName: "C",
-      value: config.get("countryCode") as string,
+      value: config.get("certificateCountryCode") as string,
     });
   }
 

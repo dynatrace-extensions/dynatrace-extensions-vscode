@@ -75,7 +75,8 @@ export async function initWorkspace(context: vscode.ExtensionContext, dt: Dynatr
       });
       switch (certChoice) {
         case "Use your own certificates":
-          const hasCertificates = checkSettings("certificateLocation.developerKey", "certificateLocation.developerCertificate");
+          const hasCertificates = checkSettings("developerKeyLocation", "developerCertificateLocation");
+          console.log(hasCertificates);
           if (!hasCertificates) {
             vscode.window.showErrorMessage("Personal certificates not found. Workspace not initialized.");
             return false;
