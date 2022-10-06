@@ -81,7 +81,7 @@ export async function uploadExtension(dt: Dynatrace) {
       vscode.commands.executeCommand("dt-ext-copilot.activateExtension", extensionVersion);
     })
     .catch((err: DynatraceAPIError) => {
+      vscode.window.showErrorMessage(err.errorParams.message);
       vscode.window.showErrorMessage("Extension upload failed.");
-      vscode.window.showErrorMessage(err.errorParams.data);
     });
 }
