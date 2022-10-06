@@ -32,7 +32,7 @@ export class ConnectionStatusManager {
       this.statusBarItem.text = `$(dt-signet) Connected to ${environment}`;
       this.statusBarItem.tooltip = "Using this environment for API calls";
       this.statusBarItem.backgroundColor = undefined;
-      this.statusBarItem.color = new vscode.ThemeColor("notebookStatusSuccessIcon.foreground");
+      this.statusBarItem.color = undefined;
     } else {
       this.statusBarItem.text = `$(dt-signet) Not connected`;
       this.statusBarItem.tooltip = "No API calls are currently possible";
