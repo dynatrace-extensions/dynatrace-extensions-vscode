@@ -1,5 +1,16 @@
 # Change Log
 
+## Version 0.14.7 / Stage: alpha (06.10.2022)
+
+### 🚀 Improved in this version:
+- Selector statuses are now cached. They will only reset when they change. Known statuses won't require re-validation.
+- Build & validation issues are communicated more clearly via JSON output
+
+### 🐛 Fixed in this version:
+- Adding a new workspace would not trigger initialization correctly
+
+---
+
 ## Version 0.14.6 / Stage: alpha (03.10.2022)
 
 ### 🚀 Improved in this version:
