@@ -75,8 +75,13 @@ export async function loadSchemas(context: vscode.ExtensionContext, dt: Dynatrac
   return true;
 }
 
+/**
+ * Downloads (at the given location) all schema files of a given version.
+ * @param location where to save schemas on disk
+ * @param version version of schemas to download
+ * @param dt Dynatrace API Client
+ */
 function downloadSchemaFiles(location: string, version: string, dt: Dynatrace) {
-  // Download all schemas of that version
   mkdirSync(location, { recursive: true });
   vscode.window.withProgress(
     {
