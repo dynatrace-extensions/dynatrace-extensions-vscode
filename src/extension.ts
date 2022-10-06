@@ -66,8 +66,16 @@ export function activate(context: vscode.ExtensionContext) {
   const tenantsTreeViewProvider = new EnvironmentsTreeDataProvider(context, connectionStatusManager);
   const cachedDataProvider = new CachedDataProvider(tenantsTreeViewProvider);
   const snippetCodeActionProvider = new SnippetGenerator();
-  const metricLensProvider = new SelectorCodeLensProvider("metricSelector:", "metricSelectorsCodeLens");
-  const entityLensProvider = new SelectorCodeLensProvider("entitySelectorTemplate:", "entitySelectorsCodeLens");
+  const metricLensProvider = new SelectorCodeLensProvider(
+    "metricSelector:",
+    "metricSelectorsCodeLens",
+    cachedDataProvider
+  );
+  const entityLensProvider = new SelectorCodeLensProvider(
+    "entitySelectorTemplate:",
+    "entitySelectorsCodeLens",
+    cachedDataProvider
+  );
 
   context.subscriptions.push(
     // Commands for the Command Palette
@@ -81,9 +89,13 @@ export function activate(context: vscode.ExtensionContext) {
     vscode.commands.registerCommand("dt-ext-copilot.initWorkspace", async () => {
       if (checkWorkspaceOpen() && checkEnvironmentConnected(tenantsTreeViewProvider)) {
         initWorkspaceStorage(context);
-        initWorkspace(context, (await tenantsTreeViewProvider.getDynatraceClient())!, () => {
-          extensionsTreeViewProvider.refresh();
-        });
+        try {
+          initWorkspace(context, (await tenantsTreeViewProvider.getDynatraceClient())!, () => {
+            extensionsTreeViewProvider.refresh();
+          });
+        } finally {
+          context.globalState.update("dt-ext-copilot.initPending", undefined);
+        }
       }
     }),
     // Generate the certificates required for extension signing
@@ -164,11 +176,10 @@ export function activate(context: vscode.ExtensionContext) {
     // Extension 2.0 Workspaces Tree View
     vscode.window.registerTreeDataProvider("dt-ext-copilot-workspaces", extensionsTreeViewProvider),
     vscode.commands.registerCommand("dt-ext-copilot-workspaces.refresh", () => extensionsTreeViewProvider.refresh()),
-    vscode.commands.registerCommand("dt-ext-copilot-workspaces.addWorkspace", () =>
-      vscode.commands.executeCommand("vscode.openFolder").then(() => {
-        vscode.commands.executeCommand("dt-ext-copilot.initWorkspace");
-      })
-    ),
+    vscode.commands.registerCommand("dt-ext-copilot-workspaces.addWorkspace", () => {
+      vscode.commands.executeCommand("vscode.openFolder");
+      context.globalState.update("dt-ext-copilot.initPending", true);
+    }),
     vscode.commands.registerCommand("dt-ext-copilot-workspaces.openWorkspace", (workspace: ExtensionProjectItem) => {
       vscode.commands.executeCommand("vscode.openFolder", workspace.path);
     }),
@@ -282,6 +293,10 @@ export function activate(context: vscode.ExtensionContext) {
       }
     })
   );
+  // We may have an initialization pending from previous window.
+  if (context.globalState.get("dt-ext-copilot.initPending")) {
+    vscode.commands.executeCommand("dt-ext-copilot.initWorkspace");
+  }
 }
 
 /**
