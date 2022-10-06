@@ -1,4 +1,5 @@
 import * as vscode from "vscode";
+import { CachedDataProvider } from "../utils/dataCaching";
 import { resolveSelectorTemplate, ValidationStatus } from "../utils/selectors";
 
 /**
@@ -10,18 +11,19 @@ class ValidationStatusLens extends vscode.CodeLens {
   /**
    * @param range VSCode Range at which lens should be created
    * @param selector selector relevant to this lens
-   * @param status the validation status for this lens' selector
+   * @param cachedData a provider of cached validation statuses
    */
-  constructor(range: vscode.Range, selector: string, status: ValidationStatus) {
+  constructor(range: vscode.Range, selector: string, cachedData: CachedDataProvider) {
     super(range);
     this.selector = selector;
-    this.command = this.getStatusAsCommand(status);
+    const cachedStatus = cachedData.getSelectorStatus(selector);
+    this.command = this.getStatusAsCommand(cachedStatus);
   }
 
   /**
    * Interprets a ValidationStatus and translates it to a vscode.Command to be used
    * inside the code lens.
-   * @param status status of the metric selector
+   * @param status status of the selector
    * @returns command object
    */
   private getStatusAsCommand(status: ValidationStatus): vscode.Command {
@@ -49,19 +51,10 @@ class ValidationStatusLens extends vscode.CodeLens {
         };
     }
   }
-
-  /**
-   * Updates the status of this lens.
-   * @param status the new status
-   */
-  public updateStatus(status: ValidationStatus) {
-    this.command = this.getStatusAsCommand(status);
-  }
 }
 
 /**
- * A Code Lens which allows validating a selector and updating its associated
- * {@link ValidationStatusLens}
+ * A Code Lens which allows validating a selector and updating its status.
  */
 class SelectorValidationLens extends vscode.CodeLens {
   selector: string;
@@ -82,7 +75,7 @@ class SelectorValidationLens extends vscode.CodeLens {
 }
 
 /**
- * A Code Lens which allows running a metric query with the given selector.
+ * A Code Lens which allows running a query with the given selector.
  */
 class SelectorRunnerLens extends vscode.CodeLens {
   selector: string;
@@ -109,7 +102,7 @@ class SelectorRunnerLens extends vscode.CodeLens {
 export class SelectorCodeLensProvider implements vscode.CodeLensProvider {
   private codeLenses: vscode.CodeLens[];
   private regex: RegExp;
-  private numLines: number;
+  public readonly cachedData: CachedDataProvider;
   private _onDidChangeCodeLenses: vscode.EventEmitter<void> = new vscode.EventEmitter<void>();
   public readonly onDidChangeCodeLenses: vscode.Event<void> = this._onDidChangeCodeLenses.event;
   private readonly controlSetting: string;
@@ -119,12 +112,13 @@ export class SelectorCodeLensProvider implements vscode.CodeLensProvider {
   /**
    * @param match the text to match and extract the selector by
    * @param controlSetting the vscode setting which controls this feature
+   * @param dataProvider a provider of cacheable data (i.e. selector statuses)
    */
-  constructor(match: string, controlSetting: string) {
-    this.numLines = -1;
+  constructor(match: string, controlSetting: string, dataProvider: CachedDataProvider) {
     this.codeLenses = [];
     this.matchString = match;
     this.controlSetting = controlSetting;
+    this.cachedData = dataProvider;
     this.selectorType = match.startsWith("metricSelector") ? "metric" : "entity";
     this.regex = new RegExp(`(${match})`, "g");
   }
@@ -136,20 +130,13 @@ export class SelectorCodeLensProvider implements vscode.CodeLensProvider {
    * @returns list of code lenses
    */
   public provideCodeLenses(document: vscode.TextDocument, token: vscode.CancellationToken): vscode.CodeLens[] {
+    this.codeLenses = [];
     const regex = new RegExp(this.regex);
     const text = document.getText();
-    const numLines = document.lineCount;
 
     // Honor the user's settings
     if (!vscode.workspace.getConfiguration("dynatrace", null).get(this.controlSetting) as boolean) {
       return [];
-    }
-
-    // If new lines have been entered/deleted, reset the previous lenses
-    // so we don't create inaccurate duplicates
-    if (numLines !== this.numLines) {
-      this.numLines = numLines;
-      this.codeLenses = [];
     }
 
     let matches;
@@ -165,47 +152,22 @@ export class SelectorCodeLensProvider implements vscode.CodeLensProvider {
           selector = resolveSelectorTemplate(selector, document, position);
         }
 
-        this.createOrUpdateLens(new SelectorRunnerLens(range, selector, this.selectorType));
-        this.createOrUpdateLens(new SelectorValidationLens(range, selector, this.selectorType));
-        this.createOrUpdateLens(new ValidationStatusLens(range, selector, { status: "unknown" }));
+        this.codeLenses.push(new SelectorRunnerLens(range, selector, this.selectorType));
+        this.codeLenses.push(new SelectorValidationLens(range, selector, this.selectorType));
+        this.codeLenses.push(new ValidationStatusLens(range, selector, this.cachedData));
       }
     }
     return this.codeLenses;
   }
 
   /**
-   * Checks the knwown Code Lenses and either creates the provided lens or updates the existing
-   * entry in case the details match.
-   * @param newLens a Selector code lens
-   */
-  private createOrUpdateLens(newLens: SelectorRunnerLens | SelectorValidationLens | ValidationStatusLens) {
-    let prevLensIdx = this.codeLenses.findIndex(
-      (lens) => lens.constructor === newLens.constructor && lens.range.isEqual(newLens.range)
-    );
-    if (prevLensIdx === -1) {
-      this.codeLenses.push(newLens);
-    } else {
-      if (
-        (this.codeLenses[prevLensIdx] as SelectorRunnerLens | SelectorValidationLens | ValidationStatusLens)
-          .selector !== newLens.selector
-      ) {
-        this.codeLenses[prevLensIdx] = newLens;
-      }
-    }
-  }
-
-  /**
-   * Allows updating already existing Validation Status code lens. This allows on-demand
-   * status updates for metric and entity selectors.
-   * @param selector metric selector of the lens
-   * @param status status object to update lens with
+   * Updates the cached validation status for a given selector and notifies this
+   * provider that code lenses have changed.
+   * @param selector selector to update status for
+   * @param status current validation status
    */
   public updateValidationStatus(selector: string, status: ValidationStatus) {
-    this.codeLenses
-      .filter((lens) => lens instanceof ValidationStatusLens && lens.selector === selector)
-      .forEach((lens) => {
-        (lens as ValidationStatusLens).updateStatus(status);
-      });
+    this.cachedData.addSelectorStatus(selector, status);
     this._onDidChangeCodeLenses.fire();
   }
 }

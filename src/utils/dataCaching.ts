@@ -1,5 +1,6 @@
 import Axios from "axios";
 import { EnvironmentsTreeDataProvider } from "../treeViews/environmentsTreeView";
+import { ValidationStatus } from "./selectors";
 
 /**
  * A utility class for caching reusable data that other components depend on.
@@ -9,6 +10,7 @@ export class CachedDataProvider {
   private readonly environments: EnvironmentsTreeDataProvider;
   private builtinEntities: EntityType[] = [];
   private baristaIcons: string[] = [];
+  private selectorStatuses: { [selector: string]: ValidationStatus } = {};
 
   /**
    * @param environments a Dynatrace Environments provider
@@ -17,6 +19,25 @@ export class CachedDataProvider {
     this.environments = environments;
     this.loadBuiltinEntities();
     this.loadBaristaIcons();
+  }
+
+  /**
+   * Gets a cached selector validation status.
+   * @param selector the selector string to get status for
+   * @returns last known validation status
+   */
+  public getSelectorStatus(selector: string): ValidationStatus {
+    let status = this.selectorStatuses[selector];
+    return status ? status : { status: "unknown" };
+  }
+
+  /**
+   * Updates the validation status for a selector.
+   * @param selector the selector to update status for
+   * @param status the current validation status
+   */
+  public addSelectorStatus(selector: string, status: ValidationStatus) {
+    this.selectorStatuses[selector] = status;
   }
 
   /**
@@ -79,9 +100,7 @@ export class CachedDataProvider {
           this.baristaIcons = res.data.icons.map((i: BaristaMeta) => i.name);
         }
       })
-      .catch(async (err) => {
-        console.log("Internal Barista not accessible. Trying public one.");
-
+      .catch(async () => {
         Axios.get(publicURL)
           .then((res) => {
             if (res.data.icons) {
@@ -89,7 +108,7 @@ export class CachedDataProvider {
             }
           })
           .catch((err) => {
-            console.log("Public Barista not accessible.");
+            console.log("Barista not accessible.");
             console.log(err.message);
           });
       });
