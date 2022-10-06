@@ -7,6 +7,7 @@ import { sign } from "../utils/cryptography";
 import { checkValidExtensionName } from "../utils/conditionCheckers";
 import { Dynatrace } from "../dynatrace-api/dynatrace";
 import { DynatraceAPIError } from "../dynatrace-api/errors";
+import { normalizeExtensionVersion } from "../utils/extensionParsing";
 
 /**
  * Builds an Extension 2.0 and its artefacts into a .zip package ready to upload to Dynatrace.
@@ -38,7 +39,9 @@ export async function buildExtension(context: vscode.ExtensionContext, dt?: Dyna
       progress.report({ message: "Checking your certificates" });
       // Either user's certificates or generated ones will be set in settings
       const devKeyPath = vscode.workspace.getConfiguration("dynatrace", null).get("developerKeyLocation") as string;
-      const devCertPath = vscode.workspace.getConfiguration("dynatrace", null).get("developerCertificateLocation") as string;
+      const devCertPath = vscode.workspace
+        .getConfiguration("dynatrace", null)
+        .get("developerCertificateLocation") as string;
 
       progress.report({ message: "Validating your extension name" });
       // Extension meta
@@ -46,11 +49,33 @@ export async function buildExtension(context: vscode.ExtensionContext, dt?: Dyna
         .findFiles("**/extension/extension.yaml")
         .then((files) => files[0].fsPath);
       const extensionDir = path.resolve(extensionFile, "..");
-      const extension = yaml.parse(readFileSync(extensionFile).toString());
+      const lineCounter = new yaml.LineCounter();
+      const extension = yaml.parse(readFileSync(extensionFile).toString(), { lineCounter: lineCounter });
       // We can only build custom extensions this way
       if (!checkValidExtensionName(extension.name)) {
         vscode.window.showErrorMessage("Build extension: operation aborted.");
         return false;
+      }
+
+      // If extension version conflicts with one on tenant, increment automatically
+      progress.report({ message: "Checking version conflicts for extension" });
+      const extensionVersion = normalizeExtensionVersion(extension.version);
+      const versions = await dt!.extensionsV2
+        .listVersions(extension.name)
+        .then((ext) => ext.map((e) => e.version))
+        .catch(() => [] as string[]);
+      if (versions.includes(extensionVersion)) {
+        let versionParts = extensionVersion.split(".");
+        if (versionParts.length > 1) {
+          extension.version = [
+            ...versionParts.slice(0, versionParts.length - 1),
+            Number(versionParts[versionParts.length - 1]) + 1,
+          ].join(".");
+        } else {
+          extension.version = Number(extension.version) + 1;
+        }
+        writeFileSync(extensionFile, yaml.stringify(extension, { lineWidth: 0, lineCounter: lineCounter }));
+        vscode.window.showInformationMessage("Extension version was increased automatically.");
       }
 
       // Build the inner .zip archive

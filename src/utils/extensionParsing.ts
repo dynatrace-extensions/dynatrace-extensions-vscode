@@ -1,4 +1,18 @@
 /**
+ * Normalize semi-invalid versions of extension because they get re-written cluster-side.
+ * E.g. version can be 3 and cluster will re-write to 3.0.0
+ * @param version version as-is
+ * @returns version normalized
+ */
+export function normalizeExtensionVersion(version: string): string {
+  let versionParts = version.split(".");
+  while (versionParts.length < 3) {
+    versionParts.push("0");
+  }
+  return versionParts.slice(0, 3).join(".");
+}
+
+/**
  * Extracts all attribute keys of a given entity type from topology section of the extension.
  * @param entityType entity type to extract for
  * @param extension extension.yaml serialized as object
