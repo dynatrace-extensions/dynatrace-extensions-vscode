@@ -70,7 +70,7 @@ export async function initWorkspace(context: vscode.ExtensionContext, dt: Dynatr
       var certChoice = await vscode.window.showQuickPick(["Use your own certificates", "Generate new ones"], {
         canPickMany: false,
         ignoreFocusOut: true,
-        title: "Certificate selection",
+        title: "Initialize Workspace: Certificates",
         placeHolder: "What certificates would you like to use for signing extensions in this workspace?",
       });
       switch (certChoice) {

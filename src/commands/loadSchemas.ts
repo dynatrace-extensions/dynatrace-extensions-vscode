@@ -27,6 +27,7 @@ export async function loadSchemas(context: vscode.ExtensionContext, dt: Dynatrac
   // Prompt user for version selection
   const version = (await vscode.window.showQuickPick(availableVersions, {
     placeHolder: "Choose a schema version",
+    title: "Extension workspace: Load Schemas"
   })) as string;
   if (!version) {
     vscode.window.showErrorMessage("No schema was selected. Operation cancelled.");
@@ -80,7 +81,7 @@ function downloadSchemaFiles(location: string, version: string, dt: Dynatrace) {
   vscode.window.withProgress(
     {
       location: vscode.ProgressLocation.Notification,
-      title: `Downloading schemas version ${version}`,
+      title: `Loading schemas ${version}`,
     },
     async (progress) => {
       progress.report({ message: "Fetching file names" });

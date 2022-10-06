@@ -84,13 +84,14 @@ export async function buildExtension(context: vscode.ExtensionContext, dt?: Dyna
       if (dt) {
         progress.report({ message: "Validating the final package contents" });
         await dt.extensionsV2.upload(readFileSync(outerZipPath), true).catch((err: DynatraceAPIError) => {
-          vscode.window.showErrorMessage(err.errorParams.message);
+          vscode.window.showErrorMessage("Extension validation failed.");
           var oc = vscode.window.createOutputChannel("Dynatrace", "json");
           oc.appendLine(
             JSON.stringify(
               {
                 extension: extension.name,
                 version: extension.version,
+                message: err.errorParams.message,
                 issues: err.errorParams.data.constraintViolations,
               },
               null,
