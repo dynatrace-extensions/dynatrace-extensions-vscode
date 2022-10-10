@@ -4,14 +4,12 @@ import { HttpClient } from "../http_client";
  * Implementation of the Extensions V2 API
  */
 export class ExtensionsServiceV2 {
-  private readonly endpoint: string;
-  private readonly schemaEndpoint: string;
+  private readonly endpoint = "/api/v2/extensions";
+  private readonly schemaEndpoint = "/api/v2/extensions/schemas";
   private readonly httpClient: HttpClient;
 
   constructor(httpClient: HttpClient) {
     this.httpClient = httpClient;
-    this.endpoint = "/api/v2/extensions";
-    this.schemaEndpoint = "/api/v2/extensions/schemas";
   }
 
   /**

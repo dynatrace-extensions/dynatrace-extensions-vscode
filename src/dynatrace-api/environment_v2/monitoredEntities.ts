@@ -4,14 +4,12 @@ import { HttpClient } from "../http_client";
  * Implementation of the Monitored Entities V2 API
  */
 export class EntityServiceV2 {
-  private readonly endpoint: string;
-  private readonly typesEndpoint: string;
+  private readonly endpoint = "/api/v2/entities";
+  private readonly typesEndpoint = "/api/v2/entityTypes";
   private readonly httpClient: HttpClient;
 
   constructor(httpClient: HttpClient) {
     this.httpClient = httpClient;
-    this.endpoint = "/api/v2/entities";
-    this.typesEndpoint = "/api/v2/entityTypes";
   }
 
   /**

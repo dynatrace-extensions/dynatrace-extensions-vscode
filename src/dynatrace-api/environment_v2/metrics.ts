@@ -4,12 +4,11 @@ import { HttpClient } from "../http_client";
  * Implementation of the Metrics V2 API
  */
 export class MetricService {
-  private readonly endpoint: string;
+  private readonly endpoint = "/api/v2/metrics";
   private readonly httpClient: HttpClient;
 
   constructor(httpClient: HttpClient) {
     this.httpClient = httpClient;
-    this.endpoint = "/api/v2/metrics";
   }
 
   /**
