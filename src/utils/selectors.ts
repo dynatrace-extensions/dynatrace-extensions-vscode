@@ -14,51 +14,46 @@ export interface ValidationStatus {
 }
 
 /**
- * Runs a metric query and reports the status of validating the result.
+ * Runs a query and reports the status of validating the result.
  * If no errors were experienced, the check is successful, otherwise it is considered failed and the details are
  * contained within the returned object.
  * @param selector metric selector to validate
+ * @param selectorType either metric or entity selector
  * @param dt Dynatrace API Client
  * @returns validation status
  */
-export async function validateMetricSelector(selector: string, dt: Dynatrace): Promise<ValidationStatus> {
-  return dt.metrics
-    .query(selector)
-    .then(() => ({ status: "valid" } as ValidationStatus))
-    .catch(
-      (err: DynatraceAPIError) =>
-        ({
-          status: "invalid",
-          error: {
-            code: err.errorParams.code,
-            message: err.errorParams.message,
-          },
-        } as ValidationStatus)
-    );
-}
-
-/**
- * Queries Dynatrace entities using the given selector and reports the status of validating the result.
- * If no errors were experienced, the check is successful, otherwise it is considered failed and the details are
- * contained within the returned object.
- * @param selector entity selector to validate
- * @param dt Dynatrace API Client
- * @returns validation status
- */
-export async function validateEntitySelector(selector: string, dt: Dynatrace): Promise<ValidationStatus> {
-  return dt.entitiesV2
-    .list(selector)
-    .then(() => ({ status: "valid" } as ValidationStatus))
-    .catch(
-      (err: DynatraceAPIError) =>
-        ({
-          status: "invalid",
-          error: {
-            code: err.errorParams.code,
-            message: err.errorParams.message,
-          },
-        } as ValidationStatus)
-    );
+export async function validateSelector(
+  selector: string,
+  selectorType: "metric" | "entity",
+  dt: Dynatrace
+): Promise<ValidationStatus> {
+  return selectorType === "metric"
+    ? dt.metrics
+        .query(selector)
+        .then(() => ({ status: "valid" } as ValidationStatus))
+        .catch(
+          (err: DynatraceAPIError) =>
+            ({
+              status: "invalid",
+              error: {
+                code: err.errorParams.code,
+                message: err.errorParams.message,
+              },
+            } as ValidationStatus)
+        )
+    : dt.entitiesV2
+        .list(selector)
+        .then(() => ({ status: "valid" } as ValidationStatus))
+        .catch(
+          (err: DynatraceAPIError) =>
+            ({
+              status: "invalid",
+              error: {
+                code: err.errorParams.code,
+                message: err.errorParams.message,
+              },
+            } as ValidationStatus)
+        );
 }
 
 /**
@@ -68,8 +63,15 @@ export async function validateEntitySelector(selector: string, dt: Dynatrace): P
  * @param selector the selector to query Dynatrace with
  * @param selectorType what type of selector it is
  * @param dt Dynatrace API Client
+ * @param oc JSON OutputChannel where error details can be shown. It will also be used to show
+ *           entity queries results.
  */
-export async function runSelector(selector: string, selectorType: "metric" | "entity", dt: Dynatrace) {
+export async function runSelector(
+  selector: string,
+  selectorType: "metric" | "entity",
+  dt: Dynatrace,
+  oc: vscode.OutputChannel
+) {
   if (selectorType === "metric") {
     dt.metrics
       .query(selector, "5m")
@@ -77,7 +79,7 @@ export async function runSelector(selector: string, selectorType: "metric" | "en
         MetricResultsPanel.createOrShow(res);
       })
       .catch((err: DynatraceAPIError) => {
-        const oc = vscode.window.createOutputChannel("Dynatrace", "json");
+        oc.clear();
         oc.appendLine(
           JSON.stringify(
             {
@@ -96,12 +98,12 @@ export async function runSelector(selector: string, selectorType: "metric" | "en
     dt.entitiesV2
       .list(selector, "now-2h", undefined, "properties,toRelationships,fromRelationships")
       .then((res: Entity[]) => {
-        const oc = vscode.window.createOutputChannel("Dynatrace", "json");
+        oc.clear();
         oc.appendLine(JSON.stringify({ selector: selector, entities: res }, null, 2));
         oc.show();
       })
       .catch((err: DynatraceAPIError) => {
-        const oc = vscode.window.createOutputChannel("Dynatrace", "json");
+        oc.clear();
         oc.appendLine(
           JSON.stringify(
             {
