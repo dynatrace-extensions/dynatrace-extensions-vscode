@@ -13,6 +13,19 @@ export function normalizeExtensionVersion(version: string): string {
 }
 
 /**
+ * Increments the current extension version by 0.0.1 to avoid version conflicts.
+ * @param currentVersion the current version string
+ * @returns the incremented version
+ */
+export function incrementExtensionVersion(currentVersion: string) {
+  currentVersion = normalizeExtensionVersion(currentVersion);
+  let versionParts = currentVersion.split(".");
+  return [...versionParts.slice(0, versionParts.length - 1), Number(versionParts[versionParts.length - 1]) + 1].join(
+    "."
+  );
+}
+
+/**
  * Extracts all attribute keys of a given entity type from topology section of the extension.
  * @param entityType entity type to extract for
  * @param extension extension.yaml serialized as object
