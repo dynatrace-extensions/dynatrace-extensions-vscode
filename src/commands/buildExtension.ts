@@ -7,7 +7,8 @@ import { sign } from "../utils/cryptography";
 import { checkValidExtensionName } from "../utils/conditionCheckers";
 import { Dynatrace } from "../dynatrace-api/dynatrace";
 import { DynatraceAPIError } from "../dynatrace-api/errors";
-import { normalizeExtensionVersion } from "../utils/extensionParsing";
+import { normalizeExtensionVersion, incrementExtensionVersion } from "../utils/extensionParsing";
+import { FastModeStatus } from "../statusBar/fastMode";
 
 /**
  * Builds an Extension 2.0 and its artefacts into a .zip package ready to upload to Dynatrace.
@@ -18,9 +19,10 @@ import { normalizeExtensionVersion } from "../utils/extensionParsing";
  * Note: Only custom extensions may be built/signed using this method.
  * @param context VSCode Extension Context
  * @param dt Dynatrace API Client if proper validation is to be done
+ * @param oc JSON OutputChannel where detailed errors can be logged
  * @returns
  */
-export async function buildExtension(context: vscode.ExtensionContext, dt?: Dynatrace) {
+export async function buildExtension(context: vscode.ExtensionContext, oc: vscode.OutputChannel, dt?: Dynatrace) {
   const workspaceRoot = vscode.workspace.workspaceFolders![0].uri.fsPath;
 
   const success = await vscode.window.withProgress(
@@ -49,8 +51,7 @@ export async function buildExtension(context: vscode.ExtensionContext, dt?: Dyna
         .findFiles("**/extension/extension.yaml")
         .then((files) => files[0].fsPath);
       const extensionDir = path.resolve(extensionFile, "..");
-      const lineCounter = new yaml.LineCounter();
-      const extension = yaml.parse(readFileSync(extensionFile).toString(), { lineCounter: lineCounter });
+      const extension = yaml.parse(readFileSync(extensionFile).toString());
       // We can only build custom extensions this way
       if (!checkValidExtensionName(extension.name)) {
         vscode.window.showErrorMessage("Build extension: operation aborted.");
@@ -65,17 +66,9 @@ export async function buildExtension(context: vscode.ExtensionContext, dt?: Dyna
         .then((ext) => ext.map((e) => e.version))
         .catch(() => [] as string[]);
       if (versions.includes(extensionVersion)) {
-        let versionParts = extensionVersion.split(".");
-        if (versionParts.length > 1) {
-          extension.version = [
-            ...versionParts.slice(0, versionParts.length - 1),
-            Number(versionParts[versionParts.length - 1]) + 1,
-          ].join(".");
-        } else {
-          extension.version = Number(extension.version) + 1;
-        }
-        writeFileSync(extensionFile, yaml.stringify(extension, { lineWidth: 0, lineCounter: lineCounter }));
-        vscode.window.showInformationMessage("Extension version was increased automatically.");
+        extension.version = incrementExtensionVersion(extensionVersion);
+        writeFileSync(extensionFile, yaml.stringify(extension, { lineWidth: 0 }));
+        vscode.window.showInformationMessage("Extension version automatically increased.");
       }
 
       // Build the inner .zip archive
@@ -110,7 +103,7 @@ export async function buildExtension(context: vscode.ExtensionContext, dt?: Dyna
         progress.report({ message: "Validating the final package contents" });
         await dt.extensionsV2.upload(readFileSync(outerZipPath), true).catch((err: DynatraceAPIError) => {
           vscode.window.showErrorMessage("Extension validation failed.");
-          var oc = vscode.window.createOutputChannel("Dynatrace", "json");
+          oc.clear();
           oc.appendLine(
             JSON.stringify(
               {
@@ -152,4 +145,124 @@ export async function buildExtension(context: vscode.ExtensionContext, dt?: Dyna
         }
       });
   }
+}
+
+/**
+ * Builds an extension 2.0 package in Fast Development Mode.
+ * This workflow assumes it will be triggerred on document Save so it expects the document
+ * (i.e. extension.yaml) as its arguments. The extension is built, signed, and automatically
+ * uploaded and activated on the tenant. If the maximum number of versions was reached, the
+ * workflow automatically removes either the oldest or the newest version before uploading it.
+ * A companion status bar is updated to reflect the status.
+ * @param context VSCode Extension Context
+ * @param dt Dynatrace API Client
+ * @param doc The document that triggered the "Save" (i.e. extension.yaml)
+ * @param oc Output Channel where error details can be communicated
+ * @param status StatusBar that can be notified of build status
+ */
+export async function fastModeBuild(
+  context: vscode.ExtensionContext,
+  dt: Dynatrace,
+  doc: vscode.TextDocument,
+  oc: vscode.OutputChannel,
+  status: FastModeStatus
+) {
+  await vscode.window.withProgress(
+    {
+      location: vscode.ProgressLocation.Notification,
+      title: "Building extension",
+    },
+    async (progress) => {
+      try {
+        // Increment version
+        progress.report({ message: "Icrementing version" });
+        var extension = yaml.parse(doc.getText().toString());
+        extension.version = incrementExtensionVersion(extension.version);
+        writeFileSync(doc.fileName, yaml.stringify(extension, { lineWidth: 0 }));
+        // Certificates
+        progress.report({ message: "Getting certificates" });
+        const workspaceConfig = vscode.workspace.getConfiguration("dynatrace", null);
+        const devKeyPath = workspaceConfig.get("developerKeyLocation") as string;
+        const devCertPath = workspaceConfig.get("developerCertificateLocation") as string;
+        // Paths
+        progress.report({ message: "Setting file paths" });
+        const workspaceRoot = vscode.workspace.workspaceFolders![0].uri.fsPath;
+        const distDir = path.resolve(workspaceRoot, "dist");
+        if (!existsSync(distDir)) {
+          mkdirSync(distDir);
+        }
+        const extensionFile = doc.fileName;
+        const extensionDir = path.resolve(extensionFile, "..");
+        // Create inner .zip
+        progress.report({ message: "Creating archive" });
+        const innerZip = new AdmZip();
+        innerZip.addLocalFolder(extensionDir);
+        const innerZipPath = path.resolve(context.storageUri!.fsPath, "extension.zip");
+        innerZip.writeZip(innerZipPath);
+        // Sign the inner .zip
+        progress.report({ message: "Signing archive" });
+        const signature = sign(innerZipPath, devKeyPath, devCertPath);
+        const sigatureFilePath = path.resolve(context.storageUri!.fsPath, "extension.zip.sig");
+        writeFileSync(sigatureFilePath, signature);
+        // Create outer .zip
+        progress.report({ message: "Creating package" });
+        const outerZip = new AdmZip();
+        const outerZipFilename = `${extension.name.replace(":", "_")}-${extension.version}.zip`;
+        const outerZipPath = path.resolve(distDir, outerZipFilename);
+        outerZip.addLocalFile(innerZipPath);
+        outerZip.addLocalFile(sigatureFilePath);
+        outerZip.writeZip(outerZipPath);
+        // Check upload possible
+        progress.report({ message: "Uploading to Dynatrace" });
+        var existingVersions = await dt.extensionsV2.listVersions(extension.name).catch((err) => {
+          return [];
+        });
+        if (existingVersions.length >= 10) {
+          // Try delete oldest version
+          await dt.extensionsV2.deleteVersion(extension.name, existingVersions[0].version).catch(async () => {
+            // Try delete newest version
+            await dt.extensionsV2.deleteVersion(extension.name, existingVersions[existingVersions.length - 1].version);
+          });
+        }
+        // Upload to Dynatrace & activate version
+        await dt.extensionsV2.upload(readFileSync(outerZipPath)).then(() => {
+          progress.report({ message: "Activating extension" });
+          dt.extensionsV2.putEnvironmentConfiguration(extension.name, extension.version);
+        });
+        status.updateStatusBar(true, extension.version, true);
+        oc.clear();
+      } catch (err) {
+        // Mark the status bar as build failing
+        status.updateStatusBar(true, extension.version, false);
+        // Provide details in output channel
+        oc.clear();
+        if (err instanceof DynatraceAPIError) {
+          oc.appendLine(
+            JSON.stringify(
+              {
+                extension: extension.name,
+                version: extension.version,
+                errorDetails: err.errorParams.data,
+              },
+              null,
+              2
+            )
+          );
+        } else {
+          oc.appendLine(
+            JSON.stringify(
+              {
+                extension: extension.name,
+                version: extension.version,
+                errorDetails: err,
+              },
+              null,
+              2
+            )
+          );
+        }
+        oc.show();
+      }
+    }
+  );
 }

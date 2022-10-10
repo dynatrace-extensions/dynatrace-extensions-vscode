@@ -53,11 +53,7 @@ export function registerWorkspace(context: vscode.ExtensionContext) {
     name: vscode.workspace.name!,
     id: path.basename(path.dirname(context.storageUri!.fsPath)),
     folder: decodeURI(
-      JSON.parse(
-        readFileSync(
-          path.join(path.dirname(context.storageUri!.fsPath), "workspace.json")
-        ).toString()
-      ).folder
+      JSON.parse(readFileSync(path.join(path.dirname(context.storageUri!.fsPath), "workspace.json")).toString()).folder
     ),
   };
 
@@ -71,11 +67,7 @@ export function registerWorkspace(context: vscode.ExtensionContext) {
   writeFileSync(workspacesJson, JSON.stringify(workspaces));
 
   // Update the state
-  vscode.commands.executeCommand(
-    "setContext",
-    "dt-ext-copilot.numWorkspaces",
-    workspaces.length
-  );
+  vscode.commands.executeCommand("setContext", "dt-ext-copilot.numWorkspaces", workspaces.length);
 }
 
 /**
@@ -143,9 +135,7 @@ export function registerEnvironment(
   current: boolean = false
 ) {
   var environmentsJson = path.join(context.globalStorageUri.fsPath, "dynatraceEnvironments.json");
-  var environments: DynatraceEnvironmentData[] = JSON.parse(
-    readFileSync(environmentsJson).toString()
-  );
+  var environments: DynatraceEnvironmentData[] = JSON.parse(readFileSync(environmentsJson).toString());
   let id = url.includes("/e/") ? url.split("/e/")[1] : url.split("https://")[1].substring(0, 8);
   var environment: DynatraceEnvironmentData = {
     id: id,
@@ -173,11 +163,7 @@ export function registerEnvironment(
   writeFileSync(environmentsJson, JSON.stringify(environments));
 
   // Update the state
-  vscode.commands.executeCommand(
-    "setContext",
-    "dt-ext-copilot.numEnvironments",
-    environments.length
-  );
+  vscode.commands.executeCommand("setContext", "dt-ext-copilot.numEnvironments", environments.length);
 }
 
 /**
@@ -188,21 +174,12 @@ export function registerEnvironment(
  */
 export function removeEnvironment(context: vscode.ExtensionContext, environmentId: string) {
   var environmentsJson = path.join(context.globalStorageUri.fsPath, "dynatraceEnvironments.json");
-  var environments: DynatraceEnvironmentData[] = JSON.parse(
-    readFileSync(environmentsJson).toString()
-  );
+  var environments: DynatraceEnvironmentData[] = JSON.parse(readFileSync(environmentsJson).toString());
 
-  writeFileSync(
-    environmentsJson,
-    JSON.stringify(environments.filter((e) => e.id !== environmentId))
-  );
+  writeFileSync(environmentsJson, JSON.stringify(environments.filter((e) => e.id !== environmentId)));
 
   // Update the state
-  vscode.commands.executeCommand(
-    "setContext",
-    "dt-ext-copilot.numEnvironments",
-    environments.length - 1
-  );
+  vscode.commands.executeCommand("setContext", "dt-ext-copilot.numEnvironments", environments.length - 1);
 }
 
 /**
@@ -218,9 +195,5 @@ export function removeWorkspace(context: vscode.ExtensionContext, workspaceId: s
   writeFileSync(workspacesJson, JSON.stringify(workspaces.filter((w) => w.id !== workspaceId)));
 
   // Update the state
-  vscode.commands.executeCommand(
-    "setContext",
-    "dt-ext-copilot.numWorkspaces",
-    workspaces.length - 1
-  );
+  vscode.commands.executeCommand("setContext", "dt-ext-copilot.numWorkspaces", workspaces.length - 1);
 }

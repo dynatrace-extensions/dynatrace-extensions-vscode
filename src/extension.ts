@@ -4,7 +4,7 @@ import { initWorkspace } from "./commands/initWorkspace";
 import { generateCerts } from "./commands/generateCertificates";
 import { uploadCertificate } from "./commands/uploadCertificate";
 import { createDocumentation } from "./commands/createDocumentation";
-import { buildExtension } from "./commands/buildExtension";
+import { buildExtension, fastModeBuild } from "./commands/buildExtension";
 import { TopologyCompletionProvider } from "./codeCompletions/topology";
 import {
   checkCertificateExists,
@@ -41,7 +41,8 @@ import { MetricResultsPanel } from "./webviews/metricResults";
 import { IconCompletionProvider } from "./codeCompletions/icons";
 import { CachedDataProvider } from "./utils/dataCaching";
 import { ScreensMetaCompletionProvider } from "./codeCompletions/screensMeta";
-import { runSelector, validateEntitySelector, validateMetricSelector } from "./utils/selectors";
+import { runSelector, validateSelector } from "./utils/selectors";
+import { FastModeStatus } from "./statusBar/fastMode";
 
 /**
  * Sets up the VSCode extension by registering all the available functionality as disposable objects.
@@ -76,6 +77,9 @@ export function activate(context: vscode.ExtensionContext) {
     "entitySelectorsCodeLens",
     cachedDataProvider
   );
+  const fastModeChannel = vscode.window.createOutputChannel("Dynatrace Fast Mode", "json");
+  const fastModeStatus = new FastModeStatus(fastModeChannel);
+  const genericChannel = vscode.window.createOutputChannel("Dynatrace", "json");
 
   context.subscriptions.push(
     // Commands for the Command Palette
@@ -121,7 +125,7 @@ export function activate(context: vscode.ExtensionContext) {
     // Build Extension 2.0 package
     vscode.commands.registerCommand("dt-ext-copilot.buildExtension", async () => {
       if (checkWorkspaceOpen() && isExtensionsWorkspace(context) && checkCertificateExists("dev")) {
-        buildExtension(context, await tenantsTreeViewProvider.getDynatraceClient());
+        buildExtension(context, genericChannel, await tenantsTreeViewProvider.getDynatraceClient());
       }
     }),
     // Upload an extension to the tenant
@@ -234,7 +238,7 @@ export function activate(context: vscode.ExtensionContext) {
     ),
     // Connection Status Bar Item
     connectionStatusManager.getStatusBarItem(),
-    // Code Lens
+    // Code Lens for metric and entity selectors
     vscode.languages.registerCodeLensProvider(
       { language: "yaml", pattern: "**/extension/extension.yaml" },
       metricLensProvider
@@ -247,22 +251,10 @@ export function activate(context: vscode.ExtensionContext) {
       "dt-ext-copilot.codelens.validateSelector",
       async (selector: string, type: "metric" | "entity") => {
         if (checkEnvironmentConnected(tenantsTreeViewProvider)) {
-          switch (type) {
-            case "metric":
-              var status = await validateMetricSelector(
-                selector,
-                (await tenantsTreeViewProvider.getDynatraceClient())!
-              );
-              metricLensProvider.updateValidationStatus(selector, status);
-              break;
-            case "entity":
-              var status = await validateEntitySelector(
-                selector,
-                (await tenantsTreeViewProvider.getDynatraceClient())!
-              );
-              entityLensProvider.updateValidationStatus(selector, status);
-              break;
-          }
+          const status = await validateSelector(selector, type, (await tenantsTreeViewProvider.getDynatraceClient())!);
+          return type === "metric"
+            ? metricLensProvider.updateValidationStatus(selector, status)
+            : entityLensProvider.updateValidationStatus(selector, status);
         }
       }
     ),
@@ -270,7 +262,7 @@ export function activate(context: vscode.ExtensionContext) {
       "dt-ext-copilot.codelens.runSelector",
       async (selector: string, type: "metric" | "entity") => {
         if (checkEnvironmentConnected(tenantsTreeViewProvider)) {
-          runSelector(selector, type, (await tenantsTreeViewProvider.getDynatraceClient())!);
+          runSelector(selector, type, (await tenantsTreeViewProvider.getDynatraceClient())!, genericChannel);
         }
       }
     ),
@@ -282,15 +274,21 @@ export function activate(context: vscode.ExtensionContext) {
         MetricResultsPanel.revive(webviewPanel, "No data to display. Close the tab and trigger the action again.");
       },
     }),
-    vscode.workspace.onDidSaveTextDocument((doc: vscode.TextDocument) => {
+    // Fast Development Mode
+    vscode.workspace.onDidSaveTextDocument(async (doc: vscode.TextDocument) => {
       if (
+        isExtensionsWorkspace(context) &&
+        checkEnvironmentConnected(tenantsTreeViewProvider) &&
         doc.fileName.endsWith("extension.yaml") &&
-        vscode.workspace.getConfiguration(undefined, null).get("fastDevelopmentMode")
+        vscode.workspace.getConfiguration("dynatrace", null).get("fastDevelopmentMode")
       ) {
-        // Upload topology to Dynatrace
-        // Upload screens to Dynatrace
-        // Upload metadata to Dynatrace
+        const dt = await tenantsTreeViewProvider.getDynatraceClient();
+        fastModeBuild(context, dt!, doc, fastModeChannel, fastModeStatus);
       }
+    }),
+    vscode.workspace.onDidChangeConfiguration(() => {
+      const fastModeEnabled = vscode.workspace.getConfiguration("dynatrace", null).get("fastDevelopmentMode");
+      fastModeStatus.updateStatusBar(Boolean(fastModeEnabled));
     })
   );
   // We may have an initialization pending from previous window.
