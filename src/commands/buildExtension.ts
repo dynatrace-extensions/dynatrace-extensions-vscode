@@ -4,7 +4,6 @@ import AdmZip = require("adm-zip");
 import * as yaml from "yaml";
 import { copyFileSync, existsSync, mkdirSync, readFileSync, rmSync, writeFileSync } from "fs";
 import { sign } from "../utils/cryptography";
-import { checkValidExtensionName } from "../utils/conditionCheckers";
 import { Dynatrace } from "../dynatrace-api/dynatrace";
 import { DynatraceAPIError } from "../dynatrace-api/errors";
 import { normalizeExtensionVersion, incrementExtensionVersion } from "../utils/extensionParsing";
@@ -52,11 +51,6 @@ export async function buildExtension(context: vscode.ExtensionContext, oc: vscod
         .then((files) => files[0].fsPath);
       const extensionDir = path.resolve(extensionFile, "..");
       const extension = yaml.parse(readFileSync(extensionFile).toString());
-      // We can only build custom extensions this way
-      if (!checkValidExtensionName(extension.name)) {
-        vscode.window.showErrorMessage("Build extension: operation aborted.");
-        return false;
-      }
 
       // If extension version conflicts with one on tenant, increment automatically
       progress.report({ message: "Checking version conflicts for extension" });

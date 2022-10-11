@@ -28,6 +28,32 @@ export class DiagnosticsProvider {
   }
 
   /**
+   * Checks whether extension is valid for building.
+   * Essentially checks whether there are any diagnostics created with severity "Error".
+   * @returns true if extension will Build, false otherwise
+   */
+  public async isValidForBuilding(): Promise<boolean> {
+    const valid = await vscode.workspace.findFiles("**/extension/extension.yaml", undefined, 1).then((files) => {
+      if (files.length === 0) {
+        return false;
+      }
+      const diagnostics = this.collection.get(files[0]);
+      if (!diagnostics) {
+        return true;
+      }
+      if (diagnostics.findIndex((diag) => diag.severity === vscode.DiagnosticSeverity.Error) > -1) {
+        return false;
+      }
+      return true;
+    });
+    if (!valid) {
+      vscode.window.showErrorMessage("Extension cannot be built. Fix problems first.");
+      vscode.commands.executeCommand("workbench.action.problems.focus");
+    }
+    return valid;
+  }
+
+  /**
    * Provides diagnostics related to the name of an extension
    * @param content extension.yaml text content
    * @returns list of diagnostic items

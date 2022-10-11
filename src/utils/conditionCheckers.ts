@@ -174,25 +174,3 @@ export function checkExtensionZipExists(): boolean {
   }
   return false;
 }
-
-/**
- * Checks whether an extension name is valid from Dynatrace perspective.
- * Valid names are up to 50 characters, start with `custom:` and follow the metric ingestion
- * protocol format for dimensions.
- * @param name the name to check
- * @returns the status of check
- */
-export function checkValidExtensionName(name: string): boolean {
-  const nameRegex = /^custom:(?!\.)(?!.*\.\.)(?!.*\.$)[a-z0-9-_\.]+$/;
-  if (name.length > 50) {
-    vscode.window.showErrorMessage("Extension name is invalid. Name must not be longer than 50 characters.");
-    return false;
-  }
-  if (!nameRegex.test(name)) {
-    vscode.window.showErrorMessage(
-      'Extension name is invalid. Name must start with "custom:" and only contain lowercase letters, numbers, hyphens, underscores, or dots.'
-    );
-    return false;
-  }
-  return true;
-}

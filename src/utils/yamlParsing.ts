@@ -1,5 +1,3 @@
-import * as vscode from "vscode";
-
 /**
  * Given a block label and a line within a yaml content, will calculate the item index
  * within that block that the line belongs to.

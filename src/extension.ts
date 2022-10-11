@@ -127,7 +127,12 @@ export function activate(context: vscode.ExtensionContext) {
     }),
     // Build Extension 2.0 package
     vscode.commands.registerCommand("dt-ext-copilot.buildExtension", async () => {
-      if (checkWorkspaceOpen() && isExtensionsWorkspace(context) && checkCertificateExists("dev")) {
+      if (
+        (await diagnosticsProvider.isValidForBuilding()) &&
+        checkWorkspaceOpen() &&
+        isExtensionsWorkspace(context) &&
+        checkCertificateExists("dev")
+      ) {
         buildExtension(context, genericChannel, await tenantsTreeViewProvider.getDynatraceClient());
       }
     }),
@@ -288,6 +293,12 @@ export function activate(context: vscode.ExtensionContext) {
       ) {
         const dt = await tenantsTreeViewProvider.getDynatraceClient();
         fastModeBuild(context, dt!, doc, fastModeChannel, fastModeStatus);
+      }
+    }),
+    // Activity on active document changed
+    vscode.window.onDidChangeActiveTextEditor((editor) => {
+      if (editor && editor.document.fileName.endsWith("extension.yaml")) {
+        diagnosticsProvider.provideDiagnostics(editor.document);
       }
     }),
     // Activity on every text change in a document
