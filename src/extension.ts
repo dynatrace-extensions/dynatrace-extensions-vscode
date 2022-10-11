@@ -277,10 +277,10 @@ export function activate(context: vscode.ExtensionContext) {
     // Fast Development Mode
     vscode.workspace.onDidSaveTextDocument(async (doc: vscode.TextDocument) => {
       if (
+        vscode.workspace.getConfiguration("dynatrace", null).get("fastDevelopmentMode") &&
         isExtensionsWorkspace(context) &&
         checkEnvironmentConnected(tenantsTreeViewProvider) &&
-        doc.fileName.endsWith("extension.yaml") &&
-        vscode.workspace.getConfiguration("dynatrace", null).get("fastDevelopmentMode")
+        doc.fileName.endsWith("extension.yaml")
       ) {
         const dt = await tenantsTreeViewProvider.getDynatraceClient();
         fastModeBuild(context, dt!, doc, fastModeChannel, fastModeStatus);

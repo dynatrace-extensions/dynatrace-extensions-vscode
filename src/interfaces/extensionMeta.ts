@@ -1,24 +1,26 @@
 interface TopologyStub {
-  types: {
-    displayName: string;
-    name: string;
-    rules: {
-      requiredDimensions?: {
-        key: string;
-        valuePattern?: any;
-      }[];
-      sources: {
-        sourceType: string;
-        condition: string;
-      }[];
-      attributes: {
-        key: string;
-        displayName: string;
-        pattern: string;
-      }[];
+  types: TopologyType[];
+  relationships: RelationshipStub[];
+}
+
+interface TopologyType {
+  displayName: string;
+  name: string;
+  rules: {
+    requiredDimensions?: {
+      key: string;
+      valuePattern?: any;
+    }[];
+    sources: {
+      sourceType: string;
+      condition: string;
+    }[];
+    attributes: {
+      key: string;
+      displayName: string;
+      pattern: string;
     }[];
   }[];
-  relationships: RelationshipStub[];
 }
 
 interface RelationshipStub {
