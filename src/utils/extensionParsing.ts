@@ -229,23 +229,23 @@ export function getAllMetricsByFeatureSet(extension: ExtensionStub): FeatureSetD
             });
           } else {
             let fsIdx = featureSets.findIndex((fs) => fs.name === "default");
-            if (fsIdx !== -1) {
+            if (fsIdx !== -1 && !featureSets[fsIdx].metrics.includes(m.key)) {
               featureSets[fsIdx].metrics.push(m.key);
             }
           }
         } else if (sg.featureSet) {
           let fsIdx = featureSets.findIndex((fs) => fs.name === sg.featureSet);
-          if (fsIdx !== -1) {
+          if (fsIdx !== -1 && !featureSets[fsIdx].metrics.includes(m.key)) {
             featureSets[fsIdx].metrics.push(m.key);
           }
         } else if (group.featureSet) {
           let fsIdx = featureSets.findIndex((fs) => fs.name === group.featureSet);
-          if (fsIdx !== -1) {
+          if (fsIdx !== -1 && !featureSets[fsIdx].metrics.includes(m.key)) {
             featureSets[fsIdx].metrics.push(m.key);
           }
         } else {
           let fsIdx = featureSets.findIndex((fs) => fs.name === "default");
-          if (fsIdx !== -1) {
+          if (fsIdx !== -1 && !featureSets[fsIdx].metrics.includes(m.key)) {
             featureSets[fsIdx].metrics.push(m.key);
           }
         }

@@ -17,6 +17,11 @@ import {
   buildEntitiesListCardSnippet,
   buildGraphChartSnippet,
   buildRelationPropertySnippet,
+  buildScreenSnippet,
+  getAllCardKeysSnippet,
+  getAllChartCardsSnippet,
+  getAllEntitiesListsSnippet,
+  slugify,
 } from "../utils/snippetBuilding";
 import { getBlockItemIndexAtLine, getParentBlocks } from "../utils/yamlParsing";
 
@@ -41,10 +46,11 @@ export class SnippetGenerator implements vscode.CodeActionProvider {
     var codeActions: vscode.CodeAction[] = [];
     var extension = yaml.parse(document.getText()) as ExtensionStub;
     var parentBlocks = getParentBlocks(range.start.line, document.getText());
+    var lineText = document.lineAt(range.start.line).text;
 
     // add properties to properties card
     if (parentBlocks[parentBlocks.length - 1] === "propertiesCard") {
-      if (document.lineAt(range.start.line).text.includes("properties:")) {
+      if (lineText.includes("properties:")) {
         // attribute properties
         codeActions.push(...this.createAttributePropertyInsertions(document, range, extension, "properties"));
         // relation properties
@@ -53,10 +59,7 @@ export class SnippetGenerator implements vscode.CodeActionProvider {
     }
 
     // add columns in entitiesListCards
-    if (
-      parentBlocks[parentBlocks.length - 1] === "entitiesListCards" &&
-      document.lineAt(range.start.line).text.includes("columns:")
-    ) {
+    if (parentBlocks[parentBlocks.length - 1] === "entitiesListCards" && lineText.includes("columns:")) {
       // attribute columns
       codeActions.push(...this.createAttributePropertyInsertions(document, range, extension, "columns"));
       // relation columns
@@ -64,7 +67,7 @@ export class SnippetGenerator implements vscode.CodeActionProvider {
     }
 
     // add charts
-    if (document.lineAt(range.start.line).text.includes("charts:")) {
+    if (lineText.includes("charts:")) {
       // in chartsCard
       if (parentBlocks[parentBlocks.length - 1] === "chartsCards") {
         codeActions.push(...this.createChartInsertions(document, range, extension, "chartsCard"));
@@ -76,10 +79,7 @@ export class SnippetGenerator implements vscode.CodeActionProvider {
     }
 
     // add metrics to graph charts
-    if (
-      document.lineAt(range.start.line).text.includes("metrics:") &&
-      parentBlocks[parentBlocks.length - 1] === "graphChartConfig"
-    ) {
+    if (lineText.includes("metrics:") && parentBlocks[parentBlocks.length - 1] === "graphChartConfig") {
       // in chartCards
       if (parentBlocks[parentBlocks.length - 3] === "chartsCards") {
         codeActions.push(...this.createChartInsertions(document, range, extension, "chartsCard", true));
@@ -91,13 +91,18 @@ export class SnippetGenerator implements vscode.CodeActionProvider {
     }
 
     // add whole chart cards
-    if (document.lineAt(range.start.line).text.includes("chartsCards:")) {
+    if (lineText.includes("chartsCards:")) {
       codeActions.push(...this.createChartCardInsertions(document, range, extension));
     }
 
     // add entity list cards
-    if (document.lineAt(range.start.line).text.includes("entitiesListCards:")) {
+    if (lineText.includes("entitiesListCards:")) {
       codeActions.push(...this.createEntitiesListCardInsertions(document, range, extension));
+    }
+
+    // generate entire entity screens
+    if (lineText.includes("screens:")) {
+      codeActions.push(...this.createScreenInsertions(document, range, extension));
     }
 
     return codeActions;
@@ -117,6 +122,9 @@ export class SnippetGenerator implements vscode.CodeActionProvider {
     document: vscode.TextDocument,
     range: vscode.Range
   ): vscode.CodeAction {
+    if (document.lineCount === range.start.line + 1) {
+      textToInsert = "\n" + textToInsert;
+    }
     var insertPosition = new vscode.Position(range.start.line + 1, 0);
     const action = new vscode.CodeAction(actionName, vscode.CodeActionKind.QuickFix);
     action.edit = new vscode.WorkspaceEdit();
@@ -265,7 +273,7 @@ export class SnippetGenerator implements vscode.CodeActionProvider {
     extension: ExtensionStub,
     cardType: "chartsCard" | "entitiesListCard",
     metricOnly: boolean = false
-  ) {
+  ): vscode.CodeAction[] {
     var indent = /[a-z]/i.exec(document.lineAt(range.start.line).text)!.index;
     var screenIdx = getBlockItemIndexAtLine("screens", range.start.line, document.getText());
     var cardIdx = getBlockItemIndexAtLine(`${cardType}s`, range.start.line, document.getText());
@@ -278,12 +286,7 @@ export class SnippetGenerator implements vscode.CodeActionProvider {
       }
     }
 
-    var typeIdx = -1;
-    extension.topology.types.forEach((type, idx) => {
-      if (type.name === entityType) {
-        typeIdx = idx;
-      }
-    });
+    var typeIdx = extension.topology.types.findIndex((type) => type.name === entityType);
     var metricsInserted =
       cardType === "chartsCard"
         ? getMetricKeysFromChartCard(screenIdx, cardIdx, extension)
@@ -318,21 +321,21 @@ export class SnippetGenerator implements vscode.CodeActionProvider {
    * @param extension extension yaml serialized as object
    * @returns list of Code Actions
    */
-  private createChartCardInsertions(document: vscode.TextDocument, range: vscode.Range, extension: ExtensionStub) {
+  private createChartCardInsertions(
+    document: vscode.TextDocument,
+    range: vscode.Range,
+    extension: ExtensionStub
+  ): vscode.CodeAction[] {
     var indent = /[a-z]/i.exec(document.lineAt(range.start.line).text)!.index;
     var screenIdx = getBlockItemIndexAtLine("screens", range.start.line, document.getText());
     var entityType = extension.screens![screenIdx].entityType;
-    var typeIdx = -1;
-    extension.topology.types.forEach((type, idx) => {
-      if (type.name === entityType) {
-        typeIdx = idx;
-      }
-    });
+    var typeIdx = extension.topology.types.findIndex((type) => type.name === entityType);
     var cardsInserted = getEntityChartCardKeys(screenIdx, extension);
     var entityMetrics = getEntityMetrics(typeIdx, extension);
     var cardsToInsert: { key: string; featureSet: string; metrics: string[] }[] = [];
+
     getAllMetricsByFeatureSet(extension)
-      .filter((fs) => !cardsInserted.includes(`${entityType}-charts-${fs.name}`))
+      .filter((fs) => !cardsInserted.includes(slugify(`${entityType}-charts-${fs.name}`)))
       .forEach((fs) => {
         let metrics = fs.metrics.filter((m) => entityMetrics.includes(m));
         if (metrics.length > 0) {
@@ -366,7 +369,7 @@ export class SnippetGenerator implements vscode.CodeActionProvider {
     document: vscode.TextDocument,
     range: vscode.Range,
     extension: ExtensionStub
-  ) {
+  ): vscode.CodeAction[] {
     var indent = /[a-z]/i.exec(document.lineAt(range.start.line).text)!.index;
     var screenIdx = getBlockItemIndexAtLine("screens", range.start.line, document.getText());
     var entityType = extension.screens![screenIdx].entityType;
@@ -375,13 +378,13 @@ export class SnippetGenerator implements vscode.CodeActionProvider {
     // TODO: Filter out only the list-able relationships (e.g. to many)
     var relationships = getRelationships(entityType, extension);
     var cardsInserted = getEntitiesListCardKeys(screenIdx, extension);
-    var cardsToInsert = [];
+    var insertions = [];
 
-    if (!cardsInserted.includes(`${entityType}-list-self`)) {
-      cardsToInsert.push(
+    if (!cardsInserted.includes(slugify(`${entityType}-list-self`))) {
+      insertions.push(
         this.createInsertAction(
           `Insert list of ${entityName}s`,
-          buildEntitiesListCardSnippet(`${entityType}-list-self`, 15, `List of ${entityName}s`, indent),
+          buildEntitiesListCardSnippet(`${entityType}-list-self`, 15, `List of ${entityName}s`, entityType, indent),
           document,
           range
         )
@@ -389,16 +392,17 @@ export class SnippetGenerator implements vscode.CodeActionProvider {
     }
 
     relationships
-      .filter((rel) => !cardsInserted.includes(`${entityType}-list-${rel.entity}`))
+      .filter((rel) => !cardsInserted.includes(slugify(`${entityType}-list-${rel.entity}`)))
       .forEach((rel) => {
         var relEntityName = getEntityName(rel.entity, extension) || rel.entity;
-        cardsToInsert.push(
+        insertions.push(
           this.createInsertAction(
             `Insert list of related ${relEntityName}s`,
             buildEntitiesListCardSnippet(
               `${entityType}-list-${rel.entity}`,
               5,
               `List of related ${relEntityName}s`,
+              rel.entity,
               indent,
               `type(${rel.entity}),${rel.direction === "to" ? "from" : "to"}Relationships.${
                 rel.relation
@@ -410,6 +414,74 @@ export class SnippetGenerator implements vscode.CodeActionProvider {
         );
       });
 
-    return cardsToInsert;
+    return insertions;
+  }
+
+  /**
+   * Creates Code Actions that insert entire entity screens. The screen is generated as best as possible
+   * given the data available. An action is also created for generating all available screens in one go.
+   * @param document the document that triggered the action
+   * @param range the range that triggered the action
+   * @param extension extension yaml serialized as object
+   * @returns list of Code Actions
+   */
+  private createScreenInsertions(
+    document: vscode.TextDocument,
+    range: vscode.Range,
+    extension: ExtensionStub
+  ): vscode.CodeAction[] {
+    const insertions: vscode.CodeAction[] = [];
+    var indent = /[a-z]/i.exec(document.lineAt(range.start.line).text)!.index;
+
+    // Which entities should we generate screens for
+    var allEntities = extension.topology.types ? extension.topology.types : [];
+    const existingScreens = extension.screens ? extension.screens.map((s) => s.entityType) : [];
+    allEntities = allEntities.filter((e) => !existingScreens.includes(e.name));
+    if (allEntities.length === 0) {
+      return [];
+    }
+    // Actions for individual screens
+    allEntities.forEach((e) => {
+      insertions.push(
+        this.createInsertAction(
+          `Generate screen for ${e.displayName}`,
+          buildScreenSnippet(
+            e,
+            extension.name,
+            getAllEntitiesListsSnippet(e.name, extension),
+            getAllChartCardsSnippet(e.name, extension),
+            getAllCardKeysSnippet(e.name, extension),
+            indent
+          ),
+          document,
+          range
+        )
+      );
+    });
+    // All-in-one action for multiple screens
+    if (allEntities.length - existingScreens.length > 1) {
+      insertions.push(
+        this.createInsertAction(
+          "Auto-generate all screens",
+          allEntities
+            .map((e) =>
+              buildScreenSnippet(
+                e,
+                extension.name,
+                getAllEntitiesListsSnippet(e.name, extension),
+                getAllChartCardsSnippet(e.name, extension),
+                getAllCardKeysSnippet(e.name, extension),
+                indent,
+                false
+              )
+            )
+            .join("\n"),
+          document,
+          range
+        )
+      );
+    }
+
+    return insertions;
   }
 }
