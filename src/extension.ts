@@ -43,6 +43,7 @@ import { CachedDataProvider } from "./utils/dataCaching";
 import { ScreensMetaCompletionProvider } from "./codeCompletions/screensMeta";
 import { runSelector, validateSelector } from "./codeLens/selectorUtils";
 import { FastModeStatus } from "./statusBar/fastMode";
+import { DiagnosticsProvider } from "./diagnostics/diagnostics";
 
 /**
  * Sets up the VSCode extension by registering all the available functionality as disposable objects.
@@ -80,6 +81,8 @@ export function activate(context: vscode.ExtensionContext) {
   const fastModeChannel = vscode.window.createOutputChannel("Dynatrace Fast Mode", "json");
   const fastModeStatus = new FastModeStatus(fastModeChannel);
   const genericChannel = vscode.window.createOutputChannel("Dynatrace", "json");
+  const diagnosticsProvider = new DiagnosticsProvider();
+  var editTimeout: NodeJS.Timeout | undefined;
 
   context.subscriptions.push(
     // Commands for the Command Palette
@@ -274,24 +277,40 @@ export function activate(context: vscode.ExtensionContext) {
         MetricResultsPanel.revive(webviewPanel, "No data to display. Close the tab and trigger the action again.");
       },
     }),
-    // Fast Development Mode
+    // Activity on every document save
     vscode.workspace.onDidSaveTextDocument(async (doc: vscode.TextDocument) => {
+      // Fast Development Mode - build extension
       if (
         vscode.workspace.getConfiguration("dynatrace", null).get("fastDevelopmentMode") &&
+        doc.fileName.endsWith("extension.yaml") &&
         isExtensionsWorkspace(context) &&
-        checkEnvironmentConnected(tenantsTreeViewProvider) &&
-        doc.fileName.endsWith("extension.yaml")
+        checkEnvironmentConnected(tenantsTreeViewProvider)
       ) {
         const dt = await tenantsTreeViewProvider.getDynatraceClient();
         fastModeBuild(context, dt!, doc, fastModeChannel, fastModeStatus);
       }
     }),
+    // Activity on every text change in a document
+    vscode.workspace.onDidChangeTextDocument((change) => {
+      if (change.document.fileName.endsWith("extension.yaml")) {
+        // Allow 1 sec after doc changes to avoid ex
+        if (editTimeout) {
+          clearTimeout(editTimeout);
+          editTimeout = undefined;
+        }
+        editTimeout = setTimeout(() => {
+          diagnosticsProvider.provideDiagnostics(change.document);
+          editTimeout = undefined;
+        }, 1000);
+      }
+    }),
+    // Activity on every configuration change
     vscode.workspace.onDidChangeConfiguration(() => {
       const fastModeEnabled = vscode.workspace.getConfiguration("dynatrace", null).get("fastDevelopmentMode");
       fastModeStatus.updateStatusBar(Boolean(fastModeEnabled));
     })
   );
-  // We may have an initialization pending from previous window.
+  // We may have an initialization pending from previous window/activation.
   if (context.globalState.get("dt-ext-copilot.initPending")) {
     vscode.commands.executeCommand("dt-ext-copilot.initWorkspace");
   }
