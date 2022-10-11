@@ -22,7 +22,7 @@ import {
   getAllChartCardsSnippet,
   getAllEntitiesListsSnippet,
   slugify,
-} from "../utils/snippetBuilding";
+} from "./snippetBuildingUtils";
 import { getBlockItemIndexAtLine, getParentBlocks } from "../utils/yamlParsing";
 
 /**

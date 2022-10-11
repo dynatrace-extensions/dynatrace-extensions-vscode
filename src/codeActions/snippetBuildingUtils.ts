@@ -1,4 +1,4 @@
-import { getAllMetricsByFeatureSet, getEntityMetrics, getEntityName, getRelationships } from "./extensionParsing";
+import { getAllMetricsByFeatureSet, getEntityMetrics, getEntityName, getRelationships } from "../utils/extensionParsing";
 import {
   attributeSnippet,
   chartCardSnippet,

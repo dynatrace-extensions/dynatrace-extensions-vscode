@@ -41,7 +41,7 @@ import { MetricResultsPanel } from "./webviews/metricResults";
 import { IconCompletionProvider } from "./codeCompletions/icons";
 import { CachedDataProvider } from "./utils/dataCaching";
 import { ScreensMetaCompletionProvider } from "./codeCompletions/screensMeta";
-import { runSelector, validateSelector } from "./utils/selectors";
+import { runSelector, validateSelector } from "./codeLens/selectorUtils";
 import { FastModeStatus } from "./statusBar/fastMode";
 
 /**

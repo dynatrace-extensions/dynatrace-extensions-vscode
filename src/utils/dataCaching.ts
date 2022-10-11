@@ -1,6 +1,6 @@
 import Axios from "axios";
 import { EnvironmentsTreeDataProvider } from "../treeViews/environmentsTreeView";
-import { ValidationStatus } from "./selectors";
+import { ValidationStatus } from "../codeLens/selectorUtils";
 
 /**
  * A utility class for caching reusable data that other components depend on.
