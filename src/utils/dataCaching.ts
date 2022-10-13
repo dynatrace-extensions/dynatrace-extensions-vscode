@@ -1,6 +1,7 @@
 import Axios from "axios";
 import { EnvironmentsTreeDataProvider } from "../treeViews/environmentsTreeView";
 import { ValidationStatus } from "../codeLens/selectorUtils";
+import { PromData } from "../codeLens/prometheusScraper";
 
 /**
  * A utility class for caching reusable data that other components depend on.
@@ -11,6 +12,7 @@ export class CachedDataProvider {
   private builtinEntities: EntityType[] = [];
   private baristaIcons: string[] = [];
   private selectorStatuses: { [selector: string]: ValidationStatus } = {};
+  private prometheusData: PromData = {};
 
   /**
    * @param environments a Dynatrace Environments provider
@@ -19,6 +21,22 @@ export class CachedDataProvider {
     this.environments = environments;
     this.loadBuiltinEntities();
     this.loadBaristaIcons();
+  }
+
+  /**
+   * Gets any cached Prometheus data.
+   * @returns cached data
+   */
+  public getPrometheusData(): PromData {
+    return this.prometheusData;
+  }
+
+  /**
+   * Caches Prometheus data.
+   * @param data data to cache
+   */
+  public addPrometheusData(data: PromData) {
+    this.prometheusData = data;
   }
 
   /**
