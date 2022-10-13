@@ -1,4 +1,9 @@
-import { getAllMetricsByFeatureSet, getEntityMetrics, getEntityName, getRelationships } from "../utils/extensionParsing";
+import {
+  getAllMetricsByFeatureSet,
+  getEntityMetrics,
+  getEntityName,
+  getRelationships,
+} from "../utils/extensionParsing";
 import {
   attributeSnippet,
   chartCardSnippet,
@@ -6,6 +11,7 @@ import {
   entitiesListCardSnippet,
   filteringSnippet,
   graphChartSnippet,
+  metricMetadataSnippet,
   relationSnippet,
   screenSnippet,
 } from "./snippets";
@@ -157,6 +163,34 @@ export function buildRelationPropertySnippet(
 }
 
 /**
+ * Builds a YAML snippet for metric metadata.
+ * @param metricKey metric key as defined in the datasource (key should match exactly)
+ * @param displayName display name of the metric
+ * @param description description of the metric
+ * @param unit measurement unit of the metric
+ * @param indent indentation of the snippet
+ * @param withNewline if true, adds a newline at the end
+ * @returns the formatted and indented snippet
+ */
+export function buildMetricMetadataSnippet(
+  metricKey: string,
+  displayName: string,
+  description: string,
+  unit: string = "Unspecified",
+  indent: number,
+  withNewline: boolean = true
+): string {
+  let snippet = metricMetadataSnippet;
+
+  snippet = snippet.replace("<metric-key>", metricKey);
+  snippet = snippet.replace("<metric-name>", displayName);
+  snippet = snippet.replace("<metric-description>", description);
+  snippet = snippet.replace("<metric-unit>", unit);
+
+  return indentSnippet(snippet, indent, withNewline);
+}
+
+/**
  * Builds a YAML snippet for a `chart`. This can be used in any section that supports charts,
  * e.g. chartsCards, entitiesListCards, etc.
  * @param metricKey metric key to use in the metric selector
@@ -270,7 +304,7 @@ export function getAllCardKeysSnippet(entityType: string, extension: ExtensionSt
  * @param withNewline if true, a newline is added at the end of the snippet
  * @returns the indentend snippet
  */
-function indentSnippet(snippet: string, indent: number, withNewline: boolean = true): string {
+export function indentSnippet(snippet: string, indent: number, withNewline: boolean = true): string {
   snippet = snippet
     .split("\n")
     .map((line) => `${" ".repeat(indent + 2)}${line}`)

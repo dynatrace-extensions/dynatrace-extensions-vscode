@@ -44,6 +44,9 @@ import { ScreensMetaCompletionProvider } from "./codeCompletions/screensMeta";
 import { runSelector, validateSelector } from "./codeLens/selectorUtils";
 import { FastModeStatus } from "./statusBar/fastMode";
 import { DiagnosticsProvider } from "./diagnostics/diagnostics";
+import { PrometheusCodeLensProvider } from "./codeLens/prometheusScraper";
+import { PrometheusCompletionProvider } from "./codeCompletions/prometheus";
+import { PrometheusActionProvider } from "./codeActions/prometheus";
 
 /**
  * Sets up the VSCode extension by registering all the available functionality as disposable objects.
@@ -78,6 +81,8 @@ export function activate(context: vscode.ExtensionContext) {
     "entitySelectorsCodeLens",
     cachedDataProvider
   );
+  const prometheusLensProvider = new PrometheusCodeLensProvider(cachedDataProvider);
+  const prometheusActionProvider = new PrometheusActionProvider(cachedDataProvider);
   const fastModeChannel = vscode.window.createOutputChannel("Dynatrace Fast Mode", "json");
   const fastModeStatus = new FastModeStatus(fastModeChannel);
   const genericChannel = vscode.window.createOutputChannel("Dynatrace", "json");
@@ -185,6 +190,11 @@ export function activate(context: vscode.ExtensionContext) {
       new ScreensMetaCompletionProvider(),
       ":"
     ),
+    // Auto-completion - Prometheus data
+    vscode.languages.registerCompletionItemProvider(
+      { language: "yaml", pattern: "**/extension/extension.yaml" },
+      new PrometheusCompletionProvider(cachedDataProvider)
+    ),
     // Extension 2.0 Workspaces Tree View
     vscode.window.registerTreeDataProvider("dt-ext-copilot-workspaces", extensionsTreeViewProvider),
     vscode.commands.registerCommand("dt-ext-copilot-workspaces.refresh", () => extensionsTreeViewProvider.refresh()),
@@ -244,6 +254,12 @@ export function activate(context: vscode.ExtensionContext) {
       snippetCodeActionProvider,
       { providedCodeActionKinds: [vscode.CodeActionKind.QuickFix] }
     ),
+    // Code actions for Prometheus data
+    vscode.languages.registerCodeActionsProvider(
+      { language: "yaml", pattern: "**/extension/extension.yaml" },
+      prometheusActionProvider,
+      { providedCodeActionKinds: [vscode.CodeActionKind.QuickFix] }
+    ),
     // Connection Status Bar Item
     connectionStatusManager.getStatusBarItem(),
     // Code Lens for metric and entity selectors
@@ -273,6 +289,11 @@ export function activate(context: vscode.ExtensionContext) {
           runSelector(selector, type, (await tenantsTreeViewProvider.getDynatraceClient())!, genericChannel);
         }
       }
+    ),
+    // Code Lens for Prometheus scraping
+    vscode.languages.registerCodeLensProvider(
+      { language: "yaml", pattern: "**/extension/extension.yaml" },
+      prometheusLensProvider
     ),
     // Web view panel - metric query results
     vscode.window.registerWebviewPanelSerializer(MetricResultsPanel.viewType, {

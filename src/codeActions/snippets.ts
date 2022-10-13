@@ -39,17 +39,17 @@ export const entitiesListCardSnippet = `\
 
 export const filteringSnippet = `\
 filtering:
-  entityFilters:
-    - displayName: Filter by
-      filters:
-        - type: entityName
-          displayName: Name
-          freeText: true
-          modifier: contains
-          defaultSearch: true
-          distinct: false
-          entityTypes:
-            - <entity-type>`;
+    entityFilters:
+      - displayName: Filter by
+        filters:
+          - type: entityName
+            displayName: Name
+            freeText: true
+            modifier: contains
+            defaultSearch: true
+            distinct: false
+            entityTypes:
+              - <entity-type>`;
 
 export const entityFilterSnippet = `\
 - type: <filter-prop>
@@ -93,11 +93,11 @@ export const screenSnippet = `\
           displayName: Extension 2.0
         - type: NOOP
           displayName: <entity-name>s
-      layout:
-        autoGenerate: false
-        cards:
-          - key: <self-list-key>
-            type: ENTITIES_LIST
+    layout:
+      autoGenerate: false
+      cards:
+        - key: <self-list-key>
+          type: ENTITIES_LIST
   detailsSettings:
     staticContent:
       showProblems: true
@@ -111,8 +111,15 @@ export const screenSnippet = `\
         - type: ENTITY_LIST_REF
           entityType: <entity-type>
           displayName: <entity-name>s
-      layout:
-        autoGenerate: false
-        cards: <details-layout-cards>
+    layout:
+      autoGenerate: false
+      cards: <details-layout-cards>
   chartsCards: <charts-cards>
   entitiesListCards: <entities-list-cards>`;
+
+export const metricMetadataSnippet = `\
+- key: <metric-key>
+  metadata:
+    displayName: <metric-name>
+    description: <metric-description>
+    unit: <metric-unit>`;
