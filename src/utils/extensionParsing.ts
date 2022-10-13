@@ -33,17 +33,23 @@ export function incrementExtensionVersion(currentVersion: string) {
  */
 export function getAttributesKeysFromTopology(entityType: string, extension: ExtensionStub): string[] {
   var attributes: string[] = [];
-  extension.topology.types
-    .filter((type) => type.name.toLowerCase() === entityType)
-    .forEach((type) => {
-      type.rules.forEach((rule) => {
-        rule.attributes.forEach((attribute) => {
-          if (attribute.key) {
-            attributes.push(attribute.key);
-          }
-        });
+  if (extension.topology && extension.topology.types) {
+    extension.topology.types
+      .filter((type) => (type.name ? type.name.toLowerCase() === entityType : false))
+      .forEach((type) => {
+        if (type.rules) {
+          type.rules.forEach((rule) => {
+            if (rule.attributes) {
+              rule.attributes.forEach((attribute) => {
+                if (attribute.key) {
+                  attributes.push(attribute.key);
+                }
+              });
+            }
+          });
+        }
       });
-    });
+  }
 
   return attributes;
 }
@@ -62,20 +68,28 @@ export function getAttributesFromTopology(
   excludeKeys?: string[]
 ): { key: string; displayName: string }[] {
   var attributes: { key: string; displayName: string }[] = [];
-  extension.topology.types
-    .filter((type) => type.name.toLowerCase() === entityType)
-    .forEach((type) => {
-      type.rules.forEach((rule) => {
-        rule.attributes
-          .filter((property) => (excludeKeys ? !excludeKeys.includes(property.key) : true))
-          .forEach((property) => {
-            attributes.push({
-              key: property.key,
-              displayName: property.displayName,
-            });
+  if (extension.topology && extension.topology.types) {
+    extension.topology.types
+      .filter((type) => (type.name ? type.name.toLowerCase() === entityType : false))
+      .forEach((type) => {
+        if (type.rules) {
+          type.rules.forEach((rule) => {
+            if (rule.attributes) {
+              rule.attributes
+                .filter((property) =>
+                  property.key ? (excludeKeys ? !excludeKeys.includes(property.key) : true) : false
+                )
+                .forEach((property) => {
+                  attributes.push({
+                    key: property.key,
+                    displayName: property.displayName,
+                  });
+                });
+            }
           });
+        }
       });
-    });
+  }
   return attributes;
 }
 
@@ -89,19 +103,25 @@ export function getAttributesFromTopology(
  */
 export function getMetricKeysFromChartCard(screenIdx: number, cardIdx: number, extension: ExtensionStub): string[] {
   var metrics: string[] = [];
-  extension.screens![screenIdx].chartsCards![cardIdx].charts.forEach((c) => {
-    if (c.graphChartConfig) {
-      c.graphChartConfig.metrics.forEach((ms) => {
-        metrics.push(ms.metricSelector.split(":")[0]);
-      });
-    }
-    if (c.pieChartConfig) {
-      metrics.push(c.pieChartConfig.metric.metricSelector.split(":")[0]);
-    }
-    if (c.singleValueConfig) {
-      metrics.push(c.singleValueConfig.metric.metricSelector.split(":")[0]);
-    }
-  });
+  if (
+    extension.screens &&
+    extension.screens[screenIdx].chartsCards &&
+    extension.screens[screenIdx].chartsCards![cardIdx].charts
+  ) {
+    extension.screens[screenIdx].chartsCards![cardIdx].charts.forEach((c) => {
+      if (c.graphChartConfig) {
+        c.graphChartConfig.metrics.forEach((ms) => {
+          metrics.push(ms.metricSelector.split(":")[0]);
+        });
+      }
+      if (c.pieChartConfig) {
+        metrics.push(c.pieChartConfig.metric.metricSelector.split(":")[0]);
+      }
+      if (c.singleValueConfig) {
+        metrics.push(c.singleValueConfig.metric.metricSelector.split(":")[0]);
+      }
+    });
+  }
   return metrics;
 }
 
@@ -120,25 +140,24 @@ export function getMetricKeysFromEntitiesListCard(
 ): string[] {
   var metrics: string[] = [];
   if (
-    !extension.screens ||
-    !extension.screens[screenIdx].entitiesListCards ||
-    !extension.screens[screenIdx].entitiesListCards![cardIdx].charts
+    extension.screens &&
+    extension.screens[screenIdx].entitiesListCards &&
+    extension.screens[screenIdx].entitiesListCards![cardIdx].charts
   ) {
-    return [];
+    extension.screens![screenIdx].entitiesListCards![cardIdx].charts!.forEach((c) => {
+      if (c.graphChartConfig) {
+        c.graphChartConfig.metrics.forEach((ms) => {
+          metrics.push(ms.metricSelector.split(":")[0]);
+        });
+      }
+      if (c.pieChartConfig) {
+        metrics.push(c.pieChartConfig.metric.metricSelector.split(":")[0]);
+      }
+      if (c.singleValueConfig) {
+        metrics.push(c.singleValueConfig.metric.metricSelector.split(":")[0]);
+      }
+    });
   }
-  extension.screens![screenIdx].entitiesListCards![cardIdx].charts!.forEach((c) => {
-    if (c.graphChartConfig) {
-      c.graphChartConfig.metrics.forEach((ms) => {
-        metrics.push(ms.metricSelector.split(":")[0]);
-      });
-    }
-    if (c.pieChartConfig) {
-      metrics.push(c.pieChartConfig.metric.metricSelector.split(":")[0]);
-    }
-    if (c.singleValueConfig) {
-      metrics.push(c.singleValueConfig.metric.metricSelector.split(":")[0]);
-    }
-  });
   return metrics;
 }
 
@@ -154,23 +173,26 @@ export function getEntityMetrics(typeIdx: number, extension: ExtensionStub, excl
   var matchingMetrics: string[] = [];
   var allMetrics = getAllMetricKeysFromDataSource(extension);
   var patterns = getEntityMetricPatterns(typeIdx, extension);
-  patterns.forEach((pattern) => {
-    let matcher = pattern.split("(")[0];
-    let value = pattern.split("(")[1].split(")")[0];
-    matchingMetrics.push(
-      ...allMetrics.filter((metric) => {
-        switch (matcher) {
-          case "$eq":
-            return metric === value && !matchingMetrics.includes(metric);
-          case "$prefix":
-            return metric.startsWith(value) && !matchingMetrics.includes(metric);
-          default:
-            return false;
-        }
-      })
-    );
-  });
-  return matchingMetrics.filter((metric) => !excludeKeys.includes(metric));
+  if (allMetrics) {
+    patterns.forEach((pattern) => {
+      let matcher = pattern.split("(")[0];
+      let value = pattern.split("(")[1].split(")")[0];
+      matchingMetrics.push(
+        ...allMetrics.filter((metric) => {
+          switch (matcher) {
+            case "$eq":
+              return metric === value && !matchingMetrics.includes(metric);
+            case "$prefix":
+              return metric.startsWith(value) && !matchingMetrics.includes(metric);
+            default:
+              return false;
+          }
+        })
+      );
+    });
+    return matchingMetrics.filter((metric) => !excludeKeys.includes(metric));
+  }
+  return [];
 }
 
 /**
@@ -195,6 +217,142 @@ export function getExtensionDatasource(extension: ExtensionStub): DatasourceGrou
 }
 
 /**
+ * Returns the name of the extension datasource.
+ * Name coincides with the YAML node that defines the datasource portion of the extension.
+ * @param extension extension.yaml serialized as object
+ * @returns datasource name
+ */
+export function getDatasourceName(extension: ExtensionStub): string {
+  if (extension.snmp) {
+    return "snmp";
+  }
+  if (extension.wmi) {
+    return "wmi";
+  }
+  if (extension.sql) {
+    return "sql";
+  }
+  if (extension.prometheus) {
+    return "prometheus";
+  }
+  return "unsupported";
+}
+
+/**
+ * Gets all the Prometheus metric keys that have been already inserted in the datasource section
+ * of the YAML in a given group/subgroup location. Specify the group and subgroup by index.
+ * The group index is mandatory if subgroup metrics should be returned as one includes the other.
+ * @param extension extension.yaml serialized as object
+ * @param groupIdx the index of the group where metrics should be extracted from
+ * @param subgroupIdx the index of the subgroup where metrics should be extracted from
+ * @returns list of (prometheus) metric keys
+ */
+export function getPrometheusMetricKeys(
+  extension: ExtensionStub,
+  groupIdx: number = -2,
+  subgroupIdx: number = -2
+): string[] {
+  var metricKeys: string[] = [];
+  if (groupIdx !== -2) {
+    // Metrics at group level
+    if (extension.prometheus![groupIdx].metrics) {
+      metricKeys.push(
+        ...extension
+          .prometheus![groupIdx].metrics!.filter((metric) => metric.value && metric.value.startsWith("metric:"))
+          .map((metric) => metric.value.split("metric:")[1])
+      );
+    }
+    if (subgroupIdx !== -2) {
+      // Metrics at subgroup level
+      if (extension.prometheus![groupIdx].subgroups![subgroupIdx].metrics) {
+        metricKeys.push(
+          ...extension
+            .prometheus![groupIdx].subgroups![subgroupIdx].metrics!.filter(
+              (metric) => metric.value && metric.value.startsWith("metric:")
+            )
+            .map((metric) => metric.value.split("metric:")[1])
+        );
+      }
+    }
+  }
+  return metricKeys;
+}
+
+/**
+ * Gets all the Prometheus label keys that have been already inserted in the datasource section
+ * of the YAML in a given group/subgroup location. Specify the group and subgroup by index.
+ * The group index is mandatory if subgroup labels should be returned as one includes the other.
+ * @param extension extension.yaml serialized as object
+ * @param groupIdx the index of the group where labels should be extracted from
+ * @param subgroupIdx the index of the subgroup where labels should be extracted from
+ * @returns list of (prometheus) label keys
+ */
+export function getPrometheusLabelKeys(
+  extension: ExtensionStub,
+  groupIdx: number = -2,
+  subgroupIdx: number = -2
+): string[] {
+  var labelKeys: string[] = [];
+  if (groupIdx !== -2) {
+    // Dimensions at group level
+    if (extension.prometheus![groupIdx].dimensions) {
+      labelKeys.push(
+        ...extension
+          .prometheus![groupIdx].dimensions!.filter(
+            (dimension) => dimension.value && dimension.value.startsWith("label:")
+          )
+          .map((dimension) => dimension.value.split("label:")[1])
+      );
+    }
+    if (subgroupIdx !== -2) {
+      // Dimensions at subgroup level
+      if (extension.prometheus![groupIdx].subgroups![subgroupIdx].dimensions) {
+        labelKeys.push(
+          ...extension
+            .prometheus![groupIdx].subgroups![subgroupIdx].dimensions!.filter(
+              (dimension) => dimension.value && dimension.value.startsWith("label:")
+            )
+            .map((dimension) => dimension.value.split("label:")[1])
+        );
+      }
+    }
+  }
+  return labelKeys;
+}
+
+/**
+ * Iterates through the datasource group and subgroup metrics to extract the value given
+ * a specific metric key.
+ * @param metricKey metric key to extract the value for
+ * @param extension extesnion.yaml serialized as object
+ * @returns value or empty string of not found
+ */
+export function getMetricValue(metricKey: string, extension: ExtensionStub): string {
+  const datasource = getExtensionDatasource(extension);
+  for (let group of datasource) {
+    if (group.metrics) {
+      for (let metric of group.metrics) {
+        if (metric.key === metricKey) {
+          return metric.value;
+        }
+      }
+    }
+    if (group.subgroups) {
+      for (let subgroup of group.subgroups) {
+        if (subgroup.metrics) {
+          for (let metric of subgroup.metrics) {
+            if (metric.key === metricKey) {
+              return metric.value;
+            }
+          }
+        }
+      }
+    }
+  }
+  return "";
+}
+
+/**
  * Extracts a list of feature sets and their included metrics for the whole extension.
  * @param extension extension.yaml serialized as object
  * @returns list of feature sets and metrics
@@ -211,46 +369,52 @@ export function getAllMetricsByFeatureSet(extension: ExtensionStub): FeatureSetD
         metrics: [],
       });
     }
+    if (group.metrics) {
+      let fsIdx = featureSets.findIndex((fs) => fs.name === (group.featureSet || "default"));
+      featureSets[fsIdx].metrics.push(...group.metrics.map((m) => m.key));
+    }
 
-    group.subgroups?.forEach((sg) => {
-      if (sg.featureSet && !featureSets.map((fs) => fs.name).includes(sg.featureSet)) {
-        featureSets.push({
-          name: sg.featureSet,
-          metrics: [],
-        });
-      }
+    if (group.subgroups) {
+      group.subgroups.forEach((sg) => {
+        if (sg.featureSet && !featureSets.map((fs) => fs.name).includes(sg.featureSet)) {
+          featureSets.push({
+            name: sg.featureSet,
+            metrics: [],
+          });
+        }
 
-      sg.metrics.forEach((m) => {
-        if (m.featureSet) {
-          if (!featureSets.map((fs) => fs.name).includes(m.featureSet)) {
-            featureSets.push({
-              name: m.featureSet,
-              metrics: [m.key],
-            });
+        sg.metrics.forEach((m) => {
+          if (m.featureSet) {
+            if (!featureSets.map((fs) => fs.name).includes(m.featureSet)) {
+              featureSets.push({
+                name: m.featureSet,
+                metrics: [m.key],
+              });
+            } else {
+              let fsIdx = featureSets.findIndex((fs) => fs.name === "default");
+              if (fsIdx !== -1 && !featureSets[fsIdx].metrics.includes(m.key)) {
+                featureSets[fsIdx].metrics.push(m.key);
+              }
+            }
+          } else if (sg.featureSet) {
+            let fsIdx = featureSets.findIndex((fs) => fs.name === sg.featureSet);
+            if (fsIdx !== -1 && !featureSets[fsIdx].metrics.includes(m.key)) {
+              featureSets[fsIdx].metrics.push(m.key);
+            }
+          } else if (group.featureSet) {
+            let fsIdx = featureSets.findIndex((fs) => fs.name === group.featureSet);
+            if (fsIdx !== -1 && !featureSets[fsIdx].metrics.includes(m.key)) {
+              featureSets[fsIdx].metrics.push(m.key);
+            }
           } else {
             let fsIdx = featureSets.findIndex((fs) => fs.name === "default");
             if (fsIdx !== -1 && !featureSets[fsIdx].metrics.includes(m.key)) {
               featureSets[fsIdx].metrics.push(m.key);
             }
           }
-        } else if (sg.featureSet) {
-          let fsIdx = featureSets.findIndex((fs) => fs.name === sg.featureSet);
-          if (fsIdx !== -1 && !featureSets[fsIdx].metrics.includes(m.key)) {
-            featureSets[fsIdx].metrics.push(m.key);
-          }
-        } else if (group.featureSet) {
-          let fsIdx = featureSets.findIndex((fs) => fs.name === group.featureSet);
-          if (fsIdx !== -1 && !featureSets[fsIdx].metrics.includes(m.key)) {
-            featureSets[fsIdx].metrics.push(m.key);
-          }
-        } else {
-          let fsIdx = featureSets.findIndex((fs) => fs.name === "default");
-          if (fsIdx !== -1 && !featureSets[fsIdx].metrics.includes(m.key)) {
-            featureSets[fsIdx].metrics.push(m.key);
-          }
-        }
+        });
       });
-    });
+    }
   });
 
   return featureSets;
@@ -265,13 +429,17 @@ export function getAllMetricsByFeatureSet(extension: ExtensionStub): FeatureSetD
  */
 export function getEntityMetricPatterns(typeIdx: number, extension: ExtensionStub) {
   var patterns: string[] = [];
-  extension.topology.types[typeIdx].rules.forEach((rule) => {
-    rule.sources.forEach((source) => {
-      if (source.sourceType === "Metrics") {
-        patterns.push(source.condition);
+  if (extension.topology.types[typeIdx].rules) {
+    extension.topology.types[typeIdx].rules.forEach((rule) => {
+      if (rule.sources) {
+        rule.sources.forEach((source) => {
+          if (source.sourceType === "Metrics") {
+            patterns.push(source.condition);
+          }
+        });
       }
     });
-  });
+  }
   return patterns;
 }
 
@@ -304,6 +472,37 @@ export function getAllMetricKeysFromDataSource(extension: ExtensionStub): string
     }
   });
   return metrics;
+}
+
+/**
+ * Extracts all metrics keys and values detected within the datasource section of the extension.yaml
+ * @param extension extension.yaml serialized as object
+ * @returns list of metric keys
+ */
+export function getAllMetricKeysAndValuesFromDataSource(extension: ExtensionStub): { key: string; value: string }[] {
+  var data: { key: string; value: string }[] = [];
+  var datasource = getExtensionDatasource(extension);
+  datasource.forEach((group) => {
+    if (group.metrics) {
+      group.metrics.forEach((metric) => {
+        if (!data.map((d) => d.key).includes(metric.key)) {
+          data.push({ key: metric.key, value: metric.value });
+        }
+      });
+    }
+    if (group.subgroups) {
+      group.subgroups.forEach((subgroup) => {
+        if (subgroup.metrics) {
+          subgroup.metrics.forEach((metric) => {
+            if (!data.map((d) => d.key).includes(metric.key)) {
+              data.push({ key: metric.key, value: metric.value });
+            }
+          });
+        }
+      });
+    }
+  });
+  return data;
 }
 
 /**
@@ -420,13 +619,16 @@ export function getRelationships(
   entityType: string,
   extension: ExtensionStub
 ): { entity: string; relation: string; direction: "to" | "from" }[] {
-  return extension.topology.relationships
-    .filter((rel) => rel.toType === entityType || rel.fromType === entityType)
-    .map((rel) => ({
-      entity: rel.toType === entityType ? rel.fromType : rel.toType,
-      relation: toCamelCase(rel.typeOfRelation),
-      direction: rel.toType === entityType ? "to" : "from",
-    }));
+  if (extension.topology && extension.topology.relationships) {
+    return extension.topology.relationships
+      .filter((rel) => rel.toType === entityType || rel.fromType === entityType)
+      .map((rel) => ({
+        entity: rel.toType === entityType ? rel.fromType : rel.toType,
+        relation: toCamelCase(rel.typeOfRelation),
+        direction: rel.toType === entityType ? "to" : "from",
+      }));
+  }
+  return [];
 }
 
 /**
@@ -452,10 +654,10 @@ export function getEntityName(entityType: string, extension: ExtensionStub) {
  * @returns list of card keys
  */
 export function getEntitiesListCardKeys(screenIdx: number, extension: ExtensionStub) {
-  if (!extension.screens || !extension.screens[screenIdx].entitiesListCards) {
-    return [];
+  if (extension.screens && extension.screens[screenIdx].entitiesListCards) {
+    return extension.screens[screenIdx].entitiesListCards!.map((elc) => elc.key);
   }
-  return extension.screens[screenIdx].entitiesListCards!.map((elc) => elc.key);
+  return [];
 }
 
 /**
