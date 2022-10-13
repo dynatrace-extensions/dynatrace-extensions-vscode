@@ -1,5 +1,25 @@
 # Change Log
 
+## Version 0.15.0 / Stage: alpha (13.10.2022)
+
+### ✨ New in this version:
+- Fast Development Mode availabe (read the docs what it is and how to enable)
+- Code Lenses for Prometheus extensions allowing to scrape and endpoint
+- Auto-completaions for metric and dimension values from prometheus scraped data as well as descriptions (in metadata)
+- Code Actions for inserting metric, dimension, and metadata definitions from prometheus scraped data
+- Code Actions for inserting entire entity screens
+- First diagnostic items raised around extension name
+
+### 🚀 Improved in this version:
+- Build process uses diagnostics collection to decide if extension is ready to build
+- Extension version is auto-incremented if version already exists in tenant
+- Generated entity lists include a filter by entity name
+
+### 🪲 Fixed in this version:
+- Actions and completions should trigger more often as extension parsing can handle incomplete/incorrect data better
+
+---
+
 ## Version 0.14.7 / Stage: alpha (06.10.2022)
 
 ### 🚀 Improved in this version:
