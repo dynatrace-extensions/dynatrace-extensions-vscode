@@ -15,6 +15,7 @@ This is a VisualStudio Code Extension that aims to provide support for all aspec
     - [📤 Upload extension to tenant](#-upload-extension-to-tenant)
     - [🔂 Activate extension on tenant](#-activate-extension-on-tenant)
     - [📑 Create documentation](#-create-documentation)
+    - [🔥 Fast Development Mode](#-fast-development-mode)
   - [Assisted extension development](#assisted-extension-development)
     - [🎹 Code completions](#-code-completions)
     - [💡 Code actions](#-code-actions)
@@ -32,6 +33,7 @@ Settings controlling the extension's behavior:
 
 - `dynatrace.metricSelectorsCodeLens` - Controls whether Code Lenses are enabled for metric selectors
 - `dynatrace.entitySelectorsCodeLens` - Controls whether Code Lenses are enabled for entity selectors
+- `dynatrace.fastDevelopmentMode` - Controls whether [Fast Development Mode](#-fast-development-mode) is enabled
 
 Settings for using your own credentials:
 
@@ -99,6 +101,17 @@ available versions of the extension and you are prompted to choose which one to 
 Reads through the `extension.yaml` file and creates a `README.md` file next to the `extension` folder,
 documenting (as best as possible) the extension package and its contents.
 
+### 🔥 Fast Development Mode
+
+**Fast Development Mode** is a workflow focused on saving as much time as possible and providing immediate feedback to
+extension developers. When enabled, on every document Save your extension version is automatically incremented, packaged,
+signed, uploaded to Dynatrace and activated. If too many versions are in the environment already, one is automatically
+removed. Any errors are communicated instantly and your VS Code status bar has an indicator of the build status.
+
+How does this help? Apart from eliminating time spent on manual operations you also get immediate updates to your
+extension's static assets (topology model, screens, metadata, dashboards, and alerts) that you can verify in the
+environment without having to go through a (slower) extension activation process.
+
 ## Assisted extension development
 
 ### 🎹 Code completions
@@ -110,13 +123,16 @@ use `Ctrl + Space` to trigger it manually.
 
 Currently implemented completions trigger:
 
-- on `fromType` and `toType` attributes of any `topology.relationships` item
-- on `sourceAttribute` and `destinationAttribute` attributes of any relationship based on entity mapping rules (provided you have already filled in `fromType` and `toType` respectively)
-- on `entityType` and `entityTypes` anywhere in the yaml, relevant entity types are suggested
-- on lists of attribute-type properties, on `key` the keys of relevant entity attributes are suggested
-- on `entitySelectorTemplate` can make use of `Ctrl + Space` to trigger completions as the selector is being built
-- on `iconPattern` (within `topology.rules`) or `icon` (within `staticContent.header`) - you can browse available Barista Icon codes
-- on `key` for card keys either inside `layout.cards` or individual card type lists - card keys that have not been used yet are suggested
+- on `fromType:` and `toType:` attributes of any `topology.relationships` item
+- on `sourceAttribute:` and `destinationAttribute:` attributes of any relationship based on entity mapping rules (provided you have already filled in `fromType` and `toType` respectively)
+- on `entityType:` and `entityTypes:` anywhere in the yaml, relevant entity types are suggested
+- on lists of attribute-type properties, on `key:` the keys of relevant entity attributes are suggested
+- on `entitySelectorTemplate:` you can make use of `Ctrl + Space` to trigger completions as the selector is being built
+- on `entitySelectorTemplate:` you can auto-complete selectors for relationships that are seen in the YAML
+- on `iconPattern:` (within `topology.rules`) or `icon:` (within `staticContent.header`) - you can browse available Barista Icon codes
+- on `key:` for card keys either inside `layout.cards` or individual card type lists - card keys that have not been used yet are suggested
+- on `value:` for metrics and dimensions of a prometheus extension if data has been scraped already
+- on `description:` in `metrics` section for those metrics that have been scraped from a Prometheus endpoint
 
 ![intellisense](previews/intellisense.gif)
 
@@ -133,13 +149,15 @@ Currently implemented action triggers:
 - inside `graphChartConfig` when clicking on `metrics` - you can add additional metrics to your chart, that aren't already used within the surrounding card
 - inside `screens` when clicking on `chartsCards` - you can automatically add chart cards for entire feature sets of metrics
 - inside `screens` when clicking on `entitiesListCards` - you can automatically add cards for listing this entity as well as the related ones
+- when clicking on `metrics` or `dimensons` within the `prometheus` data source - automatically add details from scraped Prometheus data
+- on `screens` - you can automatically generate entire screens for your entities
 
 ![auto_charts](previews/pro_chart_building.gif)
 
 ### 🔎 Code lens
 
 Code Lens are actionable, contextual information, interspersed with your code.
-For Dynatrace Extensions, these can help trigger some code-related actions to your connected tenant.
+For Dynatrace Extensions, these can help trigger some code-related actions to your connected tenant or other external endpoints.
 
 **Metric Selector Code Lenses**
 
@@ -154,6 +172,14 @@ For Dynatrace Extensions, these can help trigger some code-related actions to yo
 - See the last validation status of any entity selector
 - Validate any entity selector against a connected Dynatrace tenant
 - Run any entity selector and visualize the query results in the Dynatrace output panel
+
+**Prometheus Code Lenses**
+
+- Connect to a Prometheus endpoint and scrape metrics data. Scraped details can then be used:
+  - To automatically insert metric definitions in the `prometheus` section of the YAML
+  - To automatically insert dimensions in the `prometheus` section of the YAML
+  - To automatically insert metric metadata in the `metrics` section of the YAML
+- Get a timestamp of when details were last scraped.
 
 ## Custom Dynatrace View
 
@@ -170,7 +196,7 @@ Buttons within this view enable quick actions for:
 - Adding and initializing a new workspace (plus button at the top)
 - Quickly opening one of the extension.yaml files (file button next to the extension name)
 - Opening one of the extension workspaces (folder button next to the workspace name)
-- Removing the 
+- Removing the
 
 ![workspaces_view](previews/extensions_view.png)
 
