@@ -13,7 +13,7 @@ import { getBlockItemIndexAtLine, getParentBlocks } from "../utils/yamlParsing";
  * Provider for code auto-completion related to entities and entity types.
  */
 export class TopologyCompletionProvider implements vscode.CompletionItemProvider {
-  private builtinEntities: EntityType[];
+  private builtinEntities: EntityType[] = [];
   private readonly cachedData: CachedDataProvider;
 
   /**
@@ -21,16 +21,15 @@ export class TopologyCompletionProvider implements vscode.CompletionItemProvider
    */
   constructor(cachedDataProvider: CachedDataProvider) {
     this.cachedData = cachedDataProvider;
-    this.builtinEntities = [];
   }
 
   /**
    * Provides the actual completion items related to topology section of the extension YAML.
-   * @param document
-   * @param position
-   * @param token
-   * @param context
-   * @returns
+   * @param document {@link vscode.TextDocument} that triggered the provider
+   * @param position {@link vscode.Position} when provider was triggered
+   * @param token {@link vscode.CancellationToken}
+   * @param context {@link vscode.ExtensionContext}
+   * @returns list of completion items
    */
   provideCompletionItems(
     document: vscode.TextDocument,

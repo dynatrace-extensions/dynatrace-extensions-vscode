@@ -6,15 +6,14 @@ import { getParentBlocks } from "../utils/yamlParsing";
  * Provider for code auto-completion related to Barista icons
  */
 export class IconCompletionProvider implements vscode.CompletionItemProvider {
-  cachedData: CachedDataProvider;
-  baristaIcons: string[];
+  private baristaIcons: string[] = [];
+  private readonly cachedData: CachedDataProvider;
 
   /**
    * @param cachedDataProvider a provider of cacheable data
    */
   constructor(cachedDataProvider: CachedDataProvider) {
     this.cachedData = cachedDataProvider;
-    this.baristaIcons = [];
   }
 
   async provideCompletionItems(
