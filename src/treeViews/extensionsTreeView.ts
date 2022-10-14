@@ -5,6 +5,7 @@ import * as glob from "glob";
 import { readFileSync } from "fs";
 import { getAllWorkspaces } from "../utils/fileSystem";
 import { ExtensionWorkspace } from "../interfaces/treeViewData";
+import { deleteWorkspace } from "./commands/workspaces";
 
 /**
  * A tree data provider that renders all Extensions 2.0 project workspaces that have been
@@ -13,28 +14,66 @@ import { ExtensionWorkspace } from "../interfaces/treeViewData";
  */
 export class ExtensionsTreeDataProvider implements vscode.TreeDataProvider<ExtensionProjectItem> {
   context: vscode.ExtensionContext;
-  private _onDidChangeTreeData: vscode.EventEmitter<ExtensionProjectItem | undefined | void> =
-    new vscode.EventEmitter<ExtensionProjectItem | undefined | void>();
-  readonly onDidChangeTreeData: vscode.Event<ExtensionProjectItem | undefined | void> =
-    this._onDidChangeTreeData.event;
+  private _onDidChangeTreeData: vscode.EventEmitter<ExtensionProjectItem | undefined | void> = new vscode.EventEmitter<
+    ExtensionProjectItem | undefined | void
+  >();
+  readonly onDidChangeTreeData: vscode.Event<ExtensionProjectItem | undefined | void> = this._onDidChangeTreeData.event;
 
   /**
    * @param context VSCode Extension context
    */
   constructor(context: vscode.ExtensionContext) {
     this.context = context;
+    this.registerCommands(context);
   }
 
+  /**
+   * Registers the commands that this Tree View needs to work with.
+   * Commands include adding, opening, or deleting a workspace, opening an extension file, or refreshing this view.
+   * @param context {@link vscode.ExtensionContext}
+   */
+  private registerCommands(context: vscode.ExtensionContext) {
+    vscode.commands.registerCommand("dt-ext-copilot-workspaces.refresh", () => this.refresh()),
+      vscode.commands.registerCommand("dt-ext-copilot-workspaces.addWorkspace", () => {
+        vscode.commands.executeCommand("vscode.openFolder");
+        context.globalState.update("dt-ext-copilot.initPending", true);
+      });
+    vscode.commands.registerCommand("dt-ext-copilot-workspaces.openWorkspace", (workspace: ExtensionProjectItem) => {
+      vscode.commands.executeCommand("vscode.openFolder", workspace.path);
+    });
+    vscode.commands.registerCommand("dt-ext-copilot-workspaces.deleteWorkspace", (workspace: ExtensionProjectItem) => {
+      deleteWorkspace(context, workspace).then(() => this.refresh());
+    });
+    vscode.commands.registerCommand("dt-ext-copilot-workspaces.editExtension", (extension: ExtensionProjectItem) => {
+      vscode.commands.executeCommand("vscode.open", extension.path);
+    });
+  }
+
+  /**
+   * Refresh this view.
+   */
   refresh(): void {
     this._onDidChangeTreeData.fire();
   }
 
+  /**
+   * Retrieve a tree view item from an element within the view.
+   * @param element the element to retrieve
+   * @returns the tree item
+   */
   getTreeItem(element: ExtensionProjectItem): vscode.TreeItem {
     return element;
   }
 
+  /**
+   * Retrieves the tree view items that represent children of an element, or all items
+   * if no parent element has been provided.
+   * @param element parent element, if any
+   * @returns list of tree items
+   */
   getChildren(element?: ExtensionProjectItem | undefined): ExtensionProjectItem[] {
     if (element) {
+      // Workspaces have Extensions as children items
       var extensions: ExtensionProjectItem[] = [];
       var workspacePath = element.path.fsPath;
       glob
@@ -42,9 +81,7 @@ export class ExtensionsTreeDataProvider implements vscode.TreeDataProvider<Exten
           cwd: workspacePath,
         })
         .forEach((filepath) => {
-          let extension: ExtensionStub = yaml.parse(
-            readFileSync(path.join(workspacePath, filepath)).toString()
-          );
+          let extension: ExtensionStub = yaml.parse(readFileSync(path.join(workspacePath, filepath)).toString());
           extensions.push(
             new ExtensionProjectItem(
               extension.name,
@@ -62,7 +99,7 @@ export class ExtensionsTreeDataProvider implements vscode.TreeDataProvider<Exten
         });
       return extensions;
     }
-
+    // If not item specified, grab all workspaces from global storage
     return getAllWorkspaces(this.context).map(
       (workspace: ExtensionWorkspace) =>
         new ExtensionProjectItem(
@@ -70,8 +107,7 @@ export class ExtensionsTreeDataProvider implements vscode.TreeDataProvider<Exten
           vscode.TreeItemCollapsibleState.Collapsed,
           workspace.folder as vscode.Uri,
           vscode.workspace.workspaceFolders &&
-          vscode.workspace.workspaceFolders[0].uri.fsPath ===
-            (workspace.folder as vscode.Uri).fsPath
+          vscode.workspace.workspaceFolders[0].uri.fsPath === (workspace.folder as vscode.Uri).fsPath
             ? path.join(__filename, "..", "..", "assets", "icons", "workspace_current.png")
             : path.join(__filename, "..", "..", "assets", "icons", "workspace.png"),
           "extensionWorkspace",
@@ -102,11 +138,7 @@ export class ExtensionProjectItem extends vscode.TreeItem {
     label: string,
     collapsibleState: vscode.TreeItemCollapsibleState,
     path: vscode.Uri,
-    icon:
-      | string
-      | vscode.Uri
-      | { light: string | vscode.Uri; dark: string | vscode.Uri }
-      | vscode.ThemeIcon,
+    icon: string | vscode.Uri | { light: string | vscode.Uri; dark: string | vscode.Uri } | vscode.ThemeIcon,
     contextValue: string,
     id: string,
     version?: string

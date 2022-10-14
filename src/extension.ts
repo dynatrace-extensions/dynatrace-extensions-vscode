@@ -14,28 +14,14 @@ import {
   checkWorkspaceOpen,
   isExtensionsWorkspace,
 } from "./utils/conditionCheckers";
-import {
-  getAllEnvironments,
-  getAllWorkspaces,
-  initGlobalStorage,
-  initWorkspaceStorage,
-  registerEnvironment,
-} from "./utils/fileSystem";
-import { ExtensionProjectItem, ExtensionsTreeDataProvider } from "./treeViews/extensionsTreeView";
+import { getAllEnvironments, getAllWorkspaces, initGlobalStorage, initWorkspaceStorage } from "./utils/fileSystem";
+import { ExtensionsTreeDataProvider } from "./treeViews/extensionsTreeView";
 import { SnippetGenerator } from "./codeActions/snippetGenerator";
 import { uploadExtension } from "./commands/uploadExtension";
 import { activateExtension } from "./commands/activateExtension";
 import { EntitySelectorCompletionProvider } from "./codeCompletions/entitySelectors";
-import { EnvironmentsTreeDataProvider, EnvironmentTreeItem } from "./treeViews/environmentsTreeView";
-import {
-  addEnvironment,
-  changeConnection,
-  deleteEnvironment,
-  editEnvironment,
-} from "./treeViews/commands/environments";
-import { encryptToken } from "./utils/cryptography";
+import { EnvironmentsTreeDataProvider } from "./treeViews/environmentsTreeView";
 import { ConnectionStatusManager } from "./statusBar/connection";
-import { deleteWorkspace } from "./treeViews/commands/workspaces";
 import { SelectorCodeLensProvider } from "./codeLens/selectorCodeLens";
 import { MetricResultsPanel } from "./webviews/metricResults";
 import { IconCompletionProvider } from "./codeCompletions/icons";
@@ -59,6 +45,8 @@ export function activate(context: vscode.ExtensionContext) {
   // Initialize global storage
   initGlobalStorage(context);
 
+  // Document selector for the extension.yaml file
+  const extension2selector: vscode.DocumentSelector = { language: "yaml", pattern: "**/extension/extension.yaml" };
   // Additonal context: number of workspaces affects the welcome message for the extensions tree view
   vscode.commands.executeCommand("setContext", "dt-ext-copilot.numWorkspaces", getAllWorkspaces(context).length);
   // Additonal context: different welcome message for the extensions tree view if inside a workspace
@@ -89,188 +77,32 @@ export function activate(context: vscode.ExtensionContext) {
   const diagnosticsProvider = new DiagnosticsProvider();
   var editTimeout: NodeJS.Timeout | undefined;
 
+  // Perform all feature registrations
   context.subscriptions.push(
     // Commands for the Command Palette
-    // Load extension schemas of a given version
-    vscode.commands.registerCommand("dt-ext-copilot.loadSchemas", async () => {
-      if (checkEnvironmentConnected(tenantsTreeViewProvider)) {
-        loadSchemas(context, (await tenantsTreeViewProvider.getDynatraceClient())!);
-      }
-    }),
-    // Initialize a new workspace for extension development
-    vscode.commands.registerCommand("dt-ext-copilot.initWorkspace", async () => {
-      if (checkWorkspaceOpen() && checkEnvironmentConnected(tenantsTreeViewProvider)) {
-        initWorkspaceStorage(context);
-        try {
-          initWorkspace(context, (await tenantsTreeViewProvider.getDynatraceClient())!, () => {
-            extensionsTreeViewProvider.refresh();
-          });
-        } finally {
-          context.globalState.update("dt-ext-copilot.initPending", undefined);
-        }
-      }
-    }),
-    // Generate the certificates required for extension signing
-    vscode.commands.registerCommand("dt-ext-copilot.generateCertificates", async () => {
-      if (checkWorkspaceOpen()) {
-        initWorkspaceStorage(context);
-        return await checkOverwriteCertificates(context).then(async (approved) => {
-          if (approved) {
-            return await generateCerts(context);
-          }
-        });
-      }
-    }),
-    // Upload certificate to Dynatrace credential vault
-    vscode.commands.registerCommand("dt-ext-copilot.uploadCertificate", async () => {
-      if (checkWorkspaceOpen() && checkEnvironmentConnected(tenantsTreeViewProvider)) {
-        initWorkspaceStorage(context);
-        if (checkCertificateExists("ca")) {
-          uploadCertificate(context, (await tenantsTreeViewProvider.getDynatraceClient())!);
-        }
-      }
-    }),
-    // Build Extension 2.0 package
-    vscode.commands.registerCommand("dt-ext-copilot.buildExtension", async () => {
-      if (
-        (await diagnosticsProvider.isValidForBuilding()) &&
-        checkWorkspaceOpen() &&
-        isExtensionsWorkspace(context) &&
-        checkCertificateExists("dev")
-      ) {
-        buildExtension(context, genericChannel, await tenantsTreeViewProvider.getDynatraceClient());
-      }
-    }),
-    // Upload an extension to the tenant
-    vscode.commands.registerCommand("dt-ext-copilot.uploadExtension", async () => {
-      if (
-        checkWorkspaceOpen() &&
-        isExtensionsWorkspace(context) &&
-        checkEnvironmentConnected(tenantsTreeViewProvider) &&
-        checkExtensionZipExists()
-      ) {
-        uploadExtension((await tenantsTreeViewProvider.getDynatraceClient())!);
-      }
-    }),
-    // Activate a given version of extension 2.0
-    vscode.commands.registerCommand("dt-ext-copilot.activateExtension", async (version?: string) => {
-      if (
-        checkWorkspaceOpen() &&
-        isExtensionsWorkspace(context) &&
-        checkEnvironmentConnected(tenantsTreeViewProvider)
-      ) {
-        activateExtension((await tenantsTreeViewProvider.getDynatraceClient())!, version);
-      }
-    }),
-    // Create Extension documentation
-    vscode.commands.registerCommand("dt-ext-copilot.createDocumentation", () => {
-      createDocumentation();
-    }),
-    // Auto-completion - topology data
-    vscode.languages.registerCompletionItemProvider(
-      { language: "yaml", pattern: "**/extension/extension.yaml" },
-      new TopologyCompletionProvider(cachedDataProvider),
-      ":"
-    ),
-    // Auto-completion - entity selectors
-    vscode.languages.registerCompletionItemProvider(
-      { language: "yaml", pattern: "**/extension/extension.yaml" },
-      new EntitySelectorCompletionProvider(cachedDataProvider),
-      ":"
-    ),
-    // Auto-completion - Barista icons
-    vscode.languages.registerCompletionItemProvider(
-      { language: "yaml", pattern: "**/extension/extension.yaml" },
-      new IconCompletionProvider(cachedDataProvider),
-      ":"
-    ),
-    // Auto-completion - Screens metadata/items
-    vscode.languages.registerCompletionItemProvider(
-      { language: "yaml", pattern: "**/extension/extension.yaml" },
-      new ScreensMetaCompletionProvider(),
-      ":"
-    ),
-    // Auto-completion - Prometheus data
-    vscode.languages.registerCompletionItemProvider(
-      { language: "yaml", pattern: "**/extension/extension.yaml" },
-      new PrometheusCompletionProvider(cachedDataProvider)
-    ),
+    ...registerCommandPaletteCommands(tenantsTreeViewProvider, diagnosticsProvider, genericChannel, context),
+    // Auto-completion providers
+    ...registerCompletionProviders(extension2selector, cachedDataProvider),
     // Extension 2.0 Workspaces Tree View
     vscode.window.registerTreeDataProvider("dt-ext-copilot-workspaces", extensionsTreeViewProvider),
-    vscode.commands.registerCommand("dt-ext-copilot-workspaces.refresh", () => extensionsTreeViewProvider.refresh()),
-    vscode.commands.registerCommand("dt-ext-copilot-workspaces.addWorkspace", () => {
-      vscode.commands.executeCommand("vscode.openFolder");
-      context.globalState.update("dt-ext-copilot.initPending", true);
-    }),
-    vscode.commands.registerCommand("dt-ext-copilot-workspaces.openWorkspace", (workspace: ExtensionProjectItem) => {
-      vscode.commands.executeCommand("vscode.openFolder", workspace.path);
-    }),
-    vscode.commands.registerCommand("dt-ext-copilot-workspaces.deleteWorkspace", (workspace: ExtensionProjectItem) => {
-      deleteWorkspace(context, workspace).then(() => extensionsTreeViewProvider.refresh());
-    }),
-    vscode.commands.registerCommand("dt-ext-copilot-workspaces.editExtension", (extension: ExtensionProjectItem) => {
-      vscode.commands.executeCommand("vscode.open", extension.path);
-    }),
     // Dynatrace Environments Tree View
     vscode.window.registerTreeDataProvider("dt-ext-copilot-environments", tenantsTreeViewProvider),
-    vscode.commands.registerCommand("dt-ext-copilot-environments.refresh", () => tenantsTreeViewProvider.refresh()),
-    vscode.commands.registerCommand("dt-ext-copilot-environments.addEnvironment", () =>
-      addEnvironment(context).then(() => tenantsTreeViewProvider.refresh())
-    ),
-    vscode.commands.registerCommand(
-      "dt-ext-copilot-environments.useEnvironment",
-      (environment: EnvironmentTreeItem) => {
-        registerEnvironment(
-          context,
-          environment.url,
-          encryptToken(environment.token),
-          environment.label?.toString(),
-          true
-        );
-        tenantsTreeViewProvider.refresh();
-      }
-    ),
-    vscode.commands.registerCommand(
-      "dt-ext-copilot-environments.editEnvironment",
-      (environment: EnvironmentTreeItem) => {
-        editEnvironment(context, environment).then(() => tenantsTreeViewProvider.refresh());
-      }
-    ),
-    vscode.commands.registerCommand(
-      "dt-ext-copilot-environments.deleteEnvironment",
-      (environment: EnvironmentTreeItem) => {
-        deleteEnvironment(context, environment).then(() => tenantsTreeViewProvider.refresh());
-      }
-    ),
-    vscode.commands.registerCommand("dt-ext-copilot-environments.changeConnection", () => {
-      changeConnection(context).then(([connected, environment]) => {
-        connectionStatusManager.updateStatusBar(connected, environment);
-        tenantsTreeViewProvider.refresh();
-      });
-    }),
     // Code actions for adding snippets
-    vscode.languages.registerCodeActionsProvider(
-      { language: "yaml", pattern: "**/extension/extension.yaml" },
-      snippetCodeActionProvider,
-      { providedCodeActionKinds: [vscode.CodeActionKind.QuickFix] }
-    ),
+    vscode.languages.registerCodeActionsProvider(extension2selector, snippetCodeActionProvider, {
+      providedCodeActionKinds: [vscode.CodeActionKind.QuickFix],
+    }),
     // Code actions for Prometheus data
-    vscode.languages.registerCodeActionsProvider(
-      { language: "yaml", pattern: "**/extension/extension.yaml" },
-      prometheusActionProvider,
-      { providedCodeActionKinds: [vscode.CodeActionKind.QuickFix] }
-    ),
+    vscode.languages.registerCodeActionsProvider(extension2selector, prometheusActionProvider, {
+      providedCodeActionKinds: [vscode.CodeActionKind.QuickFix],
+    }),
     // Connection Status Bar Item
     connectionStatusManager.getStatusBarItem(),
+    // Code Lens for Prometheus scraping
+    vscode.languages.registerCodeLensProvider(extension2selector, prometheusLensProvider),
     // Code Lens for metric and entity selectors
-    vscode.languages.registerCodeLensProvider(
-      { language: "yaml", pattern: "**/extension/extension.yaml" },
-      metricLensProvider
-    ),
-    vscode.languages.registerCodeLensProvider(
-      { language: "yaml", pattern: "**/extension/extension.yaml" },
-      entityLensProvider
-    ),
+    vscode.languages.registerCodeLensProvider(extension2selector, metricLensProvider),
+    vscode.languages.registerCodeLensProvider(extension2selector, entityLensProvider),
+    // Commands for metric and entity selector Code Lenses
     vscode.commands.registerCommand(
       "dt-ext-copilot.codelens.validateSelector",
       async (selector: string, type: "metric" | "entity") => {
@@ -289,11 +121,6 @@ export function activate(context: vscode.ExtensionContext) {
           runSelector(selector, type, (await tenantsTreeViewProvider.getDynatraceClient())!, genericChannel);
         }
       }
-    ),
-    // Code Lens for Prometheus scraping
-    vscode.languages.registerCodeLensProvider(
-      { language: "yaml", pattern: "**/extension/extension.yaml" },
-      prometheusLensProvider
     ),
     // Web view panel - metric query results
     vscode.window.registerWebviewPanelSerializer(MetricResultsPanel.viewType, {
@@ -325,7 +152,7 @@ export function activate(context: vscode.ExtensionContext) {
     // Activity on every text change in a document
     vscode.workspace.onDidChangeTextDocument((change) => {
       if (change.document.fileName.endsWith("extension.yaml")) {
-        // Allow 1 sec after doc changes to avoid ex
+        // Allow 0.5 sec after doc changes to reduce execution frequency
         if (editTimeout) {
           clearTimeout(editTimeout);
           editTimeout = undefined;
@@ -333,7 +160,7 @@ export function activate(context: vscode.ExtensionContext) {
         editTimeout = setTimeout(() => {
           diagnosticsProvider.provideDiagnostics(change.document);
           editTimeout = undefined;
-        }, 1000);
+        }, 500);
       }
     }),
     // Activity on every configuration change
@@ -346,6 +173,136 @@ export function activate(context: vscode.ExtensionContext) {
   if (context.globalState.get("dt-ext-copilot.initPending")) {
     vscode.commands.executeCommand("dt-ext-copilot.initWorkspace");
   }
+}
+
+/**
+ * Registers Completion Providers for this extension.
+ * This is so that all providers can be created in one function, keeping the activation function more tidy.
+ * @param documentSelector {@link vscode.DocumentSelector} matching the extension.yaml file
+ * @param cachedDataProvider a provider for cached data
+ * @returns list of providers as disposables
+ */
+function registerCompletionProviders(
+  documentSelector: vscode.DocumentSelector,
+  cachedDataProvider: CachedDataProvider
+): vscode.Disposable[] {
+  return [
+    // Topology data
+    vscode.languages.registerCompletionItemProvider(
+      documentSelector,
+      new TopologyCompletionProvider(cachedDataProvider),
+      ":"
+    ),
+    // Entity selectors
+    vscode.languages.registerCompletionItemProvider(
+      documentSelector,
+      new EntitySelectorCompletionProvider(cachedDataProvider),
+      ":"
+    ),
+    // Barista icons
+    vscode.languages.registerCompletionItemProvider(
+      documentSelector,
+      new IconCompletionProvider(cachedDataProvider),
+      ":"
+    ),
+    // Screens metadata/items
+    vscode.languages.registerCompletionItemProvider(documentSelector, new ScreensMetaCompletionProvider(), ":"),
+    // Prometheus data
+    vscode.languages.registerCompletionItemProvider(
+      documentSelector,
+      new PrometheusCompletionProvider(cachedDataProvider)
+    ),
+  ];
+}
+
+/**
+ * Registers this extension's Commands for the VSCode Command Palette.
+ * This is so that all commands can be created in one function, keeping the activation function more tidy.
+ * @param tenantsProvider a provider for environments tree data
+ * @param diagnosticsProvider a provider for diagnostics
+ * @param outputChannel a JSON output channel for communicating data
+ * @param context {@link vscode.ExtensionContext}
+ * @returns list commands as disposables
+ */
+function registerCommandPaletteCommands(
+  tenantsProvider: EnvironmentsTreeDataProvider,
+  diagnosticsProvider: DiagnosticsProvider,
+  outputChannel: vscode.OutputChannel,
+  context: vscode.ExtensionContext
+): vscode.Disposable[] {
+  return [
+    // Load extension schemas of a given version
+    vscode.commands.registerCommand("dt-ext-copilot.loadSchemas", async () => {
+      if (checkEnvironmentConnected(tenantsProvider)) {
+        loadSchemas(context, (await tenantsProvider.getDynatraceClient())!);
+      }
+    }),
+    // Initialize a new workspace for extension development
+    vscode.commands.registerCommand("dt-ext-copilot.initWorkspace", async () => {
+      if (checkWorkspaceOpen() && checkEnvironmentConnected(tenantsProvider)) {
+        initWorkspaceStorage(context);
+        try {
+          initWorkspace(context, (await tenantsProvider.getDynatraceClient())!, () => {
+            tenantsProvider.refresh();
+          });
+        } finally {
+          context.globalState.update("dt-ext-copilot.initPending", undefined);
+        }
+      }
+    }),
+    // Generate the certificates required for extension signing
+    vscode.commands.registerCommand("dt-ext-copilot.generateCertificates", async () => {
+      if (checkWorkspaceOpen()) {
+        initWorkspaceStorage(context);
+        return await checkOverwriteCertificates(context).then(async (approved) => {
+          if (approved) {
+            return await generateCerts(context);
+          }
+        });
+      }
+    }),
+    // Upload certificate to Dynatrace credential vault
+    vscode.commands.registerCommand("dt-ext-copilot.uploadCertificate", async () => {
+      if (checkWorkspaceOpen() && checkEnvironmentConnected(tenantsProvider)) {
+        initWorkspaceStorage(context);
+        if (checkCertificateExists("ca")) {
+          uploadCertificate(context, (await tenantsProvider.getDynatraceClient())!);
+        }
+      }
+    }),
+    // Build Extension 2.0 package
+    vscode.commands.registerCommand("dt-ext-copilot.buildExtension", async () => {
+      if (
+        (await diagnosticsProvider.isValidForBuilding()) &&
+        checkWorkspaceOpen() &&
+        isExtensionsWorkspace(context) &&
+        checkCertificateExists("dev")
+      ) {
+        buildExtension(context, outputChannel, await tenantsProvider.getDynatraceClient());
+      }
+    }),
+    // Upload an extension to the tenant
+    vscode.commands.registerCommand("dt-ext-copilot.uploadExtension", async () => {
+      if (
+        checkWorkspaceOpen() &&
+        isExtensionsWorkspace(context) &&
+        checkEnvironmentConnected(tenantsProvider) &&
+        checkExtensionZipExists()
+      ) {
+        uploadExtension((await tenantsProvider.getDynatraceClient())!);
+      }
+    }),
+    // Activate a given version of extension 2.0
+    vscode.commands.registerCommand("dt-ext-copilot.activateExtension", async (version?: string) => {
+      if (checkWorkspaceOpen() && isExtensionsWorkspace(context) && checkEnvironmentConnected(tenantsProvider)) {
+        activateExtension((await tenantsProvider.getDynatraceClient())!, version);
+      }
+    }),
+    // Create Extension documentation
+    vscode.commands.registerCommand("dt-ext-copilot.createDocumentation", () => {
+      createDocumentation();
+    }),
+  ];
 }
 
 /**

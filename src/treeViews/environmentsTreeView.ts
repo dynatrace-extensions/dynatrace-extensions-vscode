@@ -3,8 +3,9 @@ import * as vscode from "vscode";
 import { Dynatrace } from "../dynatrace-api/dynatrace";
 import { DynatraceEnvironmentData } from "../interfaces/treeViewData";
 import { ConnectionStatusManager } from "../statusBar/connection";
-import { decryptToken } from "../utils/cryptography";
-import { getAllEnvironments } from "../utils/fileSystem";
+import { decryptToken, encryptToken } from "../utils/cryptography";
+import { getAllEnvironments, registerEnvironment } from "../utils/fileSystem";
+import { addEnvironment, editEnvironment, deleteEnvironment, changeConnection } from "./commands/environments";
 
 /**
  * A tree data provider that renders all Dynatrace Environments that have been registered
@@ -30,19 +31,79 @@ export class EnvironmentsTreeDataProvider implements vscode.TreeDataProvider<Env
     this.getCurrentEnvironment().then((environment) =>
       this.connectionStatus.updateStatusBar(Boolean(environment), environment?.label?.toString())
     );
+    this.registerCommands(context);
   }
 
+  /**
+   * Registers the commands that this Tree View needs to work with.
+   * Commands include adding, editing, deleting, connecting to an environment, as well as changing the 
+   * currently connected environment from the status bar and refreshing the tree view.
+   * @param context {@link vscode.ExtensionContext}
+   */
+  private registerCommands(context: vscode.ExtensionContext) {
+    vscode.commands.registerCommand("dt-ext-copilot-environments.refresh", () => this.refresh());
+    vscode.commands.registerCommand("dt-ext-copilot-environments.addEnvironment", () =>
+      addEnvironment(context).then(() => this.refresh())
+    );
+    vscode.commands.registerCommand(
+      "dt-ext-copilot-environments.useEnvironment",
+      (environment: EnvironmentTreeItem) => {
+        registerEnvironment(
+          context,
+          environment.url,
+          encryptToken(environment.token),
+          environment.label?.toString(),
+          true
+        );
+        this.refresh();
+      }
+    );
+    vscode.commands.registerCommand(
+      "dt-ext-copilot-environments.editEnvironment",
+      (environment: EnvironmentTreeItem) => {
+        editEnvironment(context, environment).then(() => this.refresh());
+      }
+    ),
+      vscode.commands.registerCommand(
+        "dt-ext-copilot-environments.deleteEnvironment",
+        (environment: EnvironmentTreeItem) => {
+          deleteEnvironment(context, environment).then(() => this.refresh());
+        }
+      );
+    vscode.commands.registerCommand("dt-ext-copilot-environments.changeConnection", () => {
+      changeConnection(context).then(([connected, environment]) => {
+        this.connectionStatus.updateStatusBar(connected, environment);
+        this.refresh();
+      });
+    });
+  }
+
+  /**
+   * Refresh this view.
+   */
   refresh(): void {
     this._onDidChangeTreeData.fire();
   }
 
+  /**
+   * Retrieve a tree view item from an element within the view.
+   * @param element the element to retrieve
+   * @returns the tree item
+   */
   getTreeItem(element: EnvironmentTreeItem): vscode.TreeItem {
     return element;
   }
 
+  /**
+   * Retrieves the tree view items that represent children of an element, or all items
+   * if no parent element has been provided.
+   * @param element parent element, if any
+   * @returns list of tree items
+   */
   async getChildren(element?: EnvironmentTreeItem | undefined): Promise<EnvironmentTreeItem[]> {
     if (element) {
       switch (element.contextValue) {
+        // For Dynatrace Environments, Extensions are the children items
         case "dynatraceEnvironment":
         case "currentDynatraceEnvironment":
           return await element.dt.extensionsV2.list().then((list) =>
@@ -62,6 +123,7 @@ export class EnvironmentsTreeDataProvider implements vscode.TreeDataProvider<Env
                 )
             )
           );
+        // For Extensions, configurations are the children items
         case "tenantExtension":
           let extensionName = element.label!.toString().split(" ")[0];
           return await element.dt.extensionsV2.listMonitoringConfigurations(extensionName).then(
@@ -99,6 +161,7 @@ export class EnvironmentsTreeDataProvider implements vscode.TreeDataProvider<Env
       }
     }
 
+    // If no item specified, grab all environments from global storage
     return getAllEnvironments(this.context).map((environment: DynatraceEnvironmentData) => {
       if (environment.current) {
         this.connectionStatus.updateStatusBar(true, environment.name ? environment.name : environment.id);

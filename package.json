@@ -28,7 +28,8 @@
 		"onCommand:dt-ext-copilot.createDocumentation",
 		"onCommand:dt-ext-copilot.buildExtension",
 		"onCommand:dt-ext-copilot.uploadExtension",
-		"onCommand:dt-ext-copilot.activateExtension"
+		"onCommand:dt-ext-copilot.activateExtension",
+		"onCommand:dt-ext-copilot.createDashboard"
 	],
 	"main": "./out/extension.js",
 	"contributes": {
@@ -71,6 +72,11 @@
 			{
 				"command": "dt-ext-copilot.activateExtension",
 				"title": "Activate extension on tenant",
+				"category": "Dynatrace"
+			},
+			{
+				"command": "dt-ext-copilot.createDashboard",
+				"title": "Create overview dashboard",
 				"category": "Dynatrace"
 			},
 			{
@@ -207,6 +213,48 @@
 			}
 		],
 		"menus": {
+			"commandPalette": [
+				{
+					"command": "dt-ext-copilot-workspaces.refresh",
+					"when": "false"
+				},
+				{
+					"command": "dt-ext-copilot-workspaces.addWorkspace",
+					"when": "false"
+				},
+				{
+					"command": "dt-ext-copilot-workspaces.openWorkspace",
+					"when": "false"
+				},
+				{
+					"command": "dt-ext-copilot-workspaces.deleteWorkspace",
+					"when": "false"
+				},
+				{
+					"command": "dt-ext-copilot-workspaces.editExtension",
+					"when": "false"
+				},
+				{
+					"command": "dt-ext-copilot-environments.refresh",
+					"when": "false"
+				},
+				{
+					"command": "dt-ext-copilot-environments.addEnvironment",
+					"when": "false"
+				},
+				{
+					"command": "dt-ext-copilot-environments.editEnvironment",
+					"when": "false"
+				},
+				{
+					"command": "dt-ext-copilot-environments.deleteEnvironment",
+					"when": "false"
+				},
+				{
+					"command": "dt-ext-copilot-environments.useEnvironment",
+					"when": "false"
+				}
+			],
 			"view/title": [
 				{
 					"command": "dt-ext-copilot-workspaces.addWorkspace",
