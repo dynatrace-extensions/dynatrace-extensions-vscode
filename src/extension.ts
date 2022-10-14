@@ -1,10 +1,10 @@
 import * as vscode from "vscode";
-import { loadSchemas } from "./commands/loadSchemas";
-import { initWorkspace } from "./commands/initWorkspace";
-import { generateCerts } from "./commands/generateCertificates";
-import { uploadCertificate } from "./commands/uploadCertificate";
-import { createDocumentation } from "./commands/createDocumentation";
-import { buildExtension, fastModeBuild } from "./commands/buildExtension";
+import { loadSchemas } from "./commandPalette/loadSchemas";
+import { initWorkspace } from "./commandPalette/initWorkspace";
+import { generateCerts } from "./commandPalette/generateCertificates";
+import { uploadCertificate } from "./commandPalette/uploadCertificate";
+import { createDocumentation } from "./commandPalette/createDocumentation";
+import { buildExtension, fastModeBuild } from "./commandPalette/buildExtension";
 import { TopologyCompletionProvider } from "./codeCompletions/topology";
 import {
   checkCertificateExists,
@@ -17,8 +17,8 @@ import {
 import { getAllEnvironments, getAllWorkspaces, initGlobalStorage, initWorkspaceStorage } from "./utils/fileSystem";
 import { ExtensionsTreeDataProvider } from "./treeViews/extensionsTreeView";
 import { SnippetGenerator } from "./codeActions/snippetGenerator";
-import { uploadExtension } from "./commands/uploadExtension";
-import { activateExtension } from "./commands/activateExtension";
+import { uploadExtension } from "./commandPalette/uploadExtension";
+import { activateExtension } from "./commandPalette/activateExtension";
 import { EntitySelectorCompletionProvider } from "./codeCompletions/entitySelectors";
 import { EnvironmentsTreeDataProvider } from "./treeViews/environmentsTreeView";
 import { ConnectionStatusManager } from "./statusBar/connection";
