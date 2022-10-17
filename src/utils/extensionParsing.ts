@@ -353,6 +353,23 @@ export function getMetricValue(metricKey: string, extension: ExtensionStub): str
 }
 
 /**
+ * Given a metric key, returns the metric display name as defined in metadata.
+ * If not found, empty string is returned.
+ * @param metricKey key to search for
+ * @param extension extension.yaml serialized as object
+ * @returns display name or empty string if not found
+ */
+export function getMetricDisplayName(metricKey: string, extension: ExtensionStub): string {
+  if (extension.metrics) {
+    let idx = extension.metrics.findIndex((m) => (m.key === metricKey) && (m.metadata !== undefined));
+    if (idx >= 0) {
+      return extension.metrics[idx].metadata.displayName;
+    }
+  }
+  return "";
+}
+
+/**
  * Extracts a list of feature sets and their included metrics for the whole extension.
  * @param extension extension.yaml serialized as object
  * @returns list of feature sets and metrics
@@ -433,7 +450,7 @@ export function getEntityMetricPatterns(typeIdx: number, extension: ExtensionStu
     extension.topology.types[typeIdx].rules.forEach((rule) => {
       if (rule.sources) {
         rule.sources.forEach((source) => {
-          if (source.sourceType === "Metrics") {
+          if (source.sourceType === "Metrics" && !patterns.includes(source.condition)) {
             patterns.push(source.condition);
           }
         });

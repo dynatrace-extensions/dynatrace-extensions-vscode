@@ -33,6 +33,7 @@ import { DiagnosticsProvider } from "./diagnostics/diagnostics";
 import { PrometheusCodeLensProvider } from "./codeLens/prometheusScraper";
 import { PrometheusCompletionProvider } from "./codeCompletions/prometheus";
 import { PrometheusActionProvider } from "./codeActions/prometheus";
+import { createOverviewDashboard } from "./commandPalette/createDashboard";
 
 /**
  * Sets up the VSCode extension by registering all the available functionality as disposable objects.
@@ -301,6 +302,15 @@ function registerCommandPaletteCommands(
     // Create Extension documentation
     vscode.commands.registerCommand("dt-ext-copilot.createDocumentation", () => {
       createDocumentation();
+    }),
+    // Create Overview dashboard
+    vscode.commands.registerCommand("dt-ext-copilot.createDashboard", () => {
+      if (
+        checkWorkspaceOpen() &&
+        isExtensionsWorkspace(context)
+      ) {
+        createOverviewDashboard(tenantsProvider, outputChannel);
+      }
     }),
   ];
 }
