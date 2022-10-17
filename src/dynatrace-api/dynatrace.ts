@@ -1,4 +1,5 @@
 import { CredentialVaultService } from "./configuration_v1/credentialVault";
+import { DashboardService } from "./configuration_v1/dashboards";
 import { ExtensionsServiceV2 } from "./environment_v2/extensions";
 import { MetricService } from "./environment_v2/metrics";
 import { EntityServiceV2 } from "./environment_v2/monitoredEntities";
@@ -15,6 +16,7 @@ export class Dynatrace {
   public readonly entitiesV2: EntityServiceV2;
   public readonly metrics: MetricService;
   public readonly settings: SettingsService;
+  public readonly dashboards: DashboardService;
 
   /**
    * @param baseUrl URL to Dynatrace Environment
@@ -27,5 +29,6 @@ export class Dynatrace {
     this.entitiesV2 = new EntityServiceV2(this._httpClient);
     this.metrics = new MetricService(this._httpClient);
     this.settings = new SettingsService(this._httpClient);
+    this.dashboards = new DashboardService(this._httpClient);
   }
 }
