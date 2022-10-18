@@ -1,5 +1,4 @@
 import * as vscode from "vscode";
-import * as yaml from "yaml";
 import { Dynatrace } from "../dynatrace-api/dynatrace";
 import { DynatraceAPIError } from "../dynatrace-api/errors";
 import { MetricResultsPanel } from "../webviews/metricResults";
@@ -125,16 +124,17 @@ export async function runSelector(
  * Resolves an `entitySelectorTemplate` into an entity selector by replacing $(entityConditions)
  * with the minimum viable selector for that type of entity.
  * @param selectorTemplate the entitySelectorTemplate to resolve
+ * @param extension extension.yaml serialized as object
  * @param document the document where the template is found
  * @param position the position at which the template is found
  * @returns entity selector
  */
 export function resolveSelectorTemplate(
   selectorTemplate: string,
+  extension: ExtensionStub,
   document: vscode.TextDocument,
   position: vscode.Position
 ): string {
-  const extension = yaml.parse(document.getText()) as ExtensionStub;
   const screenIdx = getBlockItemIndexAtLine("screens", position.line, document.getText());
   const parentBlocks = getParentBlocks(position.line, document.getText());
 

@@ -1,4 +1,5 @@
 import * as vscode from "vscode";
+import * as yaml from "yaml";
 import { CachedDataProvider } from "../utils/dataCaching";
 import { resolveSelectorTemplate, ValidationStatus } from "./selectorUtils";
 
@@ -129,35 +130,64 @@ export class SelectorCodeLensProvider implements vscode.CodeLensProvider {
    * @param token Cancellation Token
    * @returns list of code lenses
    */
-  public provideCodeLenses(document: vscode.TextDocument, token: vscode.CancellationToken): vscode.CodeLens[] {
+  public async provideCodeLenses(
+    document: vscode.TextDocument,
+    token: vscode.CancellationToken
+  ): Promise<vscode.CodeLens[]> {
     this.codeLenses = [];
     const regex = new RegExp(this.regex);
     const text = document.getText();
+    var extension: ExtensionStub;
 
     // Honor the user's settings
     if (!vscode.workspace.getConfiguration("dynatrace", null).get(this.controlSetting) as boolean) {
       return [];
     }
+    // Load yaml only for entity selectors
+    if (this.selectorType === "entity") {
+      extension = yaml.parse(document.getText()) as ExtensionStub;
+    }
+    // Create lenses
+    await Promise.all(
+      Array.from(text.matchAll(regex)).map((match) =>
+        this.createLenses(extension, match, document).then((lenses) =>
+          lenses.forEach((lens) => this.codeLenses.push(lens))
+        )
+      )
+    );
+    return this.codeLenses;
+  }
 
-    let matches;
-    while ((matches = regex.exec(text)) !== null) {
-      const line = document.lineAt(document.positionAt(matches.index).line);
-      const indexOf = line.text.indexOf(matches[0]);
+  /**
+   * Creates one of each lens for a selector
+   * @param extension extension.yaml serialized as object
+   * @param match regular expression match on the extension.yaml text
+   * @param document extension.yaml as vscode.TextDocument
+   * @returns list of code lenses
+   */
+  private async createLenses(
+    extension: ExtensionStub,
+    match: RegExpMatchArray,
+    document: vscode.TextDocument
+  ): Promise<vscode.CodeLens[]> {
+    if (match.index) {
+      const line = document.lineAt(document.positionAt(match.index).line);
+      const indexOf = line.text.indexOf(match[0]);
       const position = new vscode.Position(line.lineNumber, indexOf);
       const range = document.getWordRangeAtPosition(position, new RegExp(this.regex));
-
       if (range) {
         var selector = line.text.split(`${this.matchString} `)[1];
         if (selector.includes("$(entityConditions)")) {
-          selector = resolveSelectorTemplate(selector, document, position);
+          selector = resolveSelectorTemplate(selector, extension!, document, position);
         }
-
-        this.codeLenses.push(new SelectorRunnerLens(range, selector, this.selectorType));
-        this.codeLenses.push(new SelectorValidationLens(range, selector, this.selectorType));
-        this.codeLenses.push(new ValidationStatusLens(range, selector, this.cachedData));
+        return [
+          new SelectorRunnerLens(range, selector, this.selectorType),
+          new SelectorValidationLens(range, selector, this.selectorType),
+          new ValidationStatusLens(range, selector, this.cachedData),
+        ];
       }
     }
-    return this.codeLenses;
+    return [];
   }
 
   /**
