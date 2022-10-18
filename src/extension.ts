@@ -4,7 +4,7 @@ import { initWorkspace } from "./commandPalette/initWorkspace";
 import { generateCerts } from "./commandPalette/generateCertificates";
 import { uploadCertificate } from "./commandPalette/uploadCertificate";
 import { createDocumentation } from "./commandPalette/createDocumentation";
-import { buildExtension, fastModeBuild } from "./commandPalette/buildExtension";
+import { buildExtension } from "./commandPalette/buildExtension";
 import { TopologyCompletionProvider } from "./codeCompletions/topology";
 import {
   checkCertificateExists,
@@ -27,7 +27,7 @@ import { MetricResultsPanel } from "./webviews/metricResults";
 import { IconCompletionProvider } from "./codeCompletions/icons";
 import { CachedDataProvider } from "./utils/dataCaching";
 import { ScreensMetaCompletionProvider } from "./codeCompletions/screensMeta";
-import { runSelector, validateSelector } from "./codeLens/selectorUtils";
+import { runSelector, validateSelector } from "./codeLens/utils/selectorUtils";
 import { FastModeStatus } from "./statusBar/fastMode";
 import { DiagnosticsProvider } from "./diagnostics/diagnostics";
 import { PrometheusCodeLensProvider } from "./codeLens/prometheusScraper";
@@ -141,7 +141,7 @@ export function activate(context: vscode.ExtensionContext) {
         checkEnvironmentConnected(tenantsTreeViewProvider)
       ) {
         const dt = await tenantsTreeViewProvider.getDynatraceClient();
-        fastModeBuild(context, dt!, doc, fastModeChannel, fastModeStatus);
+        buildExtension(context, fastModeChannel, dt, { status: fastModeStatus, document: doc });
       }
     }),
     // Activity on active document changed
@@ -305,10 +305,7 @@ function registerCommandPaletteCommands(
     }),
     // Create Overview dashboard
     vscode.commands.registerCommand("dt-ext-copilot.createDashboard", () => {
-      if (
-        checkWorkspaceOpen() &&
-        isExtensionsWorkspace(context)
-      ) {
+      if (checkWorkspaceOpen() && isExtensionsWorkspace(context)) {
         createOverviewDashboard(tenantsProvider, outputChannel);
       }
     }),
