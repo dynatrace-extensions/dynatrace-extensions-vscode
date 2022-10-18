@@ -139,8 +139,23 @@ interface ExtensionStub {
   wmi?: DatasourceGroup[];
   prometheus?: DatasourceGroup[];
   sql?: DatasourceGroup[];
+  python?: PythonDatasource;
   metrics: MetricMetadata[];
   topology: TopologyStub;
   vars?: VarStub[];
   screens?: ScreenStub[];
+}
+
+interface PythonDatasource {
+  runtime: {
+    module: string;
+    version: {
+      min: string;
+    };
+  };
+  activation: {
+    remote?: {
+      path: string;
+    };
+  };
 }

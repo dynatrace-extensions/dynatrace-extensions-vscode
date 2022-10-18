@@ -213,6 +213,10 @@ export function getExtensionDatasource(extension: ExtensionStub): DatasourceGrou
   if (extension.prometheus) {
     return extension.prometheus;
   }
+  // TODO: Figure out support for Python
+  if (extension.python) {
+    return [];
+  }
   return [];
 }
 
@@ -234,6 +238,9 @@ export function getDatasourceName(extension: ExtensionStub): string {
   }
   if (extension.prometheus) {
     return "prometheus";
+  }
+  if (extension.python) {
+    return "python";
   }
   return "unsupported";
 }
@@ -361,7 +368,7 @@ export function getMetricValue(metricKey: string, extension: ExtensionStub): str
  */
 export function getMetricDisplayName(metricKey: string, extension: ExtensionStub): string {
   if (extension.metrics) {
-    let idx = extension.metrics.findIndex((m) => (m.key === metricKey) && (m.metadata !== undefined));
+    let idx = extension.metrics.findIndex((m) => m.key === metricKey && m.metadata !== undefined);
     if (idx >= 0) {
       return extension.metrics[idx].metadata.displayName;
     }
