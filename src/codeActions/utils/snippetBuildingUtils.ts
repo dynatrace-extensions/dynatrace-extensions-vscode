@@ -3,7 +3,7 @@ import {
   getEntityMetrics,
   getEntityName,
   getRelationships,
-} from "../utils/extensionParsing";
+} from "../../utils/extensionParsing";
 import {
   attributeSnippet,
   chartCardSnippet,

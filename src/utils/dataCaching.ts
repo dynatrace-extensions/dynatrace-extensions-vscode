@@ -1,6 +1,6 @@
 import Axios from "axios";
 import { EnvironmentsTreeDataProvider } from "../treeViews/environmentsTreeView";
-import { ValidationStatus } from "../codeLens/selectorUtils";
+import { ValidationStatus } from "../codeLens/utils/selectorUtils";
 import { PromData } from "../codeLens/prometheusScraper";
 
 /**

@@ -1,7 +1,7 @@
 import * as vscode from "vscode";
 import * as yaml from "yaml";
 import { CachedDataProvider } from "../utils/dataCaching";
-import { resolveSelectorTemplate, ValidationStatus } from "./selectorUtils";
+import { resolveSelectorTemplate, ValidationStatus } from "./utils/selectorUtils";
 
 /**
  * A Code Lens to display the status of validating a selector.

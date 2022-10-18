@@ -10,7 +10,7 @@ import {
   getPrometheusMetricKeys,
 } from "../utils/extensionParsing";
 import { getBlockItemIndexAtLine, getParentBlocks } from "../utils/yamlParsing";
-import { buildMetricMetadataSnippet, indentSnippet } from "./snippetBuildingUtils";
+import { buildMetricMetadataSnippet, indentSnippet } from "./utils/snippetBuildingUtils";
 
 /**
  * Provider for Code Actions that work with scraped Prometheus data to automatically

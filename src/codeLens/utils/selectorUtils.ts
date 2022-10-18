@@ -1,8 +1,8 @@
 import * as vscode from "vscode";
-import { Dynatrace } from "../dynatrace-api/dynatrace";
-import { DynatraceAPIError } from "../dynatrace-api/errors";
-import { MetricResultsPanel } from "../webviews/metricResults";
-import { getBlockItemIndexAtLine, getParentBlocks } from "../utils/yamlParsing";
+import { Dynatrace } from "../../dynatrace-api/dynatrace";
+import { DynatraceAPIError } from "../../dynatrace-api/errors";
+import { MetricResultsPanel } from "../../webviews/metricResults";
+import { getBlockItemIndexAtLine, getParentBlocks } from "../../utils/yamlParsing";
 
 export interface ValidationStatus {
   status: "valid" | "invalid" | "unknown";
