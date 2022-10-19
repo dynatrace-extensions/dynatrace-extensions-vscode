@@ -3,6 +3,7 @@
 ## Version 0.16.0 / Stage: alpha (19.10.2022)
 
 ### ✨ New in this version:
+- Workflow for creating an extension overview dashboard (landing page)
 - Build workflow can now build Python extension too (needs `dt-sdk` available globally)
 - Code Actions for inserting filtering blocks and filters within entity lists
 - Code Actions for inserting actions within screens
