@@ -34,6 +34,7 @@ import { PrometheusCodeLensProvider } from "./codeLens/prometheusScraper";
 import { PrometheusCompletionProvider } from "./codeCompletions/prometheus";
 import { PrometheusActionProvider } from "./codeActions/prometheus";
 import { createOverviewDashboard } from "./commandPalette/createDashboard";
+import { ScreenLensProvider } from "./codeLens/screenCodeLens";
 
 /**
  * Sets up the VSCode extension by registering all the available functionality as disposable objects.
@@ -70,6 +71,7 @@ export function activate(context: vscode.ExtensionContext) {
     "entitySelectorsCodeLens",
     cachedDataProvider
   );
+  const screensLensProvider = new ScreenLensProvider(tenantsTreeViewProvider);
   const prometheusLensProvider = new PrometheusCodeLensProvider(cachedDataProvider);
   const prometheusActionProvider = new PrometheusActionProvider(cachedDataProvider);
   const fastModeChannel = vscode.window.createOutputChannel("Dynatrace Fast Mode", "json");
@@ -103,6 +105,8 @@ export function activate(context: vscode.ExtensionContext) {
     // Code Lens for metric and entity selectors
     vscode.languages.registerCodeLensProvider(extension2selector, metricLensProvider),
     vscode.languages.registerCodeLensProvider(extension2selector, entityLensProvider),
+    // Code Lens for opening screens
+    vscode.languages.registerCodeLensProvider(extension2selector, screensLensProvider),
     // Commands for metric and entity selector Code Lenses
     vscode.commands.registerCommand(
       "dt-ext-copilot.codelens.validateSelector",
