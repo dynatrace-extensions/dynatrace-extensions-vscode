@@ -63,20 +63,17 @@ export const entityFilterSnippet = `\
 export const configActionSnippet = `\
 - actionScope: GLOBAL_LIST
   actionLocation: HEADER
-  actions:
-    - actionExpression: hubExtension|extensionId=<extension-id>|text=configure
-      visualization:
-        iconOnly: false
-        icon: options-menu
-        displayName: Configure extension
+  actions: <config-subaction>
 - actionScope: GLOBAL_DETAILS
   actionLocation: HEADER
-  actions:
-    - actionExpression: hubExtension|extensionId=<extension-id>|text=configure
-      visualization:
-        iconOnly: false
-        icon: options-menu
-        displayName: Configure extension`;
+  actions: <config-subaction>`;
+
+export const configSubActionSnippet = `\
+- actionExpression: hubExtension|extensionId=<extension-id>|text=configure
+  visualization:
+    iconOnly: false
+    icon: options-menu
+    displayName: Configure extension`;
 
 export const screenSnippet = `\
 - entityType: <entity-type>

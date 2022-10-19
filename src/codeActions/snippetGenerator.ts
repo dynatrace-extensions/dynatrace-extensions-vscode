@@ -14,6 +14,7 @@ import {
 import {
   buildAttributePropertySnippet,
   buildChartCardSnippet,
+  buildConfigActionSnippet,
   buildEntitiesListCardSnippet,
   buildGraphChartSnippet,
   buildRelationPropertySnippet,
@@ -105,6 +106,16 @@ export class SnippetGenerator implements vscode.CodeActionProvider {
       codeActions.push(...this.createScreenInsertions(document, range, extension));
     }
 
+    // add known actions
+    if (lineText.includes("actions:")) {
+      if (parentBlocks[parentBlocks.length - 1] === "screens") {
+        codeActions.push(...this.createGlobalActionInsertions(document, range, extension));
+      }
+      if (parentBlocks[parentBlocks.length - 1] === "actions") {
+        codeActions.push(...this.createActionInsertions(document, range, extension));
+      }
+    }
+
     return codeActions;
   }
 
@@ -130,6 +141,83 @@ export class SnippetGenerator implements vscode.CodeActionProvider {
     action.edit = new vscode.WorkspaceEdit();
     action.edit.insert(document.uri, insertPosition, textToInsert);
     return action;
+  }
+
+  /**
+   * Creates Code Actions for inserting actions into an entity's screen.
+   * This function creates actions within GLOBAL_LIST and GLOBAL_DETAILS areas.
+   * Currently the only inserted actions are for configuring the extension.
+   * @param document the document that triggered the action
+   * @param range the range that triggered the action
+   * @param extension extension yaml serialized as object
+   * @returns list of actions
+   */
+  private createGlobalActionInsertions(
+    document: vscode.TextDocument,
+    range: vscode.Range,
+    extension: ExtensionStub
+  ): vscode.CodeAction[] {
+    var actions: vscode.CodeAction[] = [];
+    const indent = /[a-z]/i.exec(document.lineAt(range.start.line).text)!.index;
+    const screenIdx = getBlockItemIndexAtLine("screens", range.start.line, document.getText());
+
+    // Only add actions if there aren't any matching the same definition
+    if (
+      extension.screens![screenIdx].actions!.filter(
+        (action) =>
+          ["GLOBAL_LIST", "GLOBAL_DETAILS"].includes(action.actionScope) &&
+          action.actions.filter((a) => a.actionExpression.startsWith(`hubExtension|extensionId=${extension.name}`))
+            .length > 0
+      ).length === 0
+    ) {
+      actions.push(
+        this.createInsertAction(
+          "Insert global actions for extension configuration",
+          buildConfigActionSnippet(extension.name, false, indent),
+          document,
+          range
+        )
+      );
+    }
+    return actions;
+  }
+
+  /**
+   * Creates Code Actions for isnerting actions into an entity's screen.
+   * This function creates the actual action object, which can be inserted anywhere.
+   * Currently the only inserted action is for configuring the extension.
+   * @param document the document that triggered the action
+   * @param range the range that triggered the action
+   * @param extension extension yaml serialized as object
+   * @returns list of actions
+   */
+  private createActionInsertions(
+    document: vscode.TextDocument,
+    range: vscode.Range,
+    extension: ExtensionStub
+  ): vscode.CodeAction[] {
+    var actions: vscode.CodeAction[] = [];
+    const indent = /[a-z]/i.exec(document.lineAt(range.start.line).text)!.index;
+    const screenIdx = getBlockItemIndexAtLine("screens", range.start.line, document.getText());
+    const actionIdx = getBlockItemIndexAtLine("actions", range.start.line - 1, document.getText());
+
+    // Only add the action if there aren't any matching the same definition
+    if (
+      extension.screens![screenIdx].actions![actionIdx].actions.filter((action) =>
+        action.actionExpression.startsWith(`hubExtension|extensionId=${extension.name}`)
+      ).length === 0
+    ) {
+      actions.push(
+        this.createInsertAction(
+          "Insert action for extension configuration",
+          buildConfigActionSnippet(extension.name, true, indent),
+          document,
+          range
+        )
+      );
+    }
+
+    return actions;
   }
 
   /**

@@ -8,6 +8,7 @@ import {
   attributeSnippet,
   chartCardSnippet,
   configActionSnippet,
+  configSubActionSnippet,
   entitiesListCardSnippet,
   filteringSnippet,
   graphChartSnippet,
@@ -15,6 +16,29 @@ import {
   relationSnippet,
   screenSnippet,
 } from "./snippets";
+
+/**
+ * Builds a YAML snippet for an action that sends to extension configuration.
+ * The action can be built as a global definition (inserting into GLOBAL_DETAILS and GLOBAL_LIST)
+ * or as a sub-action to be inserted anywhere else.
+ * @param extensionId id of the extension
+ * @param subAction when true, the snippet is shorter and can be inserted anywhere
+ * @param indent level of indentation required
+ * @returns the formatted and indented snippet
+ */
+export function buildConfigActionSnippet(extensionId: string, subAction: boolean, indent: number) {
+  let subSnippet = configSubActionSnippet;
+  subSnippet = subSnippet.replace("<extension-id>", extensionId);
+
+  if (subAction) {
+    return indentSnippet(subSnippet, indent);
+  }
+
+  let snippet = configActionSnippet;
+  snippet = snippet.replace(/<config-subaction>/g, "\n" + indentSnippet(subSnippet, indent, false));
+
+  return indentSnippet(snippet, indent);
+}
 
 /**
  * Builds a YAML snippet for a whole entity screen. This snippet builder depends on other

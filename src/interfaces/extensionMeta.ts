@@ -93,6 +93,13 @@ interface ScreenStub {
   messageCards?: any[];
   logsCards?: any[];
   eventsCards?: any[];
+  actions?: Action[];
+}
+
+interface Action {
+  actionScope: string;
+  actionLocation: string;
+  actions: { actionExpression: string }[];
 }
 
 interface EntitiesListCardStub {
