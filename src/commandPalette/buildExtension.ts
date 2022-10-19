@@ -45,19 +45,26 @@ export async function buildExtension(
   const extensionDir = path.resolve(extensionFile, "..");
 
   // Pre-build workflow
-  var success = fastMode
-    ? await preBuildTasks(distDir, extensionFile, true, dt)
-    : await preBuildTasks(distDir, extensionFile, false, dt);
-  const extension = yaml.parse(readFileSync(extensionFile).toString());
-  const zipFilename = `${extension.name.replace(":", "_")}-${extension.version}.zip`;
-  if (!success) return;
+  try {
+    fastMode
+      ? await preBuildTasks(distDir, extensionFile, true, dt)
+      : await preBuildTasks(distDir, extensionFile, false, dt);
+  } catch (err: any) {
+    vscode.window.showErrorMessage(`Error during pre-build phase: ${err.message}`);
+    return;
+  }
 
   // Package assembly workflow
-  success =
+  const extension = yaml.parse(readFileSync(extensionFile).toString());
+  const zipFilename = `${extension.name.replace(":", "_")}-${extension.version}.zip`;
+  try {
     getDatasourceName(extension) === "python"
       ? await assemblePython(workspaceStorage, workspaceRoot, zipFilename, devKey, devCert, oc)
       : await assembleStandard(workspaceStorage, extensionDir, zipFilename, devKey, devCert);
-  if (!success) return;
+  } catch (err: any) {
+    vscode.window.showErrorMessage(`Error during arhiving & signing: ${err.message}`);
+    return;
+  }
 
   // Validation & upload workflow
   if (fastMode) {
@@ -83,15 +90,9 @@ export async function buildExtension(
  * @param distDir path to the "dist" directory within the workspace
  * @param extensionFile path to the extension.yaml file within the workspace
  * @param dt optional Dynatrace API Client
- * @returns success status
  */
-async function preBuildTasks(
-  distDir: string,
-  extensionFile: string,
-  forceIncrement: boolean = false,
-  dt?: Dynatrace
-): Promise<Boolean> {
-  return await vscode.window.withProgress(
+async function preBuildTasks(distDir: string, extensionFile: string, forceIncrement: boolean = false, dt?: Dynatrace) {
+  await vscode.window.withProgress(
     {
       location: vscode.ProgressLocation.Notification,
       title: "Building Extension",
@@ -103,33 +104,27 @@ async function preBuildTasks(
         mkdirSync(distDir);
       }
 
-      try {
-        if (forceIncrement) {
-          // Always increment the version
-          const extension = yaml.parse(readFileSync(extensionFile).toString());
-          const extensionVersion = normalizeExtensionVersion(extension.version);
+      if (forceIncrement) {
+        // Always increment the version
+        const extension = yaml.parse(readFileSync(extensionFile).toString());
+        const extensionVersion = normalizeExtensionVersion(extension.version);
+        extension.version = incrementExtensionVersion(extensionVersion);
+        writeFileSync(extensionFile, yaml.stringify(extension, { lineWidth: 0 }));
+        vscode.window.showInformationMessage("Extension version automatically increased.");
+      } else if (dt) {
+        // Increment the version if there is clash on the tenant
+        const extension = yaml.parse(readFileSync(extensionFile).toString());
+        const extensionVersion = normalizeExtensionVersion(extension.version);
+        progress.report({ message: "Checking version conflicts for extension" });
+        const versions = await dt.extensionsV2
+          .listVersions(extension.name)
+          .then((ext) => ext.map((e) => e.version))
+          .catch(() => [] as string[]);
+        if (versions.includes(extensionVersion)) {
           extension.version = incrementExtensionVersion(extensionVersion);
           writeFileSync(extensionFile, yaml.stringify(extension, { lineWidth: 0 }));
           vscode.window.showInformationMessage("Extension version automatically increased.");
-        } else if (dt) {
-          // Increment the version if there is clash on the tenant
-          const extension = yaml.parse(readFileSync(extensionFile).toString());
-          const extensionVersion = normalizeExtensionVersion(extension.version);
-          progress.report({ message: "Checking version conflicts for extension" });
-          const versions = await dt.extensionsV2
-            .listVersions(extension.name)
-            .then((ext) => ext.map((e) => e.version))
-            .catch(() => [] as string[]);
-          if (versions.includes(extensionVersion)) {
-            extension.version = incrementExtensionVersion(extensionVersion);
-            writeFileSync(extensionFile, yaml.stringify(extension, { lineWidth: 0 }));
-            vscode.window.showInformationMessage("Extension version automatically increased.");
-          }
         }
-        return true;
-      } catch (err: any) {
-        vscode.window.showErrorMessage(`Error during pre-build phase: ${err.message}`);
-        return false;
       }
     }
   );
@@ -144,7 +139,6 @@ async function preBuildTasks(
  * @param zipFileName the name of the .zip file for this build
  * @param devKeyPath the path to the developer's private key
  * @param devCertPath the path to the developer's certificate
- * @returns success status
  */
 async function assembleStandard(
   workspaceStorage: string,
@@ -152,42 +146,36 @@ async function assembleStandard(
   zipFileName: string,
   devKeyPath: string,
   devCertPath: string
-): Promise<Boolean> {
-  return await vscode.window.withProgress(
+) {
+  await vscode.window.withProgress(
     {
       location: vscode.ProgressLocation.Notification,
       title: "Building extension",
     },
     async (progress) => {
-      try {
-        // Build the inner .zip archive
-        progress.report({ message: "Building the .zip archive" });
-        const innerZip = new AdmZip();
-        innerZip.addLocalFolder(extensionDir);
-        const innerZipPath = path.resolve(workspaceStorage, "extension.zip");
-        innerZip.writeZip(innerZipPath);
-        console.log(`Built the inner archive: ${innerZipPath}`);
+      // Build the inner .zip archive
+      progress.report({ message: "Building the .zip archive" });
+      const innerZip = new AdmZip();
+      innerZip.addLocalFolder(extensionDir);
+      const innerZipPath = path.resolve(workspaceStorage, "extension.zip");
+      innerZip.writeZip(innerZipPath);
+      console.log(`Built the inner archive: ${innerZipPath}`);
 
-        // Sign the inner .zip archive and write the signature file
-        progress.report({ message: "Signing the .zip archive" });
-        const signature = sign(innerZipPath, devKeyPath, devCertPath);
-        const sigatureFilePath = path.resolve(workspaceStorage, "extension.zip.sig");
-        writeFileSync(sigatureFilePath, signature);
-        console.log(`Wrote the signature file: ${sigatureFilePath}`);
+      // Sign the inner .zip archive and write the signature file
+      progress.report({ message: "Signing the .zip archive" });
+      const signature = sign(innerZipPath, devKeyPath, devCertPath);
+      const sigatureFilePath = path.resolve(workspaceStorage, "extension.zip.sig");
+      writeFileSync(sigatureFilePath, signature);
+      console.log(`Wrote the signature file: ${sigatureFilePath}`);
 
-        // Build the outer .zip that includes the inner .zip and the signature file
-        progress.report({ message: "Building the final package" });
-        const outerZip = new AdmZip();
-        const outerZipPath = path.resolve(workspaceStorage, zipFileName);
-        outerZip.addLocalFile(innerZipPath);
-        outerZip.addLocalFile(sigatureFilePath);
-        outerZip.writeZip(outerZipPath);
-        console.log(`Wrote initial outer zip at: ${outerZipPath}`);
-        return true;
-      } catch (err: any) {
-        vscode.window.showErrorMessage(`Error during arhiving & signing: ${err.message}`);
-        return false;
-      }
+      // Build the outer .zip that includes the inner .zip and the signature file
+      progress.report({ message: "Building the final package" });
+      const outerZip = new AdmZip();
+      const outerZipPath = path.resolve(workspaceStorage, zipFileName);
+      outerZip.addLocalFile(innerZipPath);
+      outerZip.addLocalFile(sigatureFilePath);
+      outerZip.writeZip(outerZipPath);
+      console.log(`Wrote initial outer zip at: ${outerZipPath}`);
     }
   );
 }
@@ -195,12 +183,13 @@ async function assembleStandard(
 /**
  * Executes the given command in a child process and wraps the whole thing in a Promise.
  * This way the execution is async but other code can await it.
- * On success, returns the exit code (if any). Will throw any error with the contents
- * of stderr.
+ * On success, returns the exit code (if any). Will throw any error with the message
+ * part of the stderr (the rest is included via output channel)
  * @param command the command to execute
+ * @param oc JSON output channel to communicate error details
  * @returns exit code or `null`
  */
-function runCommand(command: string): Promise<number | null> {
+function runCommand(command: string, oc: vscode.OutputChannel): Promise<number | null> {
   let p = exec(command);
   let [stdout, stderr] = ["", ""];
   return new Promise((resolve, reject) => {
@@ -208,8 +197,16 @@ function runCommand(command: string): Promise<number | null> {
     p.stderr?.on("data", (data) => (stderr += data.toString()));
     p.on("exit", (code) => {
       if (code !== 0) {
-        console.log(stderr);
-        reject(Error(stderr));
+        const [shortMessage, ...details] = stderr.substring(stderr.indexOf("ERROR") + 7).split("+");
+        oc.replace(
+          JSON.stringify(
+            { error: shortMessage.split("\r\n"), detailedOutput: `+${details.join("+")}`.split("\r\n") },
+            null,
+            2
+          )
+        );
+        oc.show();
+        reject(Error(shortMessage));
       }
       console.log(stdout);
       return resolve(code);
@@ -227,7 +224,6 @@ function runCommand(command: string): Promise<number | null> {
  * @param devKeyPath the path to the developer's private key
  * @param devCertPath the path to the developer's certificate
  * @param oc JSON output channel for communicating errors
- * @returns success status
  */
 async function assemblePython(
   workspaceStorage: string,
@@ -236,46 +232,30 @@ async function assemblePython(
   devKeyPath: string,
   devCertPath: string,
   oc: vscode.OutputChannel
-): Promise<Boolean> {
-  return await vscode.window.withProgress(
+) {
+  await vscode.window.withProgress(
     {
       location: vscode.ProgressLocation.Notification,
       title: "Building extension",
     },
     async (progress) => {
-      try {
-        // Check we can run dt-sdk
-        progress.report({ message: "Checking dt-sdk is usable" });
-        await runCommand("dt-sdk --help");
+      // Check we can run dt-sdk
+      progress.report({ message: "Checking dt-sdk is usable" });
+      await runCommand("dt-sdk --help", oc);
 
-        // Download dependencies
-        progress.report({ message: "Downloading dependencies" });
-        await runCommand(`dt-sdk wheel "${extensionDir}"`);
+      // Download dependencies
+      progress.report({ message: "Downloading dependencies" });
+      await runCommand(`dt-sdk wheel "${extensionDir}"`, oc);
 
-        // Build the inner .zip archive
-        progress.report({ message: "Building the .zip archive" });
-        await runCommand(`dt-sdk assemble -o "${workspaceStorage}" "${extensionDir}"`);
+      // Build the inner .zip archive
+      progress.report({ message: "Building the .zip archive" });
+      await runCommand(`dt-sdk assemble -o "${workspaceStorage}" "${extensionDir}"`, oc);
 
-        // Sign the inner .zip archive and write the signature file
-        progress.report({ message: "Signing the .zip archive" });
-        const innerZip = path.resolve(workspaceStorage, "extension.zip");
-        const outerZip = path.resolve(workspaceStorage, zipFileName);
-        await runCommand(`dt-sdk sign -o "${outerZip}" -k "${devKeyPath}" -c "${devCertPath}" "${innerZip}"`);
-
-        return true;
-      } catch (err: any) {
-        const [shortMessage, ...details] = err.message.substring(err.message.indexOf("ERROR") + 7).split("+");
-        vscode.window.showErrorMessage(`Error during archiving & signing: ${shortMessage}`);
-        oc.replace(
-          JSON.stringify(
-            { error: shortMessage.split("\r\n"), detailedOutput: `+${details.join("+")}`.split("\r\n") },
-            null,
-            2
-          )
-        );
-        oc.show();
-        return false;
-      }
+      // Sign the inner .zip archive and write the signature file
+      progress.report({ message: "Signing the .zip archive" });
+      const innerZip = path.resolve(workspaceStorage, "extension.zip");
+      const outerZip = path.resolve(workspaceStorage, zipFileName);
+      await runCommand(`dt-sdk sign -o "${outerZip}" -k "${devKeyPath}" -c "${devCertPath}" "${innerZip}"`, oc);
     }
   );
 }
