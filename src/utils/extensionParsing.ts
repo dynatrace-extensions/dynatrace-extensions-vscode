@@ -80,10 +80,18 @@ export function getAttributesFromTopology(
                   property.key ? (excludeKeys ? !excludeKeys.includes(property.key) : true) : false
                 )
                 .forEach((property) => {
-                  attributes.push({
-                    key: property.key,
-                    displayName: property.displayName,
-                  });
+                  if (
+                    !attributes.some(
+                      (attribute) =>
+                        JSON.stringify(attribute) ===
+                        JSON.stringify({ key: property.key, displayName: property.displayName })
+                    )
+                  ) {
+                    attributes.push({
+                      key: property.key,
+                      displayName: property.displayName,
+                    });
+                  }
                 });
             }
           });
