@@ -10,7 +10,8 @@ import {
   configActionSnippet,
   configSubActionSnippet,
   entitiesListCardSnippet,
-  filteringSnippet,
+  entityFilterGroupSnippet,
+  filterSnippet,
   graphChartSnippet,
   metricMetadataSnippet,
   relationSnippet,
@@ -26,7 +27,7 @@ import {
  * @param indent level of indentation required
  * @returns the formatted and indented snippet
  */
-export function buildConfigActionSnippet(extensionId: string, subAction: boolean, indent: number) {
+export function buildConfigActionSnippet(extensionId: string, subAction: boolean, indent: number): string {
   let subSnippet = configSubActionSnippet;
   subSnippet = subSnippet.replace("<extension-id>", extensionId);
 
@@ -60,7 +61,7 @@ export function buildScreenSnippet(
   cardKeysSnippet: string,
   indent: number,
   withNewline: boolean = true
-) {
+): string {
   let snippet = screenSnippet;
 
   snippet = snippet.replace(/<entity-type>/g, typeDefinition.name);
@@ -73,6 +74,53 @@ export function buildScreenSnippet(
   snippet = snippet.replace("<details-layout-cards>", "\n" + indentSnippet(cardKeysSnippet, indent + 8, false));
 
   return indentSnippet(snippet, indent, withNewline);
+}
+
+/**
+ * Builds a YAML snippet for an individual entity filter.
+ * @param entityType type of the entity the filter applies to
+ * @param property the entity's property being filtered on
+ * @param name the display name of this filter
+ * @param freeText when True this filter accepts free text and you must provide a modifier
+ * @param modifier the behavior of the free text filter's value; must be omitted when freeText is false
+ * @param distinct when true, there can be only a single instance of this filter
+ * @param indent level of indentation required
+ * @returns the formatted and indented snippet
+ */
+export function buildFilterSnippet(
+  entityType: string,
+  property: string,
+  name: string,
+  freeText: boolean,
+  distinct: boolean,
+  indent: number,
+  modifier?: "contains" | "equals" | "startsWith"
+): string {
+  let snippet = filterSnippet;
+
+  snippet = snippet.replace("<filter-prop>", property);
+  snippet = snippet.replace("<filter-name>", name);
+  snippet = snippet.replace("<free-text>", String(freeText));
+  snippet = modifier ? snippet.replace("<modifier>", `modifier: ${modifier}`) : snippet.replace("\n  <modifier>", "");
+  snippet = snippet.replace("<distinct>", String(distinct));
+  snippet = snippet.replace("<filtered-entity>", entityType);
+
+  return indentSnippet(snippet, indent);
+}
+
+/**
+ * Builds a YAML snippet for an entity filtering group. The group is called "Filter by"
+ * and contains one filter, for the entity's name (the built-in entityName).
+ * @param entityType the type of the entity to be filtered
+ * @param indent level of indentation required
+ * @returns the formatted and indented snippet
+ */
+export function buildFilterGroupSnippet(entityType: string, indent: number): string {
+  let snippet = entityFilterGroupSnippet;
+
+  snippet = snippet.replace("<entity-type>", entityType);
+
+  return indentSnippet(snippet, indent);
 }
 
 /**
@@ -95,13 +143,13 @@ export function buildEntitiesListCardSnippet(
   indent: number,
   entitySelector?: string,
   withNewline: boolean = true
-) {
+): string {
   let snippet = entitiesListCardSnippet;
 
   snippet = snippet.replace("<card-key>", slugify(key));
   snippet = snippet.replace("<page-size>", String(pageSize));
   snippet = snippet.replace("<card-name>", cardName);
-  snippet = snippet.replace("<filtering>", filteringSnippet);
+  snippet = snippet.replace("<filtering>", "\n" + indentSnippet(entityFilterGroupSnippet, indent, false));
   snippet = snippet.replace("<entity-type>", entityType);
 
   if (entitySelector) {

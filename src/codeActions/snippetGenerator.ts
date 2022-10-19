@@ -16,6 +16,8 @@ import {
   buildChartCardSnippet,
   buildConfigActionSnippet,
   buildEntitiesListCardSnippet,
+  buildFilterGroupSnippet,
+  buildFilterSnippet,
   buildGraphChartSnippet,
   buildRelationPropertySnippet,
   buildScreenSnippet,
@@ -116,6 +118,16 @@ export class SnippetGenerator implements vscode.CodeActionProvider {
       }
     }
 
+    // add filtering inside an entities list card
+    if (lineText.includes("filtering:") && parentBlocks[parentBlocks.length - 1] === "entitiesListCards") {
+      // add whole filtering block
+      codeActions.push(...this.createFilteringBlockInsertions(document, range, extension));
+    }
+    if (lineText.includes("filters:") && parentBlocks[parentBlocks.length - 3] === "entitiesListCards") {
+      // add individual filters
+      codeActions.push(...this.createFilterInsertions(document, range, extension));
+    }
+
     return codeActions;
   }
 
@@ -141,6 +153,97 @@ export class SnippetGenerator implements vscode.CodeActionProvider {
     action.edit = new vscode.WorkspaceEdit();
     action.edit.insert(document.uri, insertPosition, textToInsert);
     return action;
+  }
+
+  /**
+   * Creates Code Actions that insert a whole entity filtering block.
+   * Naturally this is only done once, when no other filtering has been defined yet. The
+   * filtering block will contain one filter (on the entity's name).
+   * @param document the document that triggered the action
+   * @param range the range that triggered the action
+   * @param extension extension.yaml serialized as object
+   * @returns Code Actions
+   */
+  private createFilteringBlockInsertions(
+    document: vscode.TextDocument,
+    range: vscode.Range,
+    extension: ExtensionStub
+  ): vscode.CodeAction[] {
+    var actions: vscode.CodeAction[] = [];
+    const indent = /[a-z]/i.exec(document.lineAt(range.start.line).text)!.index;
+    const screenIdx = getBlockItemIndexAtLine("screens", range.start.line, document.getText());
+    const cardIdx = getBlockItemIndexAtLine("entitiesListCards", range.start.line, document.getText());
+
+    // Only insert whole filtering block if none are present
+    if (!extension.screens![screenIdx].entitiesListCards![cardIdx].filtering!.hasOwnProperty("entityFilters")) {
+      // Get the right entity type
+      var entityType = extension.screens![screenIdx].entityType;
+      const selectorTemplate = extension.screens![screenIdx].entitiesListCards![cardIdx].entitySelectorTemplate;
+      if (selectorTemplate) {
+        entityType = selectorTemplate.split("type(")[1].split(")")[0];
+      }
+      actions.push(
+        this.createInsertAction("Insert filtering group", buildFilterGroupSnippet(entityType, indent), document, range)
+      );
+    }
+
+    return actions;
+  }
+
+  /**
+   * Creates Code Actions that insert individual entity filters based on the entity's attributes.
+   * @param document the document that triggered the action
+   * @param range the range that triggered the action
+   * @param extension extension.yaml serialized as object
+   * @returns Code Action
+   */
+  private createFilterInsertions(
+    document: vscode.TextDocument,
+    range: vscode.Range,
+    extension: ExtensionStub
+  ): vscode.CodeAction[] {
+    var actions: vscode.CodeAction[] = [];
+    const indent = /[a-z]/i.exec(document.lineAt(range.start.line).text)!.index;
+    const screenIdx = getBlockItemIndexAtLine("screens", range.start.line, document.getText());
+    const cardIdx = getBlockItemIndexAtLine("entitiesListCards", range.start.line, document.getText());
+    const groupIdx = getBlockItemIndexAtLine("entityFilters", range.start.line, document.getText());
+
+    // Get correct entity type
+    var entityType = extension.screens![screenIdx].entityType;
+    const selectorTemplate = extension.screens![screenIdx].entitiesListCards![cardIdx].entitySelectorTemplate;
+    if (selectorTemplate) {
+      entityType = selectorTemplate.split("type(")[1].split(")")[0];
+    }
+    // Get properties already inserted as filters
+    const insertedProperties = extension.screens![screenIdx].entitiesListCards![cardIdx].filtering!.entityFilters![
+      groupIdx
+    ].filters!.map((filter) => filter.type);
+    // Add synonyms
+    if (insertedProperties.includes("ipAddress")) {
+      insertedProperties.push("dt.ip_addresses");
+    }
+    // Create snippets for remaining properties
+    getAttributesFromTopology(entityType, extension, insertedProperties).forEach((attribute) => {
+      actions.push(
+        ["dt.ip_addresses", "dt.listen_ports", "dt.dns_names"].includes(attribute.key)
+          ? // Properties that entities API can offer suggestions for
+            this.createInsertAction(
+              `Insert ${attribute.displayName} filter`,
+              buildFilterSnippet(entityType, attribute.key, attribute.displayName, false, false, indent),
+              document,
+              range
+            )
+          : // Other properties (i.e. no suggestions offered)
+            this.createInsertAction(
+              `Insert ${attribute.displayName} filter`,
+              buildFilterSnippet(entityType, attribute.key, attribute.displayName, true, false, indent, "contains"),
+              document,
+              range
+            )
+      );
+    });
+
+    return actions;
   }
 
   /**
@@ -236,8 +339,8 @@ export class SnippetGenerator implements vscode.CodeActionProvider {
     extension: ExtensionStub,
     insertionType: "properties" | "columns"
   ): vscode.CodeAction[] {
-    var indent = /[a-z]/i.exec(document.lineAt(range.start.line).text)!.index;
-    var screenIdx = getBlockItemIndexAtLine("screens", range.start.line, document.getText());
+    const indent = /[a-z]/i.exec(document.lineAt(range.start.line).text)!.index;
+    const screenIdx = getBlockItemIndexAtLine("screens", range.start.line, document.getText());
     var entityType = extension.screens![screenIdx].entityType;
 
     // Find already inserted attributes
@@ -288,8 +391,8 @@ export class SnippetGenerator implements vscode.CodeActionProvider {
     extension: ExtensionStub,
     insertionType: "properties" | "columns"
   ): vscode.CodeAction[] {
-    var indent = /[a-z]/i.exec(document.lineAt(range.start.line).text)!.index;
-    var screenIdx = getBlockItemIndexAtLine("screens", range.start.line, document.getText());
+    const indent = /[a-z]/i.exec(document.lineAt(range.start.line).text)!.index;
+    const screenIdx = getBlockItemIndexAtLine("screens", range.start.line, document.getText());
     var entityType = extension.screens![screenIdx].entityType;
 
     // Find already inserted relations
@@ -362,8 +465,8 @@ export class SnippetGenerator implements vscode.CodeActionProvider {
     cardType: "chartsCard" | "entitiesListCard",
     metricOnly: boolean = false
   ): vscode.CodeAction[] {
-    var indent = /[a-z]/i.exec(document.lineAt(range.start.line).text)!.index;
-    var screenIdx = getBlockItemIndexAtLine("screens", range.start.line, document.getText());
+    const indent = /[a-z]/i.exec(document.lineAt(range.start.line).text)!.index;
+    const screenIdx = getBlockItemIndexAtLine("screens", range.start.line, document.getText());
     var cardIdx = getBlockItemIndexAtLine(`${cardType}s`, range.start.line, document.getText());
 
     var entityType = extension.screens![screenIdx].entityType;
@@ -414,8 +517,8 @@ export class SnippetGenerator implements vscode.CodeActionProvider {
     range: vscode.Range,
     extension: ExtensionStub
   ): vscode.CodeAction[] {
-    var indent = /[a-z]/i.exec(document.lineAt(range.start.line).text)!.index;
-    var screenIdx = getBlockItemIndexAtLine("screens", range.start.line, document.getText());
+    const indent = /[a-z]/i.exec(document.lineAt(range.start.line).text)!.index;
+    const screenIdx = getBlockItemIndexAtLine("screens", range.start.line, document.getText());
     var entityType = extension.screens![screenIdx].entityType;
     var typeIdx = extension.topology.types.findIndex((type) => type.name === entityType);
     var cardsInserted = getEntityChartCardKeys(screenIdx, extension);
@@ -458,8 +561,8 @@ export class SnippetGenerator implements vscode.CodeActionProvider {
     range: vscode.Range,
     extension: ExtensionStub
   ): vscode.CodeAction[] {
-    var indent = /[a-z]/i.exec(document.lineAt(range.start.line).text)!.index;
-    var screenIdx = getBlockItemIndexAtLine("screens", range.start.line, document.getText());
+    const indent = /[a-z]/i.exec(document.lineAt(range.start.line).text)!.index;
+    const screenIdx = getBlockItemIndexAtLine("screens", range.start.line, document.getText());
     var entityType = extension.screens![screenIdx].entityType;
     var entityName = getEntityName(entityType, extension);
 
@@ -519,7 +622,7 @@ export class SnippetGenerator implements vscode.CodeActionProvider {
     extension: ExtensionStub
   ): vscode.CodeAction[] {
     const insertions: vscode.CodeAction[] = [];
-    var indent = /[a-z]/i.exec(document.lineAt(range.start.line).text)!.index;
+    const indent = /[a-z]/i.exec(document.lineAt(range.start.line).text)!.index;
 
     // Which entities should we generate screens for
     var allEntities = extension.topology.types ? extension.topology.types : [];

@@ -33,30 +33,30 @@ export const entitiesListCardSnippet = `\
   displayIcons: true
   entitySelectorTemplate: <entity-selector>
   hideEmptyCharts: true
-  <filtering>
+  filtering: <filtering>
   columns: []
   charts: []`;
 
-export const filteringSnippet = `\
-filtering:
-    entityFilters:
-      - displayName: Filter by
-        filters:
-          - type: entityName
-            displayName: Name
-            freeText: true
-            modifier: contains
-            defaultSearch: true
-            distinct: false
-            entityTypes:
-              - <entity-type>`;
+export const entityFilterGroupSnippet = `\
+entityFilters:
+  - displayName: Filter by
+    filters:
+      - type: entityName
+        displayName: Name
+        freeText: true
+        modifier: contains
+        defaultSearch: true
+        distinct: false
+        entityTypes:
+          - <entity-type>`;
 
-export const entityFilterSnippet = `\
+export const filterSnippet = `\
 - type: <filter-prop>
   displayName: <filter-name>
   freeText: <free-text>
-  modifier: <modifier>
+  <modifier>
   distinct: <distinct>
+  defaultSearch: false
   entityTypes:
     - <filtered-entity>`;
 
