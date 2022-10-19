@@ -96,6 +96,26 @@ interface ScreenStub {
   actions?: Action[];
 }
 
+interface Filtering {
+  relationships?: string[];
+  entityFilters?: EntityFilterGroupDefinition[];
+}
+
+interface EntityFilterGroupDefinition {
+  displayName: string;
+  filters?: EntityFilterDefinition[];
+}
+
+interface EntityFilterDefinition {
+  type: string;
+  entityTypes: string[];
+  displayName: string;
+  modifier?: "contains" | "equals" | "startsWith";
+  distinct?: boolean;
+  freeText: boolean;
+  defaultSearch?: boolean;
+}
+
 interface Action {
   actionScope: string;
   actionLocation: string;
@@ -106,7 +126,7 @@ interface EntitiesListCardStub {
   key: string;
   displayName?: string;
   entitySelectorTemplate?: string;
-  filtering?: any;
+  filtering?: Filtering;
   columns?: any[];
   charts?: ChartStub[];
 }
