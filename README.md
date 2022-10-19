@@ -15,6 +15,7 @@ This is a VisualStudio Code Extension that aims to provide support for all aspec
     - [📤 Upload extension to tenant](#-upload-extension-to-tenant)
     - [🔂 Activate extension on tenant](#-activate-extension-on-tenant)
     - [📑 Create documentation](#-create-documentation)
+    - [📈 Create overview dashboard](#-create-overview-dashboard)
     - [🔥 Fast Development Mode](#-fast-development-mode)
   - [Assisted extension development](#assisted-extension-development)
     - [🎹 Code completions](#-code-completions)
@@ -101,6 +102,14 @@ available versions of the extension and you are prompted to choose which one to 
 Reads through the `extension.yaml` file and creates a `README.md` file next to the `extension` folder,
 documenting (as best as possible) the extension package and its contents.
 
+### 📈 Create overview dashboard
+
+Reads through the `extension.yaml` file and creates an overview (landing page) dashboard. This is placed in a folder called
+`dashboards` inside the `extension` folder as `overview_dashboard.json`; the YAML is also modified to include this asset.
+After generating it, you're prompted if you want to also upload it to your connected tenant. The dashboard contains links
+to extension configuration as well as every entity defined within the YAML, as well as single value tiles displaying the 
+count of each entity type, tables listing each entity and up to two graph charts for each entity type.
+
 ### 🔥 Fast Development Mode
 
 **Fast Development Mode** is a workflow focused on saving as much time as possible and providing immediate feedback to
@@ -151,6 +160,10 @@ Currently implemented action triggers:
 - inside `screens` when clicking on `entitiesListCards` - you can automatically add cards for listing this entity as well as the related ones
 - when clicking on `metrics` or `dimensons` within the `prometheus` data source - automatically add details from scraped Prometheus data
 - on `screens` - you can automatically generate entire screens for your entities
+- inside `entitiesListCards` when clicking on `filtering` - insert entire filtering blocks with a default filter by name
+- inside `entitiesListCards` and inside `filtering`, when clicking on `filters` - insert individual filter for the entity's attributes
+- inside `screens` when clicking on `actions` - insert global actions to configure the extension
+- inside `actions` when clicking on `actions` - insert an action expression to configure the extension
 
 ![auto_charts](previews/pro_chart_building.gif)
 

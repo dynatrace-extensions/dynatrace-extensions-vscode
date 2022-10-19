@@ -1,5 +1,21 @@
 # Change Log
 
+## Version 0.16.0 / Stage: alpha (19.10.2022)
+
+### ✨ New in this version:
+- Build workflow can now build Python extension too (needs `dt-sdk` available globally)
+- Code Actions for inserting filtering blocks and filters within entity lists
+- Code Actions for inserting actions within screens
+
+### 🚀 Improved in this version:
+- Selector code lenses are much faster
+- Suggestions related to entity attributes are correctly de-duplicated
+
+### 🪲 Fixed in this version:
+- Selector code lenses would sometimes make the extension unresponsive
+
+---
+
 ## Version 0.15.0 / Stage: alpha (13.10.2022)
 
 ### ✨ New in this version:
