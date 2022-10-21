@@ -3,6 +3,8 @@ import * as vscode from "vscode";
 import { glob } from "glob";
 import { existsSync, readdirSync, readFileSync } from "fs";
 import { EnvironmentsTreeDataProvider } from "../treeViews/environmentsTreeView";
+import { env } from "process";
+import axios from "axios";
 
 /**
  * Checks whether one or more VSCode settings are configured.
@@ -173,4 +175,64 @@ export function checkExtensionZipExists(): boolean {
     return true;
   }
   return false;
+}
+
+/**
+ * Checks whether we're ready for BitBucket operations.
+ * This means there is a DTBBPAT environment variable, we can reach the BitBucket URL
+ * and we're in a repo that's pointing to artifactory for extensions release.
+ * @returns status of check
+ */
+export async function checkBitBucketReady(): Promise<Boolean> {
+  // DTBBPAT - Dynatrace BitBucket Personal Access Token
+  if (!env.DTBBPAT) {
+    console.log("DTBBPAT is missing. Can't do BB PRs.");
+    return false;
+  }
+  // Dynatrace BitBucket URL
+  if (!(await checkUrlReachable("https://bitbucket.lab.dynatrace.org"))) {
+    console.log("BitBucket URL not reachable. Can't do BB PRs.");
+    return false;
+  }
+  // Gradle points to artifactory
+  if (!checkGradleProperties()) {
+    console.log("Repo not mapped to artifactory. Can't do BB PRs.");
+    return false;
+  }
+  return true;
+}
+
+/**
+ * Checks whether a URL returns a 200 response code.
+ * @param url the URL to check
+ * @returns status of check
+ */
+export async function checkUrlReachable(url: string): Promise<Boolean> {
+  return await axios
+    .get(url)
+    .then((res) => res.status === 200)
+    .catch(() => false);
+}
+
+/**
+ * Checks the repo's Gradle properties and verifies it's pointing to artifactory.
+ * @returns status of check
+ */
+async function checkGradleProperties(): Promise<Boolean> {
+  // Must have gradle.properties file
+  const files = await vscode.workspace.findFiles("**/gradle.properties");
+  if (files.length === 0) {
+    return false;
+  }
+  // Must have our repositoryBaseURL and releaseRepository
+  const props = readFileSync(files[0].fsPath).toString();
+  const baseUrlMatches = /repositoryBaseURL=(.*)/.exec(props);
+  if (!baseUrlMatches || baseUrlMatches[1] !== "https://artifactory.lab.dynatrace.org/artifactory") {
+    return false;
+  }
+  const repoMatches = /releaseRepository=(.*)/.exec(props);
+  if (!repoMatches || repoMatches[1] !== "extensions-release") {
+    return false;
+  }
+  return true;
 }

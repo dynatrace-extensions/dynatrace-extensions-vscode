@@ -7,6 +7,7 @@ import { createDocumentation } from "./commandPalette/createDocumentation";
 import { buildExtension } from "./commandPalette/buildExtension";
 import { TopologyCompletionProvider } from "./codeCompletions/topology";
 import {
+  checkBitBucketReady,
   checkCertificateExists,
   checkEnvironmentConnected,
   checkExtensionZipExists,
@@ -35,6 +36,7 @@ import { PrometheusCompletionProvider } from "./codeCompletions/prometheus";
 import { PrometheusActionProvider } from "./codeActions/prometheus";
 import { createOverviewDashboard } from "./commandPalette/createDashboard";
 import { ScreenLensProvider } from "./codeLens/screenCodeLens";
+import { BitBucketStatus } from "./statusBar/bitbucket";
 
 /**
  * Sets up the VSCode extension by registering all the available functionality as disposable objects.
@@ -79,6 +81,13 @@ export function activate(context: vscode.ExtensionContext) {
   const genericChannel = vscode.window.createOutputChannel("Dynatrace", "json");
   const diagnosticsProvider = new DiagnosticsProvider();
   var editTimeout: NodeJS.Timeout | undefined;
+  if (checkWorkspaceOpen() && isExtensionsWorkspace(context)) {
+    checkBitBucketReady().then((ready) => {
+      if (ready) {
+        new BitBucketStatus(context);
+      }
+    });
+  }
 
   // Perform all feature registrations
   context.subscriptions.push(
@@ -100,6 +109,8 @@ export function activate(context: vscode.ExtensionContext) {
     }),
     // Connection Status Bar Item
     connectionStatusManager.getStatusBarItem(),
+    // FastMode Status Bar Item
+    fastModeStatus.getStatusBarItem(),
     // Code Lens for Prometheus scraping
     vscode.languages.registerCodeLensProvider(extension2selector, prometheusLensProvider),
     // Code Lens for metric and entity selectors
