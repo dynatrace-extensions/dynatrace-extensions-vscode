@@ -55,14 +55,44 @@ export async function uploadExtension(dt: Dynatrace) {
     }
 
     // Delete the oldest version
-    dt.extensionsV2
+    const success = await dt.extensionsV2
       .deleteVersion(extensionName, existingVersions[0].version)
       .then(() => {
         vscode.window.showInformationMessage("Oldest version removed successfully");
+        return true;
       })
       .catch((err) => {
-        vscode.window.showErrorMessage(err.message);
+        // Could not delete oldest version, prompt user to select another one
+        vscode.window
+          .showQuickPick(
+            dt.extensionsV2
+              .listVersions(extensionName)
+              .then((versions) => versions.slice(1).map((version) => version.version)),
+            {
+              canPickMany: false,
+              ignoreFocusOut: true,
+              title: "Could not delete latest version",
+              placeHolder: "Please choose an alternative",
+            }
+          )
+          .then((version) => {
+            if (version) {
+              dt.extensionsV2
+                .deleteVersion(extensionName, version)
+                .then(() => {
+                  vscode.window.showInformationMessage(`Version ${version} removed successfully`);
+                  return true;
+                })
+                .catch((err) => {
+                  vscode.window.showErrorMessage(err.message);
+                  return false;
+                });
+            }
+          });
       });
+    if (!success) {
+      return;
+    }
   }
 
   // Upload extension and prompt for activation
