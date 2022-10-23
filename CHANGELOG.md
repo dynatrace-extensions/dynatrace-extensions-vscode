@@ -1,5 +1,17 @@
 # Change Log
 
+## Version 0.17.0 / Stage: alpha (23.10.2022)
+
+### ✨ New in this version
+- Status bar can create Pull Requests for Dynatrace official repositories
+- Code Lens for opening the unified analysis screens
+
+### 🚀 Improved in this version:
+- Environment token is obfuscated during setup
+- Diagnostic collection is aware of Dynatrace official repositories
+
+---
+
 ## Version 0.16.0 / Stage: alpha (19.10.2022)
 
 ### ✨ New in this version:
