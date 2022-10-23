@@ -1,8 +1,8 @@
 import * as vscode from "vscode";
 import * as yaml from "yaml";
-import * as open from "open";
 import { getBlockItemIndexAtLine, getParentBlocks } from "../utils/yamlParsing";
 import { EnvironmentsTreeDataProvider } from "../treeViews/environmentsTreeView";
+const open = require("open");
 
 /**
  * Implementation of a Code Lens Provider to allow opening Dynatrace screens in the browser.
