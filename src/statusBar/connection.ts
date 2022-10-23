@@ -7,7 +7,7 @@ export class ConnectionStatusManager {
   statusBarItem: vscode.StatusBarItem;
 
   constructor() {
-    this.statusBarItem = vscode.window.createStatusBarItem(vscode.StatusBarAlignment.Left, 1);
+    this.statusBarItem = vscode.window.createStatusBarItem(vscode.StatusBarAlignment.Left, 0);
     this.statusBarItem.command = "dt-ext-copilot-environments.changeConnection";
     this.updateStatusBar(false);
   }
