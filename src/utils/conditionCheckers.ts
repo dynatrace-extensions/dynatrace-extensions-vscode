@@ -218,7 +218,7 @@ export async function checkUrlReachable(url: string): Promise<Boolean> {
  * Checks the repo's Gradle properties and verifies it's pointing to artifactory.
  * @returns status of check
  */
-async function checkGradleProperties(): Promise<Boolean> {
+export async function checkGradleProperties(): Promise<Boolean> {
   // Must have gradle.properties file
   const files = await vscode.workspace.findFiles("**/gradle.properties");
   if (files.length === 0) {

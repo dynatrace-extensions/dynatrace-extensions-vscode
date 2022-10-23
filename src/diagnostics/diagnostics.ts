@@ -1,6 +1,8 @@
 import * as vscode from "vscode";
+import { checkGradleProperties } from "../utils/conditionCheckers";
 import {
   copilotDiagnostic,
+  EXTENSION_NAME_CUSTOM_ON_BITBUCKET,
   EXTENSION_NAME_INVALID,
   EXTENSION_NAME_MISSING,
   EXTENSION_NAME_NON_CUSTOM,
@@ -22,8 +24,8 @@ export class DiagnosticsProvider {
    * Collects Extension 2.0 diagnostics and updates the collection managed by this provider.
    * @param document text document to provide diagnostics for
    */
-  public provideDiagnostics(document: vscode.TextDocument) {
-    const diagnostics = [...this.diagnoseExtensionName(document.getText())];
+  public async provideDiagnostics(document: vscode.TextDocument) {
+    const diagnostics = [...(await this.diagnoseExtensionName(document.getText()))];
     this.collection.set(document.uri, diagnostics);
   }
 
@@ -58,7 +60,7 @@ export class DiagnosticsProvider {
    * @param content extension.yaml text content
    * @returns list of diagnostic items
    */
-  private diagnoseExtensionName(content: string): vscode.Diagnostic[] {
+  private async diagnoseExtensionName(content: string): Promise<vscode.Diagnostic[]> {
     var diagnostics: vscode.Diagnostic[] = [];
     const contentLines = content.split("\n");
     const lineNo = contentLines.findIndex((line) => line.startsWith("name:"));
@@ -76,8 +78,12 @@ export class DiagnosticsProvider {
       if (!nameRegex.test(extensionName)) {
         diagnostics.push(copilotDiagnostic(nameStart, nameEnd, EXTENSION_NAME_INVALID));
       }
-      if (!extensionName.startsWith("custom:")) {
+      const bitBucketRepo = await checkGradleProperties();
+      if (!extensionName.startsWith("custom:") && !bitBucketRepo) {
         diagnostics.push(copilotDiagnostic(nameStart, nameEnd, EXTENSION_NAME_NON_CUSTOM));
+      }
+      if (extensionName.startsWith("custom:") && bitBucketRepo) {
+        diagnostics.push(copilotDiagnostic(nameStart, nameEnd, EXTENSION_NAME_CUSTOM_ON_BITBUCKET));
       }
     }
     return diagnostics;

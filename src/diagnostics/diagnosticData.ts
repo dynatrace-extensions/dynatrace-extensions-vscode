@@ -52,6 +52,12 @@ export const EXTENSION_NAME_INVALID: CopilotDiagnostic = {
 
 export const EXTENSION_NAME_NON_CUSTOM: CopilotDiagnostic = {
   code: "DEC004",
-  severity: vscode.DiagnosticSeverity.Information,
-  message: 'Only custom extensions can be built (name must start with "custom:")'
+  severity: vscode.DiagnosticSeverity.Error,
+  message: 'Only custom extensions can be built (name must start with "custom:")',
+};
+
+export const EXTENSION_NAME_CUSTOM_ON_BITBUCKET: CopilotDiagnostic = {
+  code: "DEC005",
+  severity: vscode.DiagnosticSeverity.Warning,
+  message: "BitBucket-linked extensions should not have custom names",
 };
