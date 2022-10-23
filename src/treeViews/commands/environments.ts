@@ -30,6 +30,7 @@ export async function addEnvironment(context: vscode.ExtensionContext) {
     placeHolder: "An access token, to use when autheticating API calls...",
     prompt: "Mandatory",
     ignoreFocusOut: true,
+    password: true
   });
   if (!token || token === "") {
     vscode.window.showErrorMessage("Token cannot be blank. Operation was cancelled");
