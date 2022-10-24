@@ -55,7 +55,7 @@ Settings for generating new certificates:
 This extension exposes commands to support typical extension development workflows.
 All commands are invoked from the command palette (`Ctrl + Shift + P`), and are prefixed with `Dynatrace`.
 
-![commands](previews/commands.gif)
+![commands](previews/command_palette.gif)
 
 ### 🚀 Initialize workspace
 
@@ -63,6 +63,8 @@ Initializes a new workspace for Dynatrace Extension (2.0) Development.
 This includes loading up schemas, creating extension folder and stub, and creating an empty dist folder.
 This will also configure the `yaml.schema` extension to validate `extension.yaml` with your chosen schema version.
 Once finished, the workspace appears in the new Dynatrace view.
+
+![initialize](previews/cmd_init.gif)
 
 ### 📄 Load schemas
 
@@ -84,7 +86,7 @@ Builds your extension and its artefacts into a signed .zip archive which is plac
 Building extensions is only supported for custom extensions (i.e. name must start with `custom:`).
 Upon successful build, you may also upload this package to Dynatrace.
 
-![build_command](previews/build_command.gif)
+![build_command](previews/cmd_build.gif)
 
 ### 📤 Upload extension to tenant
 
@@ -92,10 +94,14 @@ Uploads the most recent package from your workspace's `dist` folder to the curre
 After upload, you are also prompted to activate this latest version. In the case that you reached the maximum allowed
 number of extension versions, you will be prompted to delete the oldest one.
 
+![upload_ext_command](previews/upload_extension.gif)
+
 ### 🔂 Activate extension on tenant
 
 Activates a version of your workspace's extension on the currently connected Dynatrace tenant. The tenant is polled for all
 available versions of the extension and you are prompted to choose which one to activate.
+
+![activate_ext_command](previews/activate_extension.gif)
 
 ### 📑 Create documentation
 
@@ -244,3 +250,5 @@ Right now, the extension is not published to the marketplace so you'll have to i
 In VSCode, open the Extensions menu, click the "..." and choose "Install from VSIX..".
 
 Once installed, why not initialize a new workspace, or connect a tenant? Head over to the new [Dynatrace view](#custom-dynatrace-view) to start.
+
+![get_started](previews/get_started.gif)
