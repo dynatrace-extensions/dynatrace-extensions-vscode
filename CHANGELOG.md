@@ -1,6 +1,6 @@
 # Change Log
 
-## Version 0.17.0 / Stage: alpha (23.10.2022)
+## Version 0.17.1 / Stage: alpha (24.10.2022)
 
 ### ✨ New in this version
 - Status bar can create Pull Requests for Dynatrace official repositories
@@ -9,6 +9,9 @@
 ### 🚀 Improved in this version:
 - Environment token is obfuscated during setup
 - Diagnostic collection is aware of Dynatrace official repositories
+
+### 🪲 Fixed in this version:
+- Build workflow would not link to upload & activate commands
 
 ---
 
