@@ -44,43 +44,58 @@ export async function buildExtension(
     : await vscode.workspace.findFiles("**/extension/extension.yaml").then((files) => files[0].fsPath);
   const extensionDir = path.resolve(extensionFile, "..");
 
-  // Pre-build workflow
-  try {
-    fastMode
-      ? await preBuildTasks(distDir, extensionFile, true, dt)
-      : await preBuildTasks(distDir, extensionFile, false, dt);
-  } catch (err: any) {
-    vscode.window.showErrorMessage(`Error during pre-build phase: ${err.message}`);
-    return;
-  }
+  vscode.window.withProgress(
+    {
+      location: vscode.ProgressLocation.Notification,
+      title: "Building extension",
+    },
+    async (progress) => {
+      // Pre-build workflow
+      progress.report({ message: "Checking prerequisites" });
+      try {
+        fastMode
+          ? await preBuildTasks(distDir, extensionFile, true, dt)
+          : await preBuildTasks(distDir, extensionFile, false, dt);
+      } catch (err: any) {
+        vscode.window.showErrorMessage(`Error during pre-build phase: ${err.message}`);
+        return;
+      }
 
-  // Package assembly workflow
-  const extension = yaml.parse(readFileSync(extensionFile).toString());
-  const zipFilename = `${extension.name.replace(":", "_")}-${extension.version}.zip`;
-  try {
-    getDatasourceName(extension) === "python"
-      ? await assemblePython(workspaceStorage, workspaceRoot, zipFilename, devKey, devCert, oc)
-      : await assembleStandard(workspaceStorage, extensionDir, zipFilename, devKey, devCert);
-  } catch (err: any) {
-    vscode.window.showErrorMessage(`Error during arhiving & signing: ${err.message}`);
-    return;
-  }
+      // Package assembly workflow
+      progress.report({ message: "Building extension package" });
+      const extension = yaml.parse(readFileSync(extensionFile).toString());
+      const zipFilename = `${extension.name.replace(":", "_")}-${extension.version}.zip`;
+      try {
+        getDatasourceName(extension) === "python"
+          ? await assemblePython(workspaceStorage, workspaceRoot, zipFilename, devKey, devCert, oc)
+          : await assembleStandard(workspaceStorage, extensionDir, zipFilename, devKey, devCert);
+      } catch (err: any) {
+        vscode.window.showErrorMessage(`Error during arhiving & signing: ${err.message}`);
+        return;
+      }
 
-  // Validation & upload workflow
-  if (fastMode) {
-    uploadAndActivate(path.resolve(distDir, zipFilename), extension, dt!, fastMode.status, oc);
-  } else {
-    const valid = await validateExtension(workspaceStorage, zipFilename, distDir, oc, dt);
-    if (valid) {
-      vscode.window
-        .showInformationMessage("Extension built successfully. Would you like to upload it to Dynatrace?", "Yes", "No")
-        .then((choice) => {
-          if (choice === "Yes") {
-            vscode.commands.executeCommand("dt-ext-copilot.uploadExtension");
-          }
-        });
+      // Validation & upload workflow
+      progress.report({ message: "Validating extension" });
+      if (fastMode) {
+        uploadAndActivate(path.resolve(distDir, zipFilename), extension, dt!, fastMode.status, oc);
+      } else {
+        const valid = await validateExtension(workspaceStorage, zipFilename, distDir, oc, dt);
+        if (valid) {
+          vscode.window
+            .showInformationMessage(
+              "Extension built successfully. Would you like to upload it to Dynatrace?",
+              "Yes",
+              "No"
+            )
+            .then((choice) => {
+              if (choice === "Yes") {
+                vscode.commands.executeCommand("dt-ext-copilot.uploadExtension");
+              }
+            });
+        }
+      }
     }
-  }
+  );
 }
 
 /**
@@ -92,42 +107,32 @@ export async function buildExtension(
  * @param dt optional Dynatrace API Client
  */
 async function preBuildTasks(distDir: string, extensionFile: string, forceIncrement: boolean = false, dt?: Dynatrace) {
-  await vscode.window.withProgress(
-    {
-      location: vscode.ProgressLocation.Notification,
-      title: "Building Extension",
-    },
-    async (progress) => {
-      progress.report({ message: "Checking the dist folder" });
-      // Create the dist folder if it doesn't exist
-      if (!existsSync(distDir)) {
-        mkdirSync(distDir);
-      }
+  // Create the dist folder if it doesn't exist
+  if (!existsSync(distDir)) {
+    mkdirSync(distDir);
+  }
 
-      if (forceIncrement) {
-        // Always increment the version
-        const extension = yaml.parse(readFileSync(extensionFile).toString());
-        const extensionVersion = normalizeExtensionVersion(extension.version);
-        extension.version = incrementExtensionVersion(extensionVersion);
-        writeFileSync(extensionFile, yaml.stringify(extension, { lineWidth: 0 }));
-        vscode.window.showInformationMessage("Extension version automatically increased.");
-      } else if (dt) {
-        // Increment the version if there is clash on the tenant
-        const extension = yaml.parse(readFileSync(extensionFile).toString());
-        const extensionVersion = normalizeExtensionVersion(extension.version);
-        progress.report({ message: "Checking version conflicts for extension" });
-        const versions = await dt.extensionsV2
-          .listVersions(extension.name)
-          .then((ext) => ext.map((e) => e.version))
-          .catch(() => [] as string[]);
-        if (versions.includes(extensionVersion)) {
-          extension.version = incrementExtensionVersion(extensionVersion);
-          writeFileSync(extensionFile, yaml.stringify(extension, { lineWidth: 0 }));
-          vscode.window.showInformationMessage("Extension version automatically increased.");
-        }
-      }
+  if (forceIncrement) {
+    // Always increment the version
+    const extension = yaml.parse(readFileSync(extensionFile).toString());
+    const extensionVersion = normalizeExtensionVersion(extension.version);
+    extension.version = incrementExtensionVersion(extensionVersion);
+    writeFileSync(extensionFile, yaml.stringify(extension, { lineWidth: 0 }));
+    vscode.window.showInformationMessage("Extension version automatically increased.");
+  } else if (dt) {
+    // Increment the version if there is clash on the tenant
+    const extension = yaml.parse(readFileSync(extensionFile).toString());
+    const extensionVersion = normalizeExtensionVersion(extension.version);
+    const versions = await dt.extensionsV2
+      .listVersions(extension.name)
+      .then((ext) => ext.map((e) => e.version))
+      .catch(() => [] as string[]);
+    if (versions.includes(extensionVersion)) {
+      extension.version = incrementExtensionVersion(extensionVersion);
+      writeFileSync(extensionFile, yaml.stringify(extension, { lineWidth: 0 }));
+      vscode.window.showInformationMessage("Extension version automatically increased.");
     }
-  );
+  }
 }
 
 /**
@@ -140,44 +145,33 @@ async function preBuildTasks(distDir: string, extensionFile: string, forceIncrem
  * @param devKeyPath the path to the developer's private key
  * @param devCertPath the path to the developer's certificate
  */
-async function assembleStandard(
+function assembleStandard(
   workspaceStorage: string,
   extensionDir: string,
   zipFileName: string,
   devKeyPath: string,
   devCertPath: string
 ) {
-  await vscode.window.withProgress(
-    {
-      location: vscode.ProgressLocation.Notification,
-      title: "Building extension",
-    },
-    async (progress) => {
-      // Build the inner .zip archive
-      progress.report({ message: "Building the .zip archive" });
-      const innerZip = new AdmZip();
-      innerZip.addLocalFolder(extensionDir);
-      const innerZipPath = path.resolve(workspaceStorage, "extension.zip");
-      innerZip.writeZip(innerZipPath);
-      console.log(`Built the inner archive: ${innerZipPath}`);
+  // Build the inner .zip archive
+  const innerZip = new AdmZip();
+  innerZip.addLocalFolder(extensionDir);
+  const innerZipPath = path.resolve(workspaceStorage, "extension.zip");
+  innerZip.writeZip(innerZipPath);
+  console.log(`Built the inner archive: ${innerZipPath}`);
 
-      // Sign the inner .zip archive and write the signature file
-      progress.report({ message: "Signing the .zip archive" });
-      const signature = sign(innerZipPath, devKeyPath, devCertPath);
-      const sigatureFilePath = path.resolve(workspaceStorage, "extension.zip.sig");
-      writeFileSync(sigatureFilePath, signature);
-      console.log(`Wrote the signature file: ${sigatureFilePath}`);
+  // Sign the inner .zip archive and write the signature file
+  const signature = sign(innerZipPath, devKeyPath, devCertPath);
+  const sigatureFilePath = path.resolve(workspaceStorage, "extension.zip.sig");
+  writeFileSync(sigatureFilePath, signature);
+  console.log(`Wrote the signature file: ${sigatureFilePath}`);
 
-      // Build the outer .zip that includes the inner .zip and the signature file
-      progress.report({ message: "Building the final package" });
-      const outerZip = new AdmZip();
-      const outerZipPath = path.resolve(workspaceStorage, zipFileName);
-      outerZip.addLocalFile(innerZipPath);
-      outerZip.addLocalFile(sigatureFilePath);
-      outerZip.writeZip(outerZipPath);
-      console.log(`Wrote initial outer zip at: ${outerZipPath}`);
-    }
-  );
+  // Build the outer .zip that includes the inner .zip and the signature file
+  const outerZip = new AdmZip();
+  const outerZipPath = path.resolve(workspaceStorage, zipFileName);
+  outerZip.addLocalFile(innerZipPath);
+  outerZip.addLocalFile(sigatureFilePath);
+  outerZip.writeZip(outerZipPath);
+  console.log(`Wrote initial outer zip at: ${outerZipPath}`);
 }
 
 /**
@@ -233,31 +227,19 @@ async function assemblePython(
   devCertPath: string,
   oc: vscode.OutputChannel
 ) {
-  await vscode.window.withProgress(
-    {
-      location: vscode.ProgressLocation.Notification,
-      title: "Building extension",
-    },
-    async (progress) => {
-      // Check we can run dt-sdk
-      progress.report({ message: "Checking dt-sdk is usable" });
-      await runCommand("dt-sdk --help", oc);
+  // Check we can run dt-sdk
+  await runCommand("dt-sdk --help", oc);
 
-      // Download dependencies
-      progress.report({ message: "Downloading dependencies" });
-      await runCommand(`dt-sdk wheel "${extensionDir}"`, oc);
+  // Download dependencies
+  await runCommand(`dt-sdk wheel "${extensionDir}"`, oc);
 
-      // Build the inner .zip archive
-      progress.report({ message: "Building the .zip archive" });
-      await runCommand(`dt-sdk assemble -o "${workspaceStorage}" "${extensionDir}"`, oc);
+  // Build the inner .zip archive
+  await runCommand(`dt-sdk assemble -o "${workspaceStorage}" "${extensionDir}"`, oc);
 
-      // Sign the inner .zip archive and write the signature file
-      progress.report({ message: "Signing the .zip archive" });
-      const innerZip = path.resolve(workspaceStorage, "extension.zip");
-      const outerZip = path.resolve(workspaceStorage, zipFileName);
-      await runCommand(`dt-sdk sign -o "${outerZip}" -k "${devKeyPath}" -c "${devCertPath}" "${innerZip}"`, oc);
-    }
-  );
+  // Sign the inner .zip archive and write the signature file
+  const innerZip = path.resolve(workspaceStorage, "extension.zip");
+  const outerZip = path.resolve(workspaceStorage, zipFileName);
+  await runCommand(`dt-sdk sign -o "${outerZip}" -k "${devKeyPath}" -c "${devCertPath}" "${innerZip}"`, oc);
 }
 
 /**
@@ -272,41 +254,32 @@ async function assemblePython(
  * @param dt optional Dynatrace API Client (needed for real validation)
  * @returns validation status
  */
-function validateExtension(
+async function validateExtension(
   workspaceStorage: string,
   zipFileName: string,
   distDir: string,
   oc: vscode.OutputChannel,
   dt?: Dynatrace
 ) {
-  return vscode.window.withProgress(
-    {
-      location: vscode.ProgressLocation.Notification,
-      title: "Building extension",
-    },
-    async (progress) => {
-      var valid = true;
-      const outerZipPath = path.resolve(workspaceStorage, zipFileName);
-      const finalZipPath = path.resolve(distDir, zipFileName);
-      if (dt) {
-        progress.report({ message: "Validating the final package contents" });
-        await dt.extensionsV2.upload(readFileSync(outerZipPath), true).catch((err: DynatraceAPIError) => {
-          vscode.window.showErrorMessage("Extension validation failed.");
-          oc.replace(JSON.stringify(err.errorParams.data, null, 2));
-          oc.show();
-          valid = false;
-        });
-      }
-      // Copy .zip archive into dist dir
-      if (valid) {
-        copyFileSync(outerZipPath, finalZipPath);
-      }
-      // Always remove from extension storage
-      rmSync(outerZipPath);
+  var valid = true;
+  const outerZipPath = path.resolve(workspaceStorage, zipFileName);
+  const finalZipPath = path.resolve(distDir, zipFileName);
+  if (dt) {
+    await dt.extensionsV2.upload(readFileSync(outerZipPath), true).catch((err: DynatraceAPIError) => {
+      vscode.window.showErrorMessage("Extension validation failed.");
+      oc.replace(JSON.stringify(err.errorParams.data, null, 2));
+      oc.show();
+      valid = false;
+    });
+  }
+  // Copy .zip archive into dist dir
+  if (valid) {
+    copyFileSync(outerZipPath, finalZipPath);
+  }
+  // Always remove from extension storage
+  rmSync(outerZipPath);
 
-      return valid;
-    }
-  );
+  return valid;
 }
 
 /**
