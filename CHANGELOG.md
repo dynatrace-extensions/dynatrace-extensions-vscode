@@ -1,6 +1,6 @@
 # Change Log
 
-## Version 0.17.1 / Stage: alpha (24.10.2022)
+## Version 0.17.1 / Stage: beta (25.10.2022)
 
 ### ✨ New in this version
 - Status bar can create Pull Requests for Dynatrace official repositories

@@ -25,6 +25,8 @@ This is a VisualStudio Code Extension that aims to provide support for all aspec
     - [📂 Extension 2.0 Workspaces](#-extension-20-workspaces)
     - [⚡ Dynatrace Environments](#-dynatrace-environments)
 - [Start using it!](#start-using-it)
+    - [Current project stage](#current-project-stage)
+    - [Installation steps](#installation-steps)
 
 ## Settings
 
@@ -200,6 +202,10 @@ For Dynatrace Extensions, these can help trigger some code-related actions to yo
   - To automatically insert metric metadata in the `metrics` section of the YAML
 - Get a timestamp of when details were last scraped.
 
+**Unified Analysis Screens Code Lenses**
+
+- Open the List or Details Unified Analysis screen for any entity type
+
 ## Custom Dynatrace View
 
 Access the new Dynatrace view by clicking the Dynatrace logo from your main activity bar (by default, on the left).
@@ -238,13 +244,17 @@ You can edit or remove environment details from the same list.
 
 # Start using it!
 
-Currently, this project is in alpha stage - this means there is heavy development still happening, things may break, or change completely between versions.
-Bugs are expected, however, during this stage please provide any feedback to radu.stefan@dynatrace.com regarding:
+### Current project stage
 
-- full feature ideas
-- workflow ideas
-- ease of use of current features
-- usefulness (or lack of) for current features
+Currently, this project is in beta stage - this means that most functionality present currently is locked in and should not receive any major changes unless absolutely necessary. Some bugs are still expected, however, the primary focus is catching and fixing them.
+
+Feel free to create GitHub Issues and PRs for:
+
+- any bug found, sharing steps to reproduce and the extension.yaml if appliable
+- any bug fix you can provide
+- suggestions for improvements to current workflows
+
+### Installation steps
 
 Right now, the extension is not published to the marketplace so you'll have to install it from the `.vsix` file packaged in every [release](https://github.com/dynatrace-extensions/dynatrace-extension-developer/releases).
 In VSCode, open the Extensions menu, click the "..." and choose "Install from VSIX..".
