@@ -151,7 +151,7 @@ Currently implemented completions trigger:
 - on `value:` for metrics and dimensions of a prometheus extension if data has been scraped already
 - on `description:` in `metrics` section for those metrics that have been scraped from a Prometheus endpoint
 
-![intellisense](previews/intellisense.gif)
+![code completions](previews/code_completions.gif)
 
 ### 💡 Code actions
 
