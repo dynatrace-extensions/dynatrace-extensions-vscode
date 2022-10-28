@@ -29,7 +29,9 @@ export function copilotDiagnostic(
 /**
  * ALL KNOWN DYNATRACE EXTENSIONS COPILOT DIAGNOSTICS SHOULD BE CATALOGUED HERE
  * ============================================================================
- * This allow later re-use of the known codes for other features.
+ * This allows later re-use of the known codes for other features like Quick
+ * Fix actions and condition checkers. The code you use for a diagnostic is
+ * does not indicate anything - it just needs to be unique.
  */
 
 export const EXTENSION_NAME_MISSING: CopilotDiagnostic = {
@@ -60,4 +62,16 @@ export const EXTENSION_NAME_CUSTOM_ON_BITBUCKET: CopilotDiagnostic = {
   code: "DEC005",
   severity: vscode.DiagnosticSeverity.Warning,
   message: "BitBucket-linked extensions should not have custom names",
+};
+
+export const COUNT_METRIC_KEY_SUFFIX: CopilotDiagnostic = {
+  code: "DEC006",
+  severity: vscode.DiagnosticSeverity.Warning,
+  message: 'Metrics of type count should have keys ending in ".count"'
+};
+
+export const GAUGE_METRIC_KEY_SUFFIX: CopilotDiagnostic = {
+  code: "DEC007",
+  severity: vscode.DiagnosticSeverity.Warning,
+  message: 'Metrics of type gauge should not have keys ending in ".count"'
 };

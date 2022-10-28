@@ -1,12 +1,17 @@
 import * as vscode from "vscode";
+import * as yaml from "yaml";
 import { checkGradleProperties } from "../utils/conditionCheckers";
+import { getMetricsFromDataSource } from "../utils/extensionParsing";
+import { getParentBlocks } from "../utils/yamlParsing";
 import {
   copilotDiagnostic,
+  COUNT_METRIC_KEY_SUFFIX,
   EXTENSION_NAME_CUSTOM_ON_BITBUCKET,
   EXTENSION_NAME_INVALID,
   EXTENSION_NAME_MISSING,
   EXTENSION_NAME_NON_CUSTOM,
   EXTENSION_NAME_TOO_LONG,
+  GAUGE_METRIC_KEY_SUFFIX,
 } from "./diagnosticData";
 
 /**
@@ -25,7 +30,11 @@ export class DiagnosticsProvider {
    * @param document text document to provide diagnostics for
    */
   public async provideDiagnostics(document: vscode.TextDocument) {
-    const diagnostics = [...(await this.diagnoseExtensionName(document.getText()))];
+    const extension = yaml.parse(document.getText());
+    const diagnostics = [
+      ...(await this.diagnoseExtensionName(document.getText())),
+      ...this.diagnoseMetricKeys(document, extension),
+    ];
     this.collection.set(document.uri, diagnostics);
   }
 
@@ -86,6 +95,41 @@ export class DiagnosticsProvider {
         diagnostics.push(copilotDiagnostic(nameStart, nameEnd, EXTENSION_NAME_CUSTOM_ON_BITBUCKET));
       }
     }
+    return diagnostics;
+  }
+
+  /**
+   * Provides diagnostics related to the keys of metrics.
+   * To fully comply with the metric protocol, count metrics should end in `.count` and
+   * gauge metrics should not end in `.count`. This is not only best practice but will
+   * also screw with some of our automated functions.
+   * @param document text document where diagnostics should be applied
+   * @param extension extension.yaml serialized as object
+   * @returns list of diagnostics
+   */
+  private diagnoseMetricKeys(document: vscode.TextDocument, extension: ExtensionStub): vscode.Diagnostic[] {
+    const content = document.getText();
+    var diagnostics: vscode.Diagnostic[] = [];
+    getMetricsFromDataSource(extension)
+      .filter(
+        (m) => (m.type === "count" && !m.key.endsWith(".count")) || (m.type === "gauge" && m.key.endsWith(".count"))
+      )
+      .forEach((m) => {
+        const metricRegex = new RegExp(`key: "?${m.key}"?$`, "gm");
+        let match;
+        while ((match = metricRegex.exec(content)) !== null) {
+          const line = document.lineAt(document.positionAt(match.index).line);
+          const keyStart = line.text.indexOf(m.key);
+          diagnostics.push(
+            copilotDiagnostic(
+              new vscode.Position(line.lineNumber, keyStart),
+              new vscode.Position(line.lineNumber, line.text.length),
+              m.type === "count" ? COUNT_METRIC_KEY_SUFFIX : GAUGE_METRIC_KEY_SUFFIX
+            )
+          );
+        }
+      });
+
     return diagnostics;
   }
 }
