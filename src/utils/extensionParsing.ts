@@ -507,6 +507,38 @@ export function getAllMetricKeysFromDataSource(extension: ExtensionStub): string
 }
 
 /**
+ * Extracts all metric keys and types detected within the datasource section of the extension.yaml
+ * @param extension extension.yaml serialized as object
+ * @returns list of metric keys and their types
+ */
+export function getMetricsFromDataSource(extension: ExtensionStub): { key: string; type: string }[] {
+  var metrics: { key: string; type: string }[] = [];
+  var datasource = getExtensionDatasource(extension);
+  datasource.forEach((group) => {
+    if (group.metrics) {
+      group.metrics.forEach((metric) => {
+        if (!metrics.map((m) => m.key).includes(metric.key)) {
+          metrics.push({ key: metric.key, type: metric.type ? metric.type : "gauge" });
+        }
+      });
+    }
+    if (group.subgroups) {
+      group.subgroups.forEach((subgroup) => {
+        if (subgroup.metrics) {
+          subgroup.metrics.forEach((metric) => {
+            if (!metrics.map((m) => m.key).includes(metric.key)) {
+              metrics.push({ key: metric.key, type: metric.type ? metric.type : "gauge" });
+            }
+          });
+        }
+      });
+    }
+  });
+
+  return metrics;
+}
+
+/**
  * Extracts all metrics keys and values detected within the datasource section of the extension.yaml
  * @param extension extension.yaml serialized as object
  * @returns list of metric keys
