@@ -86,25 +86,31 @@ This project is structured as follows:
 ```
 
 **VSCode API Features**
+
 Each distinct feature is placed within its own folder. The files in the main folder contain direct implementations of that feature. Within this folder, utility functions are placed in the `utils` folder.
 For example, files inside `/src/codeLens` contain direct implementations of VSCode Code Lens Providers and utility functions that are useful to these providers are in the `/src/codeLens/utils` folder.
 You can look up any class and function of a feature [online](https://code.visualstudio.com/api/references/vscode-api).
 
 **Utilities**
+
 Functionality that is generic enough to be used pretty much anywhere within the project should be part of the main `/src/utils` folder. Each file here is used for labelling more than anything - it's a category of utilities.
 
 **Command Palette Commands**
+
 These are the commands the user can directly invoke with `Ctrl + Shift + P` and represent Extensions Development workflows; they are implemented each in their own file inside `/src/commandPalette`. They are all registered within the `/src/extension.ts` file and it is within this file that checks should be implemented to decide whether the command should actually execute or not. Functions for checking various conditions are implemented un `/src/utils/conditionCheckers.ts`.
 
 **Dynatrace API Client**
+
 The project packages a very simplistic and rudimentary implementation of an HTTP Client wrapped around the Dynatrace API which is found in `/src/dynatrace-api`. This is to support API functions but does not aim to be a complete/standalone client (nor should it have to).
 Extending the client is done only if other features/functionality needs to use operations that are not implemented. Each folder represents an API (e.g. configuration, environment) and each file within represents an API endpoint (e.g. monitored entities). Interfaces are shared and kept in the `/src/dynatrace-api/interfaces` folder and do not necessarily need to be 100% complete.
 
 **Extension Manifest**
+
 The `/package.json` is called the Extension Manifest, which is the standard NodeJS configuration but also includes VS Code "contribution points". These represent "extras" (mostly to the VSCode interface) that this Extensions brings (e.g. commands for the palette, fonts, views, etc.).
 All contribution points are documented [online](https://code.visualstudio.com/api/references/contribution-points).
 
 **Tests**
+
 The setup for tests is found in `/src/test` and follows VSCode's default setup for Extension tests using Mocha as the framework. All implemented tests are inside `/src/test/suite` and you can run them at any time with:
 ```
 npm test
