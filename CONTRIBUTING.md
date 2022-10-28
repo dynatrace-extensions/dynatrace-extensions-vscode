@@ -43,44 +43,44 @@ This project is structured as follows:
 ```
 <PROJECT ROOT>
 	|
-	|-- previews/						# Gifs & previews for GitHub
-	|-- src/							# Main folder for source code
-	|	 |
-	|	 |-- assets/					# Static assets
-	|	 |	  |-- fonts/				# Custom fonts (i.e. for symbols)
-	|	 |	  |-- icons/				# Icons
-	|	 |	  |-- logos/				# Logos (e.g. Dynatrace logo)
-    |    |
-	|	 |-- codeActions/				# Main folder for Code Action providers
-	|    |    |-- utils/				# Utility functions for code action providers
-	|	 |	  |-- <file>.ts 			# Implementation of a code action provider
-	|	 |
-	|	 |-- codeCompletions/			# Main folder for Completion providers (see above for structure)
-	|	 |-- codeLens/					# Main folder for Code Lens providers (see above for structure)
-	|	 |-- commandPalette/			# Main folder for commands available in the Command Palette
-	|	 |-- diagnostics/				# Main folder for diagnostics provider
-	|	 |	  |-- diagnosticData.ts  	# Collection of diagnostic items
-	|	 |	  |-- diagnostics.ts        # Implementation of diagnostics provider
-	|	 |
-	|	 |-- dynatrace-api/				# Client for Dynatrace API operations
-	|	 |	  |-- configuration_v1/		# All operations of Config v1 endpoint
-	|	 |	  |-- environment_v2/		# All operations of Environment v2 endpoint
-	|	 |	  |-- interfaces/			# All interfaces related to API
-	|	 |	  |-- dynatrace.ts 			# Main implementation
-	|	 |	  |-- errors.ts             # Custom errors
-	|	 |	  |-- http_client.ts 		# HTTP Client implementation
-	|	 |
-	|	 |-- interfaces/				# Generic/shared interfaces throughout the project
-	|	 |-- statusBar/					# Status Bar implementations
-	|	 |-- test/						# Test suite (desperately needs contribution)
-	|	 |-- treeViews/					# Main folder for Tree View Item providers
-	|	 |	  |-- commands/				# Commands related to tree views
-	|	 |
-	|	 |-- utils/						# Utility functions shared throughout the project
-	|	 |-- webviews/					# Implementations of custom web views
-	|	 |-- extension.ts 				# Main file that VSCode runs. Everything is referenced here
+	|-- previews/			# Gifs & previews for GitHub
+	|-- src/			# Main folder for source code
+	|   |
+	|   |-- assets/			# Static assets
+	|   |    |-- fonts/		# Custom fonts (i.e. for symbols)
+	|   |    |-- icons/		# Icons
+	|   |    |-- logos/		# Logos (e.g. Dynatrace logo)
+    	|   |
+	|   |-- codeActions/		# Main folder for Code Action providers
+	|   |    |-- utils/		# Utility functions for code action providers
+	|   |    |-- <file>.ts 		# Implementation of a code action provider
+	|   |
+	|   |-- codeCompletions/	# Main folder for Completion providers (see above for structure)
+	|   |-- codeLens/		# Main folder for Code Lens providers (see above for structure)
+	|   |-- commandPalette/		# Main folder for commands available in the Command Palette
+	|   |-- diagnostics/		# Main folder for diagnostics provider
+	|   |    |-- diagnosticData.ts  # Collection of diagnostic items
+	|   |    |-- diagnostics.ts     # Implementation of diagnostics provider
+	|   |
+	|   |-- dynatrace-api/		# Client for Dynatrace API operations
+	|   |    |-- configuration_v1/	# All operations of Config v1 endpoint
+	|   |    |-- environment_v2/	# All operations of Environment v2 endpoint
+	|   |    |-- interfaces/	# All interfaces related to API
+	|   |    |-- dynatrace.ts 	# Main implementation
+	|   |    |-- errors.ts          # Custom errors
+	|   |    |-- http_client.ts 	# HTTP Client implementation
+	|   |
+	|   |-- interfaces/		# Generic/shared interfaces throughout the project
+	|   |-- statusBar/		# Status Bar implementations
+	|   |-- test/			# Test suite (desperately needs contribution)
+	|   |-- treeViews/		# Main folder for Tree View Item providers
+	|   |	  |-- commands/		# Commands related to tree views
+	|   |
+	|   |-- utils/			# Utility functions shared throughout the project
+	|   |-- webviews/		# Implementations of custom web views
+	|   |-- extension.ts 		# Main file that VSCode runs. Everything is referenced here
 	|
-	|-- package.json					# Node JS configuration, but also contributions to the VSCode UI
+	|-- package.json		# Node JS configuration, but also contributions to the VSCode UI
 	|
 	|-- ***************************************************************************************************
 ```
