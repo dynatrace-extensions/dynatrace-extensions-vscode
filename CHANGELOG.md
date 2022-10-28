@@ -1,5 +1,17 @@
 # Change Log
 
+## Version 0.18.0 / Stage: beta (28.10.2022)
+
+### ✨ New in this version:
+- Diagnostics for metric keys
+
+### 🪲 Fixed in this version:
+- Screen creation not adding \n after last screen
+- Screen generation not building action snippet correctly
+- Entity filters snippet not correctly indented when being generated
+
+---
+
 ## Version 0.17.1 / Stage: beta (25.10.2022)
 
 ### ✨ New in this version
