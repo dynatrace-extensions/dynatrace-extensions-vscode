@@ -78,7 +78,7 @@ export class TopologyCompletionProvider implements vscode.CompletionItemProvider
         var cardIdx = getBlockItemIndexAtLine("entitiesListCards", position.line, document.getText());
         let entitySelector = extension.screens![screenIdx].entitiesListCards![cardIdx].entitySelectorTemplate;
         if (entitySelector) {
-          entityType = entitySelector.split("type(")[1].split(")")[0];
+          entityType = entitySelector.split("type(")[1].split(")")[0].replace(/"/g,"");
         }
         completionItems.push(...this.createAttributeCompletion(entityType, extension));
       }
