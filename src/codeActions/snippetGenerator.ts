@@ -180,7 +180,7 @@ export class SnippetGenerator implements vscode.CodeActionProvider {
       var entityType = extension.screens![screenIdx].entityType;
       const selectorTemplate = extension.screens![screenIdx].entitiesListCards![cardIdx].entitySelectorTemplate;
       if (selectorTemplate) {
-        entityType = selectorTemplate.split("type(")[1].split(")")[0];
+        entityType = selectorTemplate.split("type(")[1].split(")")[0].replace(/"/g, "");
       }
       actions.push(
         this.createInsertAction("Insert filtering group", buildFilterGroupSnippet(entityType, indent), document, range)
@@ -212,7 +212,7 @@ export class SnippetGenerator implements vscode.CodeActionProvider {
     var entityType = extension.screens![screenIdx].entityType;
     const selectorTemplate = extension.screens![screenIdx].entitiesListCards![cardIdx].entitySelectorTemplate;
     if (selectorTemplate) {
-      entityType = selectorTemplate.split("type(")[1].split(")")[0];
+      entityType = selectorTemplate.split("type(")[1].split(")")[0].replace(/"/g, "");
     }
     // Get properties already inserted as filters
     const insertedProperties = extension.screens![screenIdx].entitiesListCards![cardIdx].filtering!.entityFilters![
@@ -353,7 +353,7 @@ export class SnippetGenerator implements vscode.CodeActionProvider {
       const cardIdx = getBlockItemIndexAtLine("entitiesListCards", range.start.line, document.getText());
       const selectorTemplate = extension.screens![screenIdx].entitiesListCards![cardIdx].entitySelectorTemplate;
       if (selectorTemplate) {
-        entityType = selectorTemplate.split("type(")[1].split(")")[0];
+        entityType = selectorTemplate.split("type(")[1].split(")")[0].replace(/"/g, "");
       }
       attributesInserted = extension.screens![screenIdx].entitiesListCards![cardIdx].columns!.filter(
         (col) => col.type === "ATTRIBUTE"
@@ -405,7 +405,7 @@ export class SnippetGenerator implements vscode.CodeActionProvider {
       const cardIdx = getBlockItemIndexAtLine("entitiesListCards", range.start.line, document.getText());
       const selectorTemplate = extension.screens![screenIdx].entitiesListCards![cardIdx].entitySelectorTemplate;
       if (selectorTemplate) {
-        entityType = selectorTemplate.split("type(")[1].split(")")[0];
+        entityType = selectorTemplate.split("type(")[1].split(")")[0].replace(/"/g, "");
       }
       relationsInserted = extension.screens![screenIdx].entitiesListCards![cardIdx].columns!.filter(
         (col) => col.type === "RELATION"
@@ -415,7 +415,7 @@ export class SnippetGenerator implements vscode.CodeActionProvider {
       relationsInserted = relationsInserted.map((property: any) => {
         if (property.relation.entitySelectorTemplate) {
           try {
-            return property.relation.entitySelectorTemplate.split("type(")[1].split(")")[0];
+            return property.relation.entitySelectorTemplate.split("type(")[1].split(")")[0].replace(/"/g, "");
           } catch {
             return "";
           }
@@ -473,7 +473,7 @@ export class SnippetGenerator implements vscode.CodeActionProvider {
     if (cardType === "entitiesListCard") {
       let entitySelector = extension.screens![screenIdx].entitiesListCards![cardIdx].entitySelectorTemplate;
       if (entitySelector) {
-        entityType = entitySelector.split("type(")[1].split(")")[0];
+        entityType = entitySelector.split("type(")[1].split(")")[0].replace(/"/g, "");
       }
     }
 
@@ -571,11 +571,11 @@ export class SnippetGenerator implements vscode.CodeActionProvider {
     var cardsInserted = getEntitiesListCardKeys(screenIdx, extension);
     var insertions = [];
 
-    if (!cardsInserted.includes(slugify(`${entityType}-list-self`))) {
+    if (!cardsInserted.includes(slugify(`${slugify(entityType)}_list_self`))) {
       insertions.push(
         this.createInsertAction(
           `Insert list of ${entityName}s`,
-          buildEntitiesListCardSnippet(`${entityType}-list-self`, 15, `List of ${entityName}s`, entityType, indent),
+          buildEntitiesListCardSnippet(`${slugify(entityType)}_list_self`, 15, `List of ${entityName}s`, entityType, indent),
           document,
           range
         )
@@ -666,7 +666,7 @@ export class SnippetGenerator implements vscode.CodeActionProvider {
                 false
               )
             )
-            .join("\n"),
+            .join("\n")+"\n",
           document,
           range
         )

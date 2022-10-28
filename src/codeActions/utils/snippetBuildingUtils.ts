@@ -65,10 +65,10 @@ export function buildScreenSnippet(
   let snippet = screenSnippet;
 
   snippet = snippet.replace(/<entity-type>/g, typeDefinition.name);
-  snippet = snippet.replace("<configAction>", "\n" + indentSnippet(configActionSnippet, indent + 2, false));
+  snippet = snippet.replace("<config-action>", "\n" + buildConfigActionSnippet(extensionId, false, indent + 2));
   snippet = snippet.replace(/<extension-id>/g, extensionId);
   snippet = snippet.replace(/<entity-name>/g, typeDefinition.displayName);
-  snippet = snippet.replace("<self-list-key>", `${slugify(typeDefinition.name)}-list-self`);
+  snippet = snippet.replace("<self-list-key>", `${slugify(typeDefinition.name)}_list_self`);
   snippet = snippet.replace("<charts-cards>", "\n" + indentSnippet(chartCardsSnippet, indent, false));
   snippet = snippet.replace("<entities-list-cards>", "\n" + indentSnippet(entitiesListCardsSnippet, indent, false));
   snippet = snippet.replace("<details-layout-cards>", "\n" + indentSnippet(cardKeysSnippet, indent + 8, false));
@@ -149,7 +149,7 @@ export function buildEntitiesListCardSnippet(
   snippet = snippet.replace("<card-key>", slugify(key));
   snippet = snippet.replace("<page-size>", String(pageSize));
   snippet = snippet.replace("<card-name>", cardName);
-  snippet = snippet.replace("<filtering>", "\n" + indentSnippet(entityFilterGroupSnippet, indent, false));
+  snippet = snippet.replace("<filtering>", "\n" + indentSnippet(entityFilterGroupSnippet, indent+2, false));
   snippet = snippet.replace("<entity-type>", entityType);
 
   if (entitySelector) {
@@ -297,7 +297,7 @@ export function getAllEntitiesListsSnippet(entityType: string, extension: Extens
 
   return [
     buildEntitiesListCardSnippet(
-      `${entityType}-list-self`,
+      `${slugify(entityType)}_list_self`,
       15,
       `List of ${entityName}s`,
       entityType,

@@ -77,7 +77,7 @@ export const configSubActionSnippet = `\
 
 export const screenSnippet = `\
 - entityType: <entity-type>
-  actions: <configAction>
+  actions: <config-action>
   listSettings:
     staticContent:
       showGlobalFilter: false
