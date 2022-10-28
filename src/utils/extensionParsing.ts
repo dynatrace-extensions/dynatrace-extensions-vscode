@@ -638,7 +638,7 @@ export function getRequiredDimensions(typeIdx: number, ruleIdx: number, extensio
 export function getRelationshipTypes(entityType: string, direction: "to" | "from", extension: ExtensionStub): string[] {
   return extension.topology.relationships
     .filter((rel) => (direction === "to" ? rel.toType === entityType : rel.fromType === entityType))
-    .map((rel) => toCamelCase(rel.typeOfRelation));
+    .map((rel) => relationToCamelCase(rel.typeOfRelation));
 }
 
 /**
@@ -656,7 +656,7 @@ export function getRelationships(
       .filter((rel) => rel.toType === entityType || rel.fromType === entityType)
       .map((rel) => ({
         entity: rel.toType === entityType ? rel.fromType : rel.toType,
-        relation: toCamelCase(rel.typeOfRelation),
+        relation: relationToCamelCase(rel.typeOfRelation),
         direction: rel.toType === entityType ? "to" : "from",
       }));
   }
@@ -693,24 +693,28 @@ export function getEntitiesListCardKeys(screenIdx: number, extension: ExtensionS
 }
 
 /**
- * Roughly converts a string from snake case to camel case.
- * Used in relationships e.g. SAME_AS must be sameAs in selectors.
- * @param text string to convert to camel case
- * @returns camel case converted string
+ * Converts a generic type of relation from ID (snake case) to camel case for use in selectors.
+ * e.g. CHILD_OF must be isChildOf in selectors.
+ * @param typeOfRelation relation type to convert to camel case
+ * @returns camel case converted relation type
  */
-function toCamelCase(text: string) {
-  var newStr = "";
-  text = text.toLowerCase();
-  var chunks = text.split("_");
-  for (let [i, chunk] of chunks.entries()) {
-    if (i === 0) {
-      newStr += chunk;
-    } else {
-      newStr += chunk[0].toUpperCase() + chunk.substring(1, chunk.length);
-    }
+function relationToCamelCase(typeOfRelation: string) {
+  switch (typeOfRelation) {
+    case "RUNS_ON":
+      return "runsOn";
+    case "SAME_AS":
+      return "isSameAs";
+    case "INSTANCE_OF":
+      return "isInstanceOf";
+    case "CHILD_OF":
+      return "isChildOf";
+    case "CALLS":
+      return "calls";
+    case "PART_OF":
+      return "isPartOf";
+    default:
+      return "";
   }
-
-  return newStr;
 }
 
 /**
