@@ -8,7 +8,8 @@ import { Dynatrace } from "../dynatrace-api/dynatrace";
 import { DynatraceAPIError } from "../dynatrace-api/errors";
 import { normalizeExtensionVersion, incrementExtensionVersion, getDatasourceName } from "../utils/extensionParsing";
 import { FastModeStatus } from "../statusBar/fastMode";
-import { exec } from "child_process";
+import { exec, ExecOptions, ProcessEnvOptions } from "child_process";
+import { getPythonPath } from "../utils/otherExtensions";
 
 type FastModeOptions = {
   status: FastModeStatus;
@@ -70,7 +71,7 @@ export async function buildExtension(
           ? await assemblePython(workspaceStorage, workspaceRoot, zipFilename, devKey, devCert, oc)
           : await assembleStandard(workspaceStorage, extensionDir, zipFilename, devKey, devCert);
       } catch (err: any) {
-        vscode.window.showErrorMessage(`Error during arhiving & signing: ${err.message}`);
+        vscode.window.showErrorMessage(`Error during archiving & signing: ${err}`);
         return;
       }
 
@@ -183,15 +184,18 @@ function assembleStandard(
  * @param oc JSON output channel to communicate error details
  * @returns exit code or `null`
  */
-function runCommand(command: string, oc: vscode.OutputChannel): Promise<number | null> {
-  let p = exec(command);
+function runCommand(command: string, oc: vscode.OutputChannel, envOptions?: ExecOptions): Promise<number | null> {
+  let p = exec(command, envOptions);
   let [stdout, stderr] = ["", ""];
   return new Promise((resolve, reject) => {
     p.stdout?.on("data", (data) => (stdout += data.toString()));
     p.stderr?.on("data", (data) => (stderr += data.toString()));
     p.on("exit", (code) => {
       if (code !== 0) {
-        const [shortMessage, ...details] = stderr.substring(stderr.indexOf("ERROR") + 7).split("+");
+        let [shortMessage, details] = [stderr, [""]];
+        if (stderr.includes("ERROR") && stderr.includes("+")) {
+          [shortMessage, ...details] = stderr.substring(stderr.indexOf("ERROR") + 7).split("+");
+        }
         oc.replace(
           JSON.stringify(
             { error: shortMessage.split("\r\n"), detailedOutput: `+${details.join("+")}`.split("\r\n") },
@@ -227,19 +231,34 @@ async function assemblePython(
   devCertPath: string,
   oc: vscode.OutputChannel
 ) {
+
+  let envOptions = {} as ExecOptions;
+  const pythonPath = await getPythonPath();
+
+  if (pythonPath !== "python") {
+    envOptions = {
+      env: {
+        // eslint-disable-next-line @typescript-eslint/naming-convention
+        PATH: `${path.resolve(pythonPath, "..")}${path.delimiter}${process.env.PATH}`, // add the python bin directory to the PATH
+        // eslint-disable-next-line @typescript-eslint/naming-convention
+        VIRTUAL_ENV: path.resolve(pythonPath, "..", ".."), // virtual env is right above bin directory
+      } 
+    };
+  }
+
   // Check we can run dt-sdk
-  await runCommand("dt-sdk --help", oc);
+  await runCommand("dt-sdk --help", oc, envOptions); // this will throw if dt-sdk is not available
 
   // Download dependencies
-  await runCommand(`dt-sdk wheel "${extensionDir}"`, oc);
+  await runCommand(`dt-sdk wheel "${extensionDir}"`, oc, envOptions);
 
   // Build the inner .zip archive
-  await runCommand(`dt-sdk assemble -o "${workspaceStorage}" "${extensionDir}"`, oc);
+  await runCommand(`dt-sdk assemble -o "${workspaceStorage}" "${extensionDir}"`, oc, envOptions);
 
   // Sign the inner .zip archive and write the signature file
   const innerZip = path.resolve(workspaceStorage, "extension.zip");
   const outerZip = path.resolve(workspaceStorage, zipFileName);
-  await runCommand(`dt-sdk sign -o "${outerZip}" -k "${devKeyPath}" -c "${devCertPath}" "${innerZip}"`, oc);
+  await runCommand(`dt-sdk sign -o "${outerZip}" -k "${devKeyPath}" -c "${devCertPath}" "${innerZip}"`, oc, envOptions);
 }
 
 /**
