@@ -249,16 +249,9 @@ async function assemblePython(
   // Check we can run dt-sdk
   await runCommand("dt-sdk --help", oc, envOptions); // this will throw if dt-sdk is not available
 
-  // Download dependencies
-  await runCommand(`dt-sdk wheel "${extensionDir}"`, oc, envOptions);
+  // Build
+  await runCommand(`dt-sdk build -k "${devKeyPath}" -c "${devCertPath}" "${extensionDir}" `, oc, envOptions);
 
-  // Build the inner .zip archive
-  await runCommand(`dt-sdk assemble -o "${workspaceStorage}" "${extensionDir}"`, oc, envOptions);
-
-  // Sign the inner .zip archive and write the signature file
-  const innerZip = path.resolve(workspaceStorage, "extension.zip");
-  const outerZip = path.resolve(workspaceStorage, zipFileName);
-  await runCommand(`dt-sdk sign -o "${outerZip}" -k "${devKeyPath}" -c "${devCertPath}" "${innerZip}"`, oc, envOptions);
 }
 
 /**
