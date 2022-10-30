@@ -71,7 +71,7 @@ export async function buildExtension(
           ? await assemblePython(workspaceStorage, workspaceRoot, zipFilename, devKey, devCert, oc)
           : await assembleStandard(workspaceStorage, extensionDir, zipFilename, devKey, devCert);
       } catch (err: any) {
-        vscode.window.showErrorMessage(`Error during archiving & signing: ${err}`);
+        vscode.window.showErrorMessage(`Error during archiving & signing: ${err.message}`);
         return;
       }
 
