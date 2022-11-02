@@ -265,7 +265,9 @@ Once installed, why not initialize a new workspace, or connect a tenant? Head ov
 
 # Known Limitations
 
-* When clicking the `+` button to add a new workspace, if the opened folder is empty the workspace is not initialized straight away
-  * Workaround: click the Dynatrace icon to trigger the workflow or use the command pallete to invoke the command
-* Auto-completions and Code actions might fail on invalid YAML
-  * Workaround: correct your YAML first, then try again
+- When clicking the `+` button to add a new workspace, if the opened folder is empty the workspace is not initialized straight away
+  - Workaround: click the Dynatrace icon to trigger the workflow or use the command pallete to invoke the command
+- Auto-completions and Code actions might fail on invalid YAML
+  - Solution: correct your YAML first, then try again
+- I just loaded schemas but validation isn't working
+  - Solution: open command palette (`Ctrl+Shift+P`) then choose "Reload window"

@@ -59,8 +59,9 @@ This project is structured as follows:
 	|   |-- codeLens/		# Main folder for Code Lens providers (see above for structure)
 	|   |-- commandPalette/		# Main folder for commands available in the Command Palette
 	|   |-- diagnostics/		# Main folder for diagnostics provider
-	|   |    |-- diagnosticData.ts  # Collection of diagnostic items
+	|   |    |-- diagnosticData.ts  # Collection of known diagnostics data
 	|   |    |-- diagnostics.ts     # Implementation of diagnostics provider
+	|   |    |-- diagnosticFixProvider.ts  # Implementation of diagnostic fix actions provider
 	|   |
 	|   |-- dynatrace-api/		# Client for Dynatrace API operations
 	|   |    |-- configuration_v1/	# All operations of Config v1 endpoint
