@@ -67,11 +67,11 @@ export const EXTENSION_NAME_CUSTOM_ON_BITBUCKET: CopilotDiagnostic = {
 export const COUNT_METRIC_KEY_SUFFIX: CopilotDiagnostic = {
   code: "DEC006",
   severity: vscode.DiagnosticSeverity.Warning,
-  message: 'Metrics of type count should have keys ending in ".count"'
+  message: 'Metrics of type count should have keys ending in ".count" or "_count"'
 };
 
 export const GAUGE_METRIC_KEY_SUFFIX: CopilotDiagnostic = {
   code: "DEC007",
   severity: vscode.DiagnosticSeverity.Warning,
-  message: 'Metrics of type gauge should not have keys ending in ".count"'
+  message: 'Metrics of type gauge should not have keys ending in ".count" or "_count"'
 };

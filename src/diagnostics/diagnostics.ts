@@ -112,18 +112,18 @@ export class DiagnosticsProvider {
     var diagnostics: vscode.Diagnostic[] = [];
     getMetricsFromDataSource(extension)
       .filter(
-        (m) => (m.type === "count" && !m.key.endsWith(".count")) || (m.type === "gauge" && m.key.endsWith(".count"))
+        (m) =>
+          (m.type === "count" && !(m.key.endsWith(".count") || m.key.endsWith("_count"))) ||
+          (m.type === "gauge" && (m.key.endsWith(".count") || m.key.endsWith("_count")))
       )
       .forEach((m) => {
-        const metricRegex = new RegExp(`key: "?${m.key}"?$`, "gm");
+        const metricRegex = new RegExp(`key: "?${m.key.replace(/\./g, "\\.")}"?(?:$|(?: .*$))`, "gm");
         let match;
         while ((match = metricRegex.exec(content)) !== null) {
-          const line = document.lineAt(document.positionAt(match.index).line);
-          const keyStart = line.text.indexOf(m.key);
           diagnostics.push(
             copilotDiagnostic(
-              new vscode.Position(line.lineNumber, keyStart),
-              new vscode.Position(line.lineNumber, line.text.length),
+              document.positionAt(match.index + match[0].indexOf(m.key)),
+              document.positionAt(match.index + match[0].indexOf(m.key) + m.key.length),
               m.type === "count" ? COUNT_METRIC_KEY_SUFFIX : GAUGE_METRIC_KEY_SUFFIX
             )
           );
