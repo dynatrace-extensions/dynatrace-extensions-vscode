@@ -68,18 +68,19 @@ export async function buildExtension(
       const zipFilename = `${extension.name.replace(":", "_")}-${extension.version}.zip`;
       try {
         getDatasourceName(extension) === "python"
-          ? await assemblePython(workspaceStorage, workspaceRoot, zipFilename, devKey, devCert, oc)
-          : await assembleStandard(workspaceStorage, extensionDir, zipFilename, devKey, devCert);
+          ? await assemblePython(workspaceRoot, devKey, devCert, oc)
+          : assembleStandard(workspaceStorage, extensionDir, zipFilename, devKey, devCert);
       } catch (err: any) {
         vscode.window.showErrorMessage(`Error during archiving & signing: ${err.message}`);
         return;
       }
 
       // Validation & upload workflow
-      progress.report({ message: "Validating extension" });
       if (fastMode) {
-        uploadAndActivate(path.resolve(distDir, zipFilename), extension, dt!, fastMode.status, oc);
+        progress.report({ message: "Uploading to Dynatrace" });
+        await uploadAndActivate(workspaceStorage, zipFilename, distDir, extension, dt!, fastMode.status, oc);
       } else {
+        progress.report({ message: "Validating extension" });
         const valid = await validateExtension(workspaceStorage, zipFilename, distDir, oc, dt);
         if (valid) {
           vscode.window
@@ -216,22 +217,17 @@ function runCommand(command: string, oc: vscode.OutputChannel, envOptions?: Exec
  * Carries out the archiving and signing parts of the extension build workflow.
  * This function is meant for Python extesnions 2.0, therefore all the steps are carried
  * out through `dt-sdk` which must be available on the machine.
- * @param workspaceStorage path to the VS Code folder for this workspace's storage
  * @param extensionDir path to the "extension" folder within the workspace
- * @param zipFileName the name of the .zip file for this build
  * @param devKeyPath the path to the developer's private key
  * @param devCertPath the path to the developer's certificate
  * @param oc JSON output channel for communicating errors
  */
 async function assemblePython(
-  workspaceStorage: string,
   extensionDir: string,
-  zipFileName: string,
   devKeyPath: string,
   devCertPath: string,
   oc: vscode.OutputChannel
 ) {
-
   let envOptions = {} as ExecOptions;
   const pythonPath = await getPythonPath();
 
@@ -242,7 +238,7 @@ async function assemblePython(
         PATH: `${path.resolve(pythonPath, "..")}${path.delimiter}${process.env.PATH}`, // add the python bin directory to the PATH
         // eslint-disable-next-line @typescript-eslint/naming-convention
         VIRTUAL_ENV: path.resolve(pythonPath, "..", ".."), // virtual env is right above bin directory
-      } 
+      },
     };
   }
 
@@ -251,7 +247,6 @@ async function assemblePython(
 
   // Build
   await runCommand(`dt-sdk build -k "${devKeyPath}" -c "${devCertPath}" "${extensionDir}" `, oc, envOptions);
-
 }
 
 /**
@@ -299,62 +294,60 @@ async function validateExtension(
  * If the extension limit has been reached on tenant, either the first or the last version is
  * removed automatically, the extension uploaded, and immediately activated.
  * This skips any prompts compared to regular flow and does not preform any validation.
- * @param extensionFile path to the extension file within the workspace
+ * @param workspaceStorage path to the VS Code folder for this workspace's storage
+ * @param zipFileName the name of the .zip file for this build
+ * @param distDir path to the "dist" folder within the workspace
  * @param extension extension.yaml serialized as object
  * @param dt Dynatrace API Client
  * @param status status bar to be updated with build status
  * @param oc JSON output channel for communicating errors
  */
 async function uploadAndActivate(
-  extensionFile: string,
+  workspaceStorage: string,
+  zipFileName: string,
+  distDir: string,
   extension: ExtensionStub,
   dt: Dynatrace,
   status: FastModeStatus,
   oc: vscode.OutputChannel
 ) {
-  await vscode.window.withProgress(
-    {
-      location: vscode.ProgressLocation.Notification,
-      title: "Building extension",
-    },
-    async (progress) => {
-      try {
-        // Check upload possible
-        progress.report({ message: "Uploading to Dynatrace" });
-        var existingVersions = await dt.extensionsV2.listVersions(extension.name).catch((err) => {
-          return [];
-        });
-        if (existingVersions.length >= 10) {
-          // Try delete oldest version
-          await dt.extensionsV2.deleteVersion(extension.name, existingVersions[0].version).catch(async () => {
-            // Try delete newest version
-            await dt.extensionsV2.deleteVersion(extension.name, existingVersions[existingVersions.length - 1].version);
-          });
-        }
-        // Upload to Dynatrace & activate version
-        await dt.extensionsV2.upload(readFileSync(extensionFile)).then(() => {
-          progress.report({ message: "Activating extension" });
-          dt.extensionsV2.putEnvironmentConfiguration(extension.name, extension.version);
-        });
-        status.updateStatusBar(true, extension.version, true);
-        oc.clear();
-      } catch (err: any) {
-        // Mark the status bar as build failing
-        status.updateStatusBar(true, extension.version, false);
-        // Provide details in output channel
-        oc.replace(
-          JSON.stringify(
-            {
-              extension: extension.name,
-              version: extension.version,
-              errorDetails: err.errorParams,
-            },
-            null,
-            2
-          )
-        );
-        oc.show();
-      }
+  try {
+    // Check upload possible
+    var existingVersions = await dt.extensionsV2.listVersions(extension.name).catch((err) => {
+      return [];
+    });
+    if (existingVersions.length >= 10) {
+      // Try delete oldest version
+      await dt.extensionsV2.deleteVersion(extension.name, existingVersions[0].version).catch(async () => {
+        // Try delete newest version
+        await dt.extensionsV2.deleteVersion(extension.name, existingVersions[existingVersions.length - 1].version);
+      });
     }
-  );
+    // Upload to Dynatrace & activate version
+    await dt.extensionsV2.upload(readFileSync(path.resolve(workspaceStorage, zipFileName))).then(() => {
+      dt.extensionsV2.putEnvironmentConfiguration(extension.name, extension.version);
+    });
+    // Copy .zip archive into dist dir
+    copyFileSync(path.resolve(workspaceStorage, zipFileName), path.resolve(distDir, zipFileName));
+    status.updateStatusBar(true, extension.version, true);
+    oc.clear();
+  } catch (err: any) {
+    // Mark the status bar as build failing
+    status.updateStatusBar(true, extension.version, false);
+    // Provide details in output channel
+    oc.replace(
+      JSON.stringify(
+        {
+          extension: extension.name,
+          version: extension.version,
+          errorDetails: err.errorParams,
+        },
+        null,
+        2
+      )
+    );
+    oc.show();
+  } finally {
+    rmSync(path.resolve(workspaceStorage, zipFileName));
+  }
 }
