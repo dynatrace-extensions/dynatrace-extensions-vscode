@@ -39,6 +39,15 @@ export class DiagnosticsProvider {
   }
 
   /**
+   * Retrieve the Diagnostics currently logged by the Extensions Copilot.
+   * @param uri URI of the extension.yaml file
+   * @returns list of diagnostic items
+   */
+  public getDiagnostics(uri: vscode.Uri): vscode.Diagnostic[] {
+    return [...(this.collection.get(uri) || [])];
+  }
+
+  /**
    * Checks whether extension is valid for building.
    * Essentially checks whether there are any diagnostics created with severity "Error".
    * @returns true if extension will Build, false otherwise

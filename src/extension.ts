@@ -37,6 +37,7 @@ import { PrometheusActionProvider } from "./codeActions/prometheus";
 import { createOverviewDashboard } from "./commandPalette/createDashboard";
 import { ScreenLensProvider } from "./codeLens/screenCodeLens";
 import { BitBucketStatus } from "./statusBar/bitbucket";
+import { DiagnosticFixProvider } from "./diagnostics/diagnosticFixProvider";
 
 /**
  * Sets up the VSCode extension by registering all the available functionality as disposable objects.
@@ -80,6 +81,7 @@ export function activate(context: vscode.ExtensionContext) {
   const fastModeStatus = new FastModeStatus(fastModeChannel);
   const genericChannel = vscode.window.createOutputChannel("Dynatrace", "json");
   const diagnosticsProvider = new DiagnosticsProvider();
+  const diagnosticFixProvider = new DiagnosticFixProvider(diagnosticsProvider);
   var editTimeout: NodeJS.Timeout | undefined;
   if (checkWorkspaceOpen() && isExtensionsWorkspace(context)) {
     checkBitBucketReady().then((ready) => {
@@ -105,6 +107,10 @@ export function activate(context: vscode.ExtensionContext) {
     }),
     // Code actions for Prometheus data
     vscode.languages.registerCodeActionsProvider(extension2selector, prometheusActionProvider, {
+      providedCodeActionKinds: [vscode.CodeActionKind.QuickFix],
+    }),
+    // Code actions for fixing issues
+    vscode.languages.registerCodeActionsProvider(extension2selector, diagnosticFixProvider, {
       providedCodeActionKinds: [vscode.CodeActionKind.QuickFix],
     }),
     // Connection Status Bar Item
