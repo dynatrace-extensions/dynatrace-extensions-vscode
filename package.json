@@ -2,7 +2,7 @@
 	"name": "dt-ext-copilot",
 	"displayName": "Dynatrace Extensions Copilot",
 	"description": "Support for Dynatrace Extension 2.0 development",
-	"version": "0.18.0",
+	"version": "0.19.0",
 	"repository": {
 		"type": "git",
 		"url": "https://github.com/dynatrace-extensions/dynatrace-extensions-copilot.git"

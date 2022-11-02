@@ -262,3 +262,10 @@ In VSCode, open the Extensions menu, click the "..." and choose "Install from VS
 Once installed, why not initialize a new workspace, or connect a tenant? Head over to the new [Dynatrace view](#custom-dynatrace-view) to start.
 
 ![get_started](previews/get_started.gif)
+
+# Known Limitations
+
+* When clicking the `+` button to add a new workspace, if the opened folder is empty the workspace is not initialized straight away
+  * Workaround: click the Dynatrace icon to trigger the workflow or use the command pallete to invoke the command
+* Auto-completions and Code actions might fail on invalid YAML
+  * Workaround: correct your YAML first, then try again

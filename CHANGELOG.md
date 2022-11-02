@@ -1,5 +1,17 @@
 # Change Log
 
+## Version 0.19.0 / Stage: beta(02.11.2022)
+
+### 🚀 Improved in this version:
+- Building python extensions uses virtual environment if one is detected (depends on VSCode Python extension)
+
+### 🪲 Fixed in this version:
+- [#21 - Fast development mode build issues](https://github.com/dynatrace-extensions/dynatrace-extensions-copilot/issues/21)
+- [#20 - Create documentation is not invoked properly](https://github.com/dynatrace-extensions/dynatrace-extensions-copilot/issues/20)
+- Diagnostics for metric keys are more accurate now
+
+---
+
 ## Version 0.18.0 / Stage: beta (28.10.2022)
 
 ### ✨ New in this version:
