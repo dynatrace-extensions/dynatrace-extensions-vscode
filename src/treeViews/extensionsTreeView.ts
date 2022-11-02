@@ -35,8 +35,8 @@ export class ExtensionsTreeDataProvider implements vscode.TreeDataProvider<Exten
   private registerCommands(context: vscode.ExtensionContext) {
     vscode.commands.registerCommand("dt-ext-copilot-workspaces.refresh", () => this.refresh()),
       vscode.commands.registerCommand("dt-ext-copilot-workspaces.addWorkspace", () => {
-        vscode.commands.executeCommand("vscode.openFolder");
         context.globalState.update("dt-ext-copilot.initPending", true);
+        vscode.commands.executeCommand("vscode.openFolder");
       });
     vscode.commands.registerCommand("dt-ext-copilot-workspaces.openWorkspace", (workspace: ExtensionProjectItem) => {
       vscode.commands.executeCommand("vscode.openFolder", workspace.path);
