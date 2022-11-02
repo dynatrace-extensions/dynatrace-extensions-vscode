@@ -395,56 +395,83 @@ export function getAllMetricsByFeatureSet(extension: ExtensionStub): FeatureSetD
 
   // Loop through groups, subgroups, and metrics to extract feature sets
   datasource.forEach((group) => {
+    // Each group may have a feature set at group level
     if (group.featureSet && !featureSets.map((fs) => fs.name).includes(group.featureSet)) {
       featureSets.push({
         name: group.featureSet,
         metrics: [],
       });
     }
+    // Each group may have metrics
     if (group.metrics) {
-      let fsIdx = featureSets.findIndex((fs) => fs.name === (group.featureSet || "default"));
-      featureSets[fsIdx].metrics.push(...group.metrics.map((m) => m.key));
+      group.metrics.forEach((m) => {
+        // Group metrics may be individually assigned a feature set
+        if (m.featureSet) {
+          if (!featureSets.map((fs) => fs.name).includes(m.featureSet)) {
+            featureSets.push({
+              name: m.featureSet,
+              metrics: [m.key],
+            });
+          } else {
+            let fsIdx = featureSets.findIndex((fs) => fs.name === m.featureSet);
+            if (!featureSets[fsIdx].metrics.includes(m.key)) {
+              featureSets[fsIdx].metrics.push(m.key);
+            }
+          }
+          // Otherwise, metrics will belong to the group's feature set or the default one
+        } else {
+          let fsIdx = featureSets.findIndex((fs) => fs.name === (group.featureSet || "default"));
+          featureSets[fsIdx].metrics.push(m.key);
+        }
+      });
     }
-
+    // Each group may have subgroups
     if (group.subgroups) {
       group.subgroups.forEach((sg) => {
+        // Each subgroup may be assigned a feature set
         if (sg.featureSet && !featureSets.map((fs) => fs.name).includes(sg.featureSet)) {
           featureSets.push({
             name: sg.featureSet,
             metrics: [],
           });
         }
-
-        sg.metrics.forEach((m) => {
-          if (m.featureSet) {
-            if (!featureSets.map((fs) => fs.name).includes(m.featureSet)) {
-              featureSets.push({
-                name: m.featureSet,
-                metrics: [m.key],
-              });
+        // Each subgroup may have metrics
+        if (sg.metrics) {
+          sg.metrics.forEach((m) => {
+            // Each metric may be individually assigned a feature set
+            if (m.featureSet) {
+              if (!featureSets.map((fs) => fs.name).includes(m.featureSet)) {
+                featureSets.push({
+                  name: m.featureSet,
+                  metrics: [m.key],
+                });
+              } else {
+                let fsIdx = featureSets.findIndex((fs) => fs.name === m.featureSet);
+                if (!featureSets[fsIdx].metrics.includes(m.key)) {
+                  featureSets[fsIdx].metrics.push(m.key);
+                }
+              }
+              // Otherwise it will fall back onto the subgroup feature set
+            } else if (sg.featureSet) {
+              let fsIdx = featureSets.findIndex((fs) => fs.name === sg.featureSet);
+              if (!featureSets[fsIdx].metrics.includes(m.key)) {
+                featureSets[fsIdx].metrics.push(m.key);
+              }
+              // Otherwise it will fall back onto the group feature set
+            } else if (group.featureSet) {
+              let fsIdx = featureSets.findIndex((fs) => fs.name === group.featureSet);
+              if (!featureSets[fsIdx].metrics.includes(m.key)) {
+                featureSets[fsIdx].metrics.push(m.key);
+              }
+              // Otherwise it will belong to the default feature set
             } else {
               let fsIdx = featureSets.findIndex((fs) => fs.name === "default");
-              if (fsIdx !== -1 && !featureSets[fsIdx].metrics.includes(m.key)) {
+              if (!featureSets[fsIdx].metrics.includes(m.key)) {
                 featureSets[fsIdx].metrics.push(m.key);
               }
             }
-          } else if (sg.featureSet) {
-            let fsIdx = featureSets.findIndex((fs) => fs.name === sg.featureSet);
-            if (fsIdx !== -1 && !featureSets[fsIdx].metrics.includes(m.key)) {
-              featureSets[fsIdx].metrics.push(m.key);
-            }
-          } else if (group.featureSet) {
-            let fsIdx = featureSets.findIndex((fs) => fs.name === group.featureSet);
-            if (fsIdx !== -1 && !featureSets[fsIdx].metrics.includes(m.key)) {
-              featureSets[fsIdx].metrics.push(m.key);
-            }
-          } else {
-            let fsIdx = featureSets.findIndex((fs) => fs.name === "default");
-            if (fsIdx !== -1 && !featureSets[fsIdx].metrics.includes(m.key)) {
-              featureSets[fsIdx].metrics.push(m.key);
-            }
-          }
-        });
+          });
+        }
       });
     }
   });

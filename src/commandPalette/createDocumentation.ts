@@ -11,21 +11,18 @@ import { getAllMetricsByFeatureSet } from "../utils/extensionParsing";
  * @returns void
  */
 export async function createDocumentation() {
-  // Check yaml file exists
-  var extensionYaml = await vscode.workspace.findFiles("**/extension.yaml");
-  if (!extensionYaml) {
-    vscode.window.showErrorMessage(
-      "Could not find extension.yaml. Check that you are in an extension workspace and try again."
-    );
-    return;
-  }
-  var extensionDir = path.dirname(extensionYaml[0].fsPath);
-  var extension = yaml.parse(readFileSync(extensionYaml[0].fsPath).toString());
+  await vscode.window.withProgress(
+    { location: vscode.ProgressLocation.Notification, title: "Creating documentation" },
+    async (progress) => {
+      progress.report({ message: "Parsing metadata" });
+      var extensionYaml = await vscode.workspace.findFiles("**/extension.yaml").then((files) => files[0].fsPath);
+      var extensionDir = path.dirname(extensionYaml);
+      var extension = yaml.parse(readFileSync(extensionYaml).toString());
 
-  writeDocumentation(extension, extensionDir);
-
-  // Link command - create Hub tile
-  // TODO: Needs implementation
+      progress.report({ message: "Writing README.md" });
+      writeDocumentation(extension, extensionDir);
+    }
+  );
 }
 
 /**
@@ -49,14 +46,14 @@ function writeDocumentation(extension: ExtensionStub, extensionDir: string) {
   docContent += `**Latest version:** ${extension.version}\n`;
   docContent +=
     "This extension is built using the Dynatrace Extension 2.0 Framework.\nThis means it will benefit of additional assets that can help you browse through the data.\n\n";
-  if (entities) {
+  if (entities.length > 0) {
     docContent += "## Topology\n\nThis extension will create the following types of entities:\n";
     entities.forEach((entity) => {
       docContent += `* ${entity.name} (${entity.type})\n`;
     });
     docContent += "\n";
   }
-  if (metrics) {
+  if (metrics.length > 0) {
     docContent += "## Metrics\n\nThis extension will collect the following metrics:\n";
     metricsMap.forEach((mm) => {
       docContent += `* Split by ${mm.metricEntityString}:\n`;
@@ -67,7 +64,7 @@ function writeDocumentation(extension: ExtensionStub, extensionDir: string) {
     });
     docContent += "\n";
   }
-  if (alerts) {
+  if (alerts.length > 0) {
     docContent +=
       "## Alerts\n\nCustom events for alerting are packaged along with the extension. These should be reviewed and ajusted as needed before enabling from the Settings page.\nAlerts:\n";
     alerts.forEach((alert) => {
@@ -78,7 +75,7 @@ function writeDocumentation(extension: ExtensionStub, extensionDir: string) {
     });
     docContent += "\n";
   }
-  if (dashboards) {
+  if (dashboards.length > 0) {
     docContent += `## Dashboards\n\nThis extension is packaged with ${dashboards.length} dashboards which should serve as a starting point for data analysis.`;
     docContent += "\nYou can find these by opening the Dashboards menu and searching for:\n\n";
     dashboards.forEach((dashboard) => {
@@ -120,6 +117,9 @@ function writeDocumentation(extension: ExtensionStub, extensionDir: string) {
  * @returns processed alerts metadata
  */
 function extractAlerts(extension: ExtensionStub, extensionDir: string): AlertDoc[] {
+  if (!extension.alerts) {
+    return [];
+  }
   return extension.alerts.map((pathEntry) => {
     var alert = JSON.parse(readFileSync(path.join(extensionDir, pathEntry.path)).toString());
 
@@ -149,6 +149,9 @@ function extractAlerts(extension: ExtensionStub, extensionDir: string): AlertDoc
  * @returns processed dashboard metadata
  */
 function extractDashboards(extension: ExtensionStub, extensionDir: string): DashboardDoc[] {
+  if (!extension.dashboards) {
+    return [];
+  }
   return extension.dashboards.map((pathEntry) => {
     var dashboard = JSON.parse(readFileSync(path.join(extensionDir, pathEntry.path)).toString());
 
@@ -164,6 +167,9 @@ function extractDashboards(extension: ExtensionStub, extensionDir: string): Dash
  * @returns topology processed metadata
  */
 function extractTopology(extension: ExtensionStub): EntityDoc[] {
+  if (!extension.topology || !extension.topology.types) {
+    return [];
+  }
   return extension.topology.types.map((topologyType): EntityDoc => {
     var entitySources: string[] = [];
     topologyType.rules.forEach((rule) => {
@@ -190,6 +196,9 @@ function extractTopology(extension: ExtensionStub): EntityDoc[] {
  * @returns metrics processed metadata
  */
 function extractMetrics(extension: ExtensionStub): MetricDoc[] {
+  if (!extension.metrics) {
+    return [];
+  }
   return extension.metrics.map((metric) => {
     return {
       key: metric.key,
@@ -232,7 +241,6 @@ function mapEntitiesToMetrics(entities: EntityDoc[], metrics: MetricDoc[]): Metr
     entity.metrics = entityMetrics;
     return entity;
   });
-  console.log(entities);
 
   metrics = metrics.map((m) => {
     m.entities = entities.filter((e) => e.metrics.includes(m.key)).map((e) => e.name);

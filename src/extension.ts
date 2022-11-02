@@ -316,7 +316,9 @@ function registerCommandPaletteCommands(
     }),
     // Create Extension documentation
     vscode.commands.registerCommand("dt-ext-copilot.createDocumentation", () => {
-      createDocumentation();
+      if (checkWorkspaceOpen() && isExtensionsWorkspace(context)) {
+        createDocumentation();
+      }
     }),
     // Create Overview dashboard
     vscode.commands.registerCommand("dt-ext-copilot.createDashboard", () => {
