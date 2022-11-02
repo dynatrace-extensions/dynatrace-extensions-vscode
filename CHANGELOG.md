@@ -9,6 +9,7 @@
 - [#21 - Fast development mode build issues](https://github.com/dynatrace-extensions/dynatrace-extensions-copilot/issues/21)
 - [#20 - Create documentation is not invoked properly](https://github.com/dynatrace-extensions/dynatrace-extensions-copilot/issues/20)
 - Diagnostics for metric keys are more accurate now
+- Metrics by featureset are now collected more accurately
 
 ---
 
