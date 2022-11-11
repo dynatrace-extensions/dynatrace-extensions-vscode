@@ -320,12 +320,16 @@ async function uploadAndActivate(
     }
 
     const file = readFileSync(path.resolve(workspaceStorage, zipFileName));
-    // // Upload to Dynatrace
+    // Upload to Dynatrace
     do {
+      var lastError;
       var uploadStatus: string = await dt.extensionsV2
         .upload(file)
         .then(() => "success")
-        .catch((err: DynatraceAPIError) => err.errorParams.message);
+        .catch((err: DynatraceAPIError) => {
+          lastError = err;
+          return err.errorParams.message;
+        });
       // Previous version deletion may not be complete yet, loop until done.
       if (uploadStatus.startsWith("Extension versions quantity limit")) {
         await new Promise((resolve) => setTimeout(resolve, 1000));
@@ -336,7 +340,7 @@ async function uploadAndActivate(
     if (uploadStatus === "success") {
       dt.extensionsV2.putEnvironmentConfiguration(extension.name, extension.version);
     } else {
-      throw new DynatraceAPIError(uploadStatus, { message: uploadStatus });
+      throw lastError;
     }
 
     // Copy .zip archive into dist dir
