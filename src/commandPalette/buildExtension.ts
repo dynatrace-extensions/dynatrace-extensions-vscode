@@ -77,7 +77,7 @@ export async function buildExtension(
 
       // Validation & upload workflow
       if (fastMode) {
-        progress.report({ message: "Uploading to Dynatrace" });
+        progress.report({ message: "Uploading & activating extension" });
         await uploadAndActivate(workspaceStorage, zipFilename, distDir, extension, dt!, fastMode.status, oc);
       } else {
         progress.report({ message: "Validating extension" });
@@ -222,12 +222,7 @@ function runCommand(command: string, oc: vscode.OutputChannel, envOptions?: Exec
  * @param devCertPath the path to the developer's certificate
  * @param oc JSON output channel for communicating errors
  */
-async function assemblePython(
-  extensionDir: string,
-  devKeyPath: string,
-  devCertPath: string,
-  oc: vscode.OutputChannel
-) {
+async function assemblePython(extensionDir: string, devKeyPath: string, devCertPath: string, oc: vscode.OutputChannel) {
   let envOptions = {} as ExecOptions;
   const pythonPath = await getPythonPath();
 
@@ -323,10 +318,27 @@ async function uploadAndActivate(
         await dt.extensionsV2.deleteVersion(extension.name, existingVersions[existingVersions.length - 1].version);
       });
     }
-    // Upload to Dynatrace & activate version
-    await dt.extensionsV2.upload(readFileSync(path.resolve(workspaceStorage, zipFileName))).then(() => {
+
+    const file = readFileSync(path.resolve(workspaceStorage, zipFileName));
+    // // Upload to Dynatrace
+    do {
+      var uploadStatus: string = await dt.extensionsV2
+        .upload(file)
+        .then(() => "success")
+        .catch((err: DynatraceAPIError) => err.errorParams.message);
+      // Previous version deletion may not be complete yet, loop until done.
+      if (uploadStatus.startsWith("Extension versions quantity limit")) {
+        await new Promise((resolve) => setTimeout(resolve, 1000));
+      }
+    } while (uploadStatus.startsWith("Extension versions quantity limit"));
+
+    // Activate extension or throw error
+    if (uploadStatus === "success") {
       dt.extensionsV2.putEnvironmentConfiguration(extension.name, extension.version);
-    });
+    } else {
+      throw new DynatraceAPIError(uploadStatus, { message: uploadStatus });
+    }
+
     // Copy .zip archive into dist dir
     copyFileSync(path.resolve(workspaceStorage, zipFileName), path.resolve(distDir, zipFileName));
     status.updateStatusBar(true, extension.version, true);

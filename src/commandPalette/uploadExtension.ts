@@ -75,6 +75,7 @@ export async function uploadExtension(dt: Dynatrace) {
               placeHolder: "Please choose an alternative",
             }
           )
+          // Remove the user's chosen version
           .then((version) => {
             if (version) {
               dt.extensionsV2
@@ -88,6 +89,7 @@ export async function uploadExtension(dt: Dynatrace) {
                   return false;
                 });
             }
+            return false;
           });
       });
     if (!success) {
@@ -95,23 +97,44 @@ export async function uploadExtension(dt: Dynatrace) {
     }
   }
 
-  // Upload extension and prompt for activation
-  dt.extensionsV2
-    .upload(readFileSync(path.join(distDir, extensionZip)))
-    .then(async () => {
-      var choice = await vscode.window.showInformationMessage(
-        "Extension uploaded successfully. Do you want to activate this version?",
-        "Yes",
-        "No"
-      );
-      if (choice !== "Yes") {
-        vscode.window.showInformationMessage("Operation completed.");
-        return;
-      }
-      vscode.commands.executeCommand("dt-ext-copilot.activateExtension", extensionVersion);
-    })
-    .catch((err: DynatraceAPIError) => {
-      vscode.window.showErrorMessage(err.errorParams.message);
-      vscode.window.showErrorMessage("Extension upload failed.");
-    });
+  // Upload extension
+  const status = await vscode.window.withProgress(
+    {
+      location: vscode.ProgressLocation.Notification,
+      title: "Uploading extension",
+      cancellable: true,
+    },
+    async (progress) => {
+      const file = readFileSync(path.join(distDir, extensionZip));
+      progress.report({ message: "Waiting to complete" });
+      do {
+        var status: string = await dt.extensionsV2
+          .upload(file)
+          .then(() => "success")
+          .catch((err: DynatraceAPIError) => err.errorParams.message);
+        // Previous version deletion may not be complete yet, loop until done.
+        if (status.startsWith("Extension versions quantity limit")) {
+          await new Promise((resolve) => setTimeout(resolve, 1000));
+        }
+      } while (status.startsWith("Extension versions quantity limit"));
+      return status;
+    }
+  );
+
+  // Prompt for version activation
+  if (status === "success") {
+    var choice = await vscode.window.showInformationMessage(
+      "Extension uploaded successfully. Do you want to activate this version?",
+      "Yes",
+      "No"
+    );
+    if (choice !== "Yes") {
+      vscode.window.showInformationMessage("Operation completed.");
+      return;
+    }
+    vscode.commands.executeCommand("dt-ext-copilot.activateExtension", extensionVersion);
+  } else {
+    vscode.window.showErrorMessage(status);
+    vscode.window.showErrorMessage("Extension upload failed.");
+  }
 }
