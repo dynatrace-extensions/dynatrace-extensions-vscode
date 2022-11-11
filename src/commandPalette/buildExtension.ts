@@ -34,7 +34,7 @@ export async function buildExtension(
   fastMode?: FastModeOptions
 ) {
   // Basic details we already know exist
-  const workspaceStorage = context.storageUri!.fsPath;
+  let workspaceStorage = context.storageUri!.fsPath;
   const workSpaceConfig = vscode.workspace.getConfiguration("dynatrace", null);
   const devKey = workSpaceConfig.get("developerKeyLocation") as string;
   const devCert = workSpaceConfig.get("developerCertificateLocation") as string;
@@ -78,6 +78,7 @@ export async function buildExtension(
       // Validation & upload workflow
       if (fastMode) {
         progress.report({ message: "Uploading & activating extension" });
+        getDatasourceName(extension) === "python" ? workspaceStorage = path.resolve(workspaceRoot, "dist") : workspaceStorage;
         await uploadAndActivate(workspaceStorage, zipFilename, distDir, extension, dt!, fastMode.status, oc);
       } else {
         progress.report({ message: "Validating extension" });
