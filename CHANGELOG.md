@@ -1,6 +1,6 @@
 # Change Log
 
-## Version 0.20.0 / Stage: beta (11.11.2022)
+## Version 0.20.1 / Stage: beta (11.11.2022)
 
 ### ✨ New in this version:
 - First diagnostics fix actions. Fix one or all your metric key issues.
