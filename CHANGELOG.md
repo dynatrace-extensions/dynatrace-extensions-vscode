@@ -1,6 +1,20 @@
 # Change Log
 
-## Version 0.19.0 / Stage: beta(02.11.2022)
+## Version 0.20.0 / Stage: beta (11.11.2022)
+
+### ✨ New in this version:
+- First diagnostics fix actions. Fix one or all your metric key issues.
+
+### 🚀 Improved in this version:
+- Diagnostics for metric keys are more accurately highlighted
+
+### 🪲 Fixed in this version:
+- [#22 - Wait needed after Deleting Oldest Extension Version](https://github.com/dynatrace-extensions/dynatrace-extensions-copilot/issues/22)
+  - Fixed for all: Regular Build/Upload + FastMode Build
+
+---
+
+## Version 0.19.0 / Stage: beta (02.11.2022)
 
 ### 🚀 Improved in this version:
 - Building python extensions uses virtual environment if one is detected (depends on VSCode Python extension)
