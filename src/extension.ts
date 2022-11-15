@@ -167,7 +167,6 @@ export function activate(context: vscode.ExtensionContext) {
     // Web view panel - WMI query results
     vscode.window.registerWebviewPanelSerializer(WMIQueryResultsPanel.viewType, {
       async deserializeWebviewPanel(webviewPanel: vscode.WebviewPanel, state: any) {
-        console.log(`Got state: ${state}`);
         webviewPanel.webview.options = { enableScripts: true };
         WMIQueryResultsPanel.revive(webviewPanel, {} as WmiQueryResult);
       },
