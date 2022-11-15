@@ -38,6 +38,9 @@ import { createOverviewDashboard } from "./commandPalette/createDashboard";
 import { ScreenLensProvider } from "./codeLens/screenCodeLens";
 import { BitBucketStatus } from "./statusBar/bitbucket";
 import { DiagnosticFixProvider } from "./diagnostics/diagnosticFixProvider";
+import { WmiCodeLensProvider } from "./codeLens/wmiCodeLens";
+import { runWMIQuery, WmiQueryResult } from "./codeLens/utils/wmiUtils";
+import { WMIQueryResultsPanel } from "./webviews/wmiQueryResults";
 
 /**
  * Sets up the VSCode extension by registering all the available functionality as disposable objects.
@@ -77,6 +80,7 @@ export function activate(context: vscode.ExtensionContext) {
   const screensLensProvider = new ScreenLensProvider(tenantsTreeViewProvider);
   const prometheusLensProvider = new PrometheusCodeLensProvider(cachedDataProvider);
   const prometheusActionProvider = new PrometheusActionProvider(cachedDataProvider);
+  const wmiLensProvider = new WmiCodeLensProvider();
   const fastModeChannel = vscode.window.createOutputChannel("Dynatrace Fast Mode", "json");
   const fastModeStatus = new FastModeStatus(fastModeChannel);
   const genericChannel = vscode.window.createOutputChannel("Dynatrace", "json");
@@ -124,6 +128,8 @@ export function activate(context: vscode.ExtensionContext) {
     vscode.languages.registerCodeLensProvider(extension2selector, entityLensProvider),
     // Code Lens for opening screens
     vscode.languages.registerCodeLensProvider(extension2selector, screensLensProvider),
+    // Code Lens for WMI queries
+    vscode.languages.registerCodeLensProvider(extension2selector, wmiLensProvider),
     // Commands for metric and entity selector Code Lenses
     vscode.commands.registerCommand(
       "dt-ext-copilot.codelens.validateSelector",
@@ -144,12 +150,26 @@ export function activate(context: vscode.ExtensionContext) {
         }
       }
     ),
+    vscode.commands.registerCommand(
+      "dt-ext-copilot.codelens.runWMIQuery",
+      async (query: string) => {
+        runWMIQuery(query, genericChannel, wmiLensProvider.processQueryResults);
+      }
+    ),
     // Web view panel - metric query results
     vscode.window.registerWebviewPanelSerializer(MetricResultsPanel.viewType, {
       async deserializeWebviewPanel(webviewPanel: vscode.WebviewPanel, state: any) {
         console.log(`Got state: ${state}`);
         webviewPanel.webview.options = { enableScripts: true };
         MetricResultsPanel.revive(webviewPanel, "No data to display. Close the tab and trigger the action again.");
+      },
+    }),
+    // Web view panel - WMI query results
+    vscode.window.registerWebviewPanelSerializer(WMIQueryResultsPanel.viewType, {
+      async deserializeWebviewPanel(webviewPanel: vscode.WebviewPanel, state: any) {
+        console.log(`Got state: ${state}`);
+        webviewPanel.webview.options = { enableScripts: true };
+        WMIQueryResultsPanel.revive(webviewPanel, {} as WmiQueryResult);
       },
     }),
     // Activity on every document save
