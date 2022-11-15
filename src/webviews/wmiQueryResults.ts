@@ -10,6 +10,12 @@ export class WMIQueryResultsPanel {
   public static createOrShow(data: WmiQueryResult) {
     const column = vscode.window.activeTextEditor ? vscode.ViewColumn.Beside : undefined;
 
+    // If we already have a panel, show it.
+    if (WMIQueryResultsPanel.currentPanel) {
+        WMIQueryResultsPanel.currentPanel.refresh(data);
+        return;
+      }
+
     const panel = vscode.window.createWebviewPanel(
       WMIQueryResultsPanel.viewType,
       "WMI Query results",
@@ -54,6 +60,10 @@ export class WMIQueryResultsPanel {
 
   public static revive(panel: vscode.WebviewPanel, data: WmiQueryResult) {
     WMIQueryResultsPanel.currentPanel = new WMIQueryResultsPanel(panel, data);
+  }
+
+  public refresh(data: WmiQueryResult) {
+    this._update(data);
   }
 
   private _update(data: WmiQueryResult) {

@@ -124,6 +124,7 @@ export class WmiCodeLensProvider implements vscode.CodeLensProvider {
    * @param document the document to search for the query
    */
   createLens(lineToMatch: string, document: vscode.TextDocument) {
+    console.log(`Creating lens for query: ${lineToMatch}`);
     // If this exact query string was already added, return
     // Needed in the rare case the user has the same query more than once
     if (
@@ -131,16 +132,22 @@ export class WmiCodeLensProvider implements vscode.CodeLensProvider {
         (lens) => (lens as WmiQueryLens).wmiQuery === lineToMatch
       )
     ) {
-      return [];
+      return;
     }
     const text = document.getText();
-    const regex = new RegExp(lineToMatch, "g");
-    const matches = Array.from(text.matchAll(regex));
+    // Find the indexes where lineToMatch is on text
+    const matches = [];
+    let i = -1;
+    while ((i = text.indexOf(lineToMatch, i + 1)) !== -1) {
+        matches.push({line: lineToMatch, index: i});
+    }
+
+    
 
     for (const match of matches) {
       const range = new vscode.Range(
-        document.positionAt(match.index!),
-        document.positionAt(match.index! + match[0].length)
+        document.positionAt(match.index),
+        document.positionAt(match.index + match.line.length)
       );
 
       if (range) {
