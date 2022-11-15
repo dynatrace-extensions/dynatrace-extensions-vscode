@@ -14,7 +14,7 @@ class WmiQueryLens extends vscode.CodeLens {
   constructor(range: vscode.Range, wmiQuery: string) {
     super(range, {
       title: "▶️ Run WMI Query",
-      tooltip: "Run a WMI on this host",
+      tooltip: "Run a WMI query on this host",
       command: "dt-ext-copilot.codelens.runWMIQuery",
       arguments: [wmiQuery],
     });
@@ -124,7 +124,6 @@ export class WmiCodeLensProvider implements vscode.CodeLensProvider {
    * @param document the document to search for the query
    */
   createLens(lineToMatch: string, document: vscode.TextDocument) {
-    console.log(`Creating lens for query: ${lineToMatch}`);
     // If this exact query string was already added, return
     // Needed in the rare case the user has the same query more than once
     if (
