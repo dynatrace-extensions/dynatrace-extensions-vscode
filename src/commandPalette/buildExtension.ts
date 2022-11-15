@@ -34,7 +34,7 @@ export async function buildExtension(
   fastMode?: FastModeOptions
 ) {
   // Basic details we already know exist
-  let workspaceStorage = context.storageUri!.fsPath;
+  const workspaceStorage = context.storageUri!.fsPath;
   const workSpaceConfig = vscode.workspace.getConfiguration("dynatrace", null);
   const devKey = workSpaceConfig.get("developerKeyLocation") as string;
   const devCert = workSpaceConfig.get("developerCertificateLocation") as string;
