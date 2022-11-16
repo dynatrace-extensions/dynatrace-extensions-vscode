@@ -202,6 +202,13 @@ For Dynatrace Extensions, these can help trigger some code-related actions to yo
   - To automatically insert metric metadata in the `metrics` section of the YAML
 - Get a timestamp of when details were last scraped.
 
+**WMI Query Code Lenses**
+
+- Run WMI queries against the local Windows machine where a WMI extension is being developed
+  - To validate that the WMI query is valid
+  - To browse the results of the query and check the column values
+  - To get the number of unique dimensions that a query would create for this machine
+
 **Unified Analysis Screens Code Lenses**
 
 - Open the List or Details Unified Analysis screen for any entity type

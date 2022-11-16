@@ -46,11 +46,29 @@ interface DatasourceGroup {
   featureSet?: string;
   dimensions?: DimensionStub[];
   metrics?: MetricStub[];
-  subgroups?: {
-    featureSet?: string;
-    dimensions?: DimensionStub[];
-    metrics: MetricStub[];
-  }[];
+  subgroups?: SubGroup[];
+}
+
+interface SubGroup extends DatasourceGroup {
+  metrics: MetricStub[];
+}
+
+interface WmiGroup extends DatasourceGroup {
+  wmiNamespace?: string;
+  query?: string;
+  interval?: {
+    minutes: number;
+  }
+  subgroups?: WmiSubGroup[];
+}
+
+interface WmiSubGroup extends SubGroup {
+  wmiNamespace?: string;
+  query?: string;
+  interval?: {
+    minutes: number;
+  }
+  type?: "logfileEvent" | "metric" | "notificationEvent"
 }
 
 interface MetricMetadata {
@@ -163,7 +181,7 @@ interface ExtensionStub {
   alerts: { path: string }[];
   dashboards: { path: string }[];
   snmp?: DatasourceGroup[];
-  wmi?: DatasourceGroup[];
+  wmi?: WmiGroup[];
   prometheus?: DatasourceGroup[];
   sql?: DatasourceGroup[];
   python?: PythonDatasource;
