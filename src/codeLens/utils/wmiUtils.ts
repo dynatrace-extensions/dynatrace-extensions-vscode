@@ -9,6 +9,7 @@ interface QueryResult {
 
 export interface WmiQueryResult {
   query: string;
+  responseTime: string;
   error: boolean;
   errorMessage?: string;
   results: Array<QueryResult>;
@@ -16,6 +17,7 @@ export interface WmiQueryResult {
 
 export async function runWMIQuery(query: string, oc: vscode.OutputChannel, callback: (query: string, result: WmiQueryResult) => void) {
   const command = `Get-WmiObject -Query "${query}" | ${ignoreProperties} | ConvertTo-Json`;
+  const startTime = new Date();
   console.log(`Running command: ${command}`);
 
   exec(command, { shell: "powershell.exe", maxBuffer: 10 * 1024 * 1024 }, (error, stdout, stderr) => {
@@ -24,7 +26,9 @@ export async function runWMIQuery(query: string, oc: vscode.OutputChannel, callb
       oc.clear();
       oc.appendLine(error.message);
       oc.show();
-      callback(query, { query, error: true, errorMessage: error.message, results: [] });
+      const responseTime = ((new Date().getTime() - startTime.getTime()) / 1000).toString();
+      
+      callback(query, { query, error: true, errorMessage: error.message, results: [], responseTime });
       return;
     }
     if (stderr) {
@@ -32,16 +36,19 @@ export async function runWMIQuery(query: string, oc: vscode.OutputChannel, callb
         oc.clear();
         oc.appendLine(stderr);
         oc.show();
-        callback(query, { query, error: true, errorMessage: stderr, results: [] });
+        const responseTime = ((new Date().getTime() - startTime.getTime()) / 1000).toString();
+        callback(query, { query, error: true, errorMessage: stderr, results: [], responseTime });
         return;
         }
     
     const jsonResponse = JSON.parse(stdout);
     
+    const responseTime = ((new Date().getTime() - startTime.getTime()) / 1000).toString();
     callback(query, {
       query,
       error: false,
       results: jsonResponse,
+      responseTime
     });
     oc.clear();
   });
