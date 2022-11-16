@@ -68,7 +68,7 @@ export async function buildExtension(
       const zipFilename = `${extension.name.replace(":", "_")}-${extension.version}.zip`;
       try {
         getDatasourceName(extension) === "python"
-          ? await assemblePython(workspaceRoot, devKey, devCert, oc)
+          ? await assemblePython(workspaceStorage, extensionDir, devKey, devCert, oc)
           : assembleStandard(workspaceStorage, extensionDir, zipFilename, devKey, devCert);
       } catch (err: any) {
         vscode.window.showErrorMessage(`Error during archiving & signing: ${err.message}`);
@@ -222,7 +222,7 @@ function runCommand(command: string, oc: vscode.OutputChannel, envOptions?: Exec
  * @param devCertPath the path to the developer's certificate
  * @param oc JSON output channel for communicating errors
  */
-async function assemblePython(extensionDir: string, devKeyPath: string, devCertPath: string, oc: vscode.OutputChannel) {
+async function assemblePython(workspaceStorage: string, extensionDir: string, devKeyPath: string, devCertPath: string, oc: vscode.OutputChannel) {
   let envOptions = {} as ExecOptions;
   const pythonPath = await getPythonPath();
 
@@ -241,7 +241,8 @@ async function assemblePython(extensionDir: string, devKeyPath: string, devCertP
   await runCommand("dt-sdk --help", oc, envOptions); // this will throw if dt-sdk is not available
 
   // Build
-  await runCommand(`dt-sdk build -k "${devKeyPath}" -c "${devCertPath}" "${extensionDir}" `, oc, envOptions);
+  const pythonExtensionDir = path.resolve(extensionDir, "..");
+  await runCommand(`dt-sdk build -k "${devKeyPath}" -c "${devCertPath}" "${pythonExtensionDir}" -t "${workspaceStorage}"`, oc, envOptions);
 }
 
 /**
