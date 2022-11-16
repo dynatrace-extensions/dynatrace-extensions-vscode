@@ -153,6 +153,7 @@ export function activate(context: vscode.ExtensionContext) {
     vscode.commands.registerCommand(
       "dt-ext-copilot.codelens.runWMIQuery",
       async (query: string) => {
+        wmiLensProvider.setQueryRunning(query);
         runWMIQuery(query, genericChannel, wmiLensProvider.processQueryResults);
       }
     ),
