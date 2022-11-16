@@ -41,6 +41,7 @@ import { DiagnosticFixProvider } from "./diagnostics/diagnosticFixProvider";
 import { WmiCodeLensProvider } from "./codeLens/wmiCodeLens";
 import { runWMIQuery, WmiQueryResult } from "./codeLens/utils/wmiUtils";
 import { WMIQueryResultsPanel } from "./webviews/wmiQueryResults";
+import { WmiCompletionProvider } from "./codeCompletions/wmi";
 
 /**
  * Sets up the VSCode extension by registering all the available functionality as disposable objects.
@@ -80,7 +81,7 @@ export function activate(context: vscode.ExtensionContext) {
   const screensLensProvider = new ScreenLensProvider(tenantsTreeViewProvider);
   const prometheusLensProvider = new PrometheusCodeLensProvider(cachedDataProvider);
   const prometheusActionProvider = new PrometheusActionProvider(cachedDataProvider);
-  const wmiLensProvider = new WmiCodeLensProvider();
+  const wmiLensProvider = new WmiCodeLensProvider(cachedDataProvider);
   const fastModeChannel = vscode.window.createOutputChannel("Dynatrace Fast Mode", "json");
   const fastModeStatus = new FastModeStatus(fastModeChannel);
   const genericChannel = vscode.window.createOutputChannel("Dynatrace", "json");
@@ -253,6 +254,11 @@ function registerCompletionProviders(
     vscode.languages.registerCompletionItemProvider(
       documentSelector,
       new PrometheusCompletionProvider(cachedDataProvider)
+    ),
+    // Wmi data
+    vscode.languages.registerCompletionItemProvider(
+      documentSelector,
+      new WmiCompletionProvider(cachedDataProvider)
     ),
   ];
 }

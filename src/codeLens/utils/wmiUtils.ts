@@ -3,16 +3,12 @@ import { exec } from "child_process";
 
 const ignoreProperties = 'Select-Object -Property * -ExcludeProperty @("Scope", "Path", "Options", "Properties", "SystemProperties", "ClassPath", "Qualifiers", "Site", "Container", "PSComputerName", "__GENUS", "__CLASS", "__SUPERCLASS", "__DYNASTY", "__RELPATH", "__PROPERTY_COUNT", "__DERIVATION", "__SERVER", "__NAMESPACE", "__PATH")';
 
-interface QueryResult {
-  [key: string]: string | number
-}
-
 export interface WmiQueryResult {
   query: string;
   responseTime: string;
   error: boolean;
   errorMessage?: string;
-  results: Array<QueryResult>;
+  results: Array<Record<string, string | number>>;
 }
 
 export async function runWMIQuery(query: string, oc: vscode.OutputChannel, callback: (query: string, result: WmiQueryResult) => void) {

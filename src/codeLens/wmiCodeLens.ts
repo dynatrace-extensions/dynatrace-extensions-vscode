@@ -76,6 +76,14 @@ export class WmiCodeLensProvider implements vscode.CodeLensProvider {
     new vscode.EventEmitter<void>();
   public readonly onDidChangeCodeLenses: vscode.Event<void> =
     this._onDidChangeCodeLenses.event;
+  private cachedData: CachedDataProvider;
+
+  /**
+   * @param cachedDataProvider a provider for cacheable data
+   */
+  constructor(cachedDataProvider: CachedDataProvider) {
+    this.cachedData = cachedDataProvider;
+  }
 
   provideCodeLenses(
     document: vscode.TextDocument,
@@ -147,10 +155,8 @@ export class WmiCodeLensProvider implements vscode.CodeLensProvider {
     const matches = [];
     let i = -1;
     while ((i = text.indexOf(lineToMatch, i + 1)) !== -1) {
-        matches.push({line: lineToMatch, index: i});
+      matches.push({ line: lineToMatch, index: i });
     }
-
-    
 
     for (const match of matches) {
       const range = new vscode.Range(
@@ -168,6 +174,8 @@ export class WmiCodeLensProvider implements vscode.CodeLensProvider {
   }
 
   processQueryResults = (query: string, result: WmiQueryResult) => {
+    this.cachedData.addWmiQueryResult(result);
+
     // Find the WmiQueryResultLens that matches this query
     const ownerLens = this.wmiQueryResultLens.find(
       (lens) => (lens as WmiQueryResultLens).wmiQuery === query

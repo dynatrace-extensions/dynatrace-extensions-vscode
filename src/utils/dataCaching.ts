@@ -2,6 +2,7 @@ import Axios from "axios";
 import { EnvironmentsTreeDataProvider } from "../treeViews/environmentsTreeView";
 import { ValidationStatus } from "../codeLens/utils/selectorUtils";
 import { PromData } from "../codeLens/prometheusScraper";
+import { WmiQueryResult } from "../codeLens/utils/wmiUtils";
 
 /**
  * A utility class for caching reusable data that other components depend on.
@@ -13,6 +14,7 @@ export class CachedDataProvider {
   private baristaIcons: string[] = [];
   private selectorStatuses: { [selector: string]: ValidationStatus } = {};
   private prometheusData: PromData = {};
+  private wmiData: Record<string, WmiQueryResult> = {};
 
   /**
    * @param environments a Dynatrace Environments provider
@@ -130,5 +132,13 @@ export class CachedDataProvider {
             console.log(err.message);
           });
       });
+  }
+
+  public getWmiQueryResult(query: string): WmiQueryResult | undefined {
+    return this.wmiData[query];
+  }
+
+  public addWmiQueryResult(result: WmiQueryResult) {
+    this.wmiData[result.query] = result;
   }
 }
