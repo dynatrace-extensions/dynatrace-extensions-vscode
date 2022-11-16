@@ -39,6 +39,15 @@ class WmiQueryResultLens extends vscode.CodeLens {
     this.wmiQuery = wmiQuery;
   }
 
+  setQueryRunning = () => {
+    this.command = {
+      title: "⏳ Running query...",
+      tooltip: "Running query...",
+      command: "",
+      arguments: [],
+    };
+  };
+
   updateResult = (result: WmiQueryResult) => {
     switch (result.error) {
       case true:
@@ -167,6 +176,18 @@ export class WmiCodeLensProvider implements vscode.CodeLensProvider {
     if (ownerLens) {
       ownerLens.updateResult(result);
       WMIQueryResultsPanel.createOrShow(result);
+      this._onDidChangeCodeLenses.fire();
+    }
+  };
+
+  setQueryRunning = (query: string) => {
+    // Find the WmiQueryResultLens that matches this query
+    const ownerLens = this.wmiQueryResultLens.find(
+      (lens) => (lens as WmiQueryResultLens).wmiQuery === query
+    ) as WmiQueryResultLens;
+
+    if (ownerLens) {
+      ownerLens.setQueryRunning();
       this._onDidChangeCodeLenses.fire();
     }
   };
