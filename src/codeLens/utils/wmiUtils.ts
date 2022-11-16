@@ -11,6 +11,12 @@ export interface WmiQueryResult {
   results: Array<Record<string, string | number>>;
 }
 
+/**
+ * Runs a WMI query using PowerShell and returns the JSON format of the results
+ * @param query The WMI query to run
+ * @param oc The output channel to use for logging
+ * @param callback The callback to call when the query is complete, used to return the results
+ */
 export async function runWMIQuery(query: string, oc: vscode.OutputChannel, callback: (query: string, result: WmiQueryResult) => void) {
   const command = `Get-WmiObject -Query "${query}" | ${ignoreProperties} | ConvertTo-Json`;
   const startTime = new Date();
