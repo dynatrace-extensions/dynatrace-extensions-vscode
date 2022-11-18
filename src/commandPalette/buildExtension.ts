@@ -217,6 +217,7 @@ function runCommand(command: string, oc: vscode.OutputChannel, envOptions?: Exec
  * Carries out the archiving and signing parts of the extension build workflow.
  * This function is meant for Python extesnions 2.0, therefore all the steps are carried
  * out through `dt-sdk` which must be available on the machine.
+ * @param workspaceStorage path to the VS Code folder for this workspace's storage
  * @param extensionDir path to the "extension" folder within the workspace
  * @param devKeyPath the path to the developer's private key
  * @param devCertPath the path to the developer's certificate
@@ -240,7 +241,7 @@ async function assemblePython(workspaceStorage: string, extensionDir: string, de
   // Check we can run dt-sdk
   await runCommand("dt-sdk --help", oc, envOptions); // this will throw if dt-sdk is not available
 
-  // Build
+  // Build, the setup.py file is always one level above the extension folder
   const pythonExtensionDir = path.resolve(extensionDir, "..");
   await runCommand(`dt-sdk build -k "${devKeyPath}" -c "${devCertPath}" "${pythonExtensionDir}" -t "${workspaceStorage}"`, oc, envOptions);
 }

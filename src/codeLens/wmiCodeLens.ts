@@ -8,8 +8,9 @@ class WmiQueryLens extends vscode.CodeLens {
   wmiQuery: string;
 
   /**
+   * Creates a new WMI query code lens
    * @param range VSCode Range at which lens should be created
-   * @param selector selector relevant to this lens
+   * @param wmiQuery The WMI query to execute
    */
   constructor(range: vscode.Range, wmiQuery: string) {
     super(range, {
@@ -27,7 +28,7 @@ class WmiQueryResultLens extends vscode.CodeLens {
 
   /**
    * @param range VSCode Range at which lens should be created
-   * @param selector selector relevant to this lens
+   * @param wmiQuery The WMI query to execute
    */
   constructor(range: vscode.Range, wmiQuery: string) {
     super(range, {
@@ -39,6 +40,9 @@ class WmiQueryResultLens extends vscode.CodeLens {
     this.wmiQuery = wmiQuery;
   }
 
+  /**
+   * Called when the user clicks on the '▶️ Run WMI Query' code lens
+  */
   setQueryRunning = () => {
     this.command = {
       title: "⏳ Running query...",
@@ -48,6 +52,9 @@ class WmiQueryResultLens extends vscode.CodeLens {
     };
   };
 
+  /**
+   * Callback function to update the code lens with the results of the query
+   * */
   updateResult = (result: WmiQueryResult) => {
     switch (result.error) {
       case true:
@@ -76,6 +83,14 @@ export class WmiCodeLensProvider implements vscode.CodeLensProvider {
     new vscode.EventEmitter<void>();
   public readonly onDidChangeCodeLenses: vscode.Event<void> =
     this._onDidChangeCodeLenses.event;
+  private cachedData: CachedDataProvider;
+
+  /**
+   * @param cachedDataProvider a provider for cacheable data
+   */
+  constructor(cachedDataProvider: CachedDataProvider) {
+    this.cachedData = cachedDataProvider;
+  }
 
   provideCodeLenses(
     document: vscode.TextDocument,
@@ -83,7 +98,7 @@ export class WmiCodeLensProvider implements vscode.CodeLensProvider {
   ): vscode.ProviderResult<vscode.CodeLens[]> {
     const text = document.getText();
 
-    // if the test does not contain 'wmi:' return
+    // Return early because it is cheaper than parsing the yaml
     if (!text.includes("wmi:")) {
       return [];
     }
@@ -147,10 +162,8 @@ export class WmiCodeLensProvider implements vscode.CodeLensProvider {
     const matches = [];
     let i = -1;
     while ((i = text.indexOf(lineToMatch, i + 1)) !== -1) {
-        matches.push({line: lineToMatch, index: i});
+      matches.push({ line: lineToMatch, index: i });
     }
-
-    
 
     for (const match of matches) {
       const range = new vscode.Range(
@@ -168,6 +181,8 @@ export class WmiCodeLensProvider implements vscode.CodeLensProvider {
   }
 
   processQueryResults = (query: string, result: WmiQueryResult) => {
+    this.cachedData.addWmiQueryResult(result);
+
     // Find the WmiQueryResultLens that matches this query
     const ownerLens = this.wmiQueryResultLens.find(
       (lens) => (lens as WmiQueryResultLens).wmiQuery === query
