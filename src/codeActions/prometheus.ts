@@ -119,17 +119,6 @@ export class PrometheusActionProvider implements vscode.CodeActionProvider {
     var codeActions: vscode.CodeAction[] = [];
     const availableKeys = Object.keys(this.prometheusData).filter((key) => !existingKeys.includes(key));
 
-    // Insert individual metrics
-    availableKeys.forEach((key) => {
-      codeActions.push(
-        this.createInsertAction(
-          `Insert ${key} metric`,
-          `- key: ${key}\n  value: metric:${key}\n  type: ${this.prometheusData[key].type}`,
-          document,
-          range
-        )
-      );
-    });
     // Insert all metrics in one go
     if (availableKeys.length > 1) {
       codeActions.push(
@@ -143,6 +132,18 @@ export class PrometheusActionProvider implements vscode.CodeActionProvider {
         )
       );
     }
+
+    // Insert individual metrics
+    availableKeys.forEach((key) => {
+      codeActions.push(
+        this.createInsertAction(
+          `Insert ${key} metric`,
+          `- key: ${key}\n  value: metric:${key}\n  type: ${this.prometheusData[key].type}`,
+          document,
+          range
+        )
+      );
+    });
 
     return codeActions;
   }
