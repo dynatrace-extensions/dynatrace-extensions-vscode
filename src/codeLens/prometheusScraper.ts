@@ -236,6 +236,7 @@ export class PrometheusCodeLensProvider implements vscode.CodeLensProvider {
       .trim()
       .split("\n")
       .forEach((line) => {
+        console.log(line);
         // # HELP defines description of a metric
         if (line.startsWith("# HELP")) {
           var key = line.split("# HELP ")[1].split(" ")[0];
@@ -254,22 +255,30 @@ export class PrometheusCodeLensProvider implements vscode.CodeLensProvider {
           scrapedMetrics[key]["type"] = type;
           // Any other line contains dimensions and the value
         } else {
-          var [key, dimensions] = line.split("{");
-          if (!scrapedMetrics[key]) {
-            scrapedMetrics[key] = {};
-          }
-          dimensions = dimensions.slice(0, dimensions.length - 1);
-          dimensions.split(",").forEach((dimension) => {
-            if (dimension.includes("=")) {
-              if (!scrapedMetrics[key]["dimensions"]) {
-                scrapedMetrics[key]["dimensions"] = [];
-              }
-              var dKey = dimension.split("=")[0];
-              if (!scrapedMetrics[key]["dimensions"]!.includes(dKey)) {
-                scrapedMetrics[key]["dimensions"]!.push(dKey);
-              }
+          if (line.includes("{")) {
+            var [key, dimensions] = line.split("{");
+            if (!scrapedMetrics[key]) {
+              scrapedMetrics[key] = {};
             }
-          });
+          // make sure lines without dimenions have the correct keys 
+          } else {
+            var [key, dimensions] = line.split(" ");
+          }
+          // if line includes dimensions, find them
+          if (dimensions && dimensions.includes("}")) {
+            dimensions = dimensions.slice(0, dimensions.length - 1);
+            dimensions.split(",").forEach((dimension) => {
+              if (dimension.includes("=")) {
+                if (!scrapedMetrics[key]["dimensions"]) {
+                  scrapedMetrics[key]["dimensions"] = [];
+                }
+                var dKey = dimension.split("=")[0];
+                if (!scrapedMetrics[key]["dimensions"]!.includes(dKey)) {
+                  scrapedMetrics[key]["dimensions"]!.push(dKey);
+                }
+              }
+            });
+         }
         }
       });
     this.cachedData.addPrometheusData(scrapedMetrics);
