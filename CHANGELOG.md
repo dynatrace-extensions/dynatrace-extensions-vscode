@@ -1,5 +1,20 @@
 # Change Log
 
+
+## Version 0.21.0 / Stage: beta (09.12.2022)
+
+### ✨ New in this version:
+- [#26 - WMI Queries utility for the WMI datasource (code lens)](https://github.com/dynatrace-extensions/dynatrace-extensions-copilot/issues/26)
+- [#28 - WMI Code Actions for auto-completion](https://github.com/dynatrace-extensions/dynatrace-extensions-copilot/issues/28)
+
+### 🚀 Improved in this version:
+- [#30 - Prometheus scraper handles missing dimensions](https://github.com/dynatrace-extensions/dynatrace-extensions-copilot/issues/30)
+
+### 🪲 Fixed in this version:
+- [#24 - Python extension upload would fail](https://github.com/dynatrace-extensions/dynatrace-extensions-copilot/issues/18)
+
+---
+
 ## Version 0.20.1 / Stage: beta (11.11.2022)
 
 ### ✨ New in this version:
