@@ -249,6 +249,9 @@ export class PrometheusCodeLensProvider implements vscode.CodeLensProvider {
         } else if (line.startsWith("# TYPE")) {
           var key = line.split("# TYPE ")[1].split(" ")[0];
           var type = line.split(`${key} `)[1];
+          if (type === "counter") {
+            type = "count";
+          }
           if (!scrapedMetrics[key]) {
             scrapedMetrics[key] = {};
           }
