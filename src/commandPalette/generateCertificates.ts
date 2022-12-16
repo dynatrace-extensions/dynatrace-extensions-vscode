@@ -22,12 +22,6 @@ export async function generateCerts(context: vscode.ExtensionContext): Promise<b
       progress.report({ message: "Generating RSA key pair for CA certificate" });
       try {
         var caKey = pki.rsa.generateKeyPair({ bits: 4096, e: 0x10001 });
-        var caSKI = pki.getPublicKeyFingerprint(caKey.publicKey, {
-          md: md.sha256.create(),
-          type: "SubjectPublicKeyInfo",
-          encoding: "hex",
-          delimiter: ":",
-        });
       } catch (err: any) {
         vscode.window.showErrorMessage("Error generating the RSA key pair for the CA certificate");
         console.log(err.message);
@@ -68,10 +62,6 @@ export async function generateCerts(context: vscode.ExtensionContext): Promise<b
           },
           {
             name: "subjectKeyIdentifier",
-          },
-          {
-            name: "authorityKeyIdentifier",
-            keyIdentifier: caSKI,
           },
         ]);
         caCert.sign(caKey.privateKey, md.sha256.create());
