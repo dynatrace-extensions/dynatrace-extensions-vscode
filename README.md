@@ -261,6 +261,31 @@ Feel free to create GitHub Issues and PRs for:
 - any bug fix you can provide
 - suggestions for improvements to current workflows
 
+### Prerequisites 
+
+This VS Code extension uses a number of Dynatrace APIs to help make the process of creating a Dynatrace extension. Because of that, it requires an API Access token with certain scopes. Below are the current scopes that an Access Token requires : 
+
+- `WriteConfig`
+- `ReadConfig`
+- `credentialVault.read`
+- `credentialVault.write`
+- `extensions.read`
+- `extensions.write`
+- `extensionEnvironment.write`
+- `extensionEnvironment.read`
+- `extensionConfigurations.read`
+- `extensionConfigurations.write`
+- `metrics.read`
+- `entities.read`
+- `settings.read`
+- `settings.write`
+
+In order to make it easier to create this token, you may also create an Access Token through the Dynatrace UI with this scope `apiTokens.write` ([documentation](https://www.dynatrace.com/support/help/shortlink/api-tokens-v2-api-post-token)), replace the TENANT-ID and Api-Token Value , and run the `curl` command below : 
+
+```sh
+curl -X POST "https://<TENANT-ID>.live.dynatrace.com/api/v2/apiTokens" -H "accept: application/json; charset=utf-8" -H "Content-Type: application/json; charset=utf-8" -d "{\"name\":\"Dynatrace Extensions Copilot\",\"scopes\":[\"entities.read\",\"extensionConfigurations.read\",\"extensionConfigurations.write\",\"extensionEnvironment.read\",\"extensionEnvironment.write\",\"extensions.read\",\"extensions.write\",\"metrics.read\",\"settings.read\",\"settings.write\",\"credentialVault.read\",\"credentialVault.write\",\"ReadConfig\",\"WriteConfig\"]}" -H "Authorization: Api-Token <CHANGE-ME>"
+```
+
 ### Installation steps
 
 Right now, the extension is not published to the marketplace so you'll have to install it from the `.vsix` file packaged in every [release](https://github.com/dynatrace-extensions/dynatrace-extension-developer/releases).
