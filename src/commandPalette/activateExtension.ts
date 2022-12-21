@@ -10,7 +10,7 @@ import { Dynatrace } from "../dynatrace-api/dynatrace";
  * @param version optional version to activate
  */
 export async function activateExtension(dt: Dynatrace, version?: string) {
-  var extensionFile = await vscode.workspace.findFiles("**/extension.yaml");
+  var extensionFile = await vscode.workspace.findFiles("extension/extension.yaml");
   var extension = yaml.parse(readFileSync(extensionFile[0].fsPath).toString());
 
   // If version was not provided, prompt user for selection

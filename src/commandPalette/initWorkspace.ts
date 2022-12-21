@@ -48,7 +48,7 @@ export async function initWorkspace(context: vscode.ExtensionContext, dt: Dynatr
       var distDir = vscode.Uri.file(path.resolve(path.join(rootPath, "dist")));
       vscode.workspace.fs.createDirectory(distDir);
 
-      vscode.workspace.findFiles("**/extension/extension.yaml").then((files) => {
+      vscode.workspace.findFiles("extension/extension.yaml").then((files) => {
         if (files.length === 0) {
           // Create extension directory
           var extensionDir = vscode.Uri.file(path.resolve(path.join(rootPath, "extension")));

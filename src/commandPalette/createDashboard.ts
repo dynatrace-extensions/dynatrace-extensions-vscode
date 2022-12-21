@@ -21,7 +21,7 @@ export async function createOverviewDashboard(
   const DASHBOARD_PATH = "dashboards/overview_dashboard.json";
   // Read extension.yaml
   const extensionFile = await vscode.workspace
-    .findFiles("**/extension/extension.yaml", undefined, 1)
+    .findFiles("extension/extension.yaml", undefined, 1)
     .then((files) => files[0]);
   const extension: ExtensionStub = yaml.parse(readFileSync(extensionFile.fsPath).toString());
   // Check topology. No topology = pointless dashboard

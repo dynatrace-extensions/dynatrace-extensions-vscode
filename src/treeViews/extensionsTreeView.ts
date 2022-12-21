@@ -77,7 +77,7 @@ export class ExtensionsTreeDataProvider implements vscode.TreeDataProvider<Exten
       var extensions: ExtensionProjectItem[] = [];
       var workspacePath = element.path.fsPath;
       glob
-        .sync("**/extension/extension.yaml", {
+        .sync("extension/extension.yaml", {
           cwd: workspacePath,
         })
         .forEach((filepath) => {

@@ -15,7 +15,7 @@ export async function createDocumentation() {
     { location: vscode.ProgressLocation.Notification, title: "Creating documentation" },
     async (progress) => {
       progress.report({ message: "Parsing metadata" });
-      var extensionYaml = await vscode.workspace.findFiles("**/extension.yaml").then((files) => files[0].fsPath);
+      var extensionYaml = await vscode.workspace.findFiles("extension/extension.yaml").then((files) => files[0].fsPath);
       var extensionDir = path.dirname(extensionYaml);
       var extension = yaml.parse(readFileSync(extensionYaml).toString());
 

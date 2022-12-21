@@ -55,7 +55,7 @@ export async function loadSchemas(context: vscode.ExtensionContext, dt: Dynatrac
 
   try {
     // If extension.yaml already exists, update the version there too
-    vscode.workspace.findFiles("**/extension/extension.yaml").then((files) => {
+    vscode.workspace.findFiles("extension/extension.yaml").then((files) => {
       if (files.length > 0) {
         files.forEach((file) => {
           var lineCounter = new yaml.LineCounter();

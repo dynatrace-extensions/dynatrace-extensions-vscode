@@ -71,7 +71,7 @@ export function isExtensionsWorkspace(context: vscode.ExtensionContext): boolean
   var status = false;
   if (context.storageUri && existsSync(context.storageUri.fsPath)) {
     status =
-      glob.sync("**/extension/extension.yaml", {
+      glob.sync("extension/extension.yaml", {
         cwd: vscode.Uri.parse(
           decodeURI(
             JSON.parse(readFileSync(path.join(path.dirname(context.storageUri.fsPath), "workspace.json")).toString())

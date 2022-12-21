@@ -42,7 +42,7 @@ export async function buildExtension(
   const distDir = path.resolve(workspaceRoot, "dist");
   const extensionFile = fastMode
     ? fastMode.document.fileName
-    : await vscode.workspace.findFiles("**/extension/extension.yaml").then((files) => files[0].fsPath);
+    : await vscode.workspace.findFiles("extension/extension.yaml").then((files) => files[0].fsPath);
   const extensionDir = path.resolve(extensionFile, "..");
 
   vscode.window.withProgress(
@@ -68,7 +68,7 @@ export async function buildExtension(
       const zipFilename = `${extension.name.replace(":", "_")}-${extension.version}.zip`;
       try {
         getDatasourceName(extension) === "python"
-          ? await assemblePython(workspaceStorage, extensionDir, devKey, devCert, oc)
+          ? await assemblePython(workspaceStorage, path.resolve(extensionDir, ".."), devKey, devCert, oc)
           : assembleStandard(workspaceStorage, extensionDir, zipFilename, devKey, devCert);
       } catch (err: any) {
         vscode.window.showErrorMessage(`Error during archiving & signing: ${err.message}`);
@@ -218,7 +218,7 @@ function runCommand(command: string, oc: vscode.OutputChannel, envOptions?: Exec
  * This function is meant for Python extesnions 2.0, therefore all the steps are carried
  * out through `dt-sdk` which must be available on the machine.
  * @param workspaceStorage path to the VS Code folder for this workspace's storage
- * @param extensionDir path to the "extension" folder within the workspace
+ * @param extensionDir path to the root folder of the workspace
  * @param devKeyPath the path to the developer's private key
  * @param devCertPath the path to the developer's certificate
  * @param oc JSON output channel for communicating errors
@@ -241,9 +241,8 @@ async function assemblePython(workspaceStorage: string, extensionDir: string, de
   // Check we can run dt-sdk
   await runCommand("dt-sdk --help", oc, envOptions); // this will throw if dt-sdk is not available
 
-  // Build, the setup.py file is always one level above the extension folder
-  const pythonExtensionDir = path.resolve(extensionDir, "..");
-  await runCommand(`dt-sdk build -k "${devKeyPath}" -c "${devCertPath}" "${pythonExtensionDir}" -t "${workspaceStorage}"`, oc, envOptions);
+  // Build
+  await runCommand(`dt-sdk build -k "${devKeyPath}" -c "${devCertPath}" "${extensionDir}" -t "${workspaceStorage}"`, oc, envOptions);
 }
 
 /**

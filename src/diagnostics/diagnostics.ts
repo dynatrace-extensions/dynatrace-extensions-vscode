@@ -53,7 +53,7 @@ export class DiagnosticsProvider {
    * @returns true if extension will Build, false otherwise
    */
   public async isValidForBuilding(): Promise<boolean> {
-    const valid = await vscode.workspace.findFiles("**/extension/extension.yaml", undefined, 1).then((files) => {
+    const valid = await vscode.workspace.findFiles("extension/extension.yaml", undefined, 1).then((files) => {
       if (files.length === 0) {
         return false;
       }
