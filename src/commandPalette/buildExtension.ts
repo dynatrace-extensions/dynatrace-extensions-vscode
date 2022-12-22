@@ -1,6 +1,5 @@
 import * as vscode from "vscode";
 import * as path from "path";
-import * as yaml from "yaml";
 import AdmZip = require("adm-zip");
 import { copyFileSync, existsSync, mkdirSync, readFileSync, rmSync, writeFileSync } from "fs";
 import { sign } from "../utils/cryptography";
@@ -42,21 +41,26 @@ export async function buildExtension(
   const distDir = path.resolve(workspaceRoot, "dist");
   const extensionFile = fastMode
     ? fastMode.document.fileName
-    : await vscode.workspace.findFiles("extension/extension.yaml").then((files) => files[0].fsPath);
+    : await vscode.workspace.findFiles("extension/extension.yaml").then(files => files[0].fsPath);
   const extensionDir = path.resolve(extensionFile, "..");
+  // Current name and version
+  const extension = readFileSync(extensionFile).toString();
+  const extensionName = /^name: ([:a-zA-Z0-9.\-_]+)/gm.exec(extension)![1];
+  const currentVersion = normalizeExtensionVersion(/^version: ([0-9.]+)/gm.exec(extension)![1]);
 
   vscode.window.withProgress(
     {
       location: vscode.ProgressLocation.Notification,
       title: "Building extension",
     },
-    async (progress) => {
+    async progress => {
       // Pre-build workflow
+      let updatedVersion = "";
       progress.report({ message: "Checking prerequisites" });
       try {
-        fastMode
-          ? await preBuildTasks(distDir, extensionFile, true, dt)
-          : await preBuildTasks(distDir, extensionFile, false, dt);
+        updatedVersion = fastMode
+          ? await preBuildTasks(distDir, extensionFile, extension, extensionName, currentVersion, true, dt)
+          : await preBuildTasks(distDir, extensionFile, extension, extensionName, currentVersion, false, dt);
       } catch (err: any) {
         vscode.window.showErrorMessage(`Error during pre-build phase: ${err.message}`);
         return;
@@ -64,10 +68,9 @@ export async function buildExtension(
 
       // Package assembly workflow
       progress.report({ message: "Building extension package" });
-      const extension = yaml.parse(readFileSync(extensionFile).toString());
-      const zipFilename = `${extension.name.replace(":", "_")}-${extension.version}.zip`;
+      const zipFilename = `${extensionName.replace(":", "_")}-${updatedVersion}.zip`;
       try {
-        getDatasourceName(extension) === "python"
+        /^python:$/gm.test(extension)
           ? await assemblePython(workspaceStorage, path.resolve(extensionDir, ".."), devKey, devCert, oc)
           : assembleStandard(workspaceStorage, extensionDir, zipFilename, devKey, devCert);
       } catch (err: any) {
@@ -78,7 +81,16 @@ export async function buildExtension(
       // Validation & upload workflow
       if (fastMode) {
         progress.report({ message: "Uploading & activating extension" });
-        await uploadAndActivate(workspaceStorage, zipFilename, distDir, extension, dt!, fastMode.status, oc);
+        await uploadAndActivate(
+          workspaceStorage,
+          zipFilename,
+          distDir,
+          extensionName,
+          updatedVersion,
+          dt!,
+          fastMode.status,
+          oc
+        );
       } else {
         progress.report({ message: "Validating extension" });
         const valid = await validateExtension(workspaceStorage, zipFilename, distDir, oc, dt);
@@ -89,7 +101,7 @@ export async function buildExtension(
               "Yes",
               "No"
             )
-            .then((choice) => {
+            .then(choice => {
               if (choice === "Yes") {
                 vscode.commands.executeCommand("dt-ext-copilot.uploadExtension");
               }
@@ -105,36 +117,48 @@ export async function buildExtension(
  * Ensures the dist folder exists and increments the extension version in case there might
  * be a conflict on the tenant (if dt is provided).
  * @param distDir path to the "dist" directory within the workspace
- * @param extensionFile path to the extension.yaml file within the workspace
+ * @param extensionFile path to the extension.yaml file
+ * @param extensionContent contents of the extension.yaml file
+ * @param extensionName the name of the extension
+ * @param currentVersion the current version of the extension
+ * @param forceIncrement whether to enforce the increment of currentVersion
  * @param dt optional Dynatrace API Client
  */
-async function preBuildTasks(distDir: string, extensionFile: string, forceIncrement: boolean = false, dt?: Dynatrace) {
+async function preBuildTasks(
+  distDir: string,
+  extensionFile: string,
+  extensionContent: string,
+  extensionName: string,
+  currentVersion: string,
+  forceIncrement: boolean = false,
+  dt?: Dynatrace
+): Promise<string> {
   // Create the dist folder if it doesn't exist
   if (!existsSync(distDir)) {
     mkdirSync(distDir);
   }
 
+  const versionRegex = /^version: ([0-9.]+)/gm;
+  const nextVersion = incrementExtensionVersion(currentVersion);
+
   if (forceIncrement) {
     // Always increment the version
-    const extension = yaml.parse(readFileSync(extensionFile).toString());
-    const extensionVersion = normalizeExtensionVersion(extension.version);
-    extension.version = incrementExtensionVersion(extensionVersion);
-    writeFileSync(extensionFile, yaml.stringify(extension, { lineWidth: 0 }));
+    writeFileSync(extensionFile, extensionContent.replace(versionRegex, `version: ${nextVersion}`));
     vscode.window.showInformationMessage("Extension version automatically increased.");
+    return nextVersion;
   } else if (dt) {
     // Increment the version if there is clash on the tenant
-    const extension = yaml.parse(readFileSync(extensionFile).toString());
-    const extensionVersion = normalizeExtensionVersion(extension.version);
     const versions = await dt.extensionsV2
-      .listVersions(extension.name)
-      .then((ext) => ext.map((e) => e.version))
+      .listVersions(extensionName)
+      .then(ext => ext.map(e => e.version))
       .catch(() => [] as string[]);
-    if (versions.includes(extensionVersion)) {
-      extension.version = incrementExtensionVersion(extensionVersion);
-      writeFileSync(extensionFile, yaml.stringify(extension, { lineWidth: 0 }));
+    if (versions.includes(currentVersion)) {
+      writeFileSync(extensionFile, extensionContent.replace(versionRegex, `version: ${nextVersion}`));
       vscode.window.showInformationMessage("Extension version automatically increased.");
+      return nextVersion;
     }
   }
+  return currentVersion;
 }
 
 /**
@@ -189,9 +213,9 @@ function runCommand(command: string, oc: vscode.OutputChannel, envOptions?: Exec
   let p = exec(command, envOptions);
   let [stdout, stderr] = ["", ""];
   return new Promise((resolve, reject) => {
-    p.stdout?.on("data", (data) => (stdout += data.toString()));
-    p.stderr?.on("data", (data) => (stderr += data.toString()));
-    p.on("exit", (code) => {
+    p.stdout?.on("data", data => (stdout += data.toString()));
+    p.stderr?.on("data", data => (stderr += data.toString()));
+    p.on("exit", code => {
       if (code !== 0) {
         let [shortMessage, details] = [stderr, [""]];
         if (stderr.includes("ERROR") && stderr.includes("+")) {
@@ -223,7 +247,13 @@ function runCommand(command: string, oc: vscode.OutputChannel, envOptions?: Exec
  * @param devCertPath the path to the developer's certificate
  * @param oc JSON output channel for communicating errors
  */
-async function assemblePython(workspaceStorage: string, extensionDir: string, devKeyPath: string, devCertPath: string, oc: vscode.OutputChannel) {
+async function assemblePython(
+  workspaceStorage: string,
+  extensionDir: string,
+  devKeyPath: string,
+  devCertPath: string,
+  oc: vscode.OutputChannel
+) {
   let envOptions = {} as ExecOptions;
   const pythonPath = await getPythonPath();
 
@@ -242,7 +272,11 @@ async function assemblePython(workspaceStorage: string, extensionDir: string, de
   await runCommand("dt-sdk --help", oc, envOptions); // this will throw if dt-sdk is not available
 
   // Build
-  await runCommand(`dt-sdk build -k "${devKeyPath}" -c "${devCertPath}" "${extensionDir}" -t "${workspaceStorage}"`, oc, envOptions);
+  await runCommand(
+    `dt-sdk build -k "${devKeyPath}" -c "${devCertPath}" "${extensionDir}" -t "${workspaceStorage}"`,
+    oc,
+    envOptions
+  );
 }
 
 /**
@@ -293,7 +327,8 @@ async function validateExtension(
  * @param workspaceStorage path to the VS Code folder for this workspace's storage
  * @param zipFileName the name of the .zip file for this build
  * @param distDir path to the "dist" folder within the workspace
- * @param extension extension.yaml serialized as object
+ * @param extensionName name of the extension
+ * @param extensionVersion version of the extension
  * @param dt Dynatrace API Client
  * @param status status bar to be updated with build status
  * @param oc JSON output channel for communicating errors
@@ -302,21 +337,22 @@ async function uploadAndActivate(
   workspaceStorage: string,
   zipFileName: string,
   distDir: string,
-  extension: ExtensionStub,
+  extensionName: string,
+  extensionVersion: string,
   dt: Dynatrace,
   status: FastModeStatus,
   oc: vscode.OutputChannel
 ) {
   try {
     // Check upload possible
-    var existingVersions = await dt.extensionsV2.listVersions(extension.name).catch((err) => {
+    var existingVersions = await dt.extensionsV2.listVersions(extensionName).catch(err => {
       return [];
     });
     if (existingVersions.length >= 10) {
       // Try delete oldest version
-      await dt.extensionsV2.deleteVersion(extension.name, existingVersions[0].version).catch(async () => {
+      await dt.extensionsV2.deleteVersion(extensionName, existingVersions[0].version).catch(async () => {
         // Try delete newest version
-        await dt.extensionsV2.deleteVersion(extension.name, existingVersions[existingVersions.length - 1].version);
+        await dt.extensionsV2.deleteVersion(extensionName, existingVersions[existingVersions.length - 1].version);
       });
     }
 
@@ -333,30 +369,30 @@ async function uploadAndActivate(
         });
       // Previous version deletion may not be complete yet, loop until done.
       if (uploadStatus.startsWith("Extension versions quantity limit")) {
-        await new Promise((resolve) => setTimeout(resolve, 1000));
+        await new Promise(resolve => setTimeout(resolve, 1000));
       }
     } while (uploadStatus.startsWith("Extension versions quantity limit"));
 
     // Activate extension or throw error
     if (uploadStatus === "success") {
-      dt.extensionsV2.putEnvironmentConfiguration(extension.name, extension.version);
+      dt.extensionsV2.putEnvironmentConfiguration(extensionName, extensionVersion);
     } else {
       throw lastError;
     }
 
     // Copy .zip archive into dist dir
     copyFileSync(path.resolve(workspaceStorage, zipFileName), path.resolve(distDir, zipFileName));
-    status.updateStatusBar(true, extension.version, true);
+    status.updateStatusBar(true, extensionVersion, true);
     oc.clear();
   } catch (err: any) {
     // Mark the status bar as build failing
-    status.updateStatusBar(true, extension.version, false);
+    status.updateStatusBar(true, extensionVersion, false);
     // Provide details in output channel
     oc.replace(
       JSON.stringify(
         {
-          extension: extension.name,
-          version: extension.version,
+          extension: extensionName,
+          version: extensionVersion,
           errorDetails: err.errorParams,
         },
         null,

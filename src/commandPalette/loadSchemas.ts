@@ -1,7 +1,6 @@
 import * as vscode from "vscode";
 import * as path from "path";
 import axios from "axios";
-import * as yaml from "yaml";
 import { existsSync, mkdirSync, readFileSync, writeFile, writeFileSync } from "fs";
 import { Dynatrace } from "../dynatrace-api/dynatrace";
 
@@ -15,7 +14,7 @@ import { Dynatrace } from "../dynatrace-api/dynatrace";
  */
 export async function loadSchemas(context: vscode.ExtensionContext, dt: Dynatrace): Promise<boolean> {
   // Fetch available schema versions from cluster
-  const availableVersions = await dt.extensionsV2.listSchemaVersions().catch((err) => {
+  const availableVersions = await dt.extensionsV2.listSchemaVersions().catch(err => {
     vscode.window.showErrorMessage(err.message);
     return [];
   });
@@ -27,7 +26,7 @@ export async function loadSchemas(context: vscode.ExtensionContext, dt: Dynatrac
   // Prompt user for version selection
   const version = (await vscode.window.showQuickPick(availableVersions, {
     placeHolder: "Choose a schema version",
-    title: "Extension workspace: Load Schemas"
+    title: "Extension workspace: Load Schemas",
   })) as string;
   if (!version) {
     vscode.window.showErrorMessage("No schema was selected. Operation cancelled.");
@@ -55,13 +54,14 @@ export async function loadSchemas(context: vscode.ExtensionContext, dt: Dynatrac
 
   try {
     // If extension.yaml already exists, update the version there too
-    vscode.workspace.findFiles("extension/extension.yaml").then((files) => {
+    vscode.workspace.findFiles("extension/extension.yaml").then(files => {
       if (files.length > 0) {
-        files.forEach((file) => {
-          var lineCounter = new yaml.LineCounter();
-          var extensionYaml: ExtensionStub = yaml.parse(readFileSync(file.fsPath).toString(), {lineCounter: lineCounter});
-          extensionYaml.minDynatraceVersion = version;
-          writeFileSync(file.fsPath, yaml.stringify(extensionYaml, {lineWidth: 0, lineCounter: lineCounter}));
+        files.forEach(file => {
+          const extension = readFileSync(file.fsPath).toString();
+          writeFileSync(
+            file.fsPath,
+            extension.replace(/^minDynatraceVersion: ([0-9.]+)/gm, `minDynatraceVersion: ${version}`)
+          );
         });
       }
     });
@@ -88,22 +88,22 @@ function downloadSchemaFiles(location: string, version: string, dt: Dynatrace) {
       location: vscode.ProgressLocation.Notification,
       title: `Loading schemas ${version}`,
     },
-    async (progress) => {
+    async progress => {
       progress.report({ message: "Fetching file names" });
       const schemaFiles = (await dt.extensionsV2
         .listSchemaFiles(version)
-        .catch((err) => vscode.window.showErrorMessage(err.message))) as string[];
+        .catch(err => vscode.window.showErrorMessage(err.message))) as string[];
 
       progress.report({ message: "Downloading files" });
       await axios
-        .all(schemaFiles.map((file) => dt.extensionsV2.getSchemaFile(version, file)))
+        .all(schemaFiles.map(file => dt.extensionsV2.getSchemaFile(version, file)))
         .then(
           axios.spread((...responses) => {
-            responses.forEach((resp) => {
+            responses.forEach(resp => {
               try {
                 let parts = resp.$id.split("/");
                 let fileName = parts[parts.length - 1];
-                writeFile(`${location}/${fileName}`, JSON.stringify(resp), (err) => {
+                writeFile(`${location}/${fileName}`, JSON.stringify(resp), err => {
                   if (err) {
                     vscode.window.showErrorMessage(`Error writing file ${fileName}:\n${err.message}`);
                   }
@@ -114,7 +114,7 @@ function downloadSchemaFiles(location: string, version: string, dt: Dynatrace) {
             });
           })
         )
-        .catch((err) => vscode.window.showErrorMessage(err.message));
+        .catch(err => vscode.window.showErrorMessage(err.message));
     }
   );
 }
