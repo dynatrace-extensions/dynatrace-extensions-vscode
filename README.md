@@ -10,7 +10,7 @@ This is a VisualStudio Code Extension that aims to provide support for all aspec
     - [🚀 Initialize workspace](#-initialize-workspace)
     - [📄 Load schemas](#-load-schemas)
     - [🔐 Generate certificates](#-generate-certificates)
-    - [🔗 Upload certificate](#-upload-certificate)
+    - [🔗 Distribute certificate](#-distribute-certificate)
     - [🎁 Build extension](#-build-extension)
     - [📤 Upload extension to tenant](#-upload-extension-to-tenant)
     - [🔂 Activate extension on tenant](#-activate-extension-on-tenant)
@@ -76,11 +76,14 @@ If repository has an `extension.yaml` file, it updates the version in there too.
 ### 🔐 Generate certificates
 
 Generates all the required keys and certificates needed for signing and validating Extensions 2.0.
-At the end, you can upload your newly generated root certificate to the Dynatrace Credentials Vault.
+At the end, you can distribute your newly generated root certificate to the Dynatrace Credentials Vault and locally installed
+OneAgents or ActiveGates.
 
-### 🔗 Upload certificate
+### 🔗 Distribute certificate
 
-Uploads the workspace's root (CA) certificate to the Dynatrace Credentials Vault.
+Uploads the workspace's root (CA) certificate to the Dynatrace Credentials Vault. The user is prompted whether to also upload
+this certificate to any locally installed OneAgents or ActiveGates (if detected). Due to the default certificate locations this
+follow-up requires administrator level permissions (example for Windows, Run As Administrator).
 
 ### 🎁 Build extension
 
