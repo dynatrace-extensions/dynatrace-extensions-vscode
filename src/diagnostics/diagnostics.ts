@@ -1,17 +1,19 @@
 import * as vscode from "vscode";
 import * as yaml from "yaml";
 import { checkGradleProperties } from "../utils/conditionCheckers";
-import { getMetricsFromDataSource } from "../utils/extensionParsing";
-import { getParentBlocks } from "../utils/yamlParsing";
+import { getCardMetaFromDefinition, getCardMetaFromLayout, getMetricsFromDataSource } from "../utils/extensionParsing";
+import { getListItemIndexes } from "../utils/yamlParsing";
 import {
   copilotDiagnostic,
   COUNT_METRIC_KEY_SUFFIX,
+  DEFINED_CARD_NOT_REFERENCED,
   EXTENSION_NAME_CUSTOM_ON_BITBUCKET,
   EXTENSION_NAME_INVALID,
   EXTENSION_NAME_MISSING,
   EXTENSION_NAME_NON_CUSTOM,
   EXTENSION_NAME_TOO_LONG,
   GAUGE_METRIC_KEY_SUFFIX,
+  REFERENCED_CARD_NOT_DEFINED,
 } from "./diagnosticData";
 
 /**
@@ -34,6 +36,7 @@ export class DiagnosticsProvider {
     const diagnostics = [
       ...(await this.diagnoseExtensionName(document.getText())),
       ...this.diagnoseMetricKeys(document, extension),
+      ...this.diagnoseCardKeys(document, extension),
     ];
     this.collection.set(document.uri, diagnostics);
   }
@@ -53,7 +56,7 @@ export class DiagnosticsProvider {
    * @returns true if extension will Build, false otherwise
    */
   public async isValidForBuilding(): Promise<boolean> {
-    const valid = await vscode.workspace.findFiles("extension/extension.yaml", undefined, 1).then((files) => {
+    const valid = await vscode.workspace.findFiles("extension/extension.yaml", undefined, 1).then(files => {
       if (files.length === 0) {
         return false;
       }
@@ -61,7 +64,7 @@ export class DiagnosticsProvider {
       if (!diagnostics) {
         return true;
       }
-      if (diagnostics.findIndex((diag) => diag.severity === vscode.DiagnosticSeverity.Error) > -1) {
+      if (diagnostics.findIndex(diag => diag.severity === vscode.DiagnosticSeverity.Error) > -1) {
         return false;
       }
       return true;
@@ -81,7 +84,7 @@ export class DiagnosticsProvider {
   private async diagnoseExtensionName(content: string): Promise<vscode.Diagnostic[]> {
     var diagnostics: vscode.Diagnostic[] = [];
     const contentLines = content.split("\n");
-    const lineNo = contentLines.findIndex((line) => line.startsWith("name:"));
+    const lineNo = contentLines.findIndex(line => line.startsWith("name:"));
 
     if (lineNo === -1) {
       diagnostics.push(copilotDiagnostic(new vscode.Position(1, 0), new vscode.Position(1, 0), EXTENSION_NAME_MISSING));
@@ -121,11 +124,11 @@ export class DiagnosticsProvider {
     var diagnostics: vscode.Diagnostic[] = [];
     getMetricsFromDataSource(extension)
       .filter(
-        (m) =>
+        m =>
           (m.type === "count" && !(m.key.endsWith(".count") || m.key.endsWith("_count"))) ||
           (m.type === "gauge" && (m.key.endsWith(".count") || m.key.endsWith("_count")))
       )
-      .forEach((m) => {
+      .forEach(m => {
         const metricRegex = new RegExp(`key: "?${m.key.replace(/\./g, "\\.")}"?(?:$|(?: .*$))`, "gm");
         let match;
         while ((match = metricRegex.exec(content)) !== null) {
@@ -138,6 +141,51 @@ export class DiagnosticsProvider {
           );
         }
       });
+
+    return diagnostics;
+  }
+
+  /**
+   * Provide diagnostics related to card keys within a screen definition.
+   * Users are warned if cards that have definitions are not used within layouts of the screen.
+   * Errors are raised if cards are referenced within layouts but do not have a definition.
+   * @param document text document where diagnostics should be applied
+   * @param extension extension.yaml serialized as object
+   * @returns list of diagnostics
+   */
+  private diagnoseCardKeys(document: vscode.TextDocument, extension: ExtensionStub): vscode.Diagnostic[] {
+    const content = document.getText();
+    let diagnostics: vscode.Diagnostic[] = [];
+    const screenBounds = getListItemIndexes("screens", content);
+
+    extension.screens?.forEach((_, idx) => {
+      const refCards = getCardMetaFromLayout(idx, extension);
+      const defCards = getCardMetaFromDefinition(idx, extension);
+      refCards
+        .filter(rc => defCards.findIndex(dc => dc.key === rc.key) === -1)
+        .forEach(rc => {
+          const keyStart = content.indexOf(`key: ${rc.key}`, screenBounds[idx].start);
+          diagnostics.push(
+            copilotDiagnostic(
+              document.positionAt(keyStart),
+              document.positionAt(keyStart + `key: ${rc.key}`.length),
+              REFERENCED_CARD_NOT_DEFINED
+            )
+          );
+        });
+      defCards
+        .filter(dc => refCards.findIndex(rc => rc.key === dc.key) === -1)
+        .forEach(dc => {
+          const keyStart = content.indexOf(`key: ${dc.key}`, screenBounds[idx].start);
+          diagnostics.push(
+            copilotDiagnostic(
+              document.positionAt(keyStart),
+              document.positionAt(keyStart + `key: ${dc.key}`.length),
+              DEFINED_CARD_NOT_REFERENCED
+            )
+          );
+        });
+    });
 
     return diagnostics;
   }

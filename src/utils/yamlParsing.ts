@@ -34,6 +34,53 @@ export function getBlockItemIndexAtLine(blockLabel: string, blockLineIdx: number
 }
 
 /**
+ * Given the label of a yaml list block, this function parses all entries of the list
+ * and returns the start and end indexes relative to the original content string containing
+ * the list. If the labelled block repeats within the content only the last entry is parsed.
+ * @param listLabel label that identifies the list block
+ * @param content string content where the block and its items can be found
+ * @returns a map of each list item's index, start position, end position
+ */
+export function getListItemIndexes(listLabel: string, content: string) {
+  const indexMap: { index: number; start: number; end: number }[] = [];
+  let index = -2; // Keeps track of list item index
+  let indent = -2; // The indent for this list of items
+  let indexInDoc = 0; // The index of the current line relative to the original content
+
+  console.log("Gettings indexes for items in list 'screens'");
+
+  for (const [lineNo, line] of content.split("\n").entries()) {
+    // Exit if the line indent is less than what the list items have
+    const lineStartIdx = /[a-z\-]/i.exec(line);
+    if (index >= 0 && (!lineStartIdx || lineStartIdx.index < indent)) {
+      indexMap[index].end = indexInDoc;
+      break;
+    }
+    indexInDoc += line.length + 1; // Newline was removed during split
+    // List declaration found
+    if (line.replace(/ /g, "").startsWith(`${listLabel}:`)) {
+      index = -1;
+      continue;
+    }
+    // First line inside the block is the first item of the list
+    if (index === -1) {
+      indent = line.indexOf("-");
+      index = 0;
+      indexMap.push({ index: index, start: indexInDoc - line.length, end: indexInDoc });
+      continue;
+    }
+    if (line.indexOf("-") === indent) {
+      // next list item
+      index++;
+      indexMap[index - 1].end = indexInDoc - line.length - 1;
+      indexMap.push({ index: index, start: indexInDoc - line.length, end: indexInDoc });
+    }
+  }
+
+  return indexMap;
+}
+
+/**
  * Given a line number and yaml content, returns a hierarchical list of parent block
  * labels. The last item in the list is the closest parent block label.
  * @param lineNumber number of the line to find
@@ -89,5 +136,5 @@ export function getParentBlocks(lineNumber: number, content: string): string[] {
       }
     }
   }
-  return blocks.map((block) => block[0]);
+  return blocks.map(block => block[0]);
 }

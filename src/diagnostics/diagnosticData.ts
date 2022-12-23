@@ -76,3 +76,15 @@ export const GAUGE_METRIC_KEY_SUFFIX: CopilotDiagnostic = {
   severity: vscode.DiagnosticSeverity.Warning,
   message: 'Metrics of type gauge should not have keys ending in ".count" or "_count"',
 };
+
+export const REFERENCED_CARD_NOT_DEFINED: CopilotDiagnostic = {
+  code: "DEC008",
+  severity: vscode.DiagnosticSeverity.Error,
+  message: "This card is referenced in layout but does not have a definition within this screen",
+};
+
+export const DEFINED_CARD_NOT_REFERENCED: CopilotDiagnostic = {
+  code: "DEC009",
+  severity: vscode.DiagnosticSeverity.Warning,
+  message: "This card is defined but is not referenced within the screen layout",
+};
