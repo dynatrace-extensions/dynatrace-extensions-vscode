@@ -1,6 +1,6 @@
 import * as vscode from "vscode";
 import * as path from "path";
-import { existsSync, mkdirSync, readFileSync, writeFileSync } from "fs";
+import { copyFileSync, existsSync, mkdirSync, readFileSync, writeFileSync } from "fs";
 import { DynatraceEnvironmentData, ExtensionWorkspace } from "../interfaces/treeViewData";
 
 /**
@@ -57,7 +57,7 @@ export function registerWorkspace(context: vscode.ExtensionContext) {
     ),
   };
 
-  var currentIndex = workspaces.findIndex((ws) => ws.id === workspace.id);
+  var currentIndex = workspaces.findIndex(ws => ws.id === workspace.id);
   if (currentIndex === -1) {
     workspaces.push(workspace);
   } else {
@@ -83,10 +83,10 @@ export function findWorkspace(
   workspaceId?: string
 ): ExtensionWorkspace | undefined {
   if (workspaceName) {
-    return getAllWorkspaces(context).find((ws) => ws.name === workspaceName);
+    return getAllWorkspaces(context).find(ws => ws.name === workspaceName);
   }
   if (workspaceId) {
-    return getAllWorkspaces(context).find((ws) => ws.id === workspaceId);
+    return getAllWorkspaces(context).find(ws => ws.id === workspaceId);
   }
 }
 
@@ -147,14 +147,14 @@ export function registerEnvironment(
 
   // If this will be the currently used environment, deactivate others
   if (current) {
-    environments = environments.map((e) => {
+    environments = environments.map(e => {
       e.current = e.current ? !e.current : e.current;
       return e;
     });
   }
 
   // Update any existing entries, otherwise create new
-  let index = environments.findIndex((e) => e.id === id);
+  let index = environments.findIndex(e => e.id === id);
   if (index === -1) {
     environments.push(environment);
   } else {
@@ -176,7 +176,7 @@ export function removeEnvironment(context: vscode.ExtensionContext, environmentI
   var environmentsJson = path.join(context.globalStorageUri.fsPath, "dynatraceEnvironments.json");
   var environments: DynatraceEnvironmentData[] = JSON.parse(readFileSync(environmentsJson).toString());
 
-  writeFileSync(environmentsJson, JSON.stringify(environments.filter((e) => e.id !== environmentId)));
+  writeFileSync(environmentsJson, JSON.stringify(environments.filter(e => e.id !== environmentId)));
 
   // Update the state
   vscode.commands.executeCommand("setContext", "dt-ext-copilot.numEnvironments", environments.length - 1);
@@ -192,8 +192,40 @@ export function removeWorkspace(context: vscode.ExtensionContext, workspaceId: s
   var workspacesJson = path.join(context.globalStorageUri.fsPath, "extensionWorkspaces.json");
   var workspaces: ExtensionWorkspace[] = JSON.parse(readFileSync(workspacesJson).toString());
 
-  writeFileSync(workspacesJson, JSON.stringify(workspaces.filter((w) => w.id !== workspaceId)));
+  writeFileSync(workspacesJson, JSON.stringify(workspaces.filter(w => w.id !== workspaceId)));
 
   // Update the state
   vscode.commands.executeCommand("setContext", "dt-ext-copilot.numWorkspaces", workspaces.length - 1);
+}
+
+/**
+ * Uploads a given CA certificate to either a OneAgent or ActiveGate's designated certificates
+ * folder. The folder gets created if it doesn't exist already.
+ * @param certPath path to the CA Certificate file
+ * @param component the component where the certificate will be written
+ */
+export function uploadComponentCert(certPath: string, component: "OneAgent" | "ActiveGate") {
+  let certFilename = path.basename(path.resolve(certPath as string));
+
+  const uploadDir =
+    process.platform === "win32"
+      ? component === "OneAgent"
+        ? "C:\\ProgramData\\dynatrace\\oneagent\\agent\\config\\certificates"
+        : "C:\\ProgramData\\dynatrace\\remotepluginmodule\\agent\\conf\\certificates"
+      : component === "OneAgent"
+      ? "/var/lib/dynatrace/oneagent/agent/config/certificates"
+      : "/var/lib/dynatrace/remotepluginmodule/agent/conf/certificates";
+
+  if (!existsSync(uploadDir)) {
+    mkdirSync(uploadDir);
+  }
+  // Avoid potential overwrites to some degree
+  if (
+    existsSync(path.join(uploadDir, certFilename)) &&
+    !(readFileSync(certPath).toString() === readFileSync(path.join(uploadDir, certFilename)).toString())
+  ) {
+    const [name, ext] = certFilename.split(".");
+    certFilename = `${name}_${vscode.workspace.name}.${ext}`;
+    copyFileSync(certPath, path.join(uploadDir, certFilename));
+  }
 }

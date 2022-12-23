@@ -15,11 +15,11 @@ import axios from "axios";
 export function checkSettings(...settings: string[]): boolean {
   let config = vscode.workspace.getConfiguration("dynatrace", null);
   let status = true;
-  settings.forEach((setting) => {
+  settings.forEach(setting => {
     if (!config.get(setting)) {
       vscode.window
         .showErrorMessage(`Missing one or more required settings. Check ${setting}`, "Open settings")
-        .then((opt) => {
+        .then(opt => {
           if (opt === "Open settings") {
             vscode.commands.executeCommand("workbench.action.openSettings", "Dynatrace");
           }
@@ -51,7 +51,7 @@ export function checkEnvironmentConnected(environmentsTree: EnvironmentsTreeData
 export function checkWorkspaceOpen(): boolean {
   var status = true;
   if (!vscode.workspace.workspaceFolders || vscode.workspace.workspaceFolders.length === 0) {
-    vscode.window.showErrorMessage("You must be inside a workspace to use this command.", "Open folder").then((opt) => {
+    vscode.window.showErrorMessage("You must be inside a workspace to use this command.", "Open folder").then(opt => {
       if (opt === "Open folder") {
         vscode.commands.executeCommand("vscode.openFolder");
       }
@@ -146,7 +146,7 @@ export function checkCertificateExists(type: "ca" | "dev" | "all"): boolean {
         "Generate new ones",
         "Open settings"
       )
-      .then((opt) => {
+      .then(opt => {
         switch (opt) {
           case "Generate new ones":
             vscode.commands.executeCommand("dt-ext-copilot.generateCertificates");
@@ -168,7 +168,7 @@ export function checkCertificateExists(type: "ca" | "dev" | "all"): boolean {
 export function checkExtensionZipExists(): boolean {
   if (vscode.workspace.workspaceFolders) {
     var distDir = path.join(vscode.workspace.workspaceFolders[0].uri.fsPath, "dist");
-    if (readdirSync(distDir).filter((i) => i.endsWith(".zip")).length === 0) {
+    if (readdirSync(distDir).filter(i => i.endsWith(".zip")).length === 0) {
       vscode.window.showErrorMessage("No extension archive was found. Try building one first.");
       return false;
     }
@@ -210,7 +210,7 @@ export async function checkBitBucketReady(): Promise<Boolean> {
 export async function checkUrlReachable(url: string): Promise<Boolean> {
   return await axios
     .get(url)
-    .then((res) => res.status === 200)
+    .then(res => res.status === 200)
     .catch(() => false);
 }
 
@@ -235,4 +235,18 @@ export async function checkGradleProperties(): Promise<Boolean> {
     return false;
   }
   return true;
+}
+
+export function checkOneAgentInstalled(): boolean {
+  const oaWinPath = "C:\\ProgramData\\dynatrace\\oneagent\\agent\\config";
+  const oaLinPath = "/var/lib/dynatrace/oneagent/agent/config";
+
+  return process.platform === "win32" ? existsSync(oaWinPath) : existsSync(oaLinPath);
+}
+
+export function checkActiveGateInstalled(): boolean {
+  const agWinPath = "C:\\ProgramData\\dynatrace\\remotepluginmodule\\agent\\conf";
+  const agLinPath = "/var/lib/dynatrace/remotepluginmodule/agent/conf";
+
+  return process.platform === "win32" ? existsSync(agWinPath) : existsSync(agLinPath);
 }

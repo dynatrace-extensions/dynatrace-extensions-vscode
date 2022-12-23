@@ -2,7 +2,7 @@ import * as vscode from "vscode";
 import { loadSchemas } from "./commandPalette/loadSchemas";
 import { initWorkspace } from "./commandPalette/initWorkspace";
 import { generateCerts } from "./commandPalette/generateCertificates";
-import { uploadCertificate } from "./commandPalette/uploadCertificate";
+import { distributeCertificate } from "./commandPalette/distributeCertificate";
 import { createDocumentation } from "./commandPalette/createDocumentation";
 import { buildExtension } from "./commandPalette/buildExtension";
 import { TopologyCompletionProvider } from "./codeCompletions/topology";
@@ -309,12 +309,12 @@ function registerCommandPaletteCommands(
         });
       }
     }),
-    // Upload certificate to Dynatrace credential vault
-    vscode.commands.registerCommand("dt-ext-copilot.uploadCertificate", async () => {
+    // Distribute CA certificate to Dynatrace credential vault & OneAgents/ActiveGates
+    vscode.commands.registerCommand("dt-ext-copilot.distributeCertificate", async () => {
       if (checkWorkspaceOpen() && checkEnvironmentConnected(tenantsProvider)) {
         initWorkspaceStorage(context);
         if (checkCertificateExists("ca")) {
-          uploadCertificate(context, (await tenantsProvider.getDynatraceClient())!);
+          distributeCertificate(context, (await tenantsProvider.getDynatraceClient())!);
         }
       }
     }),

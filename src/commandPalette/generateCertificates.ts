@@ -161,7 +161,7 @@ export async function generateCerts(context: vscode.ExtensionContext): Promise<b
       "No"
     );
     if (choice === "Yes") {
-      await vscode.commands.executeCommand("dt-ext-copilot.uploadCertificate");
+      await vscode.commands.executeCommand("dt-ext-copilot.distributeCertificate");
     }
     // We don't care about success of upload for the success of this command
     return true;

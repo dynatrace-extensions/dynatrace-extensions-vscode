@@ -24,7 +24,7 @@
 		"onCommand:dt-ext-copilot.loadSchemas",
 		"onCommand:dt-ext-copilot.initWorkspace",
 		"onCommand:dt-ext-copilot.generateCertificates",
-		"onCommand:dt-ext-copilot.uploadCertificate",
+		"onCommand:dt-ext-copilot.distributeCertificate",
 		"onCommand:dt-ext-copilot.createDocumentation",
 		"onCommand:dt-ext-copilot.buildExtension",
 		"onCommand:dt-ext-copilot.uploadExtension",
@@ -50,8 +50,8 @@
 				"category": "Dynatrace"
 			},
 			{
-				"command": "dt-ext-copilot.uploadCertificate",
-				"title": "Upload certificate",
+				"command": "dt-ext-copilot.distributeCertificate",
+				"title": "Distribute certificate",
 				"category": "Dynatrace"
 			},
 			{
