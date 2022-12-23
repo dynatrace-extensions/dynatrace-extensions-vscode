@@ -44,6 +44,8 @@ Settings for using your own credentials:
 - `dynatrace.developerCertificateLocation` - File path. Bring your own developer certificate instead of generating a new one.
 - `dynatrace.rootOrCaCertificateLocation` - File path. Bring your own root (CA) certificate instead of generating a new one.
 
+*Note:* if you generated a single "fused" certkey file via `dt-cli` and want to use it just add the path to it in both `dynatrace.developerKeyLocation` and `dynatrace.developerCertificateLocation`
+
 Settings for generating new certificates:
 
 - `dynatrace.certificateCommonName` - When generating new certificates, specifies the common name (CN) attribute of the certificate. Defaults to "Extension Developer".
