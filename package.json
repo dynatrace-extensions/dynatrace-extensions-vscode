@@ -2,7 +2,7 @@
 	"name": "dt-ext-copilot",
 	"displayName": "Dynatrace Extensions Copilot",
 	"description": "Support for Dynatrace Extension 2.0 development",
-	"version": "0.22.1",
+	"version": "0.22.2",
 	"repository": {
 		"type": "git",
 		"url": "https://github.com/dynatrace-extensions/dynatrace-extensions-copilot.git"
@@ -372,7 +372,8 @@
 		"watch": "tsc -watch -p ./",
 		"pretest": "npm run compile && npm run lint",
 		"lint": "eslint src --ext ts",
-		"test": "node ./out/test/runTest.js"
+		"test": "node ./out/test/runTest.js",
+		"build": "npm run pretest && npm run vscode:prepublish"
 	},
 	"devDependencies": {
 		"@types/adm-zip": "^0.5.0",

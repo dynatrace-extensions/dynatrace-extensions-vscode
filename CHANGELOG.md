@@ -1,5 +1,14 @@
 # Change Log
 
+## Version 0.22.2 / Stage: beta (06.01.2022)
+
+### 🚀 Improved in this version:
+- Increased logging in DevTools to aid troubleshooting
+- Card key diagnostics more accurate
+- Workspace structure allows `extension/extension.yaml` one level deep as well as in root of the workspace
+
+---
+
 ## Version 0.22.1 / Stage: beta (23.12.2022)
 
 ### 🚀 Improved in this version:
