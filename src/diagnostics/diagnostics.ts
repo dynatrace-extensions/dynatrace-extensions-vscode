@@ -62,6 +62,7 @@ export class DiagnosticsProvider {
       ...(await this.diagnoseExtensionName(document.getText())),
       ...this.diagnoseMetricKeys(document, extension),
       ...this.diagnoseCardKeys(document, extension),
+      ...this.diagnoseOIDs(document, extension),
     ];
 
     this.collection.set(document.uri, diagnostics);
@@ -205,6 +206,29 @@ export class DiagnosticsProvider {
             )
           );
         });
+    });
+
+    return diagnostics;
+  }
+
+  private diagnoseOIDs(document: vscode.TextDocument, extension: ExtensionStub): vscode.Diagnostic[] {
+    const content = document.getText();
+    let diagnostics: vscode.Diagnostic[] = [];
+
+    if (!extension.snmp) {
+      return [];
+    }
+
+    const oids: string[] = [];
+    const oidRegex = /oid:([\d\.]+)/gm;
+    let match;
+    while ((match = oidRegex.exec(content)) !== null) {
+      if (!oids.includes(match[1])) {
+        oids.push(match[1]);
+      }
+    }
+    oids.forEach(o => {
+      fetchOID(o);
     });
 
     return diagnostics;
