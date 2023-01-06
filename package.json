@@ -2,6 +2,11 @@
 	"name": "dt-ext-copilot",
 	"displayName": "Dynatrace Extensions Copilot",
 	"description": "Support for Dynatrace Extension 2.0 development",
+	"author": {
+		"name": "Dynatrace Platform Extension",
+		"email": "extensions@dynatrace.com",
+		"url": "https://info.dynatrace.com/global_all_wp_dynatrace_services_platform_extensions_fact_sheet_13656_fulfillment.html"
+	},
 	"version": "0.22.3",
 	"repository": {
 		"type": "git",
@@ -11,7 +16,15 @@
 		"vscode": "^1.67.0"
 	},
 	"categories": [
-		"Other"
+		"Other",
+		"Linters",
+		"Snippets"
+	],
+	"extensionDependencies": [
+		"redhat.vscode-yaml"
+	],
+	"extensionPack": [
+		"redhat.vscode-yaml"
 	],
 	"icon": "out/assets/logos/dynatrace_logo.png",
 	"galleryBanner": {
