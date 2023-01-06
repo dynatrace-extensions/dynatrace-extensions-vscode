@@ -1,10 +1,10 @@
 import * as path from "path";
 import * as vscode from "vscode";
-import { glob } from "glob";
 import { existsSync, readdirSync, readFileSync } from "fs";
 import { EnvironmentsTreeDataProvider } from "../treeViews/environmentsTreeView";
 import { env } from "process";
 import axios from "axios";
+import { getExtensionFilePath } from "./fileSystem";
 
 /**
  * Checks whether one or more VSCode settings are configured.
@@ -17,6 +17,7 @@ export function checkSettings(...settings: string[]): boolean {
   let status = true;
   settings.forEach(setting => {
     if (!config.get(setting)) {
+      console.log(`Setting ${setting} not found. Check failed.`);
       vscode.window
         .showErrorMessage(`Missing one or more required settings. Check ${setting}`, "Open settings")
         .then(opt => {
@@ -27,6 +28,7 @@ export function checkSettings(...settings: string[]): boolean {
       status = false;
     }
   });
+  console.log(`Check - are required settings present? > ${status}`);
   return status;
 }
 
@@ -36,12 +38,14 @@ export function checkSettings(...settings: string[]): boolean {
  * @returns check status
  */
 export function checkEnvironmentConnected(environmentsTree: EnvironmentsTreeDataProvider): boolean {
+  var status = true;
   if (!environmentsTree.getCurrentEnvironment()) {
     vscode.window.showErrorMessage("You must be connected to a Dynatrace Environment to use this command.");
-    return false;
+    status = false;
   }
 
-  return true;
+  console.log(`Check - is an environment connected? > ${status}`);
+  return status;
 }
 
 /**
@@ -68,17 +72,15 @@ export function checkWorkspaceOpen(): boolean {
  * @returns check status
  */
 export function isExtensionsWorkspace(context: vscode.ExtensionContext): boolean {
-  var status = false;
+  var status = true;
   if (context.storageUri && existsSync(context.storageUri.fsPath)) {
-    status =
-      glob.sync("extension/extension.yaml", {
-        cwd: vscode.Uri.parse(
-          decodeURI(
-            JSON.parse(readFileSync(path.join(path.dirname(context.storageUri.fsPath), "workspace.json")).toString())
-              .folder
-          )
-        ).fsPath,
-      }).length > 0;
+    const extensionYaml = getExtensionFilePath(context);
+    if (!extensionYaml) {
+      vscode.window.showWarningMessage(
+        "This command must be run from an Extensions Workspace. Ensure your `extension` folder is within the root of the workspace."
+      );
+      status = false;
+    }
   }
 
   console.log(`Check - is this an extensions workspace? > ${status}`);
@@ -138,6 +140,7 @@ export function checkCertificateExists(type: "ca" | "dev" | "all"): boolean {
       allExist = false;
     }
   }
+  console.log(`Check - ${type.toUpperCase()} certificates exist? > ${allExist}`);
 
   if (!allExist) {
     vscode.window
@@ -240,13 +243,17 @@ export async function checkGradleProperties(): Promise<Boolean> {
 export function checkOneAgentInstalled(): boolean {
   const oaWinPath = "C:\\ProgramData\\dynatrace\\oneagent\\agent\\config";
   const oaLinPath = "/var/lib/dynatrace/oneagent/agent/config";
+  const status = process.platform === "win32" ? existsSync(oaWinPath) : existsSync(oaLinPath);
 
-  return process.platform === "win32" ? existsSync(oaWinPath) : existsSync(oaLinPath);
+  console.log(`Check - is OneAgent installed locally? > ${status}`);
+  return status;
 }
 
 export function checkActiveGateInstalled(): boolean {
   const agWinPath = "C:\\ProgramData\\dynatrace\\remotepluginmodule\\agent\\conf";
   const agLinPath = "/var/lib/dynatrace/remotepluginmodule/agent/conf";
+  const status = process.platform === "win32" ? existsSync(agWinPath) : existsSync(agLinPath);
 
-  return process.platform === "win32" ? existsSync(agWinPath) : existsSync(agLinPath);
+  console.log(`Check - is ActiveGate installed locally? > ${status}`);
+  return status;
 }
