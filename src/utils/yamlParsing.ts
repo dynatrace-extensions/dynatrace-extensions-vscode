@@ -47,35 +47,33 @@ export function getListItemIndexes(listLabel: string, content: string) {
   let indent = -2; // The indent for this list of items
   let indexInDoc = 0; // The index of the current line relative to the original content
 
-  console.log("Gettings indexes for items in list 'screens'");
-
-  for (const [lineNo, line] of content.split("\n").entries()) {
-    // Exit if the line indent is less than what the list items have
+  for (const line of content.split("\n")) {
+    // Exit if the line indent becomes less than what the list defined
     const lineStartIdx = /[a-z\-]/i.exec(line);
-    if (index >= 0 && (!lineStartIdx || lineStartIdx.index < indent)) {
-      indexMap[index].end = indexInDoc;
+    if (lineStartIdx && lineStartIdx.index < indent) {
       break;
     }
-    indexInDoc += line.length + 1; // Newline was removed during split
+    indexInDoc += line.length + 1; // Newline char was removed during split
     // List declaration found
     if (line.replace(/ /g, "").startsWith(`${listLabel}:`)) {
-      index = -1;
+      index++;
       continue;
     }
     // First line inside the block is the first item of the list
     if (index === -1) {
       indent = line.indexOf("-");
-      index = 0;
+      index++;
       indexMap.push({ index: index, start: indexInDoc - line.length, end: indexInDoc });
       continue;
     }
+    // Any other line starting with "-" at the same indentation is a new item
     if (line.indexOf("-") === indent) {
-      // next list item
       index++;
       indexMap[index - 1].end = indexInDoc - line.length - 1;
       indexMap.push({ index: index, start: indexInDoc - line.length, end: indexInDoc });
     }
   }
+  indexMap[index].end = indexInDoc;
 
   return indexMap;
 }
