@@ -77,27 +77,26 @@ export class ExtensionsTreeDataProvider implements vscode.TreeDataProvider<Exten
       var extensions: ExtensionProjectItem[] = [];
       var workspacePath = element.path.fsPath;
       const extensionFiles = [
-        ...glob.sync("extension/extension.yaml", {cwd: workspacePath}),
-        ...glob.sync("*/extension/extension.yaml", {cwd: workspacePath})
-      ]
-      extensionFiles
-        .forEach((filepath) => {
-          let extension: ExtensionStub = yaml.parse(readFileSync(path.join(workspacePath, filepath)).toString());
-          extensions.push(
-            new ExtensionProjectItem(
-              extension.name,
-              vscode.TreeItemCollapsibleState.None,
-              vscode.Uri.file(path.join(workspacePath, filepath)),
-              {
-                light: path.join(__filename, "..", "..", "assets", "icons", "plugin_light.png"),
-                dark: path.join(__filename, "..", "..", "assets", "icons", "plugin_dark.png"),
-              },
-              "extension",
-              `${extension.name}-${extension.version}`,
-              extension.version
-            )
-          );
-        });
+        ...glob.sync("extension/extension.yaml", { cwd: workspacePath }),
+        ...glob.sync("*/extension/extension.yaml", { cwd: workspacePath }),
+      ];
+      extensionFiles.forEach(filepath => {
+        let extension: ExtensionStub = yaml.parse(readFileSync(path.join(workspacePath, filepath)).toString());
+        extensions.push(
+          new ExtensionProjectItem(
+            extension.name,
+            vscode.TreeItemCollapsibleState.None,
+            vscode.Uri.file(path.join(workspacePath, filepath)),
+            {
+              light: path.join(__filename, "..", "..", "assets", "icons", "plugin_light.png"),
+              dark: path.join(__filename, "..", "..", "assets", "icons", "plugin_dark.png"),
+            },
+            "extension",
+            `${extension.name}-${extension.version}`,
+            extension.version
+          )
+        );
+      });
       return extensions;
     }
     // If not item specified, grab all workspaces from global storage

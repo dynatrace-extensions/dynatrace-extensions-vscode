@@ -126,7 +126,7 @@ export class PrometheusCodeLensProvider implements vscode.CodeLensProvider {
       prompt: "Mandatory",
       ignoreFocusOut: true,
     });
-    if (!url) return false;
+    if (!url) {return false;}
     this.promUrl = url;
     // Endpoint connectivity scheme
     this.promAuth = (await vscode.window.showQuickPick(
@@ -149,7 +149,7 @@ export class PrometheusCodeLensProvider implements vscode.CodeLensProvider {
           prompt: "Mandatory",
           ignoreFocusOut: true,
         });
-        if (!this.promToken) return false;
+        if (!this.promToken) {return false;}
         return true;
       case "Username & password":
         this.promUsername = await vscode.window.showInputBox({
@@ -165,7 +165,7 @@ export class PrometheusCodeLensProvider implements vscode.CodeLensProvider {
           ignoreFocusOut: true,
           password: true,
         });
-        if (!this.promUsername || !this.promPassword) return false;
+        if (!this.promUsername || !this.promPassword) {return false;}
         return true;
       case "AWS key":
         // TODO: Figure out how to implement AWS authentication
@@ -183,7 +183,7 @@ export class PrometheusCodeLensProvider implements vscode.CodeLensProvider {
           prompt: "Mandatory",
           ignoreFocusOut: true,
         });
-        if (!this.promAccessKey || !this.promSecretKey) return false;
+        if (!this.promAccessKey || !this.promSecretKey) {return false;}
         return true;
       default:
         return false;
@@ -211,6 +211,7 @@ export class PrometheusCodeLensProvider implements vscode.CodeLensProvider {
             });
           return true;
         case "Bearer token":
+          // eslint-disable-next-line
           axios.get(this.promUrl!, { headers: { Authorization: `Bearer ${this.promToken}` } }).then((res) => {
             this.processPrometheusData(res.data);
           });

@@ -111,7 +111,7 @@ export class BitBucketStatus {
       value: `Pull ${fromBranch} into main`,
       prompt: "Optional",
     });
-    if (!title) return;
+    if (!title) {return;}
 
     // Allow user to set custom description for the PR.
     // TODO: Pre-populate with commits history or something.
@@ -121,7 +121,7 @@ export class BitBucketStatus {
         vscode.window.showErrorMessage(message);
         return "";
       });
-    if (prDescription === "") return;
+    if (prDescription === "") {return;}
 
     // Allow user to select whichever reviewers they want
     const reviewers = await vscode.window.showQuickPick(
@@ -133,7 +133,7 @@ export class BitBucketStatus {
         placeHolder: "Add reviewers for this Pull Request",
       }
     );
-    if (!reviewers) return;
+    if (!reviewers) {return;}
     const finalReviewers = reviewers.map((r) => extensionsTeam.find((user) => user.name === r)!.id);
 
     // Make the request to BitBucket and create the PR
@@ -151,8 +151,10 @@ export class BitBucketStatus {
         ),
         {
           headers: {
+            // eslint-disable-next-line
             Authorization: `Bearer ${this.dtbbpat}`,
-            "Content-Type": "application/json",
+            // eslint-disable-next-line
+            "Content-Type": "application/json", 
           },
         }
       )
