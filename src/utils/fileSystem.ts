@@ -222,8 +222,9 @@ export function uploadComponentCert(certPath: string, component: "OneAgent" | "A
   }
   // Avoid potential overwrites to some degree
   if (
-    existsSync(path.join(uploadDir, certFilename)) &&
-    !(readFileSync(certPath).toString() === readFileSync(path.join(uploadDir, certFilename)).toString())
+    (existsSync(path.join(uploadDir, certFilename)) &&
+      !(readFileSync(certPath).toString() === readFileSync(path.join(uploadDir, certFilename)).toString())) ||
+    !existsSync(path.join(uploadDir, certFilename))
   ) {
     console.log(`Copying certificate file from ${certPath} to ${uploadDir}`);
     const [name, ext] = certFilename.split(".");

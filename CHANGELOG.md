@@ -1,5 +1,12 @@
 # Change Log
 
+## Version 0.22.3 / Stage: beta (06.01.2022)
+
+### 🪲 Fixed in this version:
+- Certificates are not being uploaded to local installations correctly
+
+---
+
 ## Version 0.22.2 / Stage: beta (06.01.2022)
 
 ### 🚀 Improved in this version:
