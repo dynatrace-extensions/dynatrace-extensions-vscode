@@ -1,6 +1,6 @@
 import * as vscode from "vscode";
 import * as yaml from "yaml";
-import { getCardMetaFromDefinition, getCardMetaFromLayout } from "../utils/extensionParsing";
+import { getReferencedCardsMeta, getDefinedCardsMeta } from "../utils/extensionParsing";
 import { getBlockItemIndexAtLine, getParentBlocks } from "../utils/yamlParsing";
 
 export class ScreensMetaCompletionProvider implements vscode.CompletionItemProvider {
@@ -66,8 +66,8 @@ export class ScreensMetaCompletionProvider implements vscode.CompletionItemProvi
     var completions: vscode.CompletionItem[] = [];
 
     if (location === "definition") {
-      var cardsInserted = getCardMetaFromDefinition(screenIdx, extension, cardType).map((c) => c.key);
-      getCardMetaFromLayout(screenIdx, extension)
+      var cardsInserted = getDefinedCardsMeta(screenIdx, extension, cardType).map((c) => c.key);
+      getReferencedCardsMeta(screenIdx, extension)
         .filter(
           // Stupid way of matching card types between yaml key and yaml value
           (card) =>
@@ -81,8 +81,8 @@ export class ScreensMetaCompletionProvider implements vscode.CompletionItemProvi
           completions.push(cardCompletion);
         });
     } else if (location === "layout") {
-      var cardsInserted = getCardMetaFromLayout(screenIdx, extension).map((c) => c.key);
-      getCardMetaFromDefinition(screenIdx, extension)
+      var cardsInserted = getReferencedCardsMeta(screenIdx, extension).map((c) => c.key);
+      getDefinedCardsMeta(screenIdx, extension)
         .filter((card) => !cardsInserted.includes(card.key))
         .forEach((card) => {
           const cardCompletion = new vscode.CompletionItem(card.key, vscode.CompletionItemKind.Field);

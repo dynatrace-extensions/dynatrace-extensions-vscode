@@ -58,7 +58,7 @@ interface WmiGroup extends DatasourceGroup {
   query?: string;
   interval?: {
     minutes: number;
-  }
+  };
   subgroups?: WmiSubGroup[];
 }
 
@@ -67,8 +67,8 @@ interface WmiSubGroup extends SubGroup {
   query?: string;
   interval?: {
     minutes: number;
-  }
-  type?: "logfileEvent" | "metric" | "notificationEvent"
+  };
+  type?: "logfileEvent" | "metric" | "notificationEvent";
 }
 
 interface MetricMetadata {
@@ -90,14 +90,26 @@ interface VarStub {
 interface ListSettings {
   layout?: {
     autoGenerate?: boolean;
-    cards?: [{ key: string; type: "ENTITIES_LIST" | "CHART_GROUP" | "MESSAGE" }];
+    cards?: ListScreenCard[];
   };
+}
+
+interface ListScreenCard {
+  key: string;
+  entitySelectorTemplate?: string;
+  type: "ENTITIES_LIST" | "CHART_GROUP" | "MESSAGE";
+}
+
+interface DetailsScreenCard {
+  key: string;
+  entitySelectorTemplate?: string;
+  type: "ENTITIES_LIST" | "CHART_GROUP" | "MESSAGE" | "LOGS" | "EVENTS";
 }
 
 interface DetailsSettings {
   layout?: {
     autoGenerate?: boolean;
-    cards?: [{ key: string; type: "ENTITIES_LIST" | "CHART_GROUP" | "MESSAGE" | "LOGS" | "EVENTS" }];
+    cards?: DetailsScreenCard[];
   };
 }
 
@@ -105,7 +117,9 @@ interface ScreenStub {
   entityType: string;
   propertiesCard?: any;
   listSettings?: ListSettings;
+  listInjections?: ListScreenCard[];
   detailsSettings?: DetailsSettings;
+  detailsInjections?: DetailsScreenCard[];
   entitiesListCards?: EntitiesListCardStub[];
   chartsCards?: ChartsCardStub[];
   messageCards?: any[];
