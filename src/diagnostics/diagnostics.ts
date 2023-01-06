@@ -19,6 +19,7 @@ import * as yaml from "yaml";
 import { checkDtInternalProperties } from "../utils/conditionCheckers";
 import { getDefinedCardsMeta, getMetricsFromDataSource, getReferencedCardsMeta } from "../utils/extensionParsing";
 import { getExtensionFilePath } from "../utils/fileSystem";
+import { fetchOID } from "../utils/snmp";
 import { getListItemIndexes } from "../utils/yamlParsing";
 import {
   copilotDiagnostic,
