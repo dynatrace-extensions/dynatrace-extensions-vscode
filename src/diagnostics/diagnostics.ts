@@ -1,7 +1,8 @@
 import * as vscode from "vscode";
 import * as yaml from "yaml";
 import { checkGradleProperties } from "../utils/conditionCheckers";
-import { getCardMetaFromDefinition, getCardMetaFromLayout, getMetricsFromDataSource } from "../utils/extensionParsing";
+import { getDefinedCardsMeta, getMetricsFromDataSource, getReferencedCardsMeta } from "../utils/extensionParsing";
+import { getExtensionFilePath } from "../utils/fileSystem";
 import { getListItemIndexes } from "../utils/yamlParsing";
 import {
   copilotDiagnostic,
@@ -22,8 +23,10 @@ import {
  */
 export class DiagnosticsProvider {
   private readonly collection: vscode.DiagnosticCollection;
+  private readonly context: vscode.ExtensionContext;
 
-  constructor() {
+  constructor(context: vscode.ExtensionContext) {
+    this.context = context;
     this.collection = vscode.languages.createDiagnosticCollection("Dynatrace");
   }
 
@@ -56,24 +59,18 @@ export class DiagnosticsProvider {
    * @returns true if extension will Build, false otherwise
    */
   public async isValidForBuilding(): Promise<boolean> {
-    const valid = await vscode.workspace.findFiles("extension/extension.yaml", undefined, 1).then(files => {
-      if (files.length === 0) {
-        return false;
-      }
-      const diagnostics = this.collection.get(files[0]);
-      if (!diagnostics) {
-        return true;
-      }
-      if (diagnostics.findIndex(diag => diag.severity === vscode.DiagnosticSeverity.Error) > -1) {
-        return false;
-      }
-      return true;
-    });
-    if (!valid) {
+    let status = true;
+    const extensionYamlFile = getExtensionFilePath(this.context)!;
+    const diagnostics = this.collection.get(vscode.Uri.file(extensionYamlFile));
+
+    if (diagnostics && diagnostics.findIndex(diag => diag.severity === vscode.DiagnosticSeverity.Error) > -1) {
       vscode.window.showErrorMessage("Extension cannot be built. Fix problems first.");
       vscode.commands.executeCommand("workbench.action.problems.focus");
+      status = false;
     }
-    return valid;
+
+    console.log(`Check - diagnostics collection clear? > ${status}`);
+    return status;
   }
 
   /**
@@ -159,8 +156,8 @@ export class DiagnosticsProvider {
     const screenBounds = getListItemIndexes("screens", content);
 
     extension.screens?.forEach((_, idx) => {
-      const refCards = getCardMetaFromLayout(idx, extension);
-      const defCards = getCardMetaFromDefinition(idx, extension);
+      const refCards = getReferencedCardsMeta(idx, extension);
+      const defCards = getDefinedCardsMeta(idx, extension);
       refCards
         .filter(rc => defCards.findIndex(dc => dc.key === rc.key) === -1)
         .forEach(rc => {

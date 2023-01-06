@@ -3,6 +3,7 @@ import * as path from "path";
 import axios from "axios";
 import { existsSync, mkdirSync, readFileSync, writeFile, writeFileSync } from "fs";
 import { Dynatrace } from "../dynatrace-api/dynatrace";
+import { getExtensionFilePath } from "../utils/fileSystem";
 
 /**
  * Delivers the "Load schemas" command functionality.
@@ -54,17 +55,14 @@ export async function loadSchemas(context: vscode.ExtensionContext, dt: Dynatrac
 
   try {
     // If extension.yaml already exists, update the version there too
-    vscode.workspace.findFiles("extension/extension.yaml").then(files => {
-      if (files.length > 0) {
-        files.forEach(file => {
-          const extension = readFileSync(file.fsPath).toString();
-          writeFileSync(
-            file.fsPath,
-            extension.replace(/^minDynatraceVersion: ([0-9.]+)/gm, `minDynatraceVersion: ${version}`)
-          );
-        });
-      }
-    });
+    const extensionFile = getExtensionFilePath(context);
+    if (extensionFile) {
+      const extensionContent = readFileSync(extensionFile).toString();
+      writeFileSync(
+        extensionFile,
+        extensionContent.replace(/^minDynatraceVersion: ([0-9.]+)/gm, `minDynatraceVersion: ${version}`)
+      );
+    }
   } catch (err: any) {
     vscode.window.showErrorMessage("Extension YAML was not updated. Schema loading only partially complete.");
     vscode.window.showErrorMessage(err.message);

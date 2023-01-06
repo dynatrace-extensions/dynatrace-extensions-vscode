@@ -2,6 +2,7 @@ import { readFileSync } from "fs";
 import * as vscode from "vscode";
 import * as yaml from "yaml";
 import { Dynatrace } from "../dynatrace-api/dynatrace";
+import { getExtensionFilePath } from "../utils/fileSystem";
 
 /**
  * Activates the extension found in the currently open workspace. If a version is not provided
@@ -9,9 +10,9 @@ import { Dynatrace } from "../dynatrace-api/dynatrace";
  * @param dt Dynatrace API Client
  * @param version optional version to activate
  */
-export async function activateExtension(dt: Dynatrace, version?: string) {
-  var extensionFile = await vscode.workspace.findFiles("extension/extension.yaml");
-  var extension = yaml.parse(readFileSync(extensionFile[0].fsPath).toString());
+export async function activateExtension(context: vscode.ExtensionContext, dt: Dynatrace, version?: string) {
+  var extensionFile = getExtensionFilePath(context)!;
+  var extension = yaml.parse(readFileSync(extensionFile).toString());
 
   // If version was not provided, prompt user for selection
   if (!version) {

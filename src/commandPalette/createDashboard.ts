@@ -4,6 +4,7 @@ import * as path from "path";
 import { getEntityMetrics, getMetricDisplayName } from "../utils/extensionParsing";
 import { existsSync, mkdirSync, readFileSync, writeFileSync } from "fs";
 import { EnvironmentsTreeDataProvider } from "../treeViews/environmentsTreeView";
+import { getExtensionFilePath } from "../utils/fileSystem";
 
 /**
  * Workflow for creating an overview dashboard based on the content of the extension.yaml.
@@ -16,14 +17,13 @@ import { EnvironmentsTreeDataProvider } from "../treeViews/environmentsTreeView"
  */
 export async function createOverviewDashboard(
   tenantsProvider: EnvironmentsTreeDataProvider,
-  outputChannel: vscode.OutputChannel
+  outputChannel: vscode.OutputChannel,
+  context: vscode.ExtensionContext
 ) {
   const DASHBOARD_PATH = "dashboards/overview_dashboard.json";
   // Read extension.yaml
-  const extensionFile = await vscode.workspace
-    .findFiles("extension/extension.yaml", undefined, 1)
-    .then((files) => files[0]);
-  const extension: ExtensionStub = yaml.parse(readFileSync(extensionFile.fsPath).toString());
+  const extensionFile = getExtensionFilePath(context)!;
+  const extension: ExtensionStub = yaml.parse(readFileSync(extensionFile).toString());
   // Check topology. No topology = pointless dashboard
   if (!extension.topology) {
     vscode.window.showWarningMessage("Please define your topology before running this command.");
@@ -33,7 +33,7 @@ export async function createOverviewDashboard(
   // Create dashboard
   const dashboardJson = buildDashboard(extension);
   // Create directories for dashboard
-  const extensionDir = path.resolve(extensionFile.fsPath, "..");
+  const extensionDir = path.resolve(extensionFile, "..");
   const dashboardsDir = path.resolve(extensionDir, "dashboards");
   if (!existsSync(dashboardsDir)) {
     mkdirSync(dashboardsDir);
@@ -44,10 +44,10 @@ export async function createOverviewDashboard(
   // Edit extension.yaml to include it
   if (!extension.dashboards) {
     extension.dashboards = [{ path: DASHBOARD_PATH }];
-    writeFileSync(extensionFile.fsPath, yaml.stringify(extension, { lineWidth: 0 }));
+    writeFileSync(extensionFile, yaml.stringify(extension, { lineWidth: 0 }));
   } else if (extension.dashboards.findIndex((d) => d.path === DASHBOARD_PATH) === -1) {
     extension.dashboards.push({ path: DASHBOARD_PATH });
-    writeFileSync(extensionFile.fsPath, yaml.stringify(extension, { lineWidth: 0 }));
+    writeFileSync(extensionFile, yaml.stringify(extension, { lineWidth: 0 }));
   }
   vscode.window.showInformationMessage("Dashboard created successfully");
 

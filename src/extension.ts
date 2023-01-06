@@ -50,7 +50,7 @@ import { WmiCompletionProvider } from "./codeCompletions/wmi";
  */
 export function activate(context: vscode.ExtensionContext) {
   console.log("DYNATRACE EXTENSION DEVELOPER - ACTIVATED!");
-
+  console.log(`Workspace storage will be at: ${context.storageUri!.fsPath}`);
   // Initialize global storage
   initGlobalStorage(context);
 
@@ -85,11 +85,11 @@ export function activate(context: vscode.ExtensionContext) {
   const fastModeChannel = vscode.window.createOutputChannel("Dynatrace Fast Mode", "json");
   const fastModeStatus = new FastModeStatus(fastModeChannel);
   const genericChannel = vscode.window.createOutputChannel("Dynatrace", "json");
-  const diagnosticsProvider = new DiagnosticsProvider();
+  const diagnosticsProvider = new DiagnosticsProvider(context);
   const diagnosticFixProvider = new DiagnosticFixProvider(diagnosticsProvider);
   var editTimeout: NodeJS.Timeout | undefined;
   if (checkWorkspaceOpen() && isExtensionsWorkspace(context)) {
-    checkBitBucketReady().then((ready) => {
+    checkBitBucketReady().then(ready => {
       if (ready) {
         new BitBucketStatus(context);
       }
@@ -151,13 +151,10 @@ export function activate(context: vscode.ExtensionContext) {
         }
       }
     ),
-    vscode.commands.registerCommand(
-      "dt-ext-copilot.codelens.runWMIQuery",
-      async (query: string) => {
-        wmiLensProvider.setQueryRunning(query);
-        runWMIQuery(query, genericChannel, wmiLensProvider.processQueryResults);
-      }
-    ),
+    vscode.commands.registerCommand("dt-ext-copilot.codelens.runWMIQuery", async (query: string) => {
+      wmiLensProvider.setQueryRunning(query);
+      runWMIQuery(query, genericChannel, wmiLensProvider.processQueryResults);
+    }),
     // Web view panel - metric query results
     vscode.window.registerWebviewPanelSerializer(MetricResultsPanel.viewType, {
       async deserializeWebviewPanel(webviewPanel: vscode.WebviewPanel, state: any) {
@@ -187,13 +184,13 @@ export function activate(context: vscode.ExtensionContext) {
       }
     }),
     // Activity on active document changed
-    vscode.window.onDidChangeActiveTextEditor((editor) => {
+    vscode.window.onDidChangeActiveTextEditor(editor => {
       if (editor && editor.document.fileName.endsWith("extension.yaml")) {
         diagnosticsProvider.provideDiagnostics(editor.document);
       }
     }),
     // Activity on every text change in a document
-    vscode.workspace.onDidChangeTextDocument((change) => {
+    vscode.workspace.onDidChangeTextDocument(change => {
       if (change.document.fileName.endsWith("extension.yaml")) {
         // Allow 0.5 sec after doc changes to reduce execution frequency
         if (editTimeout) {
@@ -256,10 +253,7 @@ function registerCompletionProviders(
       new PrometheusCompletionProvider(cachedDataProvider)
     ),
     // Wmi data
-    vscode.languages.registerCompletionItemProvider(
-      documentSelector,
-      new WmiCompletionProvider(cachedDataProvider)
-    ),
+    vscode.languages.registerCompletionItemProvider(documentSelector, new WmiCompletionProvider(cachedDataProvider)),
   ];
 }
 
@@ -302,7 +296,7 @@ function registerCommandPaletteCommands(
     vscode.commands.registerCommand("dt-ext-copilot.generateCertificates", async () => {
       if (checkWorkspaceOpen()) {
         initWorkspaceStorage(context);
-        return await checkOverwriteCertificates(context).then(async (approved) => {
+        return await checkOverwriteCertificates(context).then(async approved => {
           if (approved) {
             return await generateCerts(context);
           }
@@ -343,19 +337,19 @@ function registerCommandPaletteCommands(
     // Activate a given version of extension 2.0
     vscode.commands.registerCommand("dt-ext-copilot.activateExtension", async (version?: string) => {
       if (checkWorkspaceOpen() && isExtensionsWorkspace(context) && checkEnvironmentConnected(tenantsProvider)) {
-        activateExtension((await tenantsProvider.getDynatraceClient())!, version);
+        activateExtension(context, (await tenantsProvider.getDynatraceClient())!, version);
       }
     }),
     // Create Extension documentation
     vscode.commands.registerCommand("dt-ext-copilot.createDocumentation", () => {
       if (checkWorkspaceOpen() && isExtensionsWorkspace(context)) {
-        createDocumentation();
+        createDocumentation(context);
       }
     }),
     // Create Overview dashboard
     vscode.commands.registerCommand("dt-ext-copilot.createDashboard", () => {
       if (checkWorkspaceOpen() && isExtensionsWorkspace(context)) {
-        createOverviewDashboard(tenantsProvider, outputChannel);
+        createOverviewDashboard(tenantsProvider, outputChannel, context);
       }
     }),
   ];

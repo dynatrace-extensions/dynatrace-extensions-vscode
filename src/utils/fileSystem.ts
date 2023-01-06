@@ -1,5 +1,6 @@
 import * as vscode from "vscode";
 import * as path from "path";
+import { glob } from "glob";
 import { copyFileSync, existsSync, mkdirSync, readFileSync, writeFileSync } from "fs";
 import { DynatraceEnvironmentData, ExtensionWorkspace } from "../interfaces/treeViewData";
 
@@ -224,8 +225,33 @@ export function uploadComponentCert(certPath: string, component: "OneAgent" | "A
     existsSync(path.join(uploadDir, certFilename)) &&
     !(readFileSync(certPath).toString() === readFileSync(path.join(uploadDir, certFilename)).toString())
   ) {
+    console.log(`Copying certificate file from ${certPath} to ${uploadDir}`);
     const [name, ext] = certFilename.split(".");
     certFilename = `${name}_${vscode.workspace.name}.${ext}`;
     copyFileSync(certPath, path.join(uploadDir, certFilename));
   }
+}
+
+/**
+ * Searches the known extension workspace path for the extension.yaml file and returns the
+ * found result so long as the extension directory is in the root of the workspace or one
+ * directory deep (e.g. src/extension/extension.yaml)
+ * @param context
+ * @returns
+ */
+export function getExtensionFilePath(context: vscode.ExtensionContext): string | undefined {
+  const workspaceRootPath = vscode.Uri.parse(
+    decodeURI(
+      JSON.parse(readFileSync(path.join(path.dirname(context.storageUri!.fsPath), "workspace.json")).toString()).folder
+    )
+  ).fsPath;
+  console.log(`Looking for extension.yaml in workspace root: ${workspaceRootPath}`);
+  let matches = glob.sync("extension/extension.yaml", { cwd: workspaceRootPath });
+  if (matches.length === 0) {
+    matches = glob.sync("*/extension/extension.yaml", { cwd: workspaceRootPath });
+  }
+  if (matches.length > 0) {
+    return path.join(workspaceRootPath, matches[0]);
+  }
+  return undefined;
 }

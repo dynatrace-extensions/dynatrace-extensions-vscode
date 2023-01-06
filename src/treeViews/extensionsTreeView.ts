@@ -76,10 +76,11 @@ export class ExtensionsTreeDataProvider implements vscode.TreeDataProvider<Exten
       // Workspaces have Extensions as children items
       var extensions: ExtensionProjectItem[] = [];
       var workspacePath = element.path.fsPath;
-      glob
-        .sync("extension/extension.yaml", {
-          cwd: workspacePath,
-        })
+      const extensionFiles = [
+        ...glob.sync("extension/extension.yaml", {cwd: workspacePath}),
+        ...glob.sync("*/extension/extension.yaml", {cwd: workspacePath})
+      ]
+      extensionFiles
         .forEach((filepath) => {
           let extension: ExtensionStub = yaml.parse(readFileSync(path.join(workspacePath, filepath)).toString());
           extensions.push(

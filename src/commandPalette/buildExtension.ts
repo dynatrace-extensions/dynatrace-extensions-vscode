@@ -9,6 +9,7 @@ import { normalizeExtensionVersion, incrementExtensionVersion, getDatasourceName
 import { FastModeStatus } from "../statusBar/fastMode";
 import { exec, ExecOptions, ProcessEnvOptions } from "child_process";
 import { getPythonPath } from "../utils/otherExtensions";
+import { getExtensionFilePath } from "../utils/fileSystem";
 
 type FastModeOptions = {
   status: FastModeStatus;
@@ -39,9 +40,7 @@ export async function buildExtension(
   const devCert = workSpaceConfig.get("developerCertificateLocation") as string;
   const workspaceRoot = vscode.workspace.workspaceFolders![0].uri.fsPath;
   const distDir = path.resolve(workspaceRoot, "dist");
-  const extensionFile = fastMode
-    ? fastMode.document.fileName
-    : await vscode.workspace.findFiles("extension/extension.yaml").then(files => files[0].fsPath);
+  const extensionFile = fastMode ? fastMode.document.fileName : getExtensionFilePath(context)!;
   const extensionDir = path.resolve(extensionFile, "..");
   // Current name and version
   const extension = readFileSync(extensionFile).toString();

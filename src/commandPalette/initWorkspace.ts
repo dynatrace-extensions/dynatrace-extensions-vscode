@@ -2,7 +2,7 @@ import * as vscode from "vscode";
 import * as path from "path";
 import { TextEncoder } from "util";
 import { checkSettings } from "../utils/conditionCheckers";
-import { initWorkspaceStorage, registerWorkspace } from "../utils/fileSystem";
+import { getExtensionFilePath, initWorkspaceStorage, registerWorkspace } from "../utils/fileSystem";
 import { loadSchemas } from "./loadSchemas";
 import { Dynatrace } from "../dynatrace-api/dynatrace";
 
@@ -22,7 +22,7 @@ export async function initWorkspace(context: vscode.ExtensionContext, dt: Dynatr
       location: vscode.ProgressLocation.Notification,
       title: "Initializing workspace",
     },
-    async (progress) => {
+    async progress => {
       // Load schemas if needed, otherwise use cached version and just update yaml schema
       progress.report({ message: "Setting up workspace schemas" });
       var schemaVersion = context.workspaceState.get("schemaVersion") as string;
@@ -48,19 +48,17 @@ export async function initWorkspace(context: vscode.ExtensionContext, dt: Dynatr
       var distDir = vscode.Uri.file(path.resolve(path.join(rootPath, "dist")));
       vscode.workspace.fs.createDirectory(distDir);
 
-      vscode.workspace.findFiles("extension/extension.yaml").then((files) => {
-        if (files.length === 0) {
-          // Create extension directory
-          var extensionDir = vscode.Uri.file(path.resolve(path.join(rootPath, "extension")));
-          vscode.workspace.fs.createDirectory(extensionDir);
-          // Add a basic extension stub
-          const extensionStub = `name: custom:my.awesome.extension\nversion: "0.0.1"\nminDynatraceVersion: "${schemaVersion}"\nauthor:\n  name: Your Name Here`;
-          vscode.workspace.fs.writeFile(
-            vscode.Uri.file(path.join(extensionDir.fsPath, "extension.yaml")),
-            new TextEncoder().encode(extensionStub)
-          );
-        }
-      });
+      if (!getExtensionFilePath(context)) {
+        // Create extension directory
+        var extensionDir = vscode.Uri.file(path.resolve(path.join(rootPath, "extension")));
+        vscode.workspace.fs.createDirectory(extensionDir);
+        // Add a basic extension stub
+        const extensionStub = `name: custom:my.awesome.extension\nversion: "0.0.1"\nminDynatraceVersion: "${schemaVersion}"\nauthor:\n  name: Your Name Here`;
+        vscode.workspace.fs.writeFile(
+          vscode.Uri.file(path.join(extensionDir.fsPath, "extension.yaml")),
+          new TextEncoder().encode(extensionStub)
+        );
+      }
 
       // Now that the workspace exists, storage can be created
       initWorkspaceStorage(context);

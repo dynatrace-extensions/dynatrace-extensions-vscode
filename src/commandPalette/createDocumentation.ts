@@ -3,6 +3,7 @@ import * as yaml from "yaml";
 import * as path from "path";
 import { readFileSync, writeFileSync } from "fs";
 import { getAllMetricsByFeatureSet } from "../utils/extensionParsing";
+import { getExtensionFilePath } from "../utils/fileSystem";
 
 /**
  * Delivers the "Create documentation" command functionality.
@@ -10,12 +11,12 @@ import { getAllMetricsByFeatureSet } from "../utils/extensionParsing";
  * a README.md file which is written in the workspace at the same level as the extension folder.
  * @returns void
  */
-export async function createDocumentation() {
+export async function createDocumentation(context: vscode.ExtensionContext) {
   await vscode.window.withProgress(
     { location: vscode.ProgressLocation.Notification, title: "Creating documentation" },
-    async (progress) => {
+    async progress => {
       progress.report({ message: "Parsing metadata" });
-      var extensionYaml = await vscode.workspace.findFiles("extension/extension.yaml").then((files) => files[0].fsPath);
+      var extensionYaml = getExtensionFilePath(context)!;
       var extensionDir = path.dirname(extensionYaml);
       var extension = yaml.parse(readFileSync(extensionYaml).toString());
 
@@ -48,16 +49,16 @@ function writeDocumentation(extension: ExtensionStub, extensionDir: string) {
     "This extension is built using the Dynatrace Extension 2.0 Framework.\nThis means it will benefit of additional assets that can help you browse through the data.\n\n";
   if (entities.length > 0) {
     docContent += "## Topology\n\nThis extension will create the following types of entities:\n";
-    entities.forEach((entity) => {
+    entities.forEach(entity => {
       docContent += `* ${entity.name} (${entity.type})\n`;
     });
     docContent += "\n";
   }
   if (metrics.length > 0) {
     docContent += "## Metrics\n\nThis extension will collect the following metrics:\n";
-    metricsMap.forEach((mm) => {
+    metricsMap.forEach(mm => {
       docContent += `* Split by ${mm.metricEntityString}:\n`;
-      mm.metrics.forEach((m) => {
+      mm.metrics.forEach(m => {
         docContent += `  * ${m.name} (\`${m.key}\`)\n`;
         docContent += `    ${m.description} (as ${m.unit})\n`;
       });
@@ -67,9 +68,9 @@ function writeDocumentation(extension: ExtensionStub, extensionDir: string) {
   if (alerts.length > 0) {
     docContent +=
       "## Alerts\n\nCustom events for alerting are packaged along with the extension. These should be reviewed and ajusted as needed before enabling from the Settings page.\nAlerts:\n";
-    alerts.forEach((alert) => {
+    alerts.forEach(alert => {
       docContent += `* ${alert.name}`;
-      let eIdx = entities.findIndex((e) => e.type === alert.entity);
+      let eIdx = entities.findIndex(e => e.type === alert.entity);
       docContent += eIdx === -1 ? "" : ` (applies to ${entities[eIdx].name})\n`;
       docContent += `  ${alert.description}\n`;
     });
@@ -78,7 +79,7 @@ function writeDocumentation(extension: ExtensionStub, extensionDir: string) {
   if (dashboards.length > 0) {
     docContent += `## Dashboards\n\nThis extension is packaged with ${dashboards.length} dashboards which should serve as a starting point for data analysis.`;
     docContent += "\nYou can find these by opening the Dashboards menu and searching for:\n\n";
-    dashboards.forEach((dashboard) => {
+    dashboards.forEach(dashboard => {
       docContent += `* ${dashboard.name}\n`;
     });
     docContent += "\n";
@@ -88,9 +89,9 @@ function writeDocumentation(extension: ExtensionStub, extensionDir: string) {
     docContent += "## Feature sets\n\n";
     docContent +=
       "Feature sets can be used to opt in and out of metric data collection.\nThis extension groups together metrics within the following feature sets:\n\n";
-    featureSets.forEach((featureSet) => {
+    featureSets.forEach(featureSet => {
       docContent += `* ${featureSet.name}\n`;
-      featureSet.metrics.forEach((metric) => {
+      featureSet.metrics.forEach(metric => {
         docContent += `  * ${metric}\n`;
       });
     });
@@ -100,7 +101,7 @@ function writeDocumentation(extension: ExtensionStub, extensionDir: string) {
     docContent +=
       "## Variables\n\nVariables are used in monitoring configurations for filtering and adding additional dimensions.\n";
     docContent += "This extension exposes the following variables:\n\n";
-    extension.vars.forEach((v) => {
+    extension.vars.forEach(v => {
       docContent += `* \`${v.id}\` (${v.type}) - ${v.displayName}\n`;
     });
     docContent += "\n";
@@ -120,7 +121,7 @@ function extractAlerts(extension: ExtensionStub, extensionDir: string): AlertDoc
   if (!extension.alerts) {
     return [];
   }
-  return extension.alerts.map((pathEntry) => {
+  return extension.alerts.map(pathEntry => {
     var alert = JSON.parse(readFileSync(path.join(extensionDir, pathEntry.path)).toString());
 
     let alertCondition = alert.monitoringStrategy.alertCondition.toLowerCase();
@@ -152,7 +153,7 @@ function extractDashboards(extension: ExtensionStub, extensionDir: string): Dash
   if (!extension.dashboards) {
     return [];
   }
-  return extension.dashboards.map((pathEntry) => {
+  return extension.dashboards.map(pathEntry => {
     var dashboard = JSON.parse(readFileSync(path.join(extensionDir, pathEntry.path)).toString());
 
     return {
@@ -172,10 +173,10 @@ function extractTopology(extension: ExtensionStub): EntityDoc[] {
   }
   return extension.topology.types.map((topologyType): EntityDoc => {
     var entitySources: string[] = [];
-    topologyType.rules.forEach((rule) => {
+    topologyType.rules.forEach(rule => {
       rule.sources
-        .filter((source) => source.sourceType === "Metrics")
-        .forEach((source) => {
+        .filter(source => source.sourceType === "Metrics")
+        .forEach(source => {
           if (!entitySources.includes(source.condition)) {
             entitySources.push(source.condition);
           }
@@ -199,7 +200,7 @@ function extractMetrics(extension: ExtensionStub): MetricDoc[] {
   if (!extension.metrics) {
     return [];
   }
-  return extension.metrics.map((metric) => {
+  return extension.metrics.map(metric => {
     return {
       key: metric.key,
       name: metric.metadata.displayName,
@@ -219,15 +220,15 @@ function extractMetrics(extension: ExtensionStub): MetricDoc[] {
  * @returns list of mappings between metrics and entities
  */
 function mapEntitiesToMetrics(entities: EntityDoc[], metrics: MetricDoc[]): MetricEntityMap[] {
-  entities = entities.map((entity) => {
+  entities = entities.map(entity => {
     let entityMetrics: string[] = [];
 
-    entity.sources.forEach((pattern) => {
+    entity.sources.forEach(pattern => {
       let operator = pattern.split("(")[0];
       let keyPattern = pattern.split("(")[1].split(")")[0];
       entityMetrics.push(
         ...metrics
-          .filter((m) => {
+          .filter(m => {
             if (operator === "$eq") {
               return m.key === keyPattern;
             } else if (operator === "$prefix") {
@@ -235,22 +236,22 @@ function mapEntitiesToMetrics(entities: EntityDoc[], metrics: MetricDoc[]): Metr
             }
             return false;
           })
-          .map((m) => m.key)
+          .map(m => m.key)
       );
     });
     entity.metrics = entityMetrics;
     return entity;
   });
 
-  metrics = metrics.map((m) => {
-    m.entities = entities.filter((e) => e.metrics.includes(m.key)).map((e) => e.name);
+  metrics = metrics.map(m => {
+    m.entities = entities.filter(e => e.metrics.includes(m.key)).map(e => e.name);
     return m;
   });
 
   let metricEntityMap: MetricEntityMap[] = [];
-  metrics.forEach((m) => {
+  metrics.forEach(m => {
     let metricStr = m.entities.join(", ");
-    let idx = metricEntityMap.findIndex((mm) => mm.metricEntityString === metricStr);
+    let idx = metricEntityMap.findIndex(mm => mm.metricEntityString === metricStr);
     if (idx === -1) {
       metricEntityMap.push({ metricEntityString: metricStr, metrics: [m] });
     } else {
