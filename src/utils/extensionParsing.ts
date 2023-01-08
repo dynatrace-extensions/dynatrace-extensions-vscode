@@ -213,8 +213,26 @@ export function getExtensionDatasource(extension: ExtensionStub): DatasourceGrou
   if (extension.wmi) {
     return extension.wmi;
   }
-  if (extension.sql) {
-    return extension.sql;
+  if (extension.sqlDb2) {
+    return extension.sqlDb2;
+  }
+  if (extension.sqlServer) {
+    return extension.sqlServer;
+  }
+  if (extension.sqlMySql) {
+    return extension.sqlMySql;
+  }
+  if (extension.sqlOracle) {
+    return extension.sqlOracle;
+  }
+  if (extension.sqlPostgres) {
+    return extension.sqlPostgres;
+  }
+  if (extension.sqlHana) {
+    return extension.sqlHana;
+  }
+  if (extension.sqlSnowflake) {
+    return extension.sqlSnowflake;
   }
   if (extension.prometheus) {
     return extension.prometheus;
@@ -239,8 +257,26 @@ export function getDatasourceName(extension: ExtensionStub): string {
   if (extension.wmi) {
     return "wmi";
   }
-  if (extension.sql) {
-    return "sql";
+  if (extension.sqlDb2) {
+    return "sqlDb2";
+  }
+  if (extension.sqlServer) {
+    return "sqlServer";
+  }
+  if (extension.sqlMySql) {
+    return "sqlMySql";
+  }
+  if (extension.sqlOracle) {
+    return "sqlOracle";
+  }
+  if (extension.sqlPostgres) {
+    return "sqlPostgres";
+  }
+  if (extension.sqlHana) {
+    return "sqlHana";
+  }
+  if (extension.sqlSnowflake) {
+    return "sqlSnowflake";
   }
   if (extension.prometheus) {
     return "prometheus";
