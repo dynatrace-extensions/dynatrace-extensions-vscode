@@ -144,11 +144,16 @@ export class CachedDataProvider {
     this.wmiData[result.query] = result;
   }
 
-  public async getOidInfo(oid: string) {
+  public async getSingleOidInfo(oid: string): Promise<OidInformation> {
     if (!this.oidInfo[oid]) {
       this.oidInfo[oid] = await fetchOID(oid);
     }
 
     return this.oidInfo[oid];
+  }
+
+  public async getBulkOidsInfo(oids: string[]): Promise<OidInformation[]> {
+    const infos = oids.map(oid => this.getSingleOidInfo(oid));
+    return await Promise.all(infos);
   }
 }

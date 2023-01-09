@@ -219,12 +219,18 @@ export class DiagnosticsProvider {
       return diagnostics;
     }
 
+    // Reduce the time by bulk fetching all required OIDs
     const metrics = getMetricsFromDataSource(extension, true).filter(m => m.value && m.value.startsWith("oid:"));
-    const dimensionOids = getDimensionOids(extension);
+    const oidInfos = await this.cachedData.getBulkOidsInfo(metrics.map(m => m.value!.split("oid:")[1]));
+    const metricInfos = metrics.map((m, i) => ({
+      key: m.key,
+      type: m.type,
+      value: m.value,
+      info: oidInfos[i],
+    }));
 
-    for (let metric of metrics) {
+    for (let metric of metricInfos) {
       const oid = metric.value!.slice(4);
-      const info = await this.cachedData.getOidInfo(oid);
       const oidRegex = new RegExp(`value: "?oid:${oid.replace(/\./g, "\\.")}"?(?:$|(?: .*$))`, "gm");
 
       let match;
@@ -232,17 +238,17 @@ export class DiagnosticsProvider {
         const startPos = document.positionAt(match.index + match[0].indexOf(oid));
         const endPos = document.positionAt(match.index + match[0].indexOf(oid) + oid.length);
 
-        if (!info.objectType) {
+        if (!metric.info.objectType) {
           diagnostics.push(copilotDiagnostic(startPos, endPos, OID_DOES_NOT_EXIST));
         } else {
-          if (!isOidReadable(info)) {
+          if (!isOidReadable(metric.info)) {
             diagnostics.push(copilotDiagnostic(startPos, endPos, OID_NOT_READABLE));
           }
-          if (info.syntax && info.syntax.toLowerCase().includes("string")) {
+          if (metric.info.syntax && metric.info.syntax.toLowerCase().includes("string")) {
             diagnostics.push(copilotDiagnostic(startPos, endPos, OID_STRING_AS_METRIC));
           }
-          if (info.syntax) {
-            if (metric.type === "gauge" && info.syntax.startsWith("Counter")) {
+          if (metric.info.syntax) {
+            if (metric.type === "gauge" && metric.info.syntax.startsWith("Counter")) {
               const blockStart = content.lastIndexOf("-", match.index);
               const nextDashIdx = content.indexOf("-", match.index);
               const blockEnd =
