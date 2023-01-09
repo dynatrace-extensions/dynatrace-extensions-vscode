@@ -106,7 +106,7 @@ export function activate(context: vscode.ExtensionContext) {
   const fastModeChannel = vscode.window.createOutputChannel("Dynatrace Fast Mode", "json");
   const fastModeStatus = new FastModeStatus(fastModeChannel);
   const genericChannel = vscode.window.createOutputChannel("Dynatrace", "json");
-  const diagnosticsProvider = new DiagnosticsProvider(context);
+  const diagnosticsProvider = new DiagnosticsProvider(context, cachedDataProvider);
   const diagnosticFixProvider = new DiagnosticFixProvider(diagnosticsProvider);
   var editTimeout: NodeJS.Timeout | undefined;
   if (checkWorkspaceOpen() && isExtensionsWorkspace(context, false)) {
