@@ -1,3 +1,5 @@
+import * as vscode from "vscode";
+
 /**
  * Given a block label and a line within a yaml content, will calculate the item index
  * within that block that the line belongs to.
@@ -135,4 +137,27 @@ export function getParentBlocks(lineNumber: number, content: string): string[] {
     }
   }
   return blocks.map(block => block[0]);
+}
+
+export function isSameList(itemIdx: number, document: vscode.TextDocument) {
+  const line = document.lineAt(document.positionAt(itemIdx));
+  const prevLine = document.lineAt(line.lineNumber - 1);
+  const indent = /[a-z]/g.exec(line.text)!.index;
+  const prevIndent = /[a-z]/g.exec(prevLine.text)!.index;
+  return prevIndent === indent;
+}
+
+export function getNextElementIdx(lineNumber: number, document: vscode.TextDocument, startAt: number) {
+  const content = document.getText();
+  const prevIndent = /[a-z]/g.exec(document.lineAt(lineNumber).text)!.index;
+  let indent;
+  for (let li = lineNumber + 1; li <= document.lineCount; li++) {
+    const line = document.lineAt(li).text;
+    const lineRe = new RegExp("[a-z]", "g").exec(line);
+    indent = lineRe ? lineRe.index : 9999;
+    if (indent < prevIndent) {
+      return content.indexOf(document.lineAt(li).text, startAt);
+    }
+  }
+  return content.length;
 }
