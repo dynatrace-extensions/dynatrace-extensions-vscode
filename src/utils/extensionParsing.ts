@@ -532,18 +532,23 @@ export function getAllMetricKeysFromDataSource(extension: ExtensionStub): string
 }
 
 /**
- * Extracts all metric keys and types detected within the datasource section of the extension.yaml
+ * Extracts all metric keys and types detected within the datasource section of the extension.yaml.
+ * Can optionally include values of metrics too.
  * @param extension extension.yaml serialized as object
  * @returns list of metric keys and their types
  */
-export function getMetricsFromDataSource(extension: ExtensionStub): { key: string; type: string }[] {
-  var metrics: { key: string; type: string }[] = [];
+export function getMetricsFromDataSource(extension: ExtensionStub, includeValues: boolean = false) {
+  var metrics: { key: string; type: string; value?: string }[] = [];
   var datasource = getExtensionDatasource(extension);
   datasource.forEach(group => {
     if (group.metrics) {
       group.metrics.forEach(metric => {
         if (!metrics.map(m => m.key).includes(metric.key)) {
-          metrics.push({ key: metric.key, type: metric.type ? metric.type : "gauge" });
+          metrics.push({
+            key: metric.key,
+            type: metric.type ? metric.type : "gauge",
+            value: includeValues ? metric.value : undefined,
+          });
         }
       });
     }
@@ -552,7 +557,11 @@ export function getMetricsFromDataSource(extension: ExtensionStub): { key: strin
         if (subgroup.metrics) {
           subgroup.metrics.forEach(metric => {
             if (!metrics.map(m => m.key).includes(metric.key)) {
-              metrics.push({ key: metric.key, type: metric.type ? metric.type : "gauge" });
+              metrics.push({
+                key: metric.key,
+                type: metric.type ? metric.type : "gauge",
+                value: includeValues ? metric.value : undefined,
+              });
             }
           });
         }
@@ -900,4 +909,72 @@ export function getDefinedCardsMeta(
   }
 
   return cards;
+}
+
+/**
+ * Parse SNMP datasource from extension yaml and retreive all OIDs related to metrics
+ * @param extension extension.yaml serialized as object
+ * @returns list of OIDs
+ */
+export function getMetricOids(extension: ExtensionStub): string[] {
+  const oids: string[] = [];
+
+  if (extension.snmp) {
+    extension.snmp.forEach(group => {
+      if (group.metrics) {
+        group.metrics.forEach(m => {
+          if (m.value && m.value.startsWith("oid:") && oids.indexOf(m.value.slice(4)) === -1) {
+            oids.push(m.value.slice(4));
+          }
+        });
+      }
+      if (group.subgroups) {
+        group.subgroups.forEach(sg => {
+          if (sg.metrics) {
+            sg.metrics.forEach(m => {
+              if (m.value && m.value.startsWith("oid:") && oids.indexOf(m.value.slice(4)) === -1) {
+                oids.push(m.value.slice(4));
+              }
+            });
+          }
+        });
+      }
+    });
+  }
+
+  return oids;
+}
+
+/**
+ * Parse SNMP datasource from extension yaml and retreive all OIDs related to dimensions
+ * @param extension extension.yaml serialized as object
+ * @returns list of OIDs
+ */
+export function getDimensionOids(extension: ExtensionStub): string[] {
+  const oids: string[] = [];
+
+  if (extension.snmp) {
+    extension.snmp.forEach(group => {
+      if (group.dimensions) {
+        group.dimensions.forEach(d => {
+          if (d.value && d.value.startsWith("oid:") && oids.indexOf(d.value.slice(4)) === -1) {
+            oids.push(d.value.slice(4));
+          }
+        });
+      }
+      if (group.subgroups) {
+        group.subgroups.forEach(sg => {
+          if (sg.dimensions) {
+            sg.dimensions.forEach(d => {
+              if (d.value && d.value.startsWith("oid:") && oids.indexOf(d.value.slice(4)) === -1) {
+                oids.push(d.value.slice(4));
+              }
+            });
+          }
+        });
+      }
+    });
+  }
+
+  return oids;
 }
