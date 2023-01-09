@@ -19,6 +19,7 @@ import { EnvironmentsTreeDataProvider } from "../treeViews/environmentsTreeView"
 import { ValidationStatus } from "../codeLens/utils/selectorUtils";
 import { PromData } from "../codeLens/prometheusScraper";
 import { WmiQueryResult } from "../codeLens/utils/wmiUtils";
+import { fetchOID, OidInformation } from "./snmp";
 
 /**
  * A utility class for caching reusable data that other components depend on.
@@ -28,9 +29,10 @@ export class CachedDataProvider {
   private readonly environments: EnvironmentsTreeDataProvider;
   private builtinEntities: EntityType[] = [];
   private baristaIcons: string[] = [];
-  private selectorStatuses: { [selector: string]: ValidationStatus } = {};
+  private selectorStatuses: Record<string, ValidationStatus> = {};
   private prometheusData: PromData = {};
   private wmiData: Record<string, WmiQueryResult> = {};
+  private oidInfo: Record<string, OidInformation> = {};
 
   /**
    * @param environments a Dynatrace Environments provider
@@ -105,7 +107,7 @@ export class CachedDataProvider {
    * the currently connected environment, if any.
    */
   private async loadBuiltinEntities() {
-    this.environments.getDynatraceClient().then((dt) => {
+    this.environments.getDynatraceClient().then(dt => {
       if (dt) {
         dt.entitiesV2.listTypes().then((types: EntityType[]) => {
           if (types.length > 0) {
@@ -131,19 +133,19 @@ export class CachedDataProvider {
     }
 
     Axios.get(internalURL)
-      .then((res) => {
+      .then(res => {
         if (res.data.icons) {
           this.baristaIcons = res.data.icons.map((i: BaristaMeta) => i.name);
         }
       })
       .catch(async () => {
         Axios.get(publicURL)
-          .then((res) => {
+          .then(res => {
             if (res.data.icons) {
               this.baristaIcons = res.data.icons.map((i: BaristaMeta) => i.name);
             }
           })
-          .catch((err) => {
+          .catch(err => {
             console.log("Barista not accessible.");
             console.log(err.message);
           });
@@ -156,5 +158,13 @@ export class CachedDataProvider {
 
   public addWmiQueryResult(result: WmiQueryResult) {
     this.wmiData[result.query] = result;
+  }
+
+  public async getOidInfo(oid: string) {
+    if (!this.oidInfo[oid]) {
+      this.oidInfo[oid] = await fetchOID(oid);
+    }
+
+    return this.oidInfo[oid];
   }
 }
