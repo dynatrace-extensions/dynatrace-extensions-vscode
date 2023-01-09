@@ -104,7 +104,7 @@ export const OID_NOT_READABLE: CopilotDiagnostic = {
 
 export const OID_STRING_AS_METRIC: CopilotDiagnostic = {
   code: "DEC012",
-  severity: vscode.DiagnosticSeverity.Warning,
+  severity: vscode.DiagnosticSeverity.Error,
   message: "This OID returns a string but it's being used as a numerical metric value."
 };
 

@@ -1,10 +1,16 @@
 import * as vscode from "vscode";
 import * as yaml from "yaml";
 import { checkGradleProperties } from "../utils/conditionCheckers";
-import { getDefinedCardsMeta, getMetricsFromDataSource, getReferencedCardsMeta } from "../utils/extensionParsing";
+import { CachedDataProvider } from "../utils/dataCaching";
+import {
+  getDefinedCardsMeta,
+  getDimensionOids,
+  getMetricsFromDataSource,
+  getReferencedCardsMeta,
+} from "../utils/extensionParsing";
 import { getExtensionFilePath } from "../utils/fileSystem";
-import { fetchOID } from "../utils/snmp";
-import { getListItemIndexes } from "../utils/yamlParsing";
+import { isOidReadable } from "../utils/snmp";
+import { getListItemIndexes, getNextElementIdx, isSameList } from "../utils/yamlParsing";
 import {
   copilotDiagnostic,
   COUNT_METRIC_KEY_SUFFIX,
@@ -15,6 +21,10 @@ import {
   EXTENSION_NAME_NON_CUSTOM,
   EXTENSION_NAME_TOO_LONG,
   GAUGE_METRIC_KEY_SUFFIX,
+  OID_COUNTER_AS_GAUGE,
+  OID_DOES_NOT_EXIST,
+  OID_NOT_READABLE,
+  OID_STRING_AS_METRIC,
   REFERENCED_CARD_NOT_DEFINED,
 } from "./diagnosticData";
 
@@ -25,9 +35,15 @@ import {
 export class DiagnosticsProvider {
   private readonly collection: vscode.DiagnosticCollection;
   private readonly context: vscode.ExtensionContext;
+  private readonly cachedData: CachedDataProvider;
 
-  constructor(context: vscode.ExtensionContext) {
+  /**
+   * @param context VSCode Extension Context
+   * @param cachedDataProvider Provider for cacheable data
+   */
+  constructor(context: vscode.ExtensionContext, cachedDataProvider: CachedDataProvider) {
     this.context = context;
+    this.cachedData = cachedDataProvider;
     this.collection = vscode.languages.createDiagnosticCollection("Dynatrace");
   }
 
@@ -41,7 +57,7 @@ export class DiagnosticsProvider {
       ...(await this.diagnoseExtensionName(document.getText())),
       ...this.diagnoseMetricKeys(document, extension),
       ...this.diagnoseCardKeys(document, extension),
-      ...this.diagnoseOIDs(document, extension),
+      ...(await this.diagnoseOIDs(document, extension)),
     ];
     this.collection.set(document.uri, diagnostics);
   }
@@ -121,7 +137,9 @@ export class DiagnosticsProvider {
   private diagnoseMetricKeys(document: vscode.TextDocument, extension: ExtensionStub): vscode.Diagnostic[] {
     const content = document.getText();
     var diagnostics: vscode.Diagnostic[] = [];
-    getMetricsFromDataSource(extension)
+    const metrics = getMetricsFromDataSource(extension, true);
+
+    metrics
       .filter(
         m =>
           (m.type === "count" && !(m.key.endsWith(".count") || m.key.endsWith("_count"))) ||
@@ -155,8 +173,12 @@ export class DiagnosticsProvider {
   private diagnoseCardKeys(document: vscode.TextDocument, extension: ExtensionStub): vscode.Diagnostic[] {
     const content = document.getText();
     let diagnostics: vscode.Diagnostic[] = [];
-    const screenBounds = getListItemIndexes("screens", content);
 
+    if (!extension.screens) {
+      return diagnostics;
+    }
+
+    const screenBounds = getListItemIndexes("screens", content);
     extension.screens?.forEach((_, idx) => {
       const refCards = getReferencedCardsMeta(idx, extension);
       const defCards = getDefinedCardsMeta(idx, extension);
@@ -189,25 +211,60 @@ export class DiagnosticsProvider {
     return diagnostics;
   }
 
-  private diagnoseOIDs(document: vscode.TextDocument, extension: ExtensionStub): vscode.Diagnostic[] {
+  private async diagnoseOIDs(document: vscode.TextDocument, extension: ExtensionStub): Promise<vscode.Diagnostic[]> {
     const content = document.getText();
-    let diagnostics: vscode.Diagnostic[] = [];
+    const diagnostics: vscode.Diagnostic[] = [];
 
     if (!extension.snmp) {
-      return [];
+      return diagnostics;
     }
 
-    const oids: string[] = [];
-    const oidRegex = /oid:([\d\.]+)/gm;
-    let match;
-    while ((match = oidRegex.exec(content)) !== null) {
-      if (!oids.includes(match[1])) {
-        oids.push(match[1]);
+    const metrics = getMetricsFromDataSource(extension, true).filter(m => m.value && m.value.startsWith("oid:"));
+    const dimensionOids = getDimensionOids(extension);
+
+    for (let metric of metrics) {
+      const oid = metric.value!.slice(4);
+      const info = await this.cachedData.getOidInfo(oid);
+      const oidRegex = new RegExp(`value: "?oid:${oid.replace(/\./g, "\\.")}"?(?:$|(?: .*$))`, "gm");
+
+      let match;
+      while ((match = oidRegex.exec(content)) !== null) {
+        const startPos = document.positionAt(match.index + match[0].indexOf(oid));
+        const endPos = document.positionAt(match.index + match[0].indexOf(oid) + oid.length);
+
+        if (!info.objectType) {
+          diagnostics.push(copilotDiagnostic(startPos, endPos, OID_DOES_NOT_EXIST));
+        } else {
+          if (!isOidReadable(info)) {
+            diagnostics.push(copilotDiagnostic(startPos, endPos, OID_NOT_READABLE));
+          }
+          if (info.syntax && info.syntax.toLowerCase().includes("string")) {
+            diagnostics.push(copilotDiagnostic(startPos, endPos, OID_STRING_AS_METRIC));
+          }
+          if (info.syntax) {
+            if (metric.type === "gauge" && info.syntax.startsWith("Counter")) {
+              const blockStart = content.lastIndexOf("-", match.index);
+              const nextDashIdx = content.indexOf("-", match.index);
+              const blockEnd =
+                nextDashIdx !== -1
+                  ? isSameList(nextDashIdx, document)
+                    ? content.lastIndexOf("\n", nextDashIdx)
+                    : content.indexOf(document.lineAt(document.positionAt(nextDashIdx).line - 1).text, match.index)
+                  : getNextElementIdx(
+                      document.lineAt(document.positionAt(match.index)).lineNumber,
+                      document,
+                      match.index
+                    );
+
+              // Since both OID & metric key can technically be reused, we should ensure both match
+              if (content.substring(blockStart, blockEnd).includes(metric.key)) {
+                diagnostics.push(copilotDiagnostic(startPos, endPos, OID_COUNTER_AS_GAUGE));
+              }
+            }
+          }
+        }
       }
     }
-    oids.forEach(o => {
-      fetchOID(o);
-    });
 
     return diagnostics;
   }
