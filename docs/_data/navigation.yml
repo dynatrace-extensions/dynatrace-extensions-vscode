@@ -1,0 +1,45 @@
+main:
+  - title: "Documentation"
+    url: /docs/installation
+  - title: "About"
+    url: /about/
+  
+docs:
+  - title: 🚀 Getting Started
+    children:
+      - title: Pre-requisites
+        url: /docs/pre-requisites
+      - title: Installation
+        url: /docs/installation
+      - title: First time setup
+        url: /docs/first-time-setup
+  - title: ⚡ Command Palette
+    children:
+      - title: 📦 Initialize workspace
+        url: /docs/cmd-initialize-workspace
+      - title: 📄 Load schemas
+        url: /docs/cmd-load-schemas
+      - title: 🔐 Generate certificates
+        url: /docs/cmd-generate-certificates
+      - title: 🔗 Distribute certificate
+        url: /docs/cmd-distribute-certificate
+      - title: 🎁 Build extension
+        url: /docs/cmd-build-extension
+      - title: 📤 Upload extension to tenant
+        url: /docs/cmd-upload-extension
+      - title: 🔂 Activate extension on tenant
+        url: /docs/cmd-activate-extension
+      - title: 📑 Create documentation
+        url: /docs/cmd-create-documentation
+      - title: 📈 Create overview dashboard
+        url: /docs/cmd-create-dashboard
+  - title: ⚙️ Settings
+    children:
+      - title: Credentials
+        url: /docs/settings-credentials
+      - title: Feature usage
+        url: /docs/settings-features
+  - title: ✍️ Contributing
+    children:
+      - title: Lorem Ipsum
+        url: /docs/contributing
