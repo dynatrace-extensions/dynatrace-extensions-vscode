@@ -95,7 +95,8 @@ export async function createAlert(context: vscode.ExtensionContext) {
   const paddedFileNumber = currentFileNumber.toString().padStart(3, "0");
 
   // Convert alertName to lowerCase, only allow \w and - characters
-  const alertNameForFile = alertName.toLowerCase().replace(/[^a-z0-9-]/g, "-");
+  // Make sure we don't have multiple - in a row
+  const alertNameForFile = alertName.toLowerCase().replace(/[^a-z0-9-]/g, "-").replace(/-+/g, "-");
   
   const fileName = `alert-${paddedFileNumber}-${alertNameForFile}.json`;
 
