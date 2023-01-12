@@ -356,7 +356,7 @@ function registerCommandPaletteCommands(
     // Create Alert
     vscode.commands.registerCommand("dt-ext-copilot.createAlert", () => {
       if (checkWorkspaceOpen() && isExtensionsWorkspace(context)) {
-        createAlert(tenantsProvider, outputChannel, context);
+        createAlert(context);
       }
     }),
   ];
