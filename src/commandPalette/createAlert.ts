@@ -88,17 +88,7 @@ export async function createAlert(context: vscode.ExtensionContext) {
     mkdirSync(alertsDir);
   }
 
-  // Count how many files we have inside the alerts directory with readDirSync
-  // The current file number is that number + 1
-  const currentFileNumber = readdirSync(alertsDir).length + 1;
-  // Pad the number with zeros so the lenght is always 3
-  const paddedFileNumber = currentFileNumber.toString().padStart(3, "0");
-
-  // Convert alertName to lowerCase, only allow \w and - characters
-  // Make sure we don't have multiple - in a row
-  const alertNameForFile = alertName.toLowerCase().replace(/[^a-z0-9-]/g, "-").replace(/-+/g, "-");
-  
-  const fileName = `alert-${paddedFileNumber}-${alertNameForFile}.json`;
+  const fileName = createUniqueAlertFileName(alertsDir, alertName);
 
   const alertTemplate = {
     id: crypto.randomUUID(),
@@ -141,5 +131,29 @@ export async function createAlert(context: vscode.ExtensionContext) {
 
   vscode.window.showInformationMessage(`Alert '${alertName}' created on alerts/${fileName}`);
 
+
+}
+
+function createUniqueAlertFileName(alertsDir: string, alertName: string) : string {
+  // Count how many files we have inside the alerts directory with readDirSync
+  let currentAlertFiles = readdirSync(alertsDir);
+  let currentFileNumber = currentAlertFiles.length;
+
+  while (true) {
+    currentFileNumber++;
+    // Convert alertName to lowerCase, only allow \w and - characters
+    // Make sure we don't have multiple - in a row
+    const alertNameForFile = alertName.toLowerCase().replace(/[^a-z0-9-]/g, "-").replace(/-+/g, "-");
+  
+  
+    // Pad the number with zeros so the lenght is always 3
+    const paddedFileNumber = currentFileNumber.toString().padStart(3, "0");
+    const fileName = `alert-${paddedFileNumber}-${alertNameForFile}.json`;
+
+    // Check if the file name is unique, otherwise we increment the counter and try again
+    if (!currentAlertFiles.includes(fileName)) {
+      return fileName;
+    }
+  }
 
 }
