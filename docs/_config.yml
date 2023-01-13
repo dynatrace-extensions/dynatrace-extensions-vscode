@@ -1,0 +1,96 @@
+# Welcome to Jekyll!
+#
+# This config file is meant for settings that affect your whole blog, values
+# which you are expected to set up once and rarely edit after that. If you find
+# yourself editing this file very often, consider using Jekyll's data files
+# feature for the data you need to update frequently.
+#
+# For technical reasons, this file is *NOT* reloaded automatically when you use
+# 'bundle exec jekyll serve'. If you change this file, please restart the server process.
+
+# Site settings
+# These are used to personalize your new site. If you look in the HTML files,
+# you will see them accessed via {{ site.title }}, {{ site.email }}, and so on.
+# You can create any custom variable you would like, and they will be accessible
+# in the templates via {{ site.myvariable }}.
+title: Dynatrace Extensions Copilot
+subtitle: Your personal assistant for developing Extensions 2.0
+baseurl: "/dynatrace-extensions-copilot/"
+url: "https://dynatrace-extensions.github.io"
+domain: dynatrace-extensions.github.io
+name: Platform Extensions
+email: extensions@dynatrace.com
+description: >-
+  Documentation and user guides for the Dynatrace Extensions Copilot - a project
+  made with love and maintained by the Platform Extensions team at Dynatrace.
+twitter_username: dynatrace
+github_username: dynatrace-extensions
+
+# Build settings (theme configs)
+markdown: kramdown
+remote_theme: mmistakes/minimal-mistakes
+minimal_mistakes_skin: dark
+search: true
+logo: "/assets/logos/dynatrace_logo.png"
+include:
+  - _pages
+
+# Exclude from processing.
+# The following items will not be processed, by default. Create a custom list
+# to override the default setting.
+# exclude:
+#   - Gemfile
+#   - Gemfile.lock
+#   - node_modules
+#   - vendor/bundle/
+#   - vendor/cache/
+#   - vendor/gems/
+#   - vendor/ruby/
+
+# Plugins (previously gems:)
+plugins:
+  - jekyll-paginate
+  - jekyll-sitemap
+  - jekyll-gist
+  - jekyll-feed
+  - jemoji
+  - jekyll-include-cache
+
+# Website structure
+
+collections:
+  documentation:
+    output: true
+    permalink: /:collection/:path/
+
+footer:
+  links:
+    - label: "Twitter"
+      icon: "fab fa-fw fa-twitter-square"
+      url: "https://twitter.com/"
+    - label: "GitHub"
+      icon: "fab fa-fw fa-github"
+      url: "https://github.com/"
+    - label: "Instagram"
+      icon: "fab fa-fw fa-instagram"
+      url: "https://instagram.com/"
+
+defaults:
+  # _pages
+  - scope:
+      path: "_pages"
+      type: pages
+    values:
+      layout: single
+  # _documentation
+  - scope:
+      path: ""
+      type: documentation
+    values:
+      layout: single
+      read_time: false
+      author_profile: false
+      share: false
+      comments: false
+      sidebar:
+        nav: docs

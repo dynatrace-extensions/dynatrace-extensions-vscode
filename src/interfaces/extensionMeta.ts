@@ -197,7 +197,13 @@ interface ExtensionStub {
   snmp?: DatasourceGroup[];
   wmi?: WmiGroup[];
   prometheus?: DatasourceGroup[];
-  sql?: DatasourceGroup[];
+  sqlMySql?: DatasourceGroup[];
+  sqlDb2?: DatasourceGroup[];
+  sqlHana?: DatasourceGroup[];
+  sqlOracle?: DatasourceGroup[];
+  sqlPostgres?: DatasourceGroup[];
+  sqlServer?: DatasourceGroup[];
+  sqlSnowflake?: DatasourceGroup[];
   python?: PythonDatasource;
   metrics: MetricMetadata[];
   topology: TopologyStub;
