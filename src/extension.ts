@@ -319,10 +319,10 @@ function registerCommandPaletteCommands(
     // Build Extension 2.0 package
     vscode.commands.registerCommand("dt-ext-copilot.buildExtension", async () => {
       if (
-        (await diagnosticsProvider.isValidForBuilding()) &&
         checkWorkspaceOpen() &&
         isExtensionsWorkspace(context) &&
-        checkCertificateExists("dev")
+        checkCertificateExists("dev") &&
+        (await diagnosticsProvider.isValidForBuilding())
       ) {
         buildExtension(context, outputChannel, await tenantsProvider.getDynatraceClient());
       }
