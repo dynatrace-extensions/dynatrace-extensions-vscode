@@ -609,6 +609,45 @@ export function getMetricsFromDataSource(extension: ExtensionStub, includeValues
 }
 
 /**
+ * Extracts all dimension keys detected within the datasource section of the extension.yaml.
+ * Can optionally include values of dimensions too.
+ * @param extension
+ * @param includeValues
+ */
+export function getDimensionsFromDataSource(extension: ExtensionStub, includeValues: boolean = false) {
+  var dimensions: { key: string; value?: string }[] = [];
+  var datasource = getExtensionDatasource(extension);
+  datasource.forEach(group => {
+    if (group.dimensions) {
+      group.dimensions.forEach(dimension => {
+        if (!dimensions.map(d => d.key).includes(dimension.key)) {
+          dimensions.push({
+            key: dimension.key,
+            value: includeValues ? dimension.value : undefined,
+          });
+        }
+      });
+    }
+    if (group.subgroups) {
+      group.subgroups.forEach(subgroup => {
+        if (subgroup.dimensions) {
+          subgroup.dimensions.forEach(dimension => {
+            if (!dimensions.map(d => d.key).includes(dimension.key)) {
+              dimensions.push({
+                key: dimension.key,
+                value: includeValues ? dimension.value : undefined,
+              });
+            }
+          });
+        }
+      });
+    }
+  });
+
+  return dimensions;
+}
+
+/**
  * Extracts all metrics keys and values detected within the datasource section of the extension.yaml
  * @param extension extension.yaml serialized as object
  * @returns list of metric keys
@@ -945,72 +984,4 @@ export function getDefinedCardsMeta(
   }
 
   return cards;
-}
-
-/**
- * Parse SNMP datasource from extension yaml and retreive all OIDs related to metrics
- * @param extension extension.yaml serialized as object
- * @returns list of OIDs
- */
-export function getMetricOids(extension: ExtensionStub): string[] {
-  const oids: string[] = [];
-
-  if (extension.snmp) {
-    extension.snmp.forEach(group => {
-      if (group.metrics) {
-        group.metrics.forEach(m => {
-          if (m.value && m.value.startsWith("oid:") && oids.indexOf(m.value.slice(4)) === -1) {
-            oids.push(m.value.slice(4));
-          }
-        });
-      }
-      if (group.subgroups) {
-        group.subgroups.forEach(sg => {
-          if (sg.metrics) {
-            sg.metrics.forEach(m => {
-              if (m.value && m.value.startsWith("oid:") && oids.indexOf(m.value.slice(4)) === -1) {
-                oids.push(m.value.slice(4));
-              }
-            });
-          }
-        });
-      }
-    });
-  }
-
-  return oids;
-}
-
-/**
- * Parse SNMP datasource from extension yaml and retreive all OIDs related to dimensions
- * @param extension extension.yaml serialized as object
- * @returns list of OIDs
- */
-export function getDimensionOids(extension: ExtensionStub): string[] {
-  const oids: string[] = [];
-
-  if (extension.snmp) {
-    extension.snmp.forEach(group => {
-      if (group.dimensions) {
-        group.dimensions.forEach(d => {
-          if (d.value && d.value.startsWith("oid:") && oids.indexOf(d.value.slice(4)) === -1) {
-            oids.push(d.value.slice(4));
-          }
-        });
-      }
-      if (group.subgroups) {
-        group.subgroups.forEach(sg => {
-          if (sg.dimensions) {
-            sg.dimensions.forEach(d => {
-              if (d.value && d.value.startsWith("oid:") && oids.indexOf(d.value.slice(4)) === -1) {
-                oids.push(d.value.slice(4));
-              }
-            });
-          }
-        });
-      }
-    });
-  }
-
-  return oids;
 }

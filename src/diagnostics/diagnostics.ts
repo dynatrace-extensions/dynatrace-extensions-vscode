@@ -4,7 +4,7 @@ import { checkGradleProperties } from "../utils/conditionCheckers";
 import { CachedDataProvider } from "../utils/dataCaching";
 import {
   getDefinedCardsMeta,
-  getDimensionOids,
+  getDimensionsFromDataSource,
   getMetricsFromDataSource,
   getReferencedCardsMeta,
 } from "../utils/extensionParsing";
@@ -23,8 +23,10 @@ import {
   GAUGE_METRIC_KEY_SUFFIX,
   OID_COUNTER_AS_GAUGE,
   OID_DOES_NOT_EXIST,
+  OID_GAUGE_AS_COUNTER,
   OID_NOT_READABLE,
   OID_STRING_AS_METRIC,
+  OID_SYNTAX_INVALID,
   REFERENCED_CARD_NOT_DEFINED,
 } from "./diagnosticData";
 
@@ -53,12 +55,17 @@ export class DiagnosticsProvider {
    */
   public async provideDiagnostics(document: vscode.TextDocument) {
     const extension = yaml.parse(document.getText());
-    const diagnostics = [
-      ...(await this.diagnoseExtensionName(document.getText())),
-      ...this.diagnoseMetricKeys(document, extension),
-      ...this.diagnoseCardKeys(document, extension),
-      ...(await this.diagnoseOIDs(document, extension)),
-    ];
+
+    // Diagnostic collections should be awaited all in parallel
+    const diagnostics = await Promise.all([
+      this.diagnoseExtensionName(document),
+      this.diagnoseMetricKeys(document, extension),
+      this.diagnoseCardKeys(document, extension),
+      this.diagnoseMetricOids(document, extension),
+      this.diagnoseDimensionOids(document, extension),
+      this.diagnoseTableOids(document, extension),
+    ]).then(results => results.reduce((collection, result) => collection.concat(result), []));
+
     this.collection.set(document.uri, diagnostics);
   }
 
@@ -96,8 +103,9 @@ export class DiagnosticsProvider {
    * @param content extension.yaml text content
    * @returns list of diagnostic items
    */
-  private async diagnoseExtensionName(content: string): Promise<vscode.Diagnostic[]> {
+  private async diagnoseExtensionName(document: vscode.TextDocument): Promise<vscode.Diagnostic[]> {
     var diagnostics: vscode.Diagnostic[] = [];
+    const content = document.getText();
     const contentLines = content.split("\n");
     const lineNo = contentLines.findIndex(line => line.startsWith("name:"));
 
@@ -134,12 +142,14 @@ export class DiagnosticsProvider {
    * @param extension extension.yaml serialized as object
    * @returns list of diagnostics
    */
-  private diagnoseMetricKeys(document: vscode.TextDocument, extension: ExtensionStub): vscode.Diagnostic[] {
+  private async diagnoseMetricKeys(
+    document: vscode.TextDocument,
+    extension: ExtensionStub
+  ): Promise<vscode.Diagnostic[]> {
     const content = document.getText();
     var diagnostics: vscode.Diagnostic[] = [];
-    const metrics = getMetricsFromDataSource(extension, true);
 
-    metrics
+    getMetricsFromDataSource(extension, true)
       .filter(
         m =>
           (m.type === "count" && !(m.key.endsWith(".count") || m.key.endsWith("_count"))) ||
@@ -170,7 +180,10 @@ export class DiagnosticsProvider {
    * @param extension extension.yaml serialized as object
    * @returns list of diagnostics
    */
-  private diagnoseCardKeys(document: vscode.TextDocument, extension: ExtensionStub): vscode.Diagnostic[] {
+  private async diagnoseCardKeys(
+    document: vscode.TextDocument,
+    extension: ExtensionStub
+  ): Promise<vscode.Diagnostic[]> {
     const content = document.getText();
     let diagnostics: vscode.Diagnostic[] = [];
 
@@ -211,7 +224,16 @@ export class DiagnosticsProvider {
     return diagnostics;
   }
 
-  private async diagnoseOIDs(document: vscode.TextDocument, extension: ExtensionStub): Promise<vscode.Diagnostic[]> {
+  /**
+   * Provide diagnostics related to OIDs in the context of metrics.
+   * @param document text document where diagnostics should be applied
+   * @param extension extension.yaml serialized as object
+   * @returns list of diagnostics
+   */
+  private async diagnoseMetricOids(
+    document: vscode.TextDocument,
+    extension: ExtensionStub
+  ): Promise<vscode.Diagnostic[]> {
     const content = document.getText();
     const diagnostics: vscode.Diagnostic[] = [];
 
@@ -229,7 +251,7 @@ export class DiagnosticsProvider {
       info: oidInfos[i],
     }));
 
-    for (let metric of metricInfos) {
+    for (const metric of metricInfos) {
       const oid = metric.value!.slice(4);
       const oidRegex = new RegExp(`value: "?oid:${oid.replace(/\./g, "\\.")}"?(?:$|(?: .*$))`, "gm");
 
@@ -238,8 +260,15 @@ export class DiagnosticsProvider {
         const startPos = document.positionAt(match.index + match[0].indexOf(oid));
         const endPos = document.positionAt(match.index + match[0].indexOf(oid) + oid.length);
 
-        if (!metric.info.objectType) {
+        // Check if valid
+        if (!/^\d[\.\d]+\d$/.test(oid)) {
+          diagnostics.push(copilotDiagnostic(startPos, endPos, OID_SYNTAX_INVALID));
+
+          // Check we have online data
+        } else if (!metric.info.objectType) {
           diagnostics.push(copilotDiagnostic(startPos, endPos, OID_DOES_NOT_EXIST));
+
+          // Check things we can infer from online data
         } else {
           if (!isOidReadable(metric.info)) {
             diagnostics.push(copilotDiagnostic(startPos, endPos, OID_NOT_READABLE));
@@ -248,28 +277,90 @@ export class DiagnosticsProvider {
             diagnostics.push(copilotDiagnostic(startPos, endPos, OID_STRING_AS_METRIC));
           }
           if (metric.info.syntax) {
-            if (metric.type === "gauge" && metric.info.syntax.startsWith("Counter")) {
-              const blockStart = content.lastIndexOf("-", match.index);
-              const nextDashIdx = content.indexOf("-", match.index);
-              const blockEnd =
-                nextDashIdx !== -1
-                  ? isSameList(nextDashIdx, document)
-                    ? content.lastIndexOf("\n", nextDashIdx)
-                    : content.indexOf(document.lineAt(document.positionAt(nextDashIdx).line - 1).text, match.index)
-                  : getNextElementIdx(
-                      document.lineAt(document.positionAt(match.index)).lineNumber,
-                      document,
-                      match.index
-                    );
+            // Since OID & metric are re-usable we must get the whole yaml block and match both
+            const blockStart = content.lastIndexOf("-", match.index);
+            const nextDashIdx = content.indexOf("-", match.index);
+            const blockEnd =
+              nextDashIdx !== -1
+                ? isSameList(nextDashIdx, document)
+                  ? content.lastIndexOf("\n", nextDashIdx)
+                  : content.indexOf(document.lineAt(document.positionAt(nextDashIdx).line - 1).text, match.index)
+                : getNextElementIdx(
+                    document.lineAt(document.positionAt(match.index)).lineNumber,
+                    document,
+                    match.index
+                  );
 
-              // Since both OID & metric key can technically be reused, we should ensure both match
+            if (metric.type === "gauge" && metric.info.syntax.startsWith("Counter")) {
               if (content.substring(blockStart, blockEnd).includes(metric.key)) {
                 diagnostics.push(copilotDiagnostic(startPos, endPos, OID_COUNTER_AS_GAUGE));
+              }
+            }
+            if (
+              metric.type === "count" &&
+              (metric.info.syntax === "Gauge" || metric.info.syntax.toLowerCase().includes("integer"))
+            ) {
+              if (content.substring(blockStart, blockEnd).includes(metric.key)) {
+                diagnostics.push(copilotDiagnostic(startPos, endPos, OID_GAUGE_AS_COUNTER));
               }
             }
           }
         }
       }
+    }
+
+    return diagnostics;
+  }
+
+  private async diagnoseDimensionOids(
+    document: vscode.TextDocument,
+    extension: ExtensionStub
+  ): Promise<vscode.Diagnostic[]> {
+    const content = document.getText();
+    const diagnostics: vscode.Diagnostic[] = [];
+
+    if (!extension.snmp) {
+      return diagnostics;
+    }
+
+    // Reduce the time by bulk fetching all required OIDs
+    const dimensions = getDimensionsFromDataSource(extension, true).filter(d => d.value && d.value.startsWith("oid:"));
+    const dimensionOidInfos = await this.cachedData.getBulkOidsInfo(dimensions.map(d => d.value!.split("oid:")[1]));
+    const dimensionInfos = dimensions.map((d, i) => ({
+      key: d.key,
+      value: d.value,
+      info: dimensionOidInfos[i],
+    }));
+
+    for (const dimension of dimensionInfos) {
+      const oid = dimension.value!.slice(4);
+      const oidRegex = new RegExp(`value: "?oid:${oid.replace(/\./g, "\\.")}"?(?:$|(?: .*$))`, "gm");
+
+      let match;
+      while ((match = oidRegex.exec(content)) !== null) {
+        const startPos = document.positionAt(match.index + match[0].indexOf(oid));
+        const endPos = document.positionAt(match.index + match[0].indexOf(oid) + oid.length);
+
+        // Check if valid
+        if (!/^\d[\.\d]+\d$/.test(oid)) {
+          diagnostics.push(copilotDiagnostic(startPos, endPos, OID_SYNTAX_INVALID));
+
+          // Check if there is online data
+        } else if (!dimension.info.objectType) {
+          diagnostics.push(copilotDiagnostic(startPos, endPos, OID_DOES_NOT_EXIST));
+        }
+      }
+    }
+
+    return diagnostics;
+  }
+
+  private async diagnoseTableOids(document: vscode.TextDocument, extension: ExtensionStub): Promise<vscode.Diagnostic[]> {
+    const diagnostics: vscode.Diagnostic[] = [];
+    const content = document.getText();
+
+    if (!extension.snmp) {
+      return diagnostics;
     }
 
     return diagnostics;

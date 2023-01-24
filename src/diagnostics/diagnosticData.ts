@@ -119,3 +119,9 @@ export const OID_GAUGE_AS_COUNTER: CopilotDiagnostic = {
   severity: vscode.DiagnosticSeverity.Warning,
   message: "This OID returns a Gauge but is being used as a Counter metric."
 };
+
+export const OID_SYNTAX_INVALID: CopilotDiagnostic = {
+  code: "DEC015",
+  severity: vscode.DiagnosticSeverity.Error,
+  message: "Invalid OID syntax. OID must not start/end with '.' and may only contain dots and digits."
+};
