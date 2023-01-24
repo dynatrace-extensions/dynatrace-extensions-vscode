@@ -31,20 +31,7 @@
 		"color": "#1e3142",
 		"theme": "light"
 	},
-	"activationEvents": [
-		"onView:dt-ext-copilot-workspaces",
-		"workspaceContains:**/extension/extension.yaml",
-		"onCommand:dt-ext-copilot.loadSchemas",
-		"onCommand:dt-ext-copilot.initWorkspace",
-		"onCommand:dt-ext-copilot.generateCertificates",
-		"onCommand:dt-ext-copilot.distributeCertificate",
-		"onCommand:dt-ext-copilot.createDocumentation",
-		"onCommand:dt-ext-copilot.buildExtension",
-		"onCommand:dt-ext-copilot.uploadExtension",
-		"onCommand:dt-ext-copilot.activateExtension",
-		"onCommand:dt-ext-copilot.createDashboard",
-		"onCommand:dt-ext-copilot.createAlert"
-	],
+	"activationEvents": ["*"],
 	"main": "./out/extension.js",
 	"contributes": {
 		"commands": [
