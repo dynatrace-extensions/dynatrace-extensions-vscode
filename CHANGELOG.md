@@ -1,5 +1,21 @@
 # Change Log
 
+## Version 0.24.1 / Stage: beta (24.01.2022)
+
+### ✨ New in this version:
+- [#43 - Code action idea - generate alerts JSON](https://github.com/dynatrace-extensions/dynatrace-extensions-copilot/issues/43)
+
+### 🚀 Improved in this version:
+- Extension automatically installs the required YAML by RedHat extension too
+- Extension activates as soon as vscode starts up
+- Python building includes both linux & windows modules
+
+### 🪲 Fixed in this version:
+- Errors on non-existent commands when extension not in a valid workspace
+- [#41 - Overview dashboard not adding metrics for sql datasource](https://github.com/dynatrace-extensions/dynatrace-extensions-copilot/issues/41)
+
+---
+
 ## Version 0.22.3 / Stage: beta (06.01.2022)
 
 ### 🪲 Fixed in this version:
