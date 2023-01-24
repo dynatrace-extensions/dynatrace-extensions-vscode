@@ -69,17 +69,21 @@ export function checkWorkspaceOpen(): boolean {
 /**
  * Checks whether the currently opened workspace is an Extensions 2.0 workspace or not.
  * @param context VSCode Extension Context
+ * @param showWarningMessage when true, displays a warning message to the user
  * @returns check status
  */
-export function isExtensionsWorkspace(context: vscode.ExtensionContext): boolean {
-  var status = true;
+export function isExtensionsWorkspace(context: vscode.ExtensionContext, showWarningMessage: boolean = true): boolean {
+  var status = false;
   if (context.storageUri && existsSync(context.storageUri.fsPath)) {
     const extensionYaml = getExtensionFilePath(context);
     if (!extensionYaml) {
-      vscode.window.showWarningMessage(
-        "This command must be run from an Extensions Workspace. Ensure your `extension` folder is within the root of the workspace."
-      );
-      status = false;
+      if (showWarningMessage) {
+        vscode.window.showWarningMessage(
+          "This command must be run from an Extensions Workspace. Ensure your `extension` folder is within the root of the workspace."
+        );
+      }
+    } else {
+      status = true;
     }
   }
 
