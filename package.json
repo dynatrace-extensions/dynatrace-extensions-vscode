@@ -31,7 +31,9 @@
 		"color": "#1e3142",
 		"theme": "light"
 	},
-	"activationEvents": ["*"],
+	"activationEvents": [
+		"onStartupFinished"
+	],
 	"main": "./out/extension.js",
 	"contributes": {
 		"commands": [
