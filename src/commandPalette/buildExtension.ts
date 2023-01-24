@@ -272,7 +272,7 @@ async function assemblePython(
 
   // Build
   await runCommand(
-    `dt-sdk build -k "${devKeyPath}" -c "${devCertPath}" "${extensionDir}" -t "${workspaceStorage}"`,
+    `dt-sdk build -k "${devKeyPath}" -c "${devCertPath}" "${extensionDir}" -t "${workspaceStorage}" -e "${process.platform === "win32" ? "linux_x86_64" : "win_amd64"}"`,
     oc,
     envOptions
   );
