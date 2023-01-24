@@ -60,7 +60,7 @@ export function activate(context: vscode.ExtensionContext) {
   // Additonal context: number of workspaces affects the welcome message for the extensions tree view
   vscode.commands.executeCommand("setContext", "dt-ext-copilot.numWorkspaces", getAllWorkspaces(context).length);
   // Additonal context: different welcome message for the extensions tree view if inside a workspace
-  vscode.commands.executeCommand("setContext", "dt-ext-copilot.extensionWorkspace", isExtensionsWorkspace(context));
+  vscode.commands.executeCommand("setContext", "dt-ext-copilot.extensionWorkspace", isExtensionsWorkspace(context, false));
   // Additional context: number of environments affects the welcome message for the tenants tree view
   vscode.commands.executeCommand("setContext", "dt-ext-copilot.numEnvironments", getAllEnvironments(context).length);
   // Create feature/data providers
@@ -89,7 +89,7 @@ export function activate(context: vscode.ExtensionContext) {
   const diagnosticsProvider = new DiagnosticsProvider(context);
   const diagnosticFixProvider = new DiagnosticFixProvider(diagnosticsProvider);
   var editTimeout: NodeJS.Timeout | undefined;
-  if (checkWorkspaceOpen() && isExtensionsWorkspace(context)) {
+  if (checkWorkspaceOpen() && isExtensionsWorkspace(context, false)) {
     checkBitBucketReady().then(ready => {
       if (ready) {
         new BitBucketStatus(context);
@@ -177,7 +177,7 @@ export function activate(context: vscode.ExtensionContext) {
       if (
         vscode.workspace.getConfiguration("dynatrace", null).get("fastDevelopmentMode") &&
         doc.fileName.endsWith("extension.yaml") &&
-        isExtensionsWorkspace(context) &&
+        isExtensionsWorkspace(context, false) &&
         checkEnvironmentConnected(tenantsTreeViewProvider)
       ) {
         const dt = await tenantsTreeViewProvider.getDynatraceClient();
@@ -211,7 +211,10 @@ export function activate(context: vscode.ExtensionContext) {
     })
   );
   // We may have an initialization pending from previous window/activation.
-  if (context.globalState.get("dt-ext-copilot.initPending")) {
+  const pendingInit = context.globalState.get("dt-ext-copilot.initPending");
+  if (pendingInit) {
+    console.log("PENDING");
+    console.log(pendingInit);
     vscode.commands.executeCommand("dt-ext-copilot.initWorkspace");
   }
 }
