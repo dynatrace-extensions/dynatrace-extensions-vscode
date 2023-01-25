@@ -4,7 +4,7 @@ import * as vscode from "vscode";
 import { Dynatrace } from "../dynatrace-api/dynatrace";
 import { DynatraceAPIError } from "../dynatrace-api/errors";
 import { checkActiveGateInstalled, checkOneAgentInstalled } from "../utils/conditionCheckers";
-import { uploadComponentCert } from "../utils/fileSystem";
+import { resolveRealPath, uploadComponentCert } from "../utils/fileSystem";
 
 /**
  * Delivers the "Distribute certificate" command functionality.
@@ -16,7 +16,9 @@ import { uploadComponentCert } from "../utils/fileSystem";
  * @returns boolean - the success of the command
  */
 export async function distributeCertificate(context: vscode.ExtensionContext, dt: Dynatrace) {
-  const certPath = vscode.workspace.getConfiguration("dynatrace", null).get("rootOrCaCertificateLocation");
+  const certPath = resolveRealPath(
+    vscode.workspace.getConfiguration("dynatrace", null).get("rootOrCaCertificateLocation") as string
+  );
   const certContent = readFileSync(certPath as string).toString();
 
   // TODO: This is not enough. What if ID is stale? Needs GET to confirm existence

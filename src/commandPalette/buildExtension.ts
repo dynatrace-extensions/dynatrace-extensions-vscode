@@ -9,7 +9,7 @@ import { normalizeExtensionVersion, incrementExtensionVersion, getDatasourceName
 import { FastModeStatus } from "../statusBar/fastMode";
 import { exec, ExecOptions, ProcessEnvOptions } from "child_process";
 import { getPythonPath } from "../utils/otherExtensions";
-import { getExtensionFilePath } from "../utils/fileSystem";
+import { getExtensionFilePath, resolveRealPath } from "../utils/fileSystem";
 
 type FastModeOptions = {
   status: FastModeStatus;
@@ -36,8 +36,8 @@ export async function buildExtension(
   // Basic details we already know exist
   const workspaceStorage = context.storageUri!.fsPath;
   const workSpaceConfig = vscode.workspace.getConfiguration("dynatrace", null);
-  const devKey = workSpaceConfig.get("developerKeyLocation") as string;
-  const devCert = workSpaceConfig.get("developerCertificateLocation") as string;
+  const devKey = resolveRealPath(workSpaceConfig.get("developerKeyLocation") as string);
+  const devCert = resolveRealPath(workSpaceConfig.get("developerCertificateLocation") as string);
   const workspaceRoot = vscode.workspace.workspaceFolders![0].uri.fsPath;
   const distDir = path.resolve(workspaceRoot, "dist");
   const extensionFile = fastMode ? fastMode.document.fileName : getExtensionFilePath(context)!;
@@ -272,7 +272,9 @@ async function assemblePython(
 
   // Build
   await runCommand(
-    `dt-sdk build -k "${devKeyPath}" -c "${devCertPath}" "${extensionDir}" -t "${workspaceStorage}" -e "${process.platform === "win32" ? "linux_x86_64" : "win_amd64"}"`,
+    `dt-sdk build -k "${devKeyPath}" -c "${devCertPath}" "${extensionDir}" -t "${workspaceStorage}" -e "${
+      process.platform === "win32" ? "linux_x86_64" : "win_amd64"
+    }"`,
     oc,
     envOptions
   );

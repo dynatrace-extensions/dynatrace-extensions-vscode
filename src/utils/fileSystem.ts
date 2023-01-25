@@ -1,5 +1,6 @@
 import * as vscode from "vscode";
 import * as path from "path";
+import * as os from "os";
 import { glob } from "glob";
 import { copyFileSync, existsSync, mkdirSync, readFileSync, writeFileSync } from "fs";
 import { DynatraceEnvironmentData, ExtensionWorkspace } from "../interfaces/treeViewData";
@@ -255,4 +256,30 @@ export function getExtensionFilePath(context: vscode.ExtensionContext): string |
     return path.join(workspaceRootPath, matches[0]);
   }
   return undefined;
+}
+
+/**
+ * Resolves relative paths correctly. This is needed because VS Code extensions do not have
+ * correct awareness of path relativity - they are all rooted in vscode installation directory
+ * e.g. "C:\Program Files\Microsoft VS Code"
+ * @param pathToResolve 
+ * @returns resolved absolute path
+ */
+export function resolveRealPath(pathToResolve: string): string {
+  // Absolute paths return straight away
+  if (!["~", "..", "."].some(symbol => pathToResolve.includes(symbol))) {
+    return path.resolve(pathToResolve);
+  }
+
+  // Relative paths to be processed further
+  const [symbol, ...pathSegments] = pathToResolve.split(path.sep);
+  switch (symbol) {
+    case "~":
+      return path.resolve(os.homedir(), ...pathSegments);
+    case ".":
+    case "..":
+      return path.resolve(vscode.workspace.workspaceFolders![0].uri.fsPath, symbol, ...pathSegments);
+    default:
+      return pathToResolve;
+  }
 }
