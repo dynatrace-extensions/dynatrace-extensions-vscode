@@ -1,6 +1,6 @@
 import * as vscode from "vscode";
 import * as yaml from "yaml";
-import { checkGradleProperties } from "../utils/conditionCheckers";
+import { checkDtInternalProperties } from "../utils/conditionCheckers";
 import { getDefinedCardsMeta, getMetricsFromDataSource, getReferencedCardsMeta } from "../utils/extensionParsing";
 import { getExtensionFilePath } from "../utils/fileSystem";
 import { getListItemIndexes } from "../utils/yamlParsing";
@@ -96,7 +96,7 @@ export class DiagnosticsProvider {
       if (!nameRegex.test(extensionName)) {
         diagnostics.push(copilotDiagnostic(nameStart, nameEnd, EXTENSION_NAME_INVALID));
       }
-      const bitBucketRepo = await checkGradleProperties();
+      const bitBucketRepo = await checkDtInternalProperties();
       if (!extensionName.startsWith("custom:") && !bitBucketRepo) {
         diagnostics.push(copilotDiagnostic(nameStart, nameEnd, EXTENSION_NAME_NON_CUSTOM));
       }

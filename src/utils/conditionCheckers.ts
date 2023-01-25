@@ -207,7 +207,7 @@ export async function checkBitBucketReady(): Promise<Boolean> {
     return false;
   }
   // Gradle points to artifactory
-  if (!checkGradleProperties()) {
+  if (!checkDtInternalProperties()) {
     console.log("Repo not mapped to artifactory. Can't do BB PRs.");
     return false;
   }
@@ -227,26 +227,59 @@ export async function checkUrlReachable(url: string): Promise<Boolean> {
 }
 
 /**
- * Checks the repo's Gradle properties and verifies it's pointing to artifactory.
+ * Checks whether either gradle.properties (all other extensions) or Jenkinsfile (python extensions)
+ * exists and the details map back to the Dynatrace Artifactory server.
  * @returns status of check
  */
-export async function checkGradleProperties(): Promise<Boolean> {
-  // Must have gradle.properties file
-  const files = await vscode.workspace.findFiles("**/gradle.properties");
+export async function checkDtInternalProperties(): Promise<Boolean> {
+  let status = false;
+  // Must have gradle.properties file or Jenkinsfile (for python)
+  let hasGradleProps = false;
+  let hasJenkinsProps = false;
+
+  // Check if we have gradle.properties first
+  let files = await vscode.workspace.findFiles("**/gradle.properties");
   if (files.length === 0) {
-    return false;
+    // Check if we have Jenkinsfile instead
+    files = await vscode.workspace.findFiles("**Jenkinsfile");
+    if (files.length > 0) {
+      hasJenkinsProps = true;
+    }
+  } else {
+    hasGradleProps = true;
   }
-  // Must have our repositoryBaseURL and releaseRepository
-  const props = readFileSync(files[0].fsPath).toString();
-  const baseUrlMatches = /repositoryBaseURL=(.*)/.exec(props);
-  if (!baseUrlMatches || baseUrlMatches[1] !== "https://artifactory.lab.dynatrace.org/artifactory") {
-    return false;
+  // Gradle properties must have our repositoryBaseURL and releaseRepository
+  if (hasGradleProps) {
+    const props = readFileSync(files[0].fsPath).toString();
+    const baseUrlMatches = /repositoryBaseURL=(.*)/.exec(props);
+    const repoMatches = /releaseRepository=(.*)/.exec(props);
+    if (
+      baseUrlMatches &&
+      repoMatches &&
+      baseUrlMatches[1] === "https://artifactory.lab.dynatrace.org/artifactory" &&
+      repoMatches[1] === "extensions-release"
+    ) {
+      status = true;
+    }
   }
-  const repoMatches = /releaseRepository=(.*)/.exec(props);
-  if (!repoMatches || repoMatches[1] !== "extensions-release") {
-    return false;
+  // Jenkins properties must have our rtServer details
+  if (hasJenkinsProps) {
+    const props = readFileSync(files[0].fsPath).toString();
+    const rtServerId = /id: '(.*?)'/.exec(props);
+    const rtUrl = /url: "(.*?)"/.exec(props);
+    if (
+      rtServerId &&
+      rtUrl &&
+      rtServerId[1] === "EXTENSION_ARTIFACTORY_SERVER" &&
+      rtUrl[1] === "https://artifactory.lab.dynatrace.org/artifactory"
+    ) {
+      status = true;
+    }
   }
-  return true;
+
+  console.log(`Check - is this an internal Dynatrace repo? > ${status}`);
+
+  return status;
 }
 
 export function checkOneAgentInstalled(): boolean {
