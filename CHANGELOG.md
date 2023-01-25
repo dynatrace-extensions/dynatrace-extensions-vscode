@@ -1,6 +1,18 @@
 # Change Log
 
-## Version 0.24.1 / Stage: beta (24.01.2022)
+## Version 0.24.1 / Stage: beta (25.01.2023)
+
+### 🚀 Improved in this version:
+- [#44 - Credential files should support relative paths](https://github.com/dynatrace-extensions/dynatrace-extensions-copilot/issues/44)
+- [#23 - Checks and warnings regarding YAML Schema extension](https://github.com/dynatrace-extensions/dynatrace-extensions-copilot/issues/23)
+
+### 🪲 Fixed in this version:
+- [#49 - Internal repo checks don't cover Python repos](https://github.com/dynatrace-extensions/dynatrace-extensions-copilot/issues/49)
+- [#48 - Build command breaks if name or version is surrounded by quotes](https://github.com/dynatrace-extensions/dynatrace-extensions-copilot/issues/48)
+
+---
+
+## Version 0.24.1 / Stage: beta (24.01.2023)
 
 ### ✨ New in this version:
 - [#43 - Code action idea - generate alerts JSON](https://github.com/dynatrace-extensions/dynatrace-extensions-copilot/issues/43)
@@ -16,14 +28,14 @@
 
 ---
 
-## Version 0.22.3 / Stage: beta (06.01.2022)
+## Version 0.22.3 / Stage: beta (06.01.2023)
 
 ### 🪲 Fixed in this version:
 - Certificates are not being uploaded to local installations correctly
 
 ---
 
-## Version 0.22.2 / Stage: beta (06.01.2022)
+## Version 0.22.2 / Stage: beta (06.01.2023)
 
 ### 🚀 Improved in this version:
 - Increased logging in DevTools to aid troubleshooting
