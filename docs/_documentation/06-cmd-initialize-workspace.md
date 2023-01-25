@@ -9,4 +9,4 @@ This includes loading up schemas, creating extension folder and stub, and creati
 This will also configure the `yaml.schema` extension to validate `extension.yaml` with your chosen schema version.
 Once finished, the workspace appears in the new Dynatrace view.
 
-![initialize](/assets/gifs/cmd_init.gif)
+![initialize]({{ site.baseurl }}/assets/gifs/cmd_init.gif)
