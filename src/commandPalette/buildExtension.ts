@@ -44,8 +44,8 @@ export async function buildExtension(
   const extensionDir = path.resolve(extensionFile, "..");
   // Current name and version
   const extension = readFileSync(extensionFile).toString();
-  const extensionName = /^name: ([:a-zA-Z0-9.\-_]+)/gm.exec(extension)![1];
-  const currentVersion = normalizeExtensionVersion(/^version: ([0-9.]+)/gm.exec(extension)![1]);
+  const extensionName = /^name: "?([:a-zA-Z0-9.\-_]+)"?/gm.exec(extension)![1];
+  const currentVersion = normalizeExtensionVersion(/^version: "?([0-9.]+)"?/gm.exec(extension)![1]);
 
   vscode.window.withProgress(
     {
@@ -137,7 +137,7 @@ async function preBuildTasks(
     mkdirSync(distDir);
   }
 
-  const versionRegex = /^version: ([0-9.]+)/gm;
+  const versionRegex = /^version: ("?[0-9.]+"?)/gm;
   const nextVersion = incrementExtensionVersion(currentVersion);
 
   if (forceIncrement) {

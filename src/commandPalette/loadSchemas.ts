@@ -60,7 +60,7 @@ export async function loadSchemas(context: vscode.ExtensionContext, dt: Dynatrac
       const extensionContent = readFileSync(extensionFile).toString();
       writeFileSync(
         extensionFile,
-        extensionContent.replace(/^minDynatraceVersion: ([0-9.]+)/gm, `minDynatraceVersion: ${version}`)
+        extensionContent.replace(/^minDynatraceVersion: ("?[0-9.]+"?)/gm, `minDynatraceVersion: ${version}`)
       );
     }
   } catch (err: any) {
