@@ -9,7 +9,7 @@ header:
     - label: "<i class='fas fa-download'></i> Download now"
       url: https://github.com/dynatrace-extensions/dynatrace-extensions-copilot/releases
 excerpt: >
-  Ready to take your Extension development to the next level?
+  Take Extension development to the next level.
   <br />
   <br />
   <br />
