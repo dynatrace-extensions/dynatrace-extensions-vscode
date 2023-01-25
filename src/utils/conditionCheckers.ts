@@ -4,7 +4,7 @@ import { existsSync, readdirSync, readFileSync } from "fs";
 import { EnvironmentsTreeDataProvider } from "../treeViews/environmentsTreeView";
 import { env } from "process";
 import axios from "axios";
-import { getExtensionFilePath } from "./fileSystem";
+import { getExtensionFilePath, resolveRealPath } from "./fileSystem";
 
 /**
  * Checks whether one or more VSCode settings are configured.
@@ -130,17 +130,22 @@ export function checkCertificateExists(type: "ca" | "dev" | "all"): boolean {
   var devKeyPath = vscode.workspace.getConfiguration("dynatrace", null).get("developerKeyLocation");
   var caCertPath = vscode.workspace.getConfiguration("dynatrace", null).get("rootOrCaCertificateLocation");
 
+  console.log(`DEV CERT: ${resolveRealPath(devCertPath as string)}`);
+  console.log(`DEV KEY: ${resolveRealPath(devKeyPath as string)}`);
+
   if (type === "ca" || type === "all") {
     if (!caCertPath) {
       allExist = false;
-    } else if (!existsSync(caCertPath as string)) {
+    } else if (!existsSync(resolveRealPath(caCertPath as string))) {
       allExist = false;
     }
   }
   if (type === "dev" || type === "all") {
     if (!(devKeyPath && devCertPath)) {
       allExist = false;
-    } else if (!(existsSync(devKeyPath as string) && existsSync(devCertPath as string))) {
+    } else if (
+      !(existsSync(resolveRealPath(devKeyPath as string)) && existsSync(resolveRealPath(devCertPath as string)))
+    ) {
       allExist = false;
     }
   }
