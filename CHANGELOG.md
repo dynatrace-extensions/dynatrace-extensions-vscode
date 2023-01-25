@@ -1,6 +1,6 @@
 # Change Log
 
-## Version 0.24.1 / Stage: beta (25.01.2023)
+## Version 0.24.3 / Stage: beta (25.01.2023)
 
 ### 🚀 Improved in this version:
 - [#44 - Credential files should support relative paths](https://github.com/dynatrace-extensions/dynatrace-extensions-copilot/issues/44)
