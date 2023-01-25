@@ -8,4 +8,4 @@ Builds your extension and its artefacts into a signed .zip archive which is plac
 Building extensions is only supported for custom extensions (i.e. name must start with `custom:`).
 Upon successful build, you may also upload this package to Dynatrace.
 
-![build_command](/assets/gifs/cmd_build.gif)
+![build_command]({{ site.baseurl }}/assets/gifs/cmd_build.gif)
