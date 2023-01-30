@@ -111,6 +111,7 @@ export const screenSnippet = `\
     layout:
       autoGenerate: false
       cards: <details-layout-cards>
+          - type: INJECTIONS
   chartsCards: <charts-cards>
   entitiesListCards: <entities-list-cards>`;
 
