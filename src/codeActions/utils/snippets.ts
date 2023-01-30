@@ -95,6 +95,7 @@ export const screenSnippet = `\
       cards:
         - key: <self-list-key>
           type: ENTITIES_LIST
+        - type: INJECTIONS
   detailsSettings:
     staticContent:
       showProblems: true
