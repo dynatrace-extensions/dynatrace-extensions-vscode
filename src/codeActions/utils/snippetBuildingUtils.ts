@@ -71,7 +71,7 @@ export function buildScreenSnippet(
   snippet = snippet.replace("<self-list-key>", `${slugify(typeDefinition.name)}_list_self`);
   snippet = snippet.replace("<charts-cards>", "\n" + indentSnippet(chartCardsSnippet, indent, false));
   snippet = snippet.replace("<entities-list-cards>", "\n" + indentSnippet(entitiesListCardsSnippet, indent, false));
-  snippet = snippet.replace("<details-layout-cards>", "\n" + indentSnippet(cardKeysSnippet, indent + 8, false));
+  snippet = snippet.replace("<details-layout-cards>", "\n" + indentSnippet(cardKeysSnippet, indent + 6, false));
 
   return indentSnippet(snippet, indent, withNewline);
 }
