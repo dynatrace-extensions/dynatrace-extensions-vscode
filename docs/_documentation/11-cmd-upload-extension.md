@@ -9,8 +9,6 @@ toc: true
 Uploads the most recent package from your workspace's `dist` folder to the currently connected
 Dynatrace tenant.
 
-![upload_ext_command]({{ site.baseurl }}/assets/gifs/upload_extension.gif)
-
 ## Command Pre-conditions
 
 - A registered Copilot Workspace must be open in the VSCode window
@@ -19,7 +17,7 @@ Dynatrace tenant.
 
 ## Demo
 
-> **TODO:** Video of the command
+![upload_ext_command]({{ site.baseurl }}/assets/gifs/upload_extension.gif)
 
 ## Detailed command flow
 
