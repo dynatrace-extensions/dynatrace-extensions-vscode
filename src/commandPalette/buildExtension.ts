@@ -2,7 +2,7 @@ import * as vscode from "vscode";
 import * as path from "path";
 import AdmZip = require("adm-zip");
 import { copyFileSync, existsSync, mkdirSync, readFileSync, rmSync, writeFileSync } from "fs";
-import { sign } from "../utils/cryptography";
+import { getFusedCertKeyPath, sign } from "../utils/cryptography";
 import { Dynatrace } from "../dynatrace-api/dynatrace";
 import { DynatraceAPIError } from "../dynatrace-api/errors";
 import { normalizeExtensionVersion, incrementExtensionVersion, getDatasourceName } from "../utils/extensionParsing";
@@ -69,9 +69,12 @@ export async function buildExtension(
       progress.report({ message: "Building extension package" });
       const zipFilename = `${extensionName.replace(":", "_")}-${updatedVersion}.zip`;
       try {
-        /^python:$/gm.test(extension)
-          ? await assemblePython(workspaceStorage, path.resolve(extensionDir, ".."), devKey, devCert, oc)
-          : assembleStandard(workspaceStorage, extensionDir, zipFilename, devKey, devCert);
+        if (/^python:$/gm.test(extension)) {
+          const certKey = getFusedCertKeyPath(devKey, devCert, workspaceStorage);
+          await assemblePython(workspaceStorage, path.resolve(extensionDir, ".."), certKey, oc);
+        } else {
+          assembleStandard(workspaceStorage, extensionDir, zipFilename, devKey, devCert);
+        }
       } catch (err: any) {
         vscode.window.showErrorMessage(`Error during archiving & signing: ${err.message}`);
         return;
@@ -242,15 +245,13 @@ function runCommand(command: string, oc: vscode.OutputChannel, envOptions?: Exec
  * out through `dt-sdk` which must be available on the machine.
  * @param workspaceStorage path to the VS Code folder for this workspace's storage
  * @param extensionDir path to the root folder of the workspace
- * @param devKeyPath the path to the developer's private key
- * @param devCertPath the path to the developer's certificate
+ * @param certKeyPath the path to the developer's fused private key & certificate
  * @param oc JSON output channel for communicating errors
  */
 async function assemblePython(
   workspaceStorage: string,
   extensionDir: string,
-  devKeyPath: string,
-  devCertPath: string,
+  certKeyPath: string,
   oc: vscode.OutputChannel
 ) {
   let envOptions = {} as ExecOptions;
@@ -272,7 +273,7 @@ async function assemblePython(
 
   // Build
   await runCommand(
-    `dt-sdk build -k "${devKeyPath}" -c "${devCertPath}" "${extensionDir}" -t "${workspaceStorage}" -e "${
+    `dt-sdk build -k "${certKeyPath}" "${extensionDir}" -t "${workspaceStorage}" -e "${
       process.platform === "win32" ? "linux_x86_64" : "win_amd64"
     }"`,
     oc,
