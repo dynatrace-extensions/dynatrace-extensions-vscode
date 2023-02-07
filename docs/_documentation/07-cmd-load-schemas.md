@@ -1,6 +1,6 @@
 ---
 title: 📄 Load Schemas
-permalink: /docs/cmd-load-schemas/
+permalink: /docs/cmd/load-schemas/
 toc: true
 ---
 

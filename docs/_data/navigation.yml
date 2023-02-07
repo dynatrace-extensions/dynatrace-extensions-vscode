@@ -1,45 +1,55 @@
 main:
-  - title: "Documentation"
-    url: /docs/installation
-  - title: "About"
+  - title: Documentation
+    url: /docs/start/pre-requisites
+  - title: About
     url: /about/
   
 docs:
   - title: 🚀 Getting Started
     children:
       - title: Pre-requisites
-        url: /docs/pre-requisites
+        url: /docs/start/pre-requisites
       - title: Installation
-        url: /docs/installation
+        url: /docs/start/installation
       - title: First time setup
-        url: /docs/first-time-setup
+        url: /docs/start/first-time-setup
   - title: ⚡ Command Palette
     children:
       - title: 📦 Initialize workspace
-        url: /docs/cmd-initialize-workspace
+        url: /docs/cmd/initialize-workspace
       - title: 📄 Load schemas
-        url: /docs/cmd-load-schemas
+        url: /docs/cmd/load-schemas
       - title: 🔐 Generate certificates
-        url: /docs/cmd-generate-certificates
+        url: /docs/cmd/generate-certificates
       - title: 🔗 Distribute certificate
-        url: /docs/cmd-distribute-certificate
+        url: /docs/cmd/distribute-certificate
       - title: 🎁 Build extension
-        url: /docs/cmd-build-extension
+        url: /docs/cmd/build-extension
       - title: 📤 Upload extension to tenant
-        url: /docs/cmd-upload-extension
+        url: /docs/cmd/upload-extension
       - title: 🔂 Activate extension on tenant
-        url: /docs/cmd-activate-extension
+        url: /docs/cmd/activate-extension
       - title: 📑 Create documentation
-        url: /docs/cmd-create-documentation
+        url: /docs/cmd/create-documentation
       - title: 📈 Create overview dashboard
-        url: /docs/cmd-create-dashboard
+        url: /docs/cmd/create-dashboard
+  - title: 🧠 Development assistance
+    children:
+      - title: 🎹 Code completions
+        url: /docs/dev/code-completions
+      - title: 💡 Code actions
+        url: /docs/dev/code-actions
+      - title: 🔎 Code lens
+        url: /docs/dev/code-lens
   - title: ⚙️ Settings
     children:
       - title: Credentials
-        url: /docs/settings-credentials
+        url: /docs/settings/credentials
       - title: Feature usage
-        url: /docs/settings-features
+        url: /docs/settings/features
   - title: ✍️ Contributing
     children:
-      - title: Lorem Ipsum
-        url: /docs/contributing
+      - title: Guide
+        url: /docs/contrib/guide
+      - title: Project structure
+        url: /docs/contrib/project-structure

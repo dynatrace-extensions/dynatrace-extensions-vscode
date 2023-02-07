@@ -1,6 +1,6 @@
 ---
 title: Create Overview Dashboard
-permalink: /docs/cmd-create-dashboard/
+permalink: /docs/cmd/create-dashboard/
 toc: true
 ---
 

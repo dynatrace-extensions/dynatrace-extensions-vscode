@@ -1,6 +1,6 @@
 ---
 title: 🔗 Distribute Certificate
-permalink: /docs/cmd-distribute-certificate/
+permalink: /docs/cmd/distribute-certificate/
 toc: true
 ---
 

@@ -1,6 +1,6 @@
 ---
 title: First time setup
-permalink: /docs/first-time-setup/
+permalink: /docs/start/first-time-setup/
 toc: true
 ---
 

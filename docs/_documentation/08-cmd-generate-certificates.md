@@ -1,6 +1,6 @@
 ---
 title: 🔐 Generate Certificates
-permalink: /docs/cmd-generate-certificates/
+permalink: /docs/cmd/generate-certificates/
 toc: true
 ---
 

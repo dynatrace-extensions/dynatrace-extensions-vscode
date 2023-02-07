@@ -1,6 +1,6 @@
 ---
 title: Feature usage settings
-permalink: /docs/settings-features/
+permalink: /docs/settings/features/
 toc: true
 ---
 

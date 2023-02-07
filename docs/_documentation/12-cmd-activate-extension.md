@@ -1,6 +1,6 @@
 ---
 title: 🔂 Activate Extension on Tenant
-permalink: /docs/cmd-activate-extension/
+permalink: /docs/cmd/activate-extension/
 toc: true
 ---
 

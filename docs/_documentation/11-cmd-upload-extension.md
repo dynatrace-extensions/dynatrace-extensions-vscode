@@ -1,6 +1,6 @@
 ---
 title: 📤 Upload Extension to Tenant
-permalink: /docs/cmd-upload-extension/
+permalink: /docs/cmd/upload-extension/
 toc: true
 ---
 

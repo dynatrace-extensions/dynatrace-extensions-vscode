@@ -1,6 +1,6 @@
 ---
 title: 📦 Initialize Workspace
-permalink: /docs/cmd-initialize-workspace/
+permalink: /docs/cmd/initialize-workspace/
 toc: true
 ---
 
