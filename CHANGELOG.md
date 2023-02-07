@@ -1,5 +1,15 @@
 # Change Log
 
+## Version 0.24.4 / Stage: beta (07.02.2023)
+
+### 🚀 Improved in this version:
+- [#50 - Generated screens should have injections enabled by default](https://github.com/dynatrace-extensions/dynatrace-extensions-copilot/issues/50)
+
+### 🪲 Fixed in this version:
+- [#53 - Change in dt-sdk breaks Build command for Python](https://github.com/dynatrace-extensions/dynatrace-extensions-copilot/issues/53)
+
+---
+
 ## Version 0.24.3 / Stage: beta (25.01.2023)
 
 ### 🚀 Improved in this version:
