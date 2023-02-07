@@ -1,6 +1,6 @@
 ---
 title: Credentials within the Copilot
-permalink: /docs/settings-credentials/
+permalink: /docs/settings/credentials/
 toc: true
 ---
 

@@ -1,6 +1,6 @@
 ---
 title: Pre-requisites
-permalink: /docs/pre-requisites/
+permalink: /docs/start/pre-requisites/
 toc: true
 ---
 

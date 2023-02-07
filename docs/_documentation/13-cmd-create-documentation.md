@@ -1,6 +1,6 @@
 ---
 title: Create Extension Documentation
-permalink: /docs/cmd-create-documentation/
+permalink: /docs/cmd/create-documentation/
 toc: true
 ---
 

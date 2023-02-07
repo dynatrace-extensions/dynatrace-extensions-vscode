@@ -1,6 +1,6 @@
 ---
 title: "Installation"
-permalink: /docs/installation/
+permalink: /docs/start/installation/
 toc: true
 ---
 

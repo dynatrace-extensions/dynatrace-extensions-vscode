@@ -1,6 +1,6 @@
 ---
 title: 🎁 Build Extension
-permalink: /docs/cmd-build-extension/
+permalink: /docs/cmd/build-extension/
 toc: true
 ---
 
