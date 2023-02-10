@@ -12,7 +12,7 @@ Generates all the credentials needed for signing and validating Extensions 2.0.
 
 ## Demo
 
-> **TODO:** add a recording of the command
+![generate_certificates]({{ site.baseurl }}/assets/gifs/generate_certificates.gif)
 
 ## Detailed command flow
 

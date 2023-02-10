@@ -14,7 +14,7 @@ the version in there too.
 
 ## Demo
 
-> **TODO:** add a recording of the command
+![load_schemas]({{ site.baseurl }}/assets/gifs/load_schemas.gif)
 
 ## Detailed command flow
 
