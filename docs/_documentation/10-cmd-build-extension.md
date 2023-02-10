@@ -4,8 +4,6 @@ permalink: /docs/cmd/build-extension/
 toc: true
 ---
 
-## Abstract
-
 Builds your extension and its artefacts into a signed .zip archive which is placed inside the
 `dist` folder of the workspace.
 

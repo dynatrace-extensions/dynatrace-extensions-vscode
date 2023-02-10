@@ -4,6 +4,8 @@ permalink: /docs/start/pre-requisites/
 toc: true
 ---
 
+Everything you need to start using the Copilot.
+
 ## Visual Studio Code
 
 This is pretty obvious, the Extensions Copilot exists as an Extension for Visual Studio Code.

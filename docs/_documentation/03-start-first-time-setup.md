@@ -4,6 +4,8 @@ permalink: /docs/start/first-time-setup/
 toc: true
 ---
 
+Get started and use the Copilot for the first time.
+
 ## Before you begin
 
 Make sure you have followed the previous articles for

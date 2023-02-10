@@ -4,9 +4,11 @@ permalink: /docs/contrib/guide/
 toc: true
 ---
 
+Mandatory guide for anyone wanting to contribute to this project.
+
 ## Contributing to this project
 
-This project is very much still in its infancy and there are many areas where help is needed.
+The Copilot is still in its infancy and there are many areas where help is needed.
 These include:
 - Manually testing features/scenarios and finding bugs and edge cases
 - Writing unit tests

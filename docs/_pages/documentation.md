@@ -7,4 +7,4 @@ entries_layout: grid
 classes: wide
 ---
 
-Lorem ipsum dolor sit amet...
+Documentation articles for the Dynatrace Extensions Copilot

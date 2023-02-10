@@ -4,8 +4,6 @@ permalink: /docs/cmd/activate-extension/
 toc: true
 ---
 
-## Abstract
-
 Activates a version of your workspace's extension on the currently connected Dynatrace
 environment.
 
