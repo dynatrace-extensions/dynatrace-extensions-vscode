@@ -17,7 +17,7 @@ detected).
 
 ## Demo
 
-> **TODO:** demo video of the command.
+![distribute_certificate]({{ site.baseurl }}/assets/gifs/distribute_certificate.gif)
 
 ## Detailed command flow
 
