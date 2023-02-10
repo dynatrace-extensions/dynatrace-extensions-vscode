@@ -4,6 +4,8 @@ permalink: /docs/contrib/project-structure/
 toc: true
 ---
 
+Mandatory reading for anyone wanting to contribute to this project.
+
 ## Understand the project structure
 
 This project is structured as follows:

@@ -4,8 +4,6 @@ permalink: /docs/cmd/generate-certificates/
 toc: true
 ---
 
-## Abstract
-
 Generates all the credentials needed for signing and validating Extensions 2.0.
 
 ## Command Pre-conditions
@@ -27,8 +25,12 @@ Generates all the credentials needed for signing and validating Extensions 2.0.
 4. The Developer Certificate is generated from the RSA Key Pair and the CA Certificate is
    added as the issuing authority on this credential.
 
-   > **Note**: credential details can be customized through 
-   > [settings](/dynatrace-extensions-copilot/docs/settings-credentials/)
+   <p class="notice--info">
+     <strong>📝 Note:</strong>
+     <br/>
+     Credential details can be customized through
+     <a href="/dynatrace-extensions-copilot/docs/settings-credentials/">settings</a>
+   </p>
 
 5. All intermediary files are stored in the VSCode workspace storage and the
    [credential settings](/dynatrace-extensions-copilot/docs/settings-credentials/) for this

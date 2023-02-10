@@ -4,8 +4,6 @@ permalink: /docs/cmd/distribute-certificate/
 toc: true
 ---
 
-## Abstract
-
 Uploads the workspace's root (CA) certificate to the Dynatrace Credentials Vault. Optionally,
 you can also upload this certificate to any locally installed OneAgents or ActiveGates (if 
 detected).
@@ -35,5 +33,9 @@ detected).
 3. Local OneAgent & ActiveGate paths are checked for existence and the flow prompts whether
    the certificate should also be uploaded to these locations.
 
-   > **Note**: this step requires administrator
-   > level permissions (e.g.: for Windows, Run As Administrator).
+   <p class="notice--warning">
+     <strong>⚠️ Warning:</strong>
+     <br/>
+     This step requires VS Code to run with administrator level permissions
+     (e.g.: for Windows, Run As Administrator).
+   </p>

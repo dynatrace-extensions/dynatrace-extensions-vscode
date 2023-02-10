@@ -4,8 +4,6 @@ permalink: /docs/cmd/upload-extension/
 toc: true
 ---
 
-## Abstract
-
 Uploads the most recent package from your workspace's `dist` folder to the currently connected
 Dynatrace tenant.
 

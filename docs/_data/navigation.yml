@@ -13,6 +13,12 @@ docs:
         url: /docs/start/installation
       - title: First time setup
         url: /docs/start/first-time-setup
+  - title: 🏠 Dynatrace View
+    children:
+      - title: Extension Workspaces
+        url: /docs/views/workspaces
+      - title: Environments
+        url: /docs/views/environments
   - title: ⚡ Command Palette
     children:
       - title: 📦 Initialize workspace
@@ -33,7 +39,7 @@ docs:
         url: /docs/cmd/create-documentation
       - title: 📈 Create overview dashboard
         url: /docs/cmd/create-dashboard
-  - title: 🧠 Development assistance
+  - title: 🤖 Development assistance
     children:
       - title: 🎹 Code completions
         url: /docs/dev/code-completions

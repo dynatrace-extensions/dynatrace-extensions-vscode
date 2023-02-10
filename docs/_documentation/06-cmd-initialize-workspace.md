@@ -4,8 +4,6 @@ permalink: /docs/cmd/initialize-workspace/
 toc: true
 ---
 
-## Abstract
-
 Initializes a new workspace for Dynatrace Extension 2.0 development. This includes loading up 
 schemas, creating an extension folder and stub, and creating an empty dist folder. This will 
 also configure the Support for YAML extension to validate the extension manifest with your
@@ -30,8 +28,12 @@ Once finished, the workspace appears in the new Dynatrace view.
    the flow awaits its successful completion before continuing. The Support for YAML extension
    is configured to validate the `extension.yaml` file with the chosen schema version.
    
-   > **Note:** if this workspace was previously associated with the Copilot this step will be
-   > skipped and the last known schema version will be automatically selected.
+   <p class="notice--info">
+     <strong>📝 Note:</strong>
+     <br/>
+     If this workspace was previously associated with the Copilot this step will be
+     skipped and the last known schema version will be automatically selected.
+   </p>
 
 3. New folders and files are created (if needed):
    - `./extension` - this is where the extension manifest along with its assets will be placed
