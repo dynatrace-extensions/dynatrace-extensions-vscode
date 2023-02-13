@@ -47,6 +47,8 @@ docs:
         url: /docs/dev/code-actions
       - title: 🔎 Code lens
         url: /docs/dev/code-lens
+      - title: 🔥 Fast development mode
+        url: /docs/dev/fast-development-mode
   - title: ⚙️ Settings
     children:
       - title: Credentials
