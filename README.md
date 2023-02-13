@@ -1,4 +1,4 @@
-![illustration](previews/proj-illustration.png)
+![illustration](docs/assets/images/proj-illustration.png)
 
 # Dynatrace Extensions Copilot
 
