@@ -10,4 +10,4 @@ experience. These settings allow on-demand enabling of various features.
   [metric selector code lenses](/dynatrace-extensions-copilot/docs/dev/code-lens/#metric-selector-code-lenses)
 - `dynatrace.entitySelectorsCodeLens` - 
   [entity selector code lenses](/dynatrace-extensions-copilot/docs/dev/code-lens/#entity-selector-code-lenses)
-- `dynatrace.fastDevelopmentMode` - fast development mode
+- `dynatrace.fastDevelopmentMode` - [fast development mode](/dynatrace-extensions-copilot/docs/dev/fast-development-mode)
