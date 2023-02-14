@@ -9,8 +9,8 @@ This is a VisualStudio Code Extension that aims to provide support for all aspec
 <h2 align="center">
   This project's documentation has moved to: 
 </h2>
-<h1 align="center">
+<h2 align="center">
   <a href="https://dynatrace-extensions.github.io/dynatrace-extensions-copilot/">
     GitHub Pages
   </a>
-</h1>
+</h2>
