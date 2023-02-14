@@ -32,6 +32,22 @@ export async function addEnvironment(context: vscode.ExtensionContext) {
     placeHolder: "The URL at which this environment is accessible...",
     prompt: "Mandatory",
     ignoreFocusOut: true,
+    validateInput: value => {
+      if (!/^https?:\/\/.*/.test(value)) {
+        return "This URL is invalid. Must start with http or https";
+      }
+      if (value.includes("/e/")) {
+        return !/^https?:\/\/[a-zA-Z.0-9-]+?\/e\/[a-z0-9-]*?(?:\/|$)$/.test(value)
+          ? "This does not look right. It should be the base URL to your Managed tenant."
+          : null;
+      }
+      if ([".live.", ".dev.", ".sprint."].some(x => value.includes(x))) {
+        return !/^https?:\/\/[a-z0-9]*?\.(?:live|dev|sprint)\.dynatrace(?:labs)*.*?\.com+?(?:\/|$)$/.test(value)
+          ? "This does not look right. It should be the base URL to your SaaS tenant."
+          : null;
+      }
+      return "This does not look like a Dynatrace tenant URL";
+    },
   });
   if (!url || url === "") {
     vscode.window.showErrorMessage("URL cannot be blank. Operation was cancelled.");
@@ -46,7 +62,7 @@ export async function addEnvironment(context: vscode.ExtensionContext) {
     placeHolder: "An access token, to use when autheticating API calls...",
     prompt: "Mandatory",
     ignoreFocusOut: true,
-    password: true
+    password: true,
   });
   if (!token || token === "") {
     vscode.window.showErrorMessage("Token cannot be blank. Operation was cancelled");
@@ -98,6 +114,7 @@ export async function editEnvironment(context: vscode.ExtensionContext, environm
     title: "The new access token for this environment",
     placeHolder: "An access token, to use when autheticating API calls...",
     value: environment.token,
+    password: true,
     prompt: "Mandatory",
     ignoreFocusOut: true,
   });
@@ -156,9 +173,9 @@ export async function deleteEnvironment(context: vscode.ExtensionContext, enviro
  */
 export async function changeConnection(context: vscode.ExtensionContext): Promise<[boolean, string]> {
   const environments = getAllEnvironments(context);
-  const currentEnv = environments.find((e) => e.current);
+  const currentEnv = environments.find(e => e.current);
   const choice = await vscode.window.showQuickPick(
-    environments.map((e) => (e.current ? `⭐ ${e.name}` : (e.name as string))),
+    environments.map(e => (e.current ? `⭐ ${e.name}` : (e.name as string))),
     {
       canPickMany: false,
       ignoreFocusOut: true,
@@ -169,7 +186,7 @@ export async function changeConnection(context: vscode.ExtensionContext): Promis
 
   // Use the newly selected environment
   if (choice) {
-    var environment = environments.find((e) => e.name === choice);
+    var environment = environments.find(e => e.name === choice);
     if (environment) {
       registerEnvironment(context, environment.url, environment.token, environment.name, true);
       return [true, environment.name as string];
