@@ -91,6 +91,15 @@ export class PrometheusCodeLensProvider implements vscode.CodeLensProvider {
             arguments: [],
           })
         );
+        // Edit config lens
+        this.codeLenses.push(
+          new vscode.CodeLens(range, {
+            title: "Edit config",
+            tooltip: "Make changes to the endpoint connection details",
+            command: "dt-ext-copilot.codeLens.scrapeMetrics",
+            arguments: [true],
+          })
+        );
         // Status lens
         this.codeLenses.push(
           new vscode.CodeLens(range, {
@@ -112,11 +121,12 @@ export class PrometheusCodeLensProvider implements vscode.CodeLensProvider {
   /**
    * Metric scraping workflow. If no previous details are known, these are collected.
    * Upon successful scraping and processing, timestamp is updated.
+   * @param changeConfig force collecting the details required for scraping, even if they exist already
    * @returns void
    */
-  private async scrapeMetrics() {
+  private async scrapeMetrics(changeConfig: boolean = false) {
     // Only collect details if none are available
-    if (!this.promUrl) {
+    if (!this.promUrl || changeConfig) {
       const details = await this.collectEndpointDetails();
       if (!details) {
         return;
