@@ -69,6 +69,17 @@ export async function buildExtension(
       title: "Building extension",
     },
     async progress => {
+      // Handle unsaved changes
+      const extensionDocument = vscode.workspace.textDocuments.find(doc => doc.fileName.endsWith("extension.yaml"));
+      if (extensionDocument?.isDirty) {
+        await extensionDocument
+          .save()
+          .then(success =>
+            success
+              ? vscode.window.showInformationMessage("Document saved automatically.")
+              : vscode.window.showErrorMessage("Failed to save extension manifest. Build command cancelled.")
+          );
+      }
       // Pre-build workflow
       let updatedVersion = "";
       progress.report({ message: "Checking prerequisites" });
