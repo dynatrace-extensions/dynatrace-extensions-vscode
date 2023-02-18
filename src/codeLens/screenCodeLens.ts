@@ -59,9 +59,9 @@ export class ScreenLensProvider implements vscode.CodeLensProvider {
     const regex = new RegExp(this.regex);
     const text = document.getText();
 
-    // If no screens, don't continue
-    if (!text.includes("screens:")) {
-      return this.codeLenses;
+    // If no screens or feature disabled, don't continue
+    if (!text.includes("screens:") || !vscode.workspace.getConfiguration("dynatrace", null).get("dynatrace.screenCodeLens")) {
+      return [];
     }
 
     let matches;

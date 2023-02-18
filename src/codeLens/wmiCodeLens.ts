@@ -58,7 +58,7 @@ class WmiQueryResultLens extends vscode.CodeLens {
 
   /**
    * Called when the user clicks on the '▶️ Run WMI Query' code lens
-  */
+   */
   setQueryRunning = () => {
     this.command = {
       title: "⏳ Running query...",
@@ -95,10 +95,8 @@ class WmiQueryResultLens extends vscode.CodeLens {
 export class WmiCodeLensProvider implements vscode.CodeLensProvider {
   private wmiQueryLens: WmiQueryLens[] = [];
   private wmiQueryResultLens: WmiQueryResultLens[] = [];
-  private _onDidChangeCodeLenses: vscode.EventEmitter<void> =
-    new vscode.EventEmitter<void>();
-  public readonly onDidChangeCodeLenses: vscode.Event<void> =
-    this._onDidChangeCodeLenses.event;
+  private _onDidChangeCodeLenses: vscode.EventEmitter<void> = new vscode.EventEmitter<void>();
+  public readonly onDidChangeCodeLenses: vscode.Event<void> = this._onDidChangeCodeLenses.event;
   private cachedData: CachedDataProvider;
 
   /**
@@ -115,7 +113,7 @@ export class WmiCodeLensProvider implements vscode.CodeLensProvider {
     const text = document.getText();
 
     // Return early because it is cheaper than parsing the yaml
-    if (!text.includes("wmi:")) {
+    if (!text.includes("wmi:") || !vscode.workspace.getConfiguration("dynatrace", null).get("dynatrace.diagnostics")) {
       return [];
     }
 
@@ -166,11 +164,7 @@ export class WmiCodeLensProvider implements vscode.CodeLensProvider {
   createLens(lineToMatch: string, document: vscode.TextDocument) {
     // If this exact query string was already added, return
     // Needed in the rare case the user has the same query more than once
-    if (
-      this.wmiQueryLens.find(
-        (lens) => (lens as WmiQueryLens).wmiQuery === lineToMatch
-      )
-    ) {
+    if (this.wmiQueryLens.find(lens => (lens as WmiQueryLens).wmiQuery === lineToMatch)) {
       return;
     }
     const text = document.getText();
@@ -189,9 +183,7 @@ export class WmiCodeLensProvider implements vscode.CodeLensProvider {
 
       if (range) {
         this.wmiQueryLens.push(new WmiQueryLens(range, lineToMatch));
-        this.wmiQueryResultLens.push(
-          new WmiQueryResultLens(range, lineToMatch)
-        );
+        this.wmiQueryResultLens.push(new WmiQueryResultLens(range, lineToMatch));
       }
     }
   }
@@ -201,7 +193,7 @@ export class WmiCodeLensProvider implements vscode.CodeLensProvider {
 
     // Find the WmiQueryResultLens that matches this query
     const ownerLens = this.wmiQueryResultLens.find(
-      (lens) => (lens as WmiQueryResultLens).wmiQuery === query
+      lens => (lens as WmiQueryResultLens).wmiQuery === query
     ) as WmiQueryResultLens;
 
     if (ownerLens) {
@@ -214,7 +206,7 @@ export class WmiCodeLensProvider implements vscode.CodeLensProvider {
   setQueryRunning = (query: string) => {
     // Find the WmiQueryResultLens that matches this query
     const ownerLens = this.wmiQueryResultLens.find(
-      (lens) => (lens as WmiQueryResultLens).wmiQuery === query
+      lens => (lens as WmiQueryResultLens).wmiQuery === query
     ) as WmiQueryResultLens;
 
     if (ownerLens) {

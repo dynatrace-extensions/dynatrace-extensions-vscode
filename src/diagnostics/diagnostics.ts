@@ -51,12 +51,19 @@ export class DiagnosticsProvider {
    * @param document text document to provide diagnostics for
    */
   public async provideDiagnostics(document: vscode.TextDocument) {
+    // If feature disabled, don't continue
+    if (!vscode.workspace.getConfiguration("dynatrace", null).get("dynatrace.diagnostics")) {
+      this.collection.set(document.uri, []);
+      return;
+    }
+
     const extension = yaml.parse(document.getText());
     const diagnostics = [
       ...(await this.diagnoseExtensionName(document.getText())),
       ...this.diagnoseMetricKeys(document, extension),
       ...this.diagnoseCardKeys(document, extension),
     ];
+
     this.collection.set(document.uri, diagnostics);
   }
 
