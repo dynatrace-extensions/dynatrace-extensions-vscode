@@ -15,9 +15,9 @@
 # in the templates via {{ site.myvariable }}.
 title: Dynatrace Extensions Copilot
 subtitle: Your personal assistant for developing Extensions 2.0
-baseurl: "/dynatrace-extensions-copilot/"
-url: "https://dynatrace-extensions.github.io"
-domain: dynatrace-extensions.github.io
+# baseurl: "/dynatrace-extensions-copilot/"
+url: "https://extensions-copilot.dynatrace.com"
+domain: extensions-copilot.dynatrace.com
 name: Platform Extensions
 email: extensions@dynatrace.com
 description: >-
