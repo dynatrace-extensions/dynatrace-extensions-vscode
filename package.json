@@ -2,12 +2,13 @@
 	"name": "dt-ext-copilot",
 	"displayName": "Dynatrace Extensions Copilot",
 	"description": "Support for Dynatrace Extension 2.0 development",
+	"publisher": "DynatracePlatformExtensions",
 	"author": {
 		"name": "Dynatrace Platform Extensions",
 		"email": "extensions@dynatrace.com",
 		"url": "https://info.dynatrace.com/global_all_wp_dynatrace_services_platform_extensions_fact_sheet_13656_fulfillment.html"
 	},
-	"version": "0.24.4",
+	"version": "1.0.0",
 	"repository": {
 		"type": "git",
 		"url": "https://github.com/dynatrace-extensions/dynatrace-extensions-copilot.git"
@@ -136,6 +137,54 @@
 				"command": "dt-ext-copilot-environments.deleteEnvironment",
 				"title": "Remove environment",
 				"icon": "$(trash)"
+			},
+			{
+				"command": "dt-ext-copilot-workspaces.enableMetricSelectors",
+				"title": "Enable metric selector code lens"
+			},
+			{
+				"command": "dt-ext-copilot-workspaces.disableMetricSelectors",
+				"title": "Disable metric selector code lens"
+			},
+			{
+				"command": "dt-ext-copilot-workspaces.enableEntitySelectors",
+				"title": "Enable entity selector code lens"
+			},
+			{
+				"command": "dt-ext-copilot-workspaces.disableEntitySelectors",
+				"title": "Disable entity selector code lens"
+			},
+			{
+				"command": "dt-ext-copilot-workspaces.enableScreenCodelens",
+				"title": "Enable screens code lens"
+			},
+			{
+				"command": "dt-ext-copilot-workspaces.disableScreenCodelens",
+				"title": "Disable screens code lens"
+			},
+			{
+				"command": "dt-ext-copilot-workspaces.enableWmiCodelens",
+				"title": "Enable WMI query code lens"
+			},
+			{
+				"command": "dt-ext-copilot-workspaces.disableWmiCodelens",
+				"title": "Disable WMI query code lens"
+			},
+			{
+				"command": "dt-ext-copilot-workspaces.enableDiagnostics",
+				"title": "Enable diagnostics"
+			},
+			{
+				"command": "dt-ext-copilot-workspaces.disableDiagnostics",
+				"title": "Disable diagnostics"
+			},
+			{
+				"command": "dt-ext-copilot-workspaces.enableFastDevelopment",
+				"title": "Enable fast development mode"
+			},
+			{
+				"command": "dt-ext-copilot-workspaces.disableFastDevelopment",
+				"title": "Disable fast development mode"
 			}
 		],
 		"configuration": [
@@ -156,12 +205,33 @@
 						"scope": "resource",
 						"default": true
 					},
+					"dynatrace.wmiCodeLens": {
+						"type": "boolean",
+						"description": "Enable Code Lens functionality around WMI Queries",
+						"order": 3,
+						"scope": "resource",
+						"default": true
+					},
+					"dynatrace.screenCodeLens": {
+						"type": "boolean",
+						"description": "Enable Code Lens functionality around (unified analysis) screens",
+						"order": 4,
+						"scope": "resource",
+						"default": true
+					},
 					"dynatrace.fastDevelopmentMode": {
 						"type": "boolean",
 						"description": "When enabled, static extension assets are sent to Dynatrace on every Save, and when you build an extension it will automatically get uploaded and activated immediately.",
-						"order": 3,
+						"order": 5,
 						"scope": "resource",
 						"default": false
+					},
+					"dynatrace.diagnostics": {
+						"type": "boolean",
+						"description": "When enabled, the Copilot will provide diagnostics on the extension manifest file.",
+						"order": 6,
+						"scope": "resource",
+						"default": true
 					}
 				}
 			},
@@ -261,6 +331,54 @@
 				{
 					"command": "dt-ext-copilot-environments.useEnvironment",
 					"when": "false"
+				},
+				{
+					"command": "dt-ext-copilot-workspaces.enableMetricSelectors",
+					"when": "false"
+				},
+				{
+					"command": "dt-ext-copilot-workspaces.disableMetricSelectors",
+					"when": "false"
+				},
+				{
+					"command": "dt-ext-copilot-workspaces.enableEntitySelectors",
+					"when": "false"
+				},
+				{
+					"command": "dt-ext-copilot-workspaces.enableEntitySelectors",
+					"when": "false"
+				},
+				{
+					"command": "dt-ext-copilot-workspaces.enableScreenCodelens",
+					"when": "false"
+				},
+				{
+					"command": "dt-ext-copilot-workspaces.disableScreenCodelens",
+					"when": "false"
+				},
+				{
+					"command": "dt-ext-copilot-workspaces.enableWmiCodelens",
+					"when": "false"
+				},
+				{
+					"command": "dt-ext-copilot-workspaces.disableWmiCodelens",
+					"when": "false"
+				},
+				{
+					"command": "dt-ext-copilot-workspaces.enableDiagnostics",
+					"when": "false"
+				},
+				{
+					"command": "dt-ext-copilot-workspaces.disableDiagnostics",
+					"when": "false"
+				},
+				{
+					"command": "dt-ext-copilot-workspaces.enableFastDevelopment",
+					"when": "false"
+				},
+				{
+					"command": "dt-ext-copilot-workspaces.disableFastDevelopment",
+					"when": "false"
 				}
 			],
 			"view/title": [
@@ -295,6 +413,66 @@
 					"command": "dt-ext-copilot-workspaces.deleteWorkspace",
 					"when": "view == dt-ext-copilot-workspaces && viewItem == extensionWorkspace",
 					"group": "inline@2"
+				},
+				{
+					"command": "dt-ext-copilot-workspaces.enableMetricSelectors",
+					"when": "view == dt-ext-copilot-workspaces && viewItem == extensionWorkspace && !config.dynatrace.metricSelectorsCodeLens",
+					"group": "2_workspace"
+				},
+				{
+					"command": "dt-ext-copilot-workspaces.disableMetricSelectors",
+					"when": "view == dt-ext-copilot-workspaces && viewItem == extensionWorkspace && config.dynatrace.metricSelectorsCodeLens",
+					"group": "2_workspace"
+				},
+				{
+					"command": "dt-ext-copilot-workspaces.enableEntitySelectors",
+					"when": "view == dt-ext-copilot-workspaces && viewItem == extensionWorkspace && !config.dynatrace.entitySelectorsCodeLens",
+					"group": "2_workspace"
+				},
+				{
+					"command": "dt-ext-copilot-workspaces.disableEntitySelectors",
+					"when": "view == dt-ext-copilot-workspaces && viewItem == extensionWorkspace && config.dynatrace.entitySelectorsCodeLens",
+					"group": "2_workspace"
+				},
+				{
+					"command": "dt-ext-copilot-workspaces.enableWmiCodelens",
+					"when": "view == dt-ext-copilot-workspaces && viewItem == extensionWorkspace && !config.dynatrace.wmiCodeLens",
+					"group": "2_workspace"
+				},
+				{
+					"command": "dt-ext-copilot-workspaces.disableWmiCodelens",
+					"when": "view == dt-ext-copilot-workspaces && viewItem == extensionWorkspace && config.dynatrace.wmiCodeLens",
+					"group": "2_workspace"
+				},
+				{
+					"command": "dt-ext-copilot-workspaces.enableScreenCodelens",
+					"when": "view == dt-ext-copilot-workspaces && viewItem == extensionWorkspace && !config.dynatrace.screenCodeLens",
+					"group": "2_workspace"
+				},
+				{
+					"command": "dt-ext-copilot-workspaces.disableScreenCodelens",
+					"when": "view == dt-ext-copilot-workspaces && viewItem == extensionWorkspace && config.dynatrace.screenCodeLens",
+					"group": "2_workspace"
+				},
+				{
+					"command": "dt-ext-copilot-workspaces.enableDiagnostics",
+					"when": "view == dt-ext-copilot-workspaces && viewItem == extensionWorkspace && !config.dynatrace.diagnostics",
+					"group": "2_workspace"
+				},
+				{
+					"command": "dt-ext-copilot-workspaces.disableDiagnostics",
+					"when": "view == dt-ext-copilot-workspaces && viewItem == extensionWorkspace && config.dynatrace.diagnostics",
+					"group": "2_workspace"
+				},
+				{
+					"command": "dt-ext-copilot-workspaces.enableFastDevelopment",
+					"when": "view == dt-ext-copilot-workspaces && viewItem == extensionWorkspace && !config.dynatrace.fastDevelopmentMode",
+					"group": "2_workspace"
+				},
+				{
+					"command": "dt-ext-copilot-workspaces.disableFastDevelopment",
+					"when": "view == dt-ext-copilot-workspaces && viewItem == extensionWorkspace && config.dynatrace.fastDevelopmentMode",
+					"group": "2_workspace"
 				},
 				{
 					"command": "dt-ext-copilot-workspaces.editExtension",

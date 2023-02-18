@@ -76,7 +76,11 @@ export function activate(context: vscode.ExtensionContext) {
   // Additonal context: number of workspaces affects the welcome message for the extensions tree view
   vscode.commands.executeCommand("setContext", "dt-ext-copilot.numWorkspaces", getAllWorkspaces(context).length);
   // Additonal context: different welcome message for the extensions tree view if inside a workspace
-  vscode.commands.executeCommand("setContext", "dt-ext-copilot.extensionWorkspace", isExtensionsWorkspace(context, false));
+  vscode.commands.executeCommand(
+    "setContext",
+    "dt-ext-copilot.extensionWorkspace",
+    isExtensionsWorkspace(context, false)
+  );
   // Additional context: number of environments affects the welcome message for the tenants tree view
   vscode.commands.executeCommand("setContext", "dt-ext-copilot.numEnvironments", getAllEnvironments(context).length);
   // Create feature/data providers
@@ -117,6 +121,8 @@ export function activate(context: vscode.ExtensionContext) {
   context.subscriptions.push(
     // Commands for the Command Palette
     ...registerCommandPaletteCommands(tenantsTreeViewProvider, diagnosticsProvider, genericChannel, context),
+    // Commands for enabling/disabling features
+    ...registerFeatureSwitchCommands(),
     // Auto-completion providers
     ...registerCompletionProviders(extension2selector, cachedDataProvider),
     // Extension 2.0 Workspaces Tree View
@@ -377,6 +383,52 @@ function registerCommandPaletteCommands(
       if (checkWorkspaceOpen() && isExtensionsWorkspace(context)) {
         createAlert(context);
       }
+    }),
+  ];
+}
+
+/**
+ * Registers commands that enable/disable features of this extension.
+ * This is so that all commands can be created in one function, keeping the activation function more tidy.
+ * @returns list of commands as disposables
+ */
+function registerFeatureSwitchCommands() {
+  return [
+    vscode.commands.registerCommand("dt-ext-copilot-workspaces.enableMetricSelectors", () => {
+      vscode.workspace.getConfiguration().update("dynatrace.metricSelectorsCodeLens", true);
+    }),
+    vscode.commands.registerCommand("dt-ext-copilot-workspaces.disableMetricSelectors", () => {
+      vscode.workspace.getConfiguration().update("dynatrace.metricSelectorsCodeLens", false);
+    }),
+    vscode.commands.registerCommand("dt-ext-copilot-workspaces.enableEntitySelectors", () => {
+      vscode.workspace.getConfiguration().update("dynatrace.entitySelectorsCodeLens", true);
+    }),
+    vscode.commands.registerCommand("dt-ext-copilot-workspaces.disableEntitySelectors", () => {
+      vscode.workspace.getConfiguration().update("dynatrace.entitySelectorsCodeLens", false);
+    }),
+    vscode.commands.registerCommand("dt-ext-copilot-workspaces.enableWmiCodelens", () => {
+      vscode.workspace.getConfiguration().update("dynatrace.wmiCodeLens", true);
+    }),
+    vscode.commands.registerCommand("dt-ext-copilot-workspaces.disableWmiCodelens", () => {
+      vscode.workspace.getConfiguration().update("dynatrace.wmiCodeLens", false);
+    }),
+    vscode.commands.registerCommand("dt-ext-copilot-workspaces.enableScreenCodelens", () => {
+      vscode.workspace.getConfiguration().update("dynatrace.screenCodeLens", true);
+    }),
+    vscode.commands.registerCommand("dt-ext-copilot-workspaces.disableScreenCodelens", () => {
+      vscode.workspace.getConfiguration().update("dynatrace.screenCodeLens", false);
+    }),
+    vscode.commands.registerCommand("dt-ext-copilot-workspaces.enableDiagnostics", () => {
+      vscode.workspace.getConfiguration().update("dynatrace.diagnostics", true);
+    }),
+    vscode.commands.registerCommand("dt-ext-copilot-workspaces.disableDiagnostics", () => {
+      vscode.workspace.getConfiguration().update("dynatrace.diagnostics", false);
+    }),
+    vscode.commands.registerCommand("dt-ext-copilot-workspaces.enableFastDevelopment", () => {
+      vscode.workspace.getConfiguration().update("dynatrace.fastDevelopmentMode", true);
+    }),
+    vscode.commands.registerCommand("dt-ext-copilot-workspaces.disableFastDevelopment", () => {
+      vscode.workspace.getConfiguration().update("dynatrace.fastDevelopmentMode", false);
     }),
   ];
 }
