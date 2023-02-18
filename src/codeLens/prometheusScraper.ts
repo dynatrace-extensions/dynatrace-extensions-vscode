@@ -98,7 +98,7 @@ export class PrometheusCodeLensProvider implements vscode.CodeLensProvider {
             tooltip:
               this.lastScrape === "N/A"
                 ? "Data has not been scraped yet."
-                : `Data is ready to use. ${this.lastScrape}`,
+                : `Found ${Object.keys(this.cachedData.getPrometheusData()).length} metrics at ${this.lastScrape}`,
             command: "",
             arguments: [],
           })
@@ -142,7 +142,9 @@ export class PrometheusCodeLensProvider implements vscode.CodeLensProvider {
       prompt: "Mandatory",
       ignoreFocusOut: true,
     });
-    if (!url) {return false;}
+    if (!url) {
+      return false;
+    }
     this.promUrl = url;
     // Endpoint connectivity scheme
     this.promAuth = (await vscode.window.showQuickPick(
@@ -165,7 +167,9 @@ export class PrometheusCodeLensProvider implements vscode.CodeLensProvider {
           prompt: "Mandatory",
           ignoreFocusOut: true,
         });
-        if (!this.promToken) {return false;}
+        if (!this.promToken) {
+          return false;
+        }
         return true;
       case "Username & password":
         this.promUsername = await vscode.window.showInputBox({
@@ -181,7 +185,9 @@ export class PrometheusCodeLensProvider implements vscode.CodeLensProvider {
           ignoreFocusOut: true,
           password: true,
         });
-        if (!this.promUsername || !this.promPassword) {return false;}
+        if (!this.promUsername || !this.promPassword) {
+          return false;
+        }
         return true;
       case "AWS key":
         // TODO: Figure out how to implement AWS authentication
@@ -199,7 +205,9 @@ export class PrometheusCodeLensProvider implements vscode.CodeLensProvider {
           prompt: "Mandatory",
           ignoreFocusOut: true,
         });
-        if (!this.promAccessKey || !this.promSecretKey) {return false;}
+        if (!this.promAccessKey || !this.promSecretKey) {
+          return false;
+        }
         return true;
       default:
         return false;
@@ -215,20 +223,20 @@ export class PrometheusCodeLensProvider implements vscode.CodeLensProvider {
     try {
       switch (this.promAuth) {
         case "No authentication":
-          axios.get(this.promUrl!).then((res) => {
+          axios.get(this.promUrl!).then(res => {
             this.processPrometheusData(res.data);
           });
           return true;
         case "Username & password":
           axios
             .get(this.promUrl!, { auth: { username: this.promUsername!, password: this.promPassword! } })
-            .then((res) => {
+            .then(res => {
               this.processPrometheusData(res.data);
             });
           return true;
         case "Bearer token":
           // eslint-disable-next-line
-          axios.get(this.promUrl!, { headers: { Authorization: `Bearer ${this.promToken}` } }).then((res) => {
+          axios.get(this.promUrl!, { headers: { Authorization: `Bearer ${this.promToken}` } }).then(res => {
             this.processPrometheusData(res.data);
           });
           return true;
@@ -252,7 +260,7 @@ export class PrometheusCodeLensProvider implements vscode.CodeLensProvider {
     data
       .trim()
       .split("\n")
-      .forEach((line) => {
+      .forEach(line => {
         console.log(line);
         // # HELP defines description of a metric
         if (line.startsWith("# HELP")) {
@@ -280,14 +288,14 @@ export class PrometheusCodeLensProvider implements vscode.CodeLensProvider {
             if (!scrapedMetrics[key]) {
               scrapedMetrics[key] = {};
             }
-          // make sure lines without dimenions have the correct keys 
+            // make sure lines without dimenions have the correct keys
           } else {
             var [key, dimensions] = line.split(" ");
           }
           // if line includes dimensions, find them
           if (dimensions && dimensions.includes("}")) {
             dimensions = dimensions.slice(0, dimensions.length - 1);
-            dimensions.split(",").forEach((dimension) => {
+            dimensions.split(",").forEach(dimension => {
               if (dimension.includes("=")) {
                 if (!scrapedMetrics[key]["dimensions"]) {
                   scrapedMetrics[key]["dimensions"] = [];
@@ -298,7 +306,7 @@ export class PrometheusCodeLensProvider implements vscode.CodeLensProvider {
                 }
               }
             });
-         }
+          }
         }
       });
     this.cachedData.addPrometheusData(scrapedMetrics);
