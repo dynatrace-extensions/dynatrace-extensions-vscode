@@ -52,8 +52,8 @@ export class PrometheusCodeLensProvider implements vscode.CodeLensProvider {
   constructor(cachedDataProvider: CachedDataProvider) {
     this.codeLenses = [];
     this.regex = /(prometheus:)/g;
-    vscode.commands.registerCommand("dt-ext-copilot.codelens.scrapeMetrics", () => {
-      this.scrapeMetrics();
+    vscode.commands.registerCommand("dt-ext-copilot.codelens.scrapeMetrics", (changeConfig: boolean) => {
+      this.scrapeMetrics(changeConfig);
     });
     this.cachedData = cachedDataProvider;
   }
@@ -92,22 +92,28 @@ export class PrometheusCodeLensProvider implements vscode.CodeLensProvider {
           })
         );
         // Edit config lens
-        this.codeLenses.push(
-          new vscode.CodeLens(range, {
-            title: "Edit config",
-            tooltip: "Make changes to the endpoint connection details",
-            command: "dt-ext-copilot.codeLens.scrapeMetrics",
-            arguments: [true],
-          })
-        );
+        if (this.lastScrape !== "N/A") {
+          this.codeLenses.push(
+            new vscode.CodeLens(range, {
+              title: "Edit config",
+              tooltip: "Make changes to the endpoint connection details",
+              command: "dt-ext-copilot.codelens.scrapeMetrics",
+              arguments: [true],
+            })
+          );
+        }
         // Status lens
+        const scrapedMetrics = Object.keys(this.cachedData.getPrometheusData()).length;
         this.codeLenses.push(
           new vscode.CodeLens(range, {
-            title: this.lastScrape,
+            title:
+              this.lastScrape === "N/A"
+                ? this.lastScrape
+                : `${scrapedMetrics} metrics (${this.lastScrape.substring(5)})`,
             tooltip:
               this.lastScrape === "N/A"
                 ? "Data has not been scraped yet."
-                : `Found ${Object.keys(this.cachedData.getPrometheusData()).length} metrics at ${this.lastScrape}`,
+                : `${this.lastScrape}. Found ${scrapedMetrics} metrics.`,
             command: "",
             arguments: [],
           })
@@ -271,7 +277,6 @@ export class PrometheusCodeLensProvider implements vscode.CodeLensProvider {
       .trim()
       .split("\n")
       .forEach(line => {
-        console.log(line);
         // # HELP defines description of a metric
         if (line.startsWith("# HELP")) {
           var key = line.split("# HELP ")[1].split(" ")[0];
