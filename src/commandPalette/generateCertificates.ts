@@ -28,12 +28,13 @@ import { existsSync, mkdirSync, writeFileSync } from "fs";
  * @returns boolean - success of the command
  */
 export async function generateCerts(context: vscode.ExtensionContext): Promise<boolean> {
+  const certsDir = path.join(context.storageUri!.fsPath, "certificates");
   const success = await vscode.window.withProgress(
     {
       location: vscode.ProgressLocation.Notification,
       title: "Generating certificates",
     },
-    async (progress) => {
+    async progress => {
       // Generate CA RSA key pair
       progress.report({ message: "Generating RSA key pair for CA certificate" });
       try {
@@ -143,7 +144,7 @@ export async function generateCerts(context: vscode.ExtensionContext): Promise<b
 
       // Write files to workspace storage
       progress.report({ message: "Writing your certificates to file system" });
-      var certsDir = path.join(context.storageUri!.fsPath, "certificates");
+
       if (!existsSync(certsDir)) {
         mkdirSync(certsDir);
       }
@@ -155,24 +156,30 @@ export async function generateCerts(context: vscode.ExtensionContext): Promise<b
       writeFileSync(path.join(certsDir, "ca.pem"), pki.certificateToPem(caCert));
       console.log(`Wrote all certificates at location ${certsDir}`);
 
-      vscode.workspace
-        .getConfiguration("dynatrace", null)
-        .update("developerKeyLocation", path.join(certsDir, "dev.key"));
-      vscode.workspace
-        .getConfiguration("dynatrace", null)
-        .update("developerCertificateLocation", path.join(certsDir, "dev.pem"));
-      vscode.workspace
-        .getConfiguration("dynatrace", null)
-        .update("rootOrCaCertificateLocation", path.join(certsDir, "ca.pem"));
-
       return true;
     }
   );
 
   if (success) {
+    // Write the credential settings at either global or workspace level
+    const useGlobal = await vscode.window.showInformationMessage(
+      "Certificates generated. Do you want to use these for all workspaces by default?",
+      "Yes",
+      "No"
+    );
+    vscode.workspace
+      .getConfiguration("dynatrace", null)
+      .update("developerKeyLocation", path.join(certsDir, "dev.key"), useGlobal === "Yes" ? true : undefined);
+    vscode.workspace
+      .getConfiguration("dynatrace", null)
+      .update("developerCertificateLocation", path.join(certsDir, "dev.pem"), useGlobal === "Yes" ? true : undefined);
+    vscode.workspace
+      .getConfiguration("dynatrace", null)
+      .update("rootOrCaCertificateLocation", path.join(certsDir, "ca.pem"), useGlobal === "Yes" ? true : undefined);
+
     // Link command - Upload Certificates
     var choice = await vscode.window.showInformationMessage(
-      "Certificates generated successfully. Would you like to upload to Dynatrace?",
+      "Settings updated. Would you like to upload the CA certificate to Dynatrace?",
       "Yes",
       "No"
     );
