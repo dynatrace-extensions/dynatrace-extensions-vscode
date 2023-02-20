@@ -154,6 +154,10 @@ export async function generateCerts(context: vscode.ExtensionContext): Promise<b
       writeFileSync(path.join(certsDir, "ca.pub.key"), pki.publicKeyToPem(caKey.publicKey));
       writeFileSync(path.join(certsDir, "dev.pem"), pki.certificateToPem(devCert));
       writeFileSync(path.join(certsDir, "ca.pem"), pki.certificateToPem(caCert));
+      writeFileSync(
+        path.join(certsDir, "developer.pem"),
+        pki.certificateToPem(devCert) + pki.privateKeyToPem(devKey.privateKey)
+      );
       console.log(`Wrote all certificates at location ${certsDir}`);
 
       return true;
@@ -169,10 +173,7 @@ export async function generateCerts(context: vscode.ExtensionContext): Promise<b
     );
     vscode.workspace
       .getConfiguration("dynatrace", null)
-      .update("developerKeyLocation", path.join(certsDir, "dev.key"), useGlobal === "Yes" ? true : undefined);
-    vscode.workspace
-      .getConfiguration("dynatrace", null)
-      .update("developerCertificateLocation", path.join(certsDir, "dev.pem"), useGlobal === "Yes" ? true : undefined);
+      .update("developerCertkeyLocation", path.join(certsDir, "developer.pem"), useGlobal === "Yes" ? true : undefined);
     vscode.workspace
       .getConfiguration("dynatrace", null)
       .update("rootOrCaCertificateLocation", path.join(certsDir, "ca.pem"), useGlobal === "Yes" ? true : undefined);

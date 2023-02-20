@@ -22,7 +22,7 @@ import * as mock from 'mock-fs';
 import { sign } from "../../utils/cryptography";
 
 
-const developerPem = `
+const developerCertKey = `
 -----BEGIN CERTIFICATE-----
 MIIFejCCA2KgAwIBAgIUeWjuijtWhJFvrkTafpIAPLpJV5QwDQYJKoZIhvcNAQEL
 BQAwTTEdMBsGA1UEAwwURGVmYXVsdCBFeHRlbnNpb24gQ0ExFTATBgNVBAoMDFNv
@@ -55,9 +55,6 @@ quaF6wOV7Od9bzCoc7t1qM0O8fzssTGyHD5S/f1DLCA1XEr6zUo2rEJwuY6p8TTy
 Ev9P3jYc76U1Z3O4V6h3bRrfF1Mx2BOgG/9/gam6C1yJS46M87yjeQIgJvjR5Dv3
 Hr2J2TYrtM4W58cxaag=
 -----END CERTIFICATE-----
-`;
-
-const developerKey = `
 -----BEGIN RSA PRIVATE KEY-----
 MIIJKQIBAAKCAgEAybOlkrZTi8eIHfxwVZpoF5jFY1EAeEiWaRFnYuq0kgeDjvM1
 h2o963k4hI71/bf+KxplI0sgw4O79FAU3LSsI1aOz+R0lfJt/y07yyHQ/kN4g4JH
@@ -110,6 +107,7 @@ oFMFwVbQuzHQMCIJX/gWJq5pHfQUgmdICnlrHIz2sYzWKjMy4Cuqhbz1LFrp/CII
 QpBQf+Yhr6m1jdrIsSrIun90XaCl7IGBgPJPagssHgBVrtjN4/f4VXEz/RN+
 -----END RSA PRIVATE KEY-----
 `;
+
 
 const expectedCMS = `-----BEGIN CMS-----
 MIIISgYJKoZIhvcNAQcCoIIIOzCCCDcCAQExDzANBglghkgBZQMEAgEFADALBgkq
@@ -170,12 +168,11 @@ suite("Cryptography Test Suite", () => {
         mock({
             "mock": {
                 "extension.zip": "AAA",
-                "developer.key": developerKey,
-                "developer.pem": developerPem
+                "developer.pem": developerCertKey
             }
         });
 
-        const cms = sign("mock/extension.zip", "mock/developer.key", "mock/developer.pem");
+        const cms = sign("mock/extension.zip", "mock/developer.pem");
 
         // Needed because if the test runs on windows we get \r\n instead of \n
         const cmsNewLines = cms.replace(/\r?\n|\r/g, "\n");
