@@ -18,7 +18,7 @@ import * as vscode from "vscode";
 import * as path from "path";
 import AdmZip = require("adm-zip");
 import { copyFileSync, existsSync, mkdirSync, readFileSync, rmSync, writeFileSync } from "fs";
-import { getFusedCertKeyPath, sign } from "../utils/cryptography";
+import { sign } from "../utils/cryptography";
 import { Dynatrace } from "../dynatrace-api/dynatrace";
 import { DynatraceAPIError } from "../dynatrace-api/errors";
 import { normalizeExtensionVersion, incrementExtensionVersion, getDatasourceName } from "../utils/extensionParsing";
@@ -52,8 +52,7 @@ export async function buildExtension(
   // Basic details we already know exist
   const workspaceStorage = context.storageUri!.fsPath;
   const workSpaceConfig = vscode.workspace.getConfiguration("dynatrace", null);
-  const devKey = resolveRealPath(workSpaceConfig.get("developerKeyLocation") as string);
-  const devCert = resolveRealPath(workSpaceConfig.get("developerCertificateLocation") as string);
+  const devCertKey = resolveRealPath(workSpaceConfig.get("developerCertkeyLocation") as string);
   const workspaceRoot = vscode.workspace.workspaceFolders![0].uri.fsPath;
   const distDir = path.resolve(workspaceRoot, "dist");
   const extensionFile = fastMode ? fastMode.document.fileName : getExtensionFilePath(context)!;
@@ -97,10 +96,9 @@ export async function buildExtension(
       const zipFilename = `${extensionName.replace(":", "_")}-${updatedVersion}.zip`;
       try {
         if (/^python:$/gm.test(extension)) {
-          const certKey = getFusedCertKeyPath(devKey, devCert, workspaceStorage);
-          await assemblePython(workspaceStorage, path.resolve(extensionDir, ".."), certKey, oc);
+          await assemblePython(workspaceStorage, path.resolve(extensionDir, ".."), devCertKey, oc);
         } else {
-          assembleStandard(workspaceStorage, extensionDir, zipFilename, devKey, devCert);
+          assembleStandard(workspaceStorage, extensionDir, zipFilename, devCertKey);
         }
       } catch (err: any) {
         vscode.window.showErrorMessage(`Error during archiving & signing: ${err.message}`);
@@ -197,15 +195,13 @@ async function preBuildTasks(
  * @param workspaceStorage path to the VS Code folder for this workspace's storage
  * @param extensionDir path to the "extension" folder within the workspace
  * @param zipFileName the name of the .zip file for this build
- * @param devKeyPath the path to the developer's private key
- * @param devCertPath the path to the developer's certificate
+ * @param devCertKeyPath the path to the developer's fused credential file
  */
 function assembleStandard(
   workspaceStorage: string,
   extensionDir: string,
   zipFileName: string,
-  devKeyPath: string,
-  devCertPath: string
+  devCertKeyPath: string,
 ) {
   // Build the inner .zip archive
   const innerZip = new AdmZip();
@@ -215,7 +211,7 @@ function assembleStandard(
   console.log(`Built the inner archive: ${innerZipPath}`);
 
   // Sign the inner .zip archive and write the signature file
-  const signature = sign(innerZipPath, devKeyPath, devCertPath);
+  const signature = sign(innerZipPath, devCertKeyPath);
   const sigatureFilePath = path.resolve(workspaceStorage, "extension.zip.sig");
   writeFileSync(sigatureFilePath, signature);
   console.log(`Wrote the signature file: ${sigatureFilePath}`);

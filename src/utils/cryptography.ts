@@ -17,7 +17,6 @@
 import * as crypto from "crypto";
 import * as fs from "fs";
 import * as forge from "node-forge";
-import * as path from "path";
 
 const algorithm = "aes-256-cbc";
 
@@ -89,18 +88,10 @@ function getContentFromMergedFile(filePath: string): [string, string] {
  * @param certPath path to the file containing Certificate Key
  * @returns signature
  */
-export function sign(inputFilePath: string, keyPath: string, certPath: string): string {
-  console.log(`Signing extension with certificate ${certPath} and key ${keyPath}`);
+export function sign(inputFilePath: string, certKeyPath: string): string {
+  console.log(`Signing extension with credentials from ${certKeyPath}`);
 
-  let keyContents: string;
-  let certContents: string;
-
-  if (keyPath === certPath) {
-    [keyContents, certContents] = getContentFromMergedFile(keyPath);
-  } else {
-    keyContents = fs.readFileSync(keyPath).toString();
-    certContents = fs.readFileSync(certPath).toString();
-  }
+  const [keyContents, certContents] = getContentFromMergedFile(certKeyPath);
 
   const dataToSign = fs.readFileSync(inputFilePath);
   const cert = forge.pki.certificateFromPem(certContents);
@@ -120,34 +111,4 @@ export function sign(inputFilePath: string, keyPath: string, certPath: string): 
     type: "CMS",
     body: forge.asn1.toDer(p7.toAsn1()).getBytes(),
   });
-}
-
-/**
- * Gets the path of a fused developer cert/key file. The keyPath and certPath are assumed to be taken
- * from Copilot settings so if they already point to the same file we return the path directly.
- * Otherwise a fused certKey is written to storage and that path is used going forward.
- * @param keyPath
- * @param certPath
- * @param workspaceStorage
- * @returns
- */
-export function getFusedCertKeyPath(keyPath: string, certPath: string, workspaceStorage: string): string {
-  const fusedKeyPath = path.resolve(workspaceStorage, "devCertKey.pem");
-
-  // If credentials already fused just use whichever
-  if (keyPath === certPath) {
-    return keyPath;
-  }
-
-  const keyContents = fs.readFileSync(keyPath).toString();
-  const certContents = fs.readFileSync(certPath).toString();
-  const fusedContent = certContents + keyContents;
-
-  // If the file doesn't already exist or the content is different
-  if (!fs.existsSync(fusedKeyPath) || fs.readFileSync(fusedKeyPath).toString() !== fusedContent) {
-    // Write the contents to file
-    fs.writeFileSync(fusedKeyPath, fusedContent);
-  }
-
-  return fusedKeyPath;
 }

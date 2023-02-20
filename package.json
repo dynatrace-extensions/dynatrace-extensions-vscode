@@ -238,17 +238,27 @@
 			{
 				"title": "Certificates",
 				"properties": {
+					"dynatrace.developerCertkeyLocation": {
+						"type": "string",
+						"description": "Bring your own: use the developer certificate & key from this location instead of generating new ones",
+						"order": 1,
+						"scope": "resource"
+					},
 					"dynatrace.developerKeyLocation": {
 						"type": "string",
 						"description": "Bring your own: use the developer key file at this path instead of generating a new one.",
 						"order": 3,
-						"scope": "resource"
+						"scope": "resource",
+						"markdownDeprecationMessage": "**Deprecated:** This setting is ignored. Please use `#dynatrace.developerCertkeyLocation#` instead.",
+						"deprecationMessage": "DEPRECATED: This setting is ignored. Please use dynatrace.developerCertkeyLocation instead."
 					},
 					"dynatrace.developerCertificateLocation": {
 						"type": "string",
 						"description": "Bring your own: use the developer certificate file at this path instead of generating a new one.",
 						"order": 4,
-						"scope": "resource"
+						"scope": "resource",
+						"markdownDeprecationMessage": "**Deprecated:** This setting is ignored. Please use `#dynatrace.developerCertkeyLocation#` instead.",
+						"deprecationMessage": "DEPRECATED: This setting is ignored. Please use dynatrace.developerCertkeyLocation instead."
 					},
 					"dynatrace.rootOrCaCertificateLocation": {
 						"type": "string",

@@ -142,12 +142,8 @@ export async function checkOverwriteCertificates(context: vscode.ExtensionContex
  */
 export function checkCertificateExists(type: "ca" | "dev" | "all"): boolean {
   var allExist = true;
-  var devCertPath = vscode.workspace.getConfiguration("dynatrace", null).get("developerCertificateLocation");
-  var devKeyPath = vscode.workspace.getConfiguration("dynatrace", null).get("developerKeyLocation");
+  var devCertkeyPath = vscode.workspace.getConfiguration("dynatrace", null).get("developerCertkeyLocation");
   var caCertPath = vscode.workspace.getConfiguration("dynatrace", null).get("rootOrCaCertificateLocation");
-
-  console.log(`DEV CERT: ${resolveRealPath(devCertPath as string)}`);
-  console.log(`DEV KEY: ${resolveRealPath(devKeyPath as string)}`);
 
   if (type === "ca" || type === "all") {
     if (!caCertPath) {
@@ -157,11 +153,9 @@ export function checkCertificateExists(type: "ca" | "dev" | "all"): boolean {
     }
   }
   if (type === "dev" || type === "all") {
-    if (!(devKeyPath && devCertPath)) {
+    if (!devCertkeyPath) {
       allExist = false;
-    } else if (
-      !(existsSync(resolveRealPath(devKeyPath as string)) && existsSync(resolveRealPath(devCertPath as string)))
-    ) {
+    } else if (!existsSync(resolveRealPath(devCertkeyPath as string))) {
       allExist = false;
     }
   }
@@ -180,7 +174,7 @@ export function checkCertificateExists(type: "ca" | "dev" | "all"): boolean {
             vscode.commands.executeCommand("dt-ext-copilot.generateCertificates");
             break;
           case "Open settings":
-            vscode.commands.executeCommand("workbench.action.openSettings", "Dynatrace Certificate Location");
+            vscode.commands.executeCommand("workbench.action.openSettings", "Dynatrace Location");
             break;
         }
       });
