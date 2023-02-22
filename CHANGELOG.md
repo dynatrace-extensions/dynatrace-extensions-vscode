@@ -1,5 +1,30 @@
 # Change Log
 
+## Version 1.0.0
+
+### ✨ New in this version:
+- [#59 - Credentials can now be stored in global settings](https://github.com/dynatrace-extensions/dynatrace-extensions-copilot/issues/59)
+- [#56 - Build command saves changes to extension manifest before running](https://github.com/dynatrace-extensions/dynatrace-extensions-copilot/issues/56)
+- [#45 - Diagnostics collection offers insights into SNMP](https://github.com/dynatrace-extensions/dynatrace-extensions-copilot/issues/45)
+- [#52 - Copilot uses fused credential files](https://github.com/dynatrace-extensions/dynatrace-extensions-copilot/issues/52)
+- [#29 - Context menus in the Workspaces view allow switching features on/off](https://github.com/dynatrace-extensions/dynatrace-extensions-copilot/issues/29)
+
+### 🚀 Improved in this version:
+- [#58 - URLs for environments are now validated more accurately](https://github.com/dynatrace-extensions/dynatrace-extensions-copilot/issues/58)
+- [#55 - Code lens for Prometheus allow changing endpoint details](https://github.com/dynatrace-extensions/dynatrace-extensions-copilot/issues/55)
+- [#54 - Code lens for Prometheus displays how many metrics we scraped](https://github.com/dynatrace-extensions/dynatrace-extensions-copilot/issues/54)
+
+### 🪲 Fixed in this version:
+- [#57 - Tokens displayed in clear text when editing environments](https://github.com/dynatrace-extensions/dynatrace-extensions-copilot/issues/57)
+
+### ⚠️ Special notes:
+- Since this is a live version available on Marketplace it will appear as a new extension.
+  This means any previous version should be removed and any workspaces will have to be initialized again.
+- Starting with this version, the Copilot only supports fused credential files.
+  If you want to use an older format (key & certificate as separate files) you must paste the contents manually and create a fused file.
+
+---
+
 ## Version 0.24.4 / Stage: beta (07.02.2023)
 
 ### 🚀 Improved in this version:
