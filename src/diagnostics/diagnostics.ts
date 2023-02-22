@@ -25,8 +25,8 @@ import {
   getReferencedCardsMeta,
 } from "../utils/extensionParsing";
 import { getExtensionFilePath } from "../utils/fileSystem";
-import { isOidReadable } from "../utils/snmp";
-import { getListItemIndexes, getNextElementIdx, isSameList } from "../utils/yamlParsing";
+import { isOidReadable, isTable, OidInformation } from "../utils/snmp";
+import { getBlockItemIndexAtLine, getListItemIndexes, getNextElementIdx, isSameList } from "../utils/yamlParsing";
 import {
   copilotDiagnostic,
   COUNT_METRIC_KEY_SUFFIX,
@@ -39,10 +39,14 @@ import {
   GAUGE_METRIC_KEY_SUFFIX,
   OID_COUNTER_AS_GAUGE,
   OID_DOES_NOT_EXIST,
+  OID_DOT_ZERO_IN_TABLE,
+  OID_DOT_ZERO_MISSING,
   OID_GAUGE_AS_COUNTER,
   OID_NOT_READABLE,
+  OID_STATIC_OBJ_IN_TABLE,
   OID_STRING_AS_METRIC,
   OID_SYNTAX_INVALID,
+  OID_TABLE_OBJ_AS_STATIC,
   REFERENCED_CARD_NOT_DEFINED,
 } from "./diagnosticData";
 
@@ -71,7 +75,7 @@ export class DiagnosticsProvider {
    */
   public async provideDiagnostics(document: vscode.TextDocument) {
     // If feature disabled, don't continue
-    if (!vscode.workspace.getConfiguration("dynatrace", null).get("dynatrace.diagnostics")) {
+    if (!vscode.workspace.getConfiguration("dynatrace", null).get("diagnostics")) {
       this.collection.set(document.uri, []);
       return;
     }
@@ -85,7 +89,6 @@ export class DiagnosticsProvider {
       this.diagnoseCardKeys(document, extension),
       this.diagnoseMetricOids(document, extension),
       this.diagnoseDimensionOids(document, extension),
-      this.diagnoseTableOids(document, extension),
     ]).then(results => results.reduce((collection, result) => collection.concat(result), []));
 
     this.collection.set(document.uri, diagnostics);
@@ -131,6 +134,11 @@ export class DiagnosticsProvider {
     const contentLines = content.split("\n");
     const lineNo = contentLines.findIndex(line => line.startsWith("name:"));
 
+    // Honor the user's settings
+    if (!vscode.workspace.getConfiguration().get("dynatrace.diagnostics.extensionName", false) as boolean) {
+      return [];
+    }
+
     if (lineNo === -1) {
       diagnostics.push(copilotDiagnostic(new vscode.Position(1, 0), new vscode.Position(1, 0), EXTENSION_NAME_MISSING));
     } else {
@@ -171,6 +179,11 @@ export class DiagnosticsProvider {
     const content = document.getText();
     var diagnostics: vscode.Diagnostic[] = [];
 
+    // Honor the user's settings
+    if (!vscode.workspace.getConfiguration().get("dynatrace.diagnostics.metricKeys", false) as boolean) {
+      return [];
+    }
+
     getMetricsFromDataSource(extension, true)
       .filter(
         m =>
@@ -209,8 +222,12 @@ export class DiagnosticsProvider {
     const content = document.getText();
     let diagnostics: vscode.Diagnostic[] = [];
 
-    if (!extension.screens) {
-      return diagnostics;
+    // Honor the user's settings and bail early if no screens
+    if (
+      (!vscode.workspace.getConfiguration().get("dynatrace.diagnostics.cardKeys", false) as boolean) ||
+      !extension.screens
+    ) {
+      return [];
     }
 
     const screenBounds = getListItemIndexes("screens", content);
@@ -259,13 +276,17 @@ export class DiagnosticsProvider {
     const content = document.getText();
     const diagnostics: vscode.Diagnostic[] = [];
 
-    if (!extension.snmp) {
-      return diagnostics;
+    // Honor the user's settings and bail early if no screens
+    if ((!vscode.workspace.getConfiguration().get("dynatrace.diagnostics.snmp", false) as boolean) || !extension.snmp) {
+      return [];
     }
 
-    // Reduce the time by bulk fetching all required OIDs
+    // Get metrics and keep the OID-based ones
     const metrics = getMetricsFromDataSource(extension, true).filter(m => m.value && m.value.startsWith("oid:"));
-    const oidInfos = await this.cachedData.getBulkOidsInfo(metrics.map(m => m.value!.split("oid:")[1]));
+    // Reduce the time by bulk fetching all required OIDs
+    const oidInfos = await this.cachedData.getBulkOidsInfo(
+      metrics.map(m => (m.value!.endsWith(".0") ? m.value!.slice(4, m.value!.length - 2) : m.value!.slice(4)))
+    );
     const metricInfos = metrics.map((m, i) => ({
       key: m.key,
       type: m.type,
@@ -326,6 +347,9 @@ export class DiagnosticsProvider {
                 diagnostics.push(copilotDiagnostic(startPos, endPos, OID_GAUGE_AS_COUNTER));
               }
             }
+            diagnostics.push(
+              ...(await this.createTableOidDiagnostics(metric, oid, startPos, endPos, content, extension))
+            );
           }
         }
       }
@@ -334,6 +358,12 @@ export class DiagnosticsProvider {
     return diagnostics;
   }
 
+  /**
+   * Provide diagnostics related to OIDs in the context of metric dimensions.
+   * @param document text document where diagnostics should be applied
+   * @param extension extension.yaml serialized as object
+   * @returns list of diagnostics
+   */
   private async diagnoseDimensionOids(
     document: vscode.TextDocument,
     extension: ExtensionStub
@@ -341,12 +371,16 @@ export class DiagnosticsProvider {
     const content = document.getText();
     const diagnostics: vscode.Diagnostic[] = [];
 
-    if (!extension.snmp) {
-      return diagnostics;
+    // Honor the user's settings and bail early if no screens
+    if ((!vscode.workspace.getConfiguration().get("dynatrace.diagnostics.snmp", false) as boolean) || !extension.snmp) {
+      return [];
     }
 
+    // Get dimensions and tidy up OIDs (.0 ending is not valid for lookups)
+    const dimensions = getDimensionsFromDataSource(extension, true)
+      .filter(d => d.value && d.value.startsWith("oid:"))
+      .map(d => ({ key: d.key, value: d.value?.endsWith(".0") ? d.value.slice(0, d.value.length - 2) : d.value }));
     // Reduce the time by bulk fetching all required OIDs
-    const dimensions = getDimensionsFromDataSource(extension, true).filter(d => d.value && d.value.startsWith("oid:"));
     const dimensionOidInfos = await this.cachedData.getBulkOidsInfo(dimensions.map(d => d.value!.split("oid:")[1]));
     const dimensionInfos = dimensions.map((d, i) => ({
       key: d.key,
@@ -370,6 +404,12 @@ export class DiagnosticsProvider {
           // Check if there is online data
         } else if (!dimension.info.objectType) {
           diagnostics.push(copilotDiagnostic(startPos, endPos, OID_DOES_NOT_EXIST));
+
+          // Check things we can infer from the data
+        } else {
+          diagnostics.push(
+            ...(await this.createTableOidDiagnostics(dimension, oid, startPos, endPos, content, extension))
+          );
         }
       }
     }
@@ -377,14 +417,71 @@ export class DiagnosticsProvider {
     return diagnostics;
   }
 
-  private async diagnoseTableOids(document: vscode.TextDocument, extension: ExtensionStub): Promise<vscode.Diagnostic[]> {
+  /**
+   * Logic for checking whether a metric or dimension OID has any issues when it is related in some way to
+   * a table: e.g. either subgroup defined as table but OID isn't or OID is for table but subgroup isn't
+   * @param usageInfo
+   * @param oid
+   * @param startPos
+   * @param endPos
+   * @param content
+   * @param extension
+   * @param cachedData
+   * @returns
+   */
+  private async createTableOidDiagnostics(
+    usageInfo: {
+      key: string;
+      type?: string;
+      value: string | undefined;
+      info: OidInformation;
+    },
+    oid: string,
+    startPos: vscode.Position,
+    endPos: vscode.Position,
+    content: string,
+    extension: ExtensionStub
+  ): Promise<vscode.Diagnostic[]> {
     const diagnostics: vscode.Diagnostic[] = [];
-    const content = document.getText();
+    const groupIdx = getBlockItemIndexAtLine("snmp", startPos.line, content);
+    const subgroupIdx = getBlockItemIndexAtLine("subgroups", startPos.line, content);
 
-    if (!extension.snmp) {
-      return diagnostics;
+    // Honor the user's settings and bail early if no screens
+    if ((!vscode.workspace.getConfiguration().get("dynatrace.diagnostics.snmp", false) as boolean) || !extension.snmp) {
+      return [];
     }
 
+    if (groupIdx !== -1 && subgroupIdx !== -1) {
+      if (extension.snmp![groupIdx].subgroups && subgroupIdx !== -1) {
+        if (extension.snmp![groupIdx].subgroups![subgroupIdx].table) {
+          if (usageInfo.value?.endsWith(".0")) {
+            diagnostics.push(copilotDiagnostic(startPos, endPos, OID_DOT_ZERO_IN_TABLE));
+          } else {
+            // Get data for grandparent OID, then check for signs of table
+            const grandparentInfo = await this.cachedData.getSingleOidInfo(
+              // Get the second last index of '.' and slice oid from start
+              oid.slice(0, oid.slice(0, oid.lastIndexOf(".")).lastIndexOf("."))
+            );
+            if (!isTable(grandparentInfo)) {
+              diagnostics.push(copilotDiagnostic(startPos, endPos, OID_STATIC_OBJ_IN_TABLE));
+            }
+          }
+        } else {
+          if (!usageInfo.value?.endsWith(".0")) {
+            diagnostics.push(copilotDiagnostic(startPos, endPos, OID_DOT_ZERO_MISSING));
+          } else {
+            // Get data for grandparent OID, then check for signs of table
+            const grandparentInfo = await this.cachedData.getSingleOidInfo(
+              // Remove '.0', get the second last index of '.' and slice oid from start
+              oid.slice(0, oid.slice(0, oid.slice(0, oid.length - 2).lastIndexOf(".")).lastIndexOf("."))
+            );
+            if (isTable(grandparentInfo)) {
+              diagnostics.push(copilotDiagnostic(startPos, endPos, OID_TABLE_OBJ_AS_STATIC));
+            }
+          }
+        }
+      }
+    }
     return diagnostics;
   }
 }
