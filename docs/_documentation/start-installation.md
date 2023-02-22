@@ -3,13 +3,9 @@ title: "Installation"
 permalink: /docs/start/installation/
 ---
 
-Right now, the extension is not published to the marketplace so you'll have to install
-it using the `.vsix` file packaged in every
-[release](https://github.com/dynatrace-extensions/dynatrace-extension-developer/releases).
+This extension is now available directly from the Visual Studio Code [Marketplace](https://marketplace.visualstudio.com/items?itemName=DynatracePlatformExtensions.dt-ext-copilot).
 
-Open Visual Studio Code, then open the Extensions menu, click the "..." and choose
-"Install from VSIX..". Select the `.vsix` file downloaded and wait for VS Code to confirm
-the installation was successful.
+You can either open the link above, or access the Extensions menu from your editor, and search for "dynatrace". Access the extension and install it from there.
 
 <p class="notice--info">
     <strong>📝 Note:</strong>
