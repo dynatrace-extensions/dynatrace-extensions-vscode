@@ -1,3 +1,5 @@
+import * as vscode from "vscode";
+
 /**
   Copyright 2022 Dynatrace LLC
 
@@ -52,7 +54,7 @@ export function getBlockItemIndexAtLine(blockLabel: string, blockLineIdx: number
 /**
  * Given the label of a yaml list block, this function parses all entries of the list
  * and returns the start and end indexes relative to the original content string containing
- * the list. If the labelled block repeats within the content only the last entry is parsed.
+ * the list. If the labelled block repeats within the content only the first entry is parsed.
  * @param listLabel label that identifies the list block
  * @param content string content where the block and its items can be found
  * @returns a map of each list item's index, start position, end position
@@ -151,4 +153,27 @@ export function getParentBlocks(lineNumber: number, content: string): string[] {
     }
   }
   return blocks.map(block => block[0]);
+}
+
+export function isSameList(itemIdx: number, document: vscode.TextDocument) {
+  const line = document.lineAt(document.positionAt(itemIdx));
+  const prevLine = document.lineAt(line.lineNumber - 1);
+  const indent = /[a-z]/g.exec(line.text)!.index;
+  const prevIndent = /[a-z]/g.exec(prevLine.text)!.index;
+  return prevIndent === indent;
+}
+
+export function getNextElementIdx(lineNumber: number, document: vscode.TextDocument, startAt: number) {
+  const content = document.getText();
+  const prevIndent = /[a-z]/g.exec(document.lineAt(lineNumber).text)!.index;
+  let indent;
+  for (let li = lineNumber + 1; li <= document.lineCount-1; li++) {
+    const line = document.lineAt(li).text;
+    const lineRe = new RegExp("[a-z]", "g").exec(line);
+    indent = lineRe ? lineRe.index : 9999;
+    if (indent < prevIndent) {
+      return content.indexOf(document.lineAt(li).text, startAt);
+    }
+  }
+  return content.length;
 }

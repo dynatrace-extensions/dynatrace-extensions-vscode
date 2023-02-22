@@ -67,6 +67,7 @@ interface DatasourceGroup {
 
 interface SubGroup extends DatasourceGroup {
   metrics: MetricStub[];
+
 }
 
 interface WmiGroup extends DatasourceGroup {
@@ -76,6 +77,20 @@ interface WmiGroup extends DatasourceGroup {
     minutes: number;
   };
   subgroups?: WmiSubGroup[];
+}
+
+interface SnmpGroup extends DatasourceGroup {
+  interval?: {
+    minutes: number;
+  };
+  subgroups?: SnmpSubGroup[];
+}
+
+interface SnmpSubGroup extends SubGroup {
+  interval?: {
+    minutes: number;
+  };
+  table?: boolean;
 }
 
 interface WmiSubGroup extends SubGroup {
@@ -210,7 +225,7 @@ interface ExtensionStub {
   minDynatraceVersion: string;
   alerts: { path: string }[];
   dashboards: { path: string }[];
-  snmp?: DatasourceGroup[];
+  snmp?: SnmpGroup[];
   wmi?: WmiGroup[];
   prometheus?: DatasourceGroup[];
   sqlMySql?: DatasourceGroup[];

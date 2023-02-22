@@ -584,18 +584,23 @@ export function getAllMetricKeysFromDataSource(extension: ExtensionStub): string
 }
 
 /**
- * Extracts all metric keys and types detected within the datasource section of the extension.yaml
+ * Extracts all metric keys and types detected within the datasource section of the extension.yaml.
+ * Can optionally include values of metrics too.
  * @param extension extension.yaml serialized as object
  * @returns list of metric keys and their types
  */
-export function getMetricsFromDataSource(extension: ExtensionStub): { key: string; type: string }[] {
-  var metrics: { key: string; type: string }[] = [];
+export function getMetricsFromDataSource(extension: ExtensionStub, includeValues: boolean = false) {
+  var metrics: { key: string; type: string; value?: string }[] = [];
   var datasource = getExtensionDatasource(extension);
   datasource.forEach(group => {
     if (group.metrics) {
       group.metrics.forEach(metric => {
         if (!metrics.map(m => m.key).includes(metric.key)) {
-          metrics.push({ key: metric.key, type: metric.type ? metric.type : "gauge" });
+          metrics.push({
+            key: metric.key,
+            type: metric.type ? metric.type : "gauge",
+            value: includeValues ? metric.value : undefined,
+          });
         }
       });
     }
@@ -604,7 +609,11 @@ export function getMetricsFromDataSource(extension: ExtensionStub): { key: strin
         if (subgroup.metrics) {
           subgroup.metrics.forEach(metric => {
             if (!metrics.map(m => m.key).includes(metric.key)) {
-              metrics.push({ key: metric.key, type: metric.type ? metric.type : "gauge" });
+              metrics.push({
+                key: metric.key,
+                type: metric.type ? metric.type : "gauge",
+                value: includeValues ? metric.value : undefined,
+              });
             }
           });
         }
@@ -613,6 +622,45 @@ export function getMetricsFromDataSource(extension: ExtensionStub): { key: strin
   });
 
   return metrics;
+}
+
+/**
+ * Extracts all dimension keys detected within the datasource section of the extension.yaml.
+ * Can optionally include values of dimensions too.
+ * @param extension
+ * @param includeValues
+ */
+export function getDimensionsFromDataSource(extension: ExtensionStub, includeValues: boolean = false) {
+  var dimensions: { key: string; value?: string }[] = [];
+  var datasource = getExtensionDatasource(extension);
+  datasource.forEach(group => {
+    if (group.dimensions) {
+      group.dimensions.forEach(dimension => {
+        if (!dimensions.map(d => d.key).includes(dimension.key)) {
+          dimensions.push({
+            key: dimension.key,
+            value: includeValues ? dimension.value : undefined,
+          });
+        }
+      });
+    }
+    if (group.subgroups) {
+      group.subgroups.forEach(subgroup => {
+        if (subgroup.dimensions) {
+          subgroup.dimensions.forEach(dimension => {
+            if (!dimensions.map(d => d.key).includes(dimension.key)) {
+              dimensions.push({
+                key: dimension.key,
+                value: includeValues ? dimension.value : undefined,
+              });
+            }
+          });
+        }
+      });
+    }
+  });
+
+  return dimensions;
 }
 
 /**

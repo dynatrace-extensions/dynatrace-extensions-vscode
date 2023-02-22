@@ -171,12 +171,44 @@
 				"title": "🪟 Disable WMI query code lens"
 			},
 			{
-				"command": "dt-ext-copilot-workspaces.enableDiagnostics",
-				"title": "🪲 Enable diagnostics"
+				"command": "dt-ext-copilot-workspaces.enableAllDiagnostics",
+				"title": "Enable all diagnostics"
 			},
 			{
-				"command": "dt-ext-copilot-workspaces.disableDiagnostics",
-				"title": "🪲 Disable diagnostics"
+				"command": "dt-ext-copilot-workspaces.disableAllDiagnostics",
+				"title": "Disable all diagnostics"
+			},
+			{
+				"command": "dt-ext-copilot-workspaces.enableMetricKeyDiagnostics",
+				"title": "Enable metric key diagnostics"
+			},
+			{
+				"command": "dt-ext-copilot-workspaces.disableMetricKeyDiagnostics",
+				"title": "Disable metric key diagnostics"
+			},
+			{
+				"command": "dt-ext-copilot-workspaces.enableCardKeyDiagnostics",
+				"title": "Enable card key diagnostics"
+			},
+			{
+				"command": "dt-ext-copilot-workspaces.disableCardKeyDiagnostics",
+				"title": "Disable card key diagnostics"
+			},
+			{
+				"command": "dt-ext-copilot-workspaces.enableSnmpDiagnostics",
+				"title": "Enable SNMP diagnostics"
+			},
+			{
+				"command": "dt-ext-copilot-workspaces.disableSnmpDiagnostics",
+				"title": "Disable SNMP diagnostics"
+			},
+			{
+				"command": "dt-ext-copilot-workspaces.enableNameDiagnostics",
+				"title": "Enable extension name diagnostics"
+			},
+			{
+				"command": "dt-ext-copilot-workspaces.disableNameDiagnostics",
+				"title": "Disable extension name diagnostics"
 			},
 			{
 				"command": "dt-ext-copilot-workspaces.enableFastDevelopment",
@@ -225,10 +257,43 @@
 						"order": 5,
 						"scope": "resource",
 						"default": false
-					},
-					"dynatrace.diagnostics": {
+					}
+				}
+			},
+			{
+				"title": "Diagnostics",
+				"properties": {
+					"dynatrace.diagnostics.all": {
 						"type": "boolean",
-						"description": "When enabled, the Copilot will provide diagnostics on the extension manifest file.",
+						"description": "When enabled, the Copilot will provide extension manifest diagnostics for all known issues.",
+						"order": 6,
+						"scope": "resource",
+						"default": true
+					},
+					"dynatrace.diagnostics.extensionName": {
+						"type": "boolean",
+						"description": "When enabled, the Copilot will provide extension manifest diagnostics for issues related to the extension name.",
+						"order": 6,
+						"scope": "resource",
+						"default": true
+					},
+					"dynatrace.diagnostics.metricKeys": {
+						"type": "boolean",
+						"description": "When enabled, the Copilot will provide extension manifest diagnostics for issues related to keys used for metric definitions.",
+						"order": 6,
+						"scope": "resource",
+						"default": true
+					},
+					"dynatrace.diagnostics.cardKeys": {
+						"type": "boolean",
+						"description": "When enabled, the Copilot will provide extension manifest diagnostics for issues related to keys used for screen card definitions.",
+						"order": 6,
+						"scope": "resource",
+						"default": true
+					},
+					"dynatrace.diagnostics.snmp": {
+						"type": "boolean",
+						"description": "When enabled, the Copilot will provide extension manifest diagnostics for issues related to keys used for OIDs used in the SNMP datasource definition.",
 						"order": 6,
 						"scope": "resource",
 						"default": true
@@ -375,19 +440,51 @@
 					"when": "false"
 				},
 				{
-					"command": "dt-ext-copilot-workspaces.enableDiagnostics",
-					"when": "false"
-				},
-				{
-					"command": "dt-ext-copilot-workspaces.disableDiagnostics",
-					"when": "false"
-				},
-				{
 					"command": "dt-ext-copilot-workspaces.enableFastDevelopment",
 					"when": "false"
 				},
 				{
 					"command": "dt-ext-copilot-workspaces.disableFastDevelopment",
+					"when": "false"
+				},
+				{
+					"command": "dt-ext-copilot-workspaces.enableNameDiagnostics",
+					"when": "false"
+				},
+				{
+					"command": "dt-ext-copilot-workspaces.disableNameDiagnostics",
+					"when": "false"
+				},
+				{
+					"command": "dt-ext-copilot-workspaces.enableMetricKeyDiagnostics",
+					"when": "false"
+				},
+				{
+					"command": "dt-ext-copilot-workspaces.disableMetricKeyDiagnostics",
+					"when": "false"
+				},
+				{
+					"command": "dt-ext-copilot-workspaces.enableCardKeyDiagnostics",
+					"when": "false"
+				},
+				{
+					"command": "dt-ext-copilot-workspaces.disableCardKeyDiagnostics",
+					"when": "false"
+				},
+				{
+					"command": "dt-ext-copilot-workspaces.enableSnmpDiagnostics",
+					"when": "false"
+				},
+				{
+					"command": "dt-ext-copilot-workspaces.disableSnmpDiagnostics",
+					"when": "false"
+				},
+				{
+					"command": "dt-ext-copilot-workspaces.enableAllDiagnostics",
+					"when": "false"
+				},
+				{
+					"command": "dt-ext-copilot-workspaces.disableAllDiagnostics",
 					"when": "false"
 				}
 			],
@@ -465,13 +562,7 @@
 					"group": "2_workspace@4"
 				},
 				{
-					"command": "dt-ext-copilot-workspaces.enableDiagnostics",
-					"when": "view == dt-ext-copilot-workspaces && viewItem == extensionWorkspace && !config.dynatrace.diagnostics",
-					"group": "2_workspace@5"
-				},
-				{
-					"command": "dt-ext-copilot-workspaces.disableDiagnostics",
-					"when": "view == dt-ext-copilot-workspaces && viewItem == extensionWorkspace && config.dynatrace.diagnostics",
+					"submenu": "dt-ext-copilot.diagnostics-menu",
 					"group": "2_workspace@5"
 				},
 				{
@@ -504,8 +595,66 @@
 					"when": "view == dt-ext-copilot-environments && viewItem == dynatraceEnvironment || viewItem == currentDynatraceEnvironment",
 					"group": "inline@3"
 				}
+			],
+			"dt-ext-copilot.diagnostics-menu": [
+				{
+					"command": "dt-ext-copilot-workspaces.enableNameDiagnostics",
+					"when": "view == dt-ext-copilot-workspaces && viewItem == extensionWorkspace && !config.dynatrace.diagnostics.extensionName",
+					"group": "navigation@1"
+				},
+				{
+					"command": "dt-ext-copilot-workspaces.disableNameDiagnostics",
+					"when": "view == dt-ext-copilot-workspaces && viewItem == extensionWorkspace && config.dynatrace.diagnostics.extensionName",
+					"group": "navigation@1"
+				},
+				{
+					"command": "dt-ext-copilot-workspaces.enableMetricKeyDiagnostics",
+					"when": "view == dt-ext-copilot-workspaces && viewItem == extensionWorkspace && !config.dynatrace.diagnostics.metricKeys",
+					"group": "navigation@2"
+				},
+				{
+					"command": "dt-ext-copilot-workspaces.disableMetricKeyDiagnostics",
+					"when": "view == dt-ext-copilot-workspaces && viewItem == extensionWorkspace && config.dynatrace.diagnostics.metricKeys",
+					"group": "navigation@2"
+				},
+				{
+					"command": "dt-ext-copilot-workspaces.enableCardKeyDiagnostics",
+					"when": "view == dt-ext-copilot-workspaces && viewItem == extensionWorkspace && !config.dynatrace.diagnostics.cardKeys",
+					"group": "navigation@3"
+				},
+				{
+					"command": "dt-ext-copilot-workspaces.disableCardKeyDiagnostics",
+					"when": "view == dt-ext-copilot-workspaces && viewItem == extensionWorkspace && config.dynatrace.diagnostics.cardKeys",
+					"group": "navigation@3"
+				},
+				{
+					"command": "dt-ext-copilot-workspaces.enableSnmpDiagnostics",
+					"when": "view == dt-ext-copilot-workspaces && viewItem == extensionWorkspace && !config.dynatrace.diagnostics.snmp",
+					"group": "navigation@4"
+				},
+				{
+					"command": "dt-ext-copilot-workspaces.disableSnmpDiagnostics",
+					"when": "view == dt-ext-copilot-workspaces && viewItem == extensionWorkspace && config.dynatrace.diagnostics.snmp",
+					"group": "navigation@4"
+				},
+				{
+					"command": "dt-ext-copilot-workspaces.enableAllDiagnostics",
+					"when": "view == dt-ext-copilot-workspaces && viewItem == extensionWorkspace && !config.dynatrace.diagnostics.all",
+					"group": "navigation@5"
+				},
+				{
+					"command": "dt-ext-copilot-workspaces.disableAllDiagnostics",
+					"when": "view == dt-ext-copilot-workspaces && viewItem == extensionWorkspace && config.dynatrace.diagnostics.all",
+					"group": "navigation@5"
+				}
 			]
 		},
+		"submenus": [
+			{
+				"label": "🪲 Diagnostics",
+				"id": "dt-ext-copilot.diagnostics-menu"
+			}
+		],
 		"viewsContainers": {
 			"activitybar": [
 				{

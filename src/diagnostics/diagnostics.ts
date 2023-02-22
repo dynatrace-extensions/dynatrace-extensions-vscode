@@ -17,9 +17,16 @@
 import * as vscode from "vscode";
 import * as yaml from "yaml";
 import { checkDtInternalProperties } from "../utils/conditionCheckers";
-import { getDefinedCardsMeta, getMetricsFromDataSource, getReferencedCardsMeta } from "../utils/extensionParsing";
+import { CachedDataProvider } from "../utils/dataCaching";
+import {
+  getDefinedCardsMeta,
+  getDimensionsFromDataSource,
+  getMetricsFromDataSource,
+  getReferencedCardsMeta,
+} from "../utils/extensionParsing";
 import { getExtensionFilePath } from "../utils/fileSystem";
-import { getListItemIndexes } from "../utils/yamlParsing";
+import { isOidReadable, isTable, OidInformation } from "../utils/snmp";
+import { getBlockItemIndexAtLine, getListItemIndexes, getNextElementIdx, isSameList } from "../utils/yamlParsing";
 import {
   copilotDiagnostic,
   COUNT_METRIC_KEY_SUFFIX,
@@ -30,6 +37,16 @@ import {
   EXTENSION_NAME_NON_CUSTOM,
   EXTENSION_NAME_TOO_LONG,
   GAUGE_METRIC_KEY_SUFFIX,
+  OID_COUNTER_AS_GAUGE,
+  OID_DOES_NOT_EXIST,
+  OID_DOT_ZERO_IN_TABLE,
+  OID_DOT_ZERO_MISSING,
+  OID_GAUGE_AS_COUNTER,
+  OID_NOT_READABLE,
+  OID_STATIC_OBJ_IN_TABLE,
+  OID_STRING_AS_METRIC,
+  OID_SYNTAX_INVALID,
+  OID_TABLE_OBJ_AS_STATIC,
   REFERENCED_CARD_NOT_DEFINED,
 } from "./diagnosticData";
 
@@ -40,9 +57,15 @@ import {
 export class DiagnosticsProvider {
   private readonly collection: vscode.DiagnosticCollection;
   private readonly context: vscode.ExtensionContext;
+  private readonly cachedData: CachedDataProvider;
 
-  constructor(context: vscode.ExtensionContext) {
+  /**
+   * @param context VSCode Extension Context
+   * @param cachedDataProvider Provider for cacheable data
+   */
+  constructor(context: vscode.ExtensionContext, cachedDataProvider: CachedDataProvider) {
     this.context = context;
+    this.cachedData = cachedDataProvider;
     this.collection = vscode.languages.createDiagnosticCollection("Dynatrace");
   }
 
@@ -52,17 +75,21 @@ export class DiagnosticsProvider {
    */
   public async provideDiagnostics(document: vscode.TextDocument) {
     // If feature disabled, don't continue
-    if (!vscode.workspace.getConfiguration("dynatrace", null).get("dynatrace.diagnostics")) {
+    if (!vscode.workspace.getConfiguration("dynatrace", null).get("diagnostics")) {
       this.collection.set(document.uri, []);
       return;
     }
 
     const extension = yaml.parse(document.getText());
-    const diagnostics = [
-      ...(await this.diagnoseExtensionName(document.getText())),
-      ...this.diagnoseMetricKeys(document, extension),
-      ...this.diagnoseCardKeys(document, extension),
-    ];
+
+    // Diagnostic collections should be awaited all in parallel
+    const diagnostics = await Promise.all([
+      this.diagnoseExtensionName(document),
+      this.diagnoseMetricKeys(document, extension),
+      this.diagnoseCardKeys(document, extension),
+      this.diagnoseMetricOids(document, extension),
+      this.diagnoseDimensionOids(document, extension),
+    ]).then(results => results.reduce((collection, result) => collection.concat(result), []));
 
     this.collection.set(document.uri, diagnostics);
   }
@@ -101,10 +128,16 @@ export class DiagnosticsProvider {
    * @param content extension.yaml text content
    * @returns list of diagnostic items
    */
-  private async diagnoseExtensionName(content: string): Promise<vscode.Diagnostic[]> {
+  private async diagnoseExtensionName(document: vscode.TextDocument): Promise<vscode.Diagnostic[]> {
     var diagnostics: vscode.Diagnostic[] = [];
+    const content = document.getText();
     const contentLines = content.split("\n");
     const lineNo = contentLines.findIndex(line => line.startsWith("name:"));
+
+    // Honor the user's settings
+    if (!vscode.workspace.getConfiguration().get("dynatrace.diagnostics.extensionName", false) as boolean) {
+      return [];
+    }
 
     if (lineNo === -1) {
       diagnostics.push(copilotDiagnostic(new vscode.Position(1, 0), new vscode.Position(1, 0), EXTENSION_NAME_MISSING));
@@ -139,10 +172,19 @@ export class DiagnosticsProvider {
    * @param extension extension.yaml serialized as object
    * @returns list of diagnostics
    */
-  private diagnoseMetricKeys(document: vscode.TextDocument, extension: ExtensionStub): vscode.Diagnostic[] {
+  private async diagnoseMetricKeys(
+    document: vscode.TextDocument,
+    extension: ExtensionStub
+  ): Promise<vscode.Diagnostic[]> {
     const content = document.getText();
     var diagnostics: vscode.Diagnostic[] = [];
-    getMetricsFromDataSource(extension)
+
+    // Honor the user's settings
+    if (!vscode.workspace.getConfiguration().get("dynatrace.diagnostics.metricKeys", false) as boolean) {
+      return [];
+    }
+
+    getMetricsFromDataSource(extension, true)
       .filter(
         m =>
           (m.type === "count" && !(m.key.endsWith(".count") || m.key.endsWith("_count"))) ||
@@ -173,11 +215,22 @@ export class DiagnosticsProvider {
    * @param extension extension.yaml serialized as object
    * @returns list of diagnostics
    */
-  private diagnoseCardKeys(document: vscode.TextDocument, extension: ExtensionStub): vscode.Diagnostic[] {
+  private async diagnoseCardKeys(
+    document: vscode.TextDocument,
+    extension: ExtensionStub
+  ): Promise<vscode.Diagnostic[]> {
     const content = document.getText();
     let diagnostics: vscode.Diagnostic[] = [];
-    const screenBounds = getListItemIndexes("screens", content);
 
+    // Honor the user's settings and bail early if no screens
+    if (
+      (!vscode.workspace.getConfiguration().get("dynatrace.diagnostics.cardKeys", false) as boolean) ||
+      !extension.screens
+    ) {
+      return [];
+    }
+
+    const screenBounds = getListItemIndexes("screens", content);
     extension.screens?.forEach((_, idx) => {
       const refCards = getReferencedCardsMeta(idx, extension);
       const defCards = getDefinedCardsMeta(idx, extension);
@@ -207,6 +260,228 @@ export class DiagnosticsProvider {
         });
     });
 
+    return diagnostics;
+  }
+
+  /**
+   * Provide diagnostics related to OIDs in the context of metrics.
+   * @param document text document where diagnostics should be applied
+   * @param extension extension.yaml serialized as object
+   * @returns list of diagnostics
+   */
+  private async diagnoseMetricOids(
+    document: vscode.TextDocument,
+    extension: ExtensionStub
+  ): Promise<vscode.Diagnostic[]> {
+    const content = document.getText();
+    const diagnostics: vscode.Diagnostic[] = [];
+
+    // Honor the user's settings and bail early if no screens
+    if ((!vscode.workspace.getConfiguration().get("dynatrace.diagnostics.snmp", false) as boolean) || !extension.snmp) {
+      return [];
+    }
+
+    // Get metrics and keep the OID-based ones
+    const metrics = getMetricsFromDataSource(extension, true).filter(m => m.value && m.value.startsWith("oid:"));
+    // Reduce the time by bulk fetching all required OIDs
+    const oidInfos = await this.cachedData.getBulkOidsInfo(
+      metrics.map(m => (m.value!.endsWith(".0") ? m.value!.slice(4, m.value!.length - 2) : m.value!.slice(4)))
+    );
+    const metricInfos = metrics.map((m, i) => ({
+      key: m.key,
+      type: m.type,
+      value: m.value,
+      info: oidInfos[i],
+    }));
+
+    for (const metric of metricInfos) {
+      const oid = metric.value!.slice(4);
+      const oidRegex = new RegExp(`value: "?oid:${oid.replace(/\./g, "\\.")}"?(?:$|(?: .*$))`, "gm");
+
+      let match;
+      while ((match = oidRegex.exec(content)) !== null) {
+        const startPos = document.positionAt(match.index + match[0].indexOf(oid));
+        const endPos = document.positionAt(match.index + match[0].indexOf(oid) + oid.length);
+
+        // Check if valid
+        if (!/^\d[\.\d]+\d$/.test(oid)) {
+          diagnostics.push(copilotDiagnostic(startPos, endPos, OID_SYNTAX_INVALID));
+
+          // Check we have online data
+        } else if (!metric.info.objectType) {
+          diagnostics.push(copilotDiagnostic(startPos, endPos, OID_DOES_NOT_EXIST));
+
+          // Check things we can infer from online data
+        } else {
+          if (!isOidReadable(metric.info)) {
+            diagnostics.push(copilotDiagnostic(startPos, endPos, OID_NOT_READABLE));
+          }
+          if (metric.info.syntax && metric.info.syntax.toLowerCase().includes("string")) {
+            diagnostics.push(copilotDiagnostic(startPos, endPos, OID_STRING_AS_METRIC));
+          }
+          if (metric.info.syntax) {
+            // Since OID & metric are re-usable we must get the whole yaml block and match both
+            const blockStart = content.lastIndexOf("-", match.index);
+            const nextDashIdx = content.indexOf("-", match.index);
+            const blockEnd =
+              nextDashIdx !== -1
+                ? isSameList(nextDashIdx, document)
+                  ? content.lastIndexOf("\n", nextDashIdx)
+                  : content.indexOf(document.lineAt(document.positionAt(nextDashIdx).line - 1).text, match.index)
+                : getNextElementIdx(
+                    document.lineAt(document.positionAt(match.index)).lineNumber,
+                    document,
+                    match.index
+                  );
+
+            if (metric.type === "gauge" && metric.info.syntax.startsWith("Counter")) {
+              if (content.substring(blockStart, blockEnd).includes(metric.key)) {
+                diagnostics.push(copilotDiagnostic(startPos, endPos, OID_COUNTER_AS_GAUGE));
+              }
+            }
+            if (
+              metric.type === "count" &&
+              (metric.info.syntax === "Gauge" || metric.info.syntax.toLowerCase().includes("integer"))
+            ) {
+              if (content.substring(blockStart, blockEnd).includes(metric.key)) {
+                diagnostics.push(copilotDiagnostic(startPos, endPos, OID_GAUGE_AS_COUNTER));
+              }
+            }
+            diagnostics.push(
+              ...(await this.createTableOidDiagnostics(metric, oid, startPos, endPos, content, extension))
+            );
+          }
+        }
+      }
+    }
+
+    return diagnostics;
+  }
+
+  /**
+   * Provide diagnostics related to OIDs in the context of metric dimensions.
+   * @param document text document where diagnostics should be applied
+   * @param extension extension.yaml serialized as object
+   * @returns list of diagnostics
+   */
+  private async diagnoseDimensionOids(
+    document: vscode.TextDocument,
+    extension: ExtensionStub
+  ): Promise<vscode.Diagnostic[]> {
+    const content = document.getText();
+    const diagnostics: vscode.Diagnostic[] = [];
+
+    // Honor the user's settings and bail early if no screens
+    if ((!vscode.workspace.getConfiguration().get("dynatrace.diagnostics.snmp", false) as boolean) || !extension.snmp) {
+      return [];
+    }
+
+    // Get dimensions and tidy up OIDs (.0 ending is not valid for lookups)
+    const dimensions = getDimensionsFromDataSource(extension, true)
+      .filter(d => d.value && d.value.startsWith("oid:"))
+      .map(d => ({ key: d.key, value: d.value?.endsWith(".0") ? d.value.slice(0, d.value.length - 2) : d.value }));
+    // Reduce the time by bulk fetching all required OIDs
+    const dimensionOidInfos = await this.cachedData.getBulkOidsInfo(dimensions.map(d => d.value!.split("oid:")[1]));
+    const dimensionInfos = dimensions.map((d, i) => ({
+      key: d.key,
+      value: d.value,
+      info: dimensionOidInfos[i],
+    }));
+
+    for (const dimension of dimensionInfos) {
+      const oid = dimension.value!.slice(4);
+      const oidRegex = new RegExp(`value: "?oid:${oid.replace(/\./g, "\\.")}"?(?:$|(?: .*$))`, "gm");
+
+      let match;
+      while ((match = oidRegex.exec(content)) !== null) {
+        const startPos = document.positionAt(match.index + match[0].indexOf(oid));
+        const endPos = document.positionAt(match.index + match[0].indexOf(oid) + oid.length);
+
+        // Check if valid
+        if (!/^\d[\.\d]+\d$/.test(oid)) {
+          diagnostics.push(copilotDiagnostic(startPos, endPos, OID_SYNTAX_INVALID));
+
+          // Check if there is online data
+        } else if (!dimension.info.objectType) {
+          diagnostics.push(copilotDiagnostic(startPos, endPos, OID_DOES_NOT_EXIST));
+
+          // Check things we can infer from the data
+        } else {
+          diagnostics.push(
+            ...(await this.createTableOidDiagnostics(dimension, oid, startPos, endPos, content, extension))
+          );
+        }
+      }
+    }
+
+    return diagnostics;
+  }
+
+  /**
+   * Logic for checking whether a metric or dimension OID has any issues when it is related in some way to
+   * a table: e.g. either subgroup defined as table but OID isn't or OID is for table but subgroup isn't
+   * @param usageInfo
+   * @param oid
+   * @param startPos
+   * @param endPos
+   * @param content
+   * @param extension
+   * @param cachedData
+   * @returns
+   */
+  private async createTableOidDiagnostics(
+    usageInfo: {
+      key: string;
+      type?: string;
+      value: string | undefined;
+      info: OidInformation;
+    },
+    oid: string,
+    startPos: vscode.Position,
+    endPos: vscode.Position,
+    content: string,
+    extension: ExtensionStub
+  ): Promise<vscode.Diagnostic[]> {
+    const diagnostics: vscode.Diagnostic[] = [];
+    const groupIdx = getBlockItemIndexAtLine("snmp", startPos.line, content);
+    const subgroupIdx = getBlockItemIndexAtLine("subgroups", startPos.line, content);
+
+    // Honor the user's settings and bail early if no screens
+    if ((!vscode.workspace.getConfiguration().get("dynatrace.diagnostics.snmp", false) as boolean) || !extension.snmp) {
+      return [];
+    }
+
+    if (groupIdx !== -1 && subgroupIdx !== -1) {
+      if (extension.snmp![groupIdx].subgroups && subgroupIdx !== -1) {
+        if (extension.snmp![groupIdx].subgroups![subgroupIdx].table) {
+          if (usageInfo.value?.endsWith(".0")) {
+            diagnostics.push(copilotDiagnostic(startPos, endPos, OID_DOT_ZERO_IN_TABLE));
+          } else {
+            // Get data for grandparent OID, then check for signs of table
+            const grandparentInfo = await this.cachedData.getSingleOidInfo(
+              // Get the second last index of '.' and slice oid from start
+              oid.slice(0, oid.slice(0, oid.lastIndexOf(".")).lastIndexOf("."))
+            );
+            if (!isTable(grandparentInfo)) {
+              diagnostics.push(copilotDiagnostic(startPos, endPos, OID_STATIC_OBJ_IN_TABLE));
+            }
+          }
+        } else {
+          if (!usageInfo.value?.endsWith(".0")) {
+            diagnostics.push(copilotDiagnostic(startPos, endPos, OID_DOT_ZERO_MISSING));
+          } else {
+            // Get data for grandparent OID, then check for signs of table
+            const grandparentInfo = await this.cachedData.getSingleOidInfo(
+              // Remove '.0', get the second last index of '.' and slice oid from start
+              oid.slice(0, oid.slice(0, oid.slice(0, oid.length - 2).lastIndexOf(".")).lastIndexOf("."))
+            );
+            if (isTable(grandparentInfo)) {
+              diagnostics.push(copilotDiagnostic(startPos, endPos, OID_TABLE_OBJ_AS_STATIC));
+            }
+          }
+        }
+      }
+    }
     return diagnostics;
   }
 }

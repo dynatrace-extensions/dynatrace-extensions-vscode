@@ -47,8 +47,9 @@ export function copilotDiagnostic(
  * ALL KNOWN DYNATRACE EXTENSIONS COPILOT DIAGNOSTICS SHOULD BE CATALOGUED HERE
  * ============================================================================
  * This allows later re-use of the known codes for other features like Quick
- * Fix actions and condition checkers. The code you use for a diagnostic is
- * does not indicate anything - it just needs to be unique.
+ * Fix actions and condition checkers. The code you use when adding a new
+ * diagnostic to the catalogue does not indicate anything - it just needs to
+ * be unique. "DEC" was used to indicate Dynatrace Extensions Copilot.
  */
 
 export const EXTENSION_NAME_MISSING: CopilotDiagnostic = {
@@ -103,4 +104,64 @@ export const DEFINED_CARD_NOT_REFERENCED: CopilotDiagnostic = {
   code: "DEC009",
   severity: vscode.DiagnosticSeverity.Warning,
   message: "This card is defined but is not referenced within the screen layout",
+};
+
+export const OID_DOES_NOT_EXIST: CopilotDiagnostic = {
+  code: "DEC010",
+  severity: vscode.DiagnosticSeverity.Warning,
+  message: "The existence of this OID could not be verified.",
+};
+
+export const OID_NOT_READABLE: CopilotDiagnostic = {
+  code: "DEC011",
+  severity: vscode.DiagnosticSeverity.Error,
+  message: "This OID is not readable (MAX-ACCESS does not allow reading).",
+};
+
+export const OID_STRING_AS_METRIC: CopilotDiagnostic = {
+  code: "DEC012",
+  severity: vscode.DiagnosticSeverity.Error,
+  message: "This OID returns a string but it's being used as a numerical metric value.",
+};
+
+export const OID_COUNTER_AS_GAUGE: CopilotDiagnostic = {
+  code: "DEC013",
+  severity: vscode.DiagnosticSeverity.Warning,
+  message: "This OID returns a Counter but is being used as a Gauge metric.",
+};
+
+export const OID_GAUGE_AS_COUNTER: CopilotDiagnostic = {
+  code: "DEC014",
+  severity: vscode.DiagnosticSeverity.Warning,
+  message: "This OID returns a Gauge but is being used as a Counter metric.",
+};
+
+export const OID_SYNTAX_INVALID: CopilotDiagnostic = {
+  code: "DEC015",
+  severity: vscode.DiagnosticSeverity.Error,
+  message: "Invalid OID syntax. OID must not start/end with '.' and may only contain dots and digits.",
+};
+
+export const OID_DOT_ZERO_IN_TABLE: CopilotDiagnostic = {
+  code: "DEC016",
+  severity: vscode.DiagnosticSeverity.Error,
+  message: "Invalid OID syntax. OIDs must not end in '.0' when part of a 'table' subgroup.",
+};
+
+export const OID_DOT_ZERO_MISSING: CopilotDiagnostic = {
+  code: "DEC016",
+  severity: vscode.DiagnosticSeverity.Error,
+  message: "Invalid OID syntax. OIDs must end in '.0' when they are not part of a 'table' subgroup.",
+};
+
+export const OID_STATIC_OBJ_IN_TABLE: CopilotDiagnostic = {
+  code: "DEC017",
+  severity: vscode.DiagnosticSeverity.Error,
+  message: "Type conflict. This OID is static but being used inside a 'table' subgroup.",
+};
+
+export const OID_TABLE_OBJ_AS_STATIC: CopilotDiagnostic = {
+  code: "DEC018",
+  severity: vscode.DiagnosticSeverity.Error,
+  message: "Type conflict. This OID maps to table entries but is not being used inside a 'table' subgroup.",
 };
