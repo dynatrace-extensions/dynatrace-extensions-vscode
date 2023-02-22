@@ -394,6 +394,7 @@ function registerCommandPaletteCommands(
  */
 function registerFeatureSwitchCommands() {
   return [
+    // Code lenses
     vscode.commands.registerCommand("dt-ext-copilot-workspaces.enableMetricSelectors", () => {
       vscode.workspace.getConfiguration().update("dynatrace.metricSelectorsCodeLens", true);
     }),
@@ -418,17 +419,51 @@ function registerFeatureSwitchCommands() {
     vscode.commands.registerCommand("dt-ext-copilot-workspaces.disableScreenCodelens", () => {
       vscode.workspace.getConfiguration().update("dynatrace.screenCodeLens", false);
     }),
-    vscode.commands.registerCommand("dt-ext-copilot-workspaces.enableDiagnostics", () => {
-      vscode.workspace.getConfiguration().update("dynatrace.diagnostics", true);
-    }),
-    vscode.commands.registerCommand("dt-ext-copilot-workspaces.disableDiagnostics", () => {
-      vscode.workspace.getConfiguration().update("dynatrace.diagnostics", false);
-    }),
+    // Other features
     vscode.commands.registerCommand("dt-ext-copilot-workspaces.enableFastDevelopment", () => {
       vscode.workspace.getConfiguration().update("dynatrace.fastDevelopmentMode", true);
     }),
     vscode.commands.registerCommand("dt-ext-copilot-workspaces.disableFastDevelopment", () => {
       vscode.workspace.getConfiguration().update("dynatrace.fastDevelopmentMode", false);
+    }),
+    // Diagnostics
+    vscode.commands.registerCommand("dt-ext-copilot-workspaces.enableAllDiagnostics", () => {
+      vscode.workspace.getConfiguration().update("dynatrace.diagnostics.all", true);
+      vscode.workspace.getConfiguration().update("dynatrace.diagnostics.extensionName", true);
+      vscode.workspace.getConfiguration().update("dynatrace.diagnostics.metricKeys", true);
+      vscode.workspace.getConfiguration().update("dynatrace.diagnostics.cardKeys", true);
+      vscode.workspace.getConfiguration().update("dynatrace.diagnostics.snmp", true);
+    }),
+    vscode.commands.registerCommand("dt-ext-copilot-workspaces.disableAllDiagnostics", () => {
+      vscode.workspace.getConfiguration().update("dynatrace.diagnostics.all", false);
+      vscode.workspace.getConfiguration().update("dynatrace.diagnostics.extensionName", false);
+      vscode.workspace.getConfiguration().update("dynatrace.diagnostics.metricKeys", false);
+      vscode.workspace.getConfiguration().update("dynatrace.diagnostics.cardKeys", false);
+      vscode.workspace.getConfiguration().update("dynatrace.diagnostics.snmp", false);
+    }),
+    vscode.commands.registerCommand("dt-ext-copilot-workspaces.enableNameDiagnostics", () => {
+      vscode.workspace.getConfiguration().update("dynatrace.diagnostics.extensionName", true);
+    }),
+    vscode.commands.registerCommand("dt-ext-copilot-workspaces.disableNameDiagnostics", () => {
+      vscode.workspace.getConfiguration().update("dynatrace.diagnostics.extensionName", false);
+    }),
+    vscode.commands.registerCommand("dt-ext-copilot-workspaces.enableMetricKeyDiagnostics", () => {
+      vscode.workspace.getConfiguration().update("dynatrace.diagnostics.metricKeys", true);
+    }),
+    vscode.commands.registerCommand("dt-ext-copilot-workspaces.disableMetricKeyDiagnostics", () => {
+      vscode.workspace.getConfiguration().update("dynatrace.diagnostics.metricKeys", false);
+    }),
+    vscode.commands.registerCommand("dt-ext-copilot-workspaces.enableCardKeyDiagnostics", () => {
+      vscode.workspace.getConfiguration().update("dynatrace.diagnostics.cardKeys", true);
+    }),
+    vscode.commands.registerCommand("dt-ext-copilot-workspaces.disableCardKeyDiagnostics", () => {
+      vscode.workspace.getConfiguration().update("dynatrace.diagnostics.cardKeys", false);
+    }),
+    vscode.commands.registerCommand("dt-ext-copilot-workspaces.enableSnmpDiagnostics", () => {
+      vscode.workspace.getConfiguration().update("dynatrace.diagnostics.snmp", true);
+    }),
+    vscode.commands.registerCommand("dt-ext-copilot-workspaces.disableSnmpDiagnostics", () => {
+      vscode.workspace.getConfiguration().update("dynatrace.diagnostics.snmp", false);
     }),
   ];
 }
