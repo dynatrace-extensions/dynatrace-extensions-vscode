@@ -2,6 +2,7 @@
 title: 💡 Code actions
 permalink: /docs/dev/code-actions/
 toc: true
+toc_sticky: true
 ---
 
 Code actions happen on key lines of your extension manifest.

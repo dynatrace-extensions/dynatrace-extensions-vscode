@@ -2,6 +2,7 @@
 title: 🔎 Code lens
 permalink: /docs/dev/code-lens/
 toc: true
+toc_sticky: true
 ---
 
 Code lens are actionable, contextual information, interspersed with your code.

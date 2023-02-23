@@ -2,6 +2,7 @@
 title: 🔂 Activate Extension on Tenant
 permalink: /docs/cmd/activate-extension/
 toc: true
+toc_sticky: true
 ---
 
 Activates a version of your workspace's extension on the currently connected Dynatrace

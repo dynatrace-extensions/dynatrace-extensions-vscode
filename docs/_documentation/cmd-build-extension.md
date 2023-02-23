@@ -2,6 +2,7 @@
 title: 🎁 Build Extension
 permalink: /docs/cmd/build-extension/
 toc: true
+toc_sticky: true
 ---
 
 Builds your extension and its artefacts into a signed .zip archive which is placed inside the

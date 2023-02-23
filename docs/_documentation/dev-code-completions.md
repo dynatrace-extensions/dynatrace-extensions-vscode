@@ -2,6 +2,7 @@
 title: 🎹 Code completions
 permalink: /docs/dev/code-completions/
 toc: true
+toc_sticky: true
 ---
 
 Code completions or suggestions happen at key points within the extension manifest. 
@@ -21,21 +22,79 @@ can be inserted at the location of your cursor.
 
 ## Currently implemented triggers
 
-- on `fromType:` and `toType:` attributes of any `topology.relationships` item
-- on `sourceAttribute:` and `destinationAttribute:` attributes of any relationship based on
-  entity mapping rules (provided you have already filled in `fromType` and `toType` respectively)
-- on `entityType:` and `entityTypes:` anywhere in the yaml, relevant entity types are suggested
-- on lists of attribute-type properties, on `key:` the keys of relevant entity attributes are
-  suggested
-- on `entitySelectorTemplate:` you can make use of Ctrl + Space to trigger completions as the 
-  selector is being built
-- on `entitySelectorTemplate:` you can auto-complete selectors for relationships that are seen
-  in the YAML
-- on `iconPattern:` (within `topology.rules`) or `icon:` (within `staticContent.header`) - you can 
-  browse available Barista Icon codes
-- on `key:` for card keys either inside `layout.cards` or individual card type lists - card keys
-  that have not been used yet are suggested
-- on `value:` for metrics and dimensions of a prometheus extension if data has been scraped
-  already
-- on `description:` in metrics section for those metrics that have been scraped from a 
-  Prometheus endpoint
+<table style="margin-top: 20px">
+  <tr>
+    <th>Keyword trigger</th>
+    <th>Effects</th>
+  </tr>
+  <tr>
+    <td>
+      On <code>fromType:</code> or <code>toType:</code> inside 
+      <code>topology.relationships</code> list items
+    </td>
+    <td>Browse built-in and custom entity types</td>
+  </tr>
+  <tr>
+    <td>
+      On <code>sourceAttribute:</code> inside <code>mappingRules</code> list items of 
+      topology relationships
+    </td>
+    <td>
+      Browse entity attributes (entity must be present in the <code>fromType</code> attribute)
+    </td>
+  </tr>
+  <tr>
+    <td>
+      On <code>destinationAttribute:</code> inside <code>mappingRules</code> list items of 
+      topology relationships
+    </td>
+    <td>
+      Browse entity attributes (entity must be present in <code>toType</code> attribute)
+    </td>
+  </tr>
+  <tr>
+    <td>On <code>entityType:</code> and <code>entityTypes:</code></td>
+    <td>Browse relevant entity types</td>
+  </tr>
+  <tr>
+    <td>On <code>key:</code> (of attributes inside screen properties)</td>
+    <td>Attributes are suggested from topology and built-in values</td>
+  </tr>
+  <tr>
+    <td>On <code>entitySelectorTemplate:</code></td>
+    <td>
+      Use of <code>Ctrl + Space</code> to trigger completions as you build your selector or
+      choose one of the pre-built selectors (from relationships seen in your YAML)
+    </td>
+  </tr>
+  <tr>
+    <td>
+      On <code>iconPattern:</code> (within <code>topology.rules</code>) or 
+      <code>icon:</code> (within <code>staticContent.header</code>)
+    </td>
+    <td>
+      Browse available <a href="https://barista.dynatrace.com/resources/icons">Barista</a>
+      icon codes
+    </td>
+  </tr>
+  <tr>
+    <td>
+      On <code>key:</code> (of cards in screens, either in <code>layout</code> or individual lists)</td>
+    <td>Browse keys of cards defined, but not yet utilised</td>
+  </tr>
+  <tr>
+    <td>On <code>value:</code>, for metrics and dimensions of a Prometheus extension</td>
+    <td>
+      Browse metrics & dimensions scraped using the
+      <a href="/docs/dev/code-lens/#prometheus-code-lenses">Prometheus code lens</a>
+    </td>
+  </tr>
+  <tr>
+    <td>On <code>description:</code> (in the <code>metrics:</code> section of the manifest)</td>
+    <td>
+      For those metrics that have been scraped using the
+      <a href="/docs/dev/code-lens/#prometheus-code-lenses">Prometheus code lens</a>, add the description
+      from the scraped data
+    </td>
+  </tr>
+</table>

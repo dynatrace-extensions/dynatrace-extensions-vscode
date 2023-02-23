@@ -2,6 +2,7 @@
 title: Project structure
 permalink: /docs/contrib/project-structure/
 toc: true
+toc_sticky: true
 ---
 
 Mandatory reading for anyone wanting to contribute to this project.

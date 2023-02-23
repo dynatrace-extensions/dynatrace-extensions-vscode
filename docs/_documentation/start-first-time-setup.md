@@ -2,6 +2,7 @@
 title: First time setup
 permalink: /docs/start/first-time-setup/
 toc: true
+toc_sticky: true
 ---
 
 Get started and use the Copilot for the first time.

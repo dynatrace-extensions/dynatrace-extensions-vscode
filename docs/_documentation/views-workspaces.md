@@ -2,6 +2,7 @@
 title: Extension Workspaces
 permalink: /docs/views/workspaces/
 toc: true
+toc_sticky: true
 ---
 
 Once the Copilot is installed your editor will show the Dynatrace icon in its activity bar.

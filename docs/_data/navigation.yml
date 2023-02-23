@@ -54,7 +54,7 @@ docs:
       - title: Credentials
         url: /docs/settings/credentials
       - title: Behavior
-        url: /docs/settings/features
+        url: /docs/settings/behavior
   - title: ✍️ Contributing
     children:
       - title: Guide
