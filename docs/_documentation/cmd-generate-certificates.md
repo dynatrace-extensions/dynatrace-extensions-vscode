@@ -2,6 +2,7 @@
 title: 🔐 Generate Certificates
 permalink: /docs/cmd/generate-certificates/
 toc: true
+toc_sticky: true
 ---
 
 Generates all the credentials needed for signing and validating Extensions 2.0.

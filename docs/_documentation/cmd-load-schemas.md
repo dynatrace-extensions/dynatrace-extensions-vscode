@@ -2,6 +2,7 @@
 title: 📄 Load Schemas
 permalink: /docs/cmd/load-schemas/
 toc: true
+toc_sticky: true
 ---
 
 Downloads schema files of a specific version and sets up validation for the extension manifest

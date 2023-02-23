@@ -2,6 +2,7 @@
 title: Pre-requisites
 permalink: /docs/start/pre-requisites/
 toc: true
+toc_sticky: true
 ---
 
 Everything you need to start using the Copilot.

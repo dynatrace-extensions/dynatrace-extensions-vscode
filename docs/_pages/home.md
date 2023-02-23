@@ -8,6 +8,8 @@ header:
   actions:
     - label: "<i class='fas fa-download'></i> Download now"
       url: https://github.com/dynatrace-extensions/dynatrace-extensions-copilot/releases/latest
+    - label: "<i class='fas fa-cart-arrow-down'></i> Marketplace"
+      url: https://marketplace.visualstudio.com/items?itemName=DynatracePlatformExtensions.dt-ext-copilot
 excerpt: >
   Take Extension development to the next level.
   <br />
@@ -52,5 +54,6 @@ feature_row:
     btn_class: btn--info
     url: https://help.dynatrace.com
 ---
+
 {% include feature_row id="intro" type="center" %}
 {% include feature_row %}

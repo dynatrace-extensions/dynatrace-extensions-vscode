@@ -2,6 +2,7 @@
 title: 🔥 Fast development mode
 permalink: /docs/dev/fast-development-mode
 toc: true
+toc_sticky: true
 ---
 
 Fast development mode is a workflow designed to allow advanced developers to gain immediate 

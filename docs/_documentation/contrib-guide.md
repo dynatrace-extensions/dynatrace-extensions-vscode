@@ -2,6 +2,7 @@
 title: Guide
 permalink: /docs/contrib/guide/
 toc: true
+toc_sticky: true
 ---
 
 Mandatory guide for anyone wanting to contribute to this project.

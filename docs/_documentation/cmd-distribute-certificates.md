@@ -2,6 +2,7 @@
 title: 🔗 Distribute Certificate
 permalink: /docs/cmd/distribute-certificate/
 toc: true
+toc_sticky: true
 ---
 
 Uploads the workspace's root (CA) certificate to the Dynatrace Credentials Vault. Optionally,

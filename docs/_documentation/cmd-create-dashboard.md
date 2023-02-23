@@ -2,6 +2,7 @@
 title: 📈 Create overview dashboard
 permalink: /docs/cmd/create-dashboard/
 toc: true
+toc_sticky: true
 ---
 
 Reads through the `extension.yaml` file and creates an overview dashboard which serves as a

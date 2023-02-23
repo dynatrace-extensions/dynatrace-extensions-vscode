@@ -2,6 +2,7 @@
 title: 📦 Initialize Workspace
 permalink: /docs/cmd/initialize-workspace/
 toc: true
+toc_sticky: true
 ---
 
 Initializes a new workspace for Dynatrace Extension 2.0 development. This includes loading up 

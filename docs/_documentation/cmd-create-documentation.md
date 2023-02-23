@@ -2,6 +2,7 @@
 title: 📑 Create documentation
 permalink: /docs/cmd/create-documentation/
 toc: true
+toc_sticky: true
 ---
 
 Reads through the `extension.yaml` file and creates a `README.md` file in the workspace root

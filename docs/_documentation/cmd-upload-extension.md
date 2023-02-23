@@ -2,6 +2,7 @@
 title: 📤 Upload Extension to Tenant
 permalink: /docs/cmd/upload-extension/
 toc: true
+toc_sticky: true
 ---
 
 Uploads the most recent package from your workspace's `dist` folder to the currently connected
