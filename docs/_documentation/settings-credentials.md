@@ -9,42 +9,36 @@ development or allowing you to bring your own credential files.
 
 ## When using your own credentials
 
-Provide your files the the Copilot by using these settings:
-- `dynatrace.developerKeyLocation` - this is a path to your developer private key file.
-- `dynatrace.developerCertificateLocation` - this is a path to your developer certificate file.
-- `dynatrace.rootOrCaCertificateLocation` - this is a path to your root (CA) certificate.
+Provide your files to the Copilot by using these settings:
+- `dynatrace.developerCertkeyLocation` - this is the path to your fused developer credential file
+- `dynatrace.rootOrCaCertificateLocation` - this is the path to your root (CA) certificate.
 
 Example usage (in `./vscode/settings.json`):
 
 ```json
 {
-    "dynatrace.developerKeyLocation": "C:\\Temp\\certificates\\dev.key",
-    "dynatrace.developerCertificateLocation": "C:\\Temp\\certificates\\dev.pem",
+    "dynatrace.developerCertkeyLocation": "C:\\Temp\\certificates\\dev.pem",
     "dynatrace.rootOrCaCertificateLocation": "C:\\Temp\\certificates\\ca.pem"
 }
 ```
 
-<p class="notice--info">
-    <strong>📝 Note:</strong>
-    <br/>
-    If you generated a single "fused" certkey file via <code>dt-cli</code> and want to use it
-    just add the path to it in both <code>dynatrace.developerKeyLocation</code> and
-    <code>dynatrace.developerCertificateLocation</code>
-</p>
-
 <p class="notice--warning">
-    <strong>⚠️ Warning:</strong>
+    <strong>⚠️ Deprecation warning:</strong>
     <br/>
-    We will soon deprecate the split-credential file format and move towards supporting only
-    a fused credential file. You can keep track of this task via
-    <a href="https://github.com/dynatrace-extensions/dynatrace-extensions-copilot/issues/52">
-        issue #52
-    </a>
+    Since version <code>1.0.0</code> of the Copilot, split credential files are no longer
+    supported and the following settings have been deprecated:
+    <br/>
+    <code>dynatrace.developerKeyLocation</code>
+    <br/>
+    <code>dynatrace.developerCertificateLocation</code>
+    <br/>
+    If you still want to use older credentials, you must paste the contents together and
+    manually create the fused file. Otherwise, just let the Copilot generate one for you.
 </p>
 
 ## When generating credentials
 
-Through the [Generate certificates](/dynatrace-extensions-copilot/docs/cmd/generate-certificates)
+Through the [Generate certificates](/docs/cmd/generate-certificates)
 command we can generate all the files you need and automatically update your `settings.json`.
 
 Customize the credentials metadata by using these settings:

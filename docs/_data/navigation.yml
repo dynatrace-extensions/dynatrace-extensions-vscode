@@ -53,7 +53,7 @@ docs:
     children:
       - title: Credentials
         url: /docs/settings/credentials
-      - title: Feature usage
+      - title: Behavior
         url: /docs/settings/features
   - title: ✍️ Contributing
     children:
