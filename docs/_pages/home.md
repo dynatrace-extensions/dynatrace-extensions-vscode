@@ -7,7 +7,7 @@ header:
   overlay_image: /assets/images/copilot-banner-resize-2.png
   actions:
     - label: "<i class='fas fa-download'></i> Download now"
-      url: https://github.com/dynatrace-extensions/dynatrace-extensions-copilot/releases
+      url: https://github.com/dynatrace-extensions/dynatrace-extensions-copilot/releases/latest
 excerpt: >
   Take Extension development to the next level.
   <br />
