@@ -29,7 +29,7 @@ landing page for the extension.
    unified analysis screens.
 
 4. Tables of each entity type are created, alongside graph charts based on the top one or
-   two metrics extracted at step 1.
+   two metrics extracted at step one.
 
 5. The dashboard is written to path `./extension/dashboards/overview_dashboard.json` and the
    extension manifest is edited to include the reference to this newly created dashboard.
@@ -39,6 +39,6 @@ landing page for the extension.
      <strong>📝 Note:</strong>
      <br/>
      Your dashboard will automatically be uploaded as part of the extension deployment. 
-     This final step is offered in case you want an early preview of the data before your
-     extension deployment.
+     This final step is offered in case you want an early preview of the asset before 
+     your extension deployment.
    </p>
