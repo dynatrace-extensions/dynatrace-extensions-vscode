@@ -33,7 +33,7 @@ help in three distinct areas:
 
 **Content validation**
 - Automatically ensure you comply with target versions of the Extensions 2.0 schemas
-- Benefit of SME diagnostics beyond schema validation
+- Benefit of SME diagnostics beyond simple schema validation
 - Check presence/validity of data against your Dynatrace tenant (e.g. metric & entity selectors)
 
 ## Support

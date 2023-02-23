@@ -52,7 +52,7 @@ the code will pause on them.
 ## Make your first contribution
 
 Make sure to check out the 
-[project structure](/dynatrace-extensions-copilot/docs/contrib/project-structure/) to
+[project structure](/docs/contrib/project-structure/) to
 understand how it works and where to best enhance it.
 
 Found something you can work on to contribute to this project? That's awesome.

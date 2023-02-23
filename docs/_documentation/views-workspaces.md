@@ -15,8 +15,8 @@ Use the Extension Workspaces view to keep track of all your projects and easily 
 
 Keep track of all workspaces containing extension projects, regardless of where on your filesystem
 they are stored. Use the `+` icon of the view header or run the 
-[Initialize workspace command](/dynatrace-extensions-copilot/docs/cmd/initialize-workspace/) to add
-a new extension workspace. Use the icon next to each workspace label if you want to remove it.
+[Initialize workspace command](/docs/cmd/initialize-workspace/) to add a new extension workspace.
+Use the icon next to each workspace label if you want to remove it.
 
 Expand the row to see which extension is part of it as well as its latest version.
 

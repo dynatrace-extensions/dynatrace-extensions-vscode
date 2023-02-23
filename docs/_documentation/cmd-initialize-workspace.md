@@ -24,7 +24,7 @@ Once finished, the workspace appears in the new Dynatrace view.
 
 1. Internal local storage is provisioned for this workspace.
 
-2. The [Load schemas](/dynatrace-extensions-copilot/docs/load-schemas/) command is invoked an
+2. The [Load schemas](/docs/cmd/load-schemas/) command is invoked an
    the flow awaits its successful completion before continuing. The Support for YAML extension
    is configured to validate the `extension.yaml` file with the chosen schema version.
    
@@ -46,12 +46,12 @@ Once finished, the workspace appears in the new Dynatrace view.
    The workflow takes two paths:
 
    a. Use your own certificates
-      - [Settings](/dynatrace-extensions-copilot/docs/settings-credentials/) are checked to
+      - [Settings](/docs/settings/credentials/) are checked to
         ensure paths have been provided for Developer Certificate and Key.
   
    b. Generate new ones
       - This triggers the
-        [Generate certificates](/dynatrace-extensions-copilot/docs/cmd-generate-certificates/)
+        [Generate certificates](/docs/cmd/generate-certificates/)
         command and awaits its successful completion before continuing.
 
 5. The workflow finalizes with saving the workspace metadata in the global VSCode storage and 

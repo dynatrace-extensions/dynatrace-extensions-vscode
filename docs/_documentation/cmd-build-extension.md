@@ -32,4 +32,5 @@ Builds your extension and its artefacts into a signed .zip archive which is plac
    editor window and the workflow terminates. Valid packages are moved to the `dist`
    folder of your workspace.
 
-4. The workflow finishes by linking to the [Upload extension](/dynatrace-extensions-copilot/docs/cmd-upload-extension/) command
+4. The workflow finishes by linking to the [Upload extension](/docs/cmd/upload-extension/)
+   command

@@ -33,9 +33,9 @@ Generates all the credentials needed for signing and validating Extensions 2.0.
    </p>
 
 5. All intermediary files are stored in the VSCode workspace storage and the
-   [credential settings](/dynatrace-extensions-copilot/docs/settings-credentials/) for this
-   workspace are updated with the paths to the generated files. This is done in the
-   `./vscode/settings.json` file.
+   [credential settings](/docs/settings/credentials/) for this workspace are updated
+   with the paths to the generated files. This is done in the `./vscode/settings.json`
+   file.
 
 6. Upon successful completion you are prompted for uploading your credentials to Dynatrace
-   and this links the workflow to the [Distribute certificate](/dynatrace-extensions-copilot/docs/cmd-distribute-certificate/) command.
+   and this links the workflow to the [Distribute certificate](/docs/cmd/distribute-certificate/) command.

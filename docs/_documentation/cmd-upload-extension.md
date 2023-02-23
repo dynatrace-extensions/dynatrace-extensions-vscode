@@ -30,4 +30,4 @@ Dynatrace tenant.
 3. Once the upload is possible, the extension is uploaded.
    
 4. The workflow finishes by linking to the
-   [Activate extension](/dynatrace-extensions-copilot/docs/cmd-activate-extension/) command.
+   [Activate extension](/docs/cmd/activate-extension/) command.

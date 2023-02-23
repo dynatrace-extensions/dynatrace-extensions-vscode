@@ -9,8 +9,8 @@ Get started and use the Copilot for the first time.
 ## Before you begin
 
 Make sure you have followed the previous articles for
-[pre-requisites](/dynatrace-extensions-copilot/docs/pre-requisites) and 
-[installation](/dynatrace-extensions-copilot/docs/installation).
+[pre-requisites](/docs/start/pre-requisites) and 
+[installation](/docs/start/installation).
 
 ## Connect to your Dynatrace Tenant
 
@@ -32,7 +32,7 @@ On the new Dynatrace activity bar item, head over to the `EXTENSIONS 2.0 WORKSPA
 click the button to either open a new folder or initialize workspace.
 
 This will trigger the
-[Initialize Workspace Command](/dynatrace-extensions-copilot/docs/cmd-initialize-workspace) and
+[Initialize Workspace Command](/docs/cmd/initialize-workspace) and
 guide you through all the setup required for first time use.
 
 ## Demo
