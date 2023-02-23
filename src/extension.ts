@@ -67,7 +67,6 @@ import { createAlert } from "./commandPalette/createAlert";
  */
 export function activate(context: vscode.ExtensionContext) {
   console.log("DYNATRACE EXTENSION DEVELOPER - ACTIVATED!");
-  console.log(`Workspace storage will be at: ${context.storageUri!.fsPath}`);
   // Initialize global storage
   initGlobalStorage(context);
 

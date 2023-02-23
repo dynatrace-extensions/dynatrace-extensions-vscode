@@ -1,6 +1,13 @@
 # Change Log
 
-## Version 1.0.0
+## Version 1.0.1 (23.02.2023)
+
+### 🪲 Fixed in this version:
+- [#61 - Copilot is not activated unless a folder is open](https://github.com/dynatrace-extensions/dynatrace-extensions-copilot/issues/61)
+
+---
+
+## Version 1.0.0 (22.02.2023)
 
 ### ✨ New in this version:
 - [#59 - Credentials can now be stored in global settings](https://github.com/dynatrace-extensions/dynatrace-extensions-copilot/issues/59)

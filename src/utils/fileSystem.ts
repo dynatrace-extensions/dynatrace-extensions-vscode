@@ -54,8 +54,10 @@ export function initGlobalStorage(context: vscode.ExtensionContext) {
  * @param context VSCode Extension Context
  */
 export function initWorkspaceStorage(context: vscode.ExtensionContext) {
-  if (!existsSync(context.storageUri!.fsPath)) {
-    mkdirSync(context.storageUri!.fsPath);
+  const storagePath = context.storageUri!.fsPath;
+  console.log(`Workspace storage will be at: ${storagePath}`);
+  if (!existsSync(storagePath)) {
+    mkdirSync(storagePath);
   }
 }
 
