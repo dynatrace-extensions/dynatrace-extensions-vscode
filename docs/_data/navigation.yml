@@ -51,6 +51,8 @@ docs:
         url: /docs/dev/code-lens
       - title: 🔥 Fast development mode
         url: /docs/dev/fast-development-mode
+      - title: 🩺 Diagnostics
+        url: /docs/dev/diagnostics
   - title: ⚙️ Settings
     children:
       - title: Credentials
