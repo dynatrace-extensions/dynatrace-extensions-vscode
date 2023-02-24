@@ -71,13 +71,13 @@ export async function buildExtension(
       // Handle unsaved changes
       const extensionDocument = vscode.workspace.textDocuments.find(doc => doc.fileName.endsWith("extension.yaml"));
       if (extensionDocument?.isDirty) {
-        await extensionDocument
-          .save()
-          .then(success =>
-            success
-              ? vscode.window.showInformationMessage("Document saved automatically.")
-              : vscode.window.showErrorMessage("Failed to save extension manifest. Build command cancelled.")
-          );
+        const saved = await extensionDocument.save();
+        if (saved) {
+          vscode.window.showInformationMessage("Document saved automatically.");
+        } else {
+          vscode.window.showErrorMessage("Failed to save extension manifest. Build command cancelled.");
+          return;
+        }
       }
       // Pre-build workflow
       let updatedVersion = "";
@@ -197,12 +197,7 @@ async function preBuildTasks(
  * @param zipFileName the name of the .zip file for this build
  * @param devCertKeyPath the path to the developer's fused credential file
  */
-function assembleStandard(
-  workspaceStorage: string,
-  extensionDir: string,
-  zipFileName: string,
-  devCertKeyPath: string,
-) {
+function assembleStandard(workspaceStorage: string, extensionDir: string, zipFileName: string, devCertKeyPath: string) {
   // Build the inner .zip archive
   const innerZip = new AdmZip();
   innerZip.addLocalFolder(extensionDir);
