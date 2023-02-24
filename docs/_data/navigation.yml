@@ -39,6 +39,8 @@ docs:
         url: /docs/cmd/create-documentation
       - title: 📈 Create overview dashboard
         url: /docs/cmd/create-dashboard
+      - title: 🔔 Create alert
+        url: /docs/cmd/create-alert/
   - title: 🤖 Development assistance
     children:
       - title: 🎹 Code completions
