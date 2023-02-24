@@ -71,7 +71,7 @@ footer:
       url: "https://twitter.com/Dynatrace"
     - label: "GitHub"
       icon: "fab fa-fw fa-github"
-      url: "https://github.com/dynatrace-extensions"
+      url: "https://github.com/dynatrace-extensions/dynatrace-extensions-copilot"
     - label: "Website"
       icon: "fas fa-globe"
       url: "https://www.dynatrace.com"
