@@ -113,7 +113,7 @@ export class WmiCodeLensProvider implements vscode.CodeLensProvider {
     const text = document.getText();
 
     // Return early because it is cheaper than parsing the yaml
-    if (!text.includes("wmi:") || !vscode.workspace.getConfiguration("dynatrace", null).get("dynatrace.diagnostics")) {
+    if (!text.includes("wmi:") || !vscode.workspace.getConfiguration("dynatrace", null).get("wmiCodeLens")) {
       return [];
     }
 
@@ -133,11 +133,7 @@ export class WmiCodeLensProvider implements vscode.CodeLensProvider {
     //     - subgroup: Queue
     //       query: SELECT Name, MessagesinQueue, BytesInQueue FROM Win32_PerfRawData_msmq_MSMQQueue
 
-    if (!extension.wmi) {
-      // This is never true because we already checked above, but Typescript is angry
-      return;
-    }
-    for (const group of extension.wmi) {
+    for (const group of extension.wmi!) {
       if (group.query) {
         const newLens = this.createLens(group.query, document);
       }
