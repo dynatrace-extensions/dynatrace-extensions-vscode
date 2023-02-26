@@ -130,7 +130,7 @@ export class WmiCodeLensProvider implements vscode.CodeLensProvider {
       this.previousWMIQueryResultLens = this.wmiQueryResultLens;
       this.wmiQueryResultLens = [];
     }
-    
+
     this.selfUpdateTriggered = false;
     const text = document.getText();
 
@@ -188,6 +188,7 @@ export class WmiCodeLensProvider implements vscode.CodeLensProvider {
    *
    * @param lineToMatch The line that we want to match
    * @param document the document to search for the query
+   * @param createdEarlier a code lens that was created earlier, if it exists
    */
   createLens(
     lineToMatch: string,
