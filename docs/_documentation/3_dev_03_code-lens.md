@@ -23,6 +23,8 @@ tenant or other external endpoints.
 - Validate any entity selector against a connected Dynatrace tenant
 - Run any entity selector and visualize the query results in the Dynatrace output panel
 
+![entity_selector_lens]({{ site.baseurl }}/assets/gifs/entity_selector_lens.gif)
+
 ## Prometheus Code Lenses
 
 - Connect to a Prometheus endpoint and scrape metrics data. Scraped details can then be used:
@@ -45,3 +47,12 @@ tenant or other external endpoints.
 ## Unified Analysis Screens Code Lenses
 
 - Open the List or Details Unified Analysis screen for any entity type
+
+![screen_code_lens]({{ site.baseurl }}/assets/gifs/screen_code_lens.gif)
+
+<p class="notice--warning">
+  <strong>⚠️ Warning:</strong>
+  <br/>
+  You will probably hit a <code>404 Not Found</code> if you did not yet deploy your extension
+  as the entity definitions would not exist in your environment.
+</p>

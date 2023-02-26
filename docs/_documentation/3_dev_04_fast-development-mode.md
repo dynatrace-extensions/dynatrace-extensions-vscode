@@ -9,6 +9,10 @@ Fast development mode is a workflow designed to allow advanced developers to gai
 feedback on the current state of their extension and minimze the steps and time it takes to
 see updates in their connected Dynatrace environment.
 
+## Demo
+
+![fast_dev_mode]({{ site.baseurl }}/assets/gifs/fast_dev_mode.gif)
+
 ## How does it work?
 
 When enabled, every time changes to the extension manifest are saved, the extension version
@@ -22,7 +26,3 @@ and displays the status of the last attempted build.
 
 When developing your static assets, such as the Unified Analysis screen, this mode is the
 quickest way to cycle through a variety of changes before the final format.
-
-## Demo
-
-![fast_dev_mode]({{ site.baseurl }}/assets/gifs/fast_dev_mode.gif)
