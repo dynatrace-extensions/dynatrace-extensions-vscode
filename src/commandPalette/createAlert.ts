@@ -27,6 +27,7 @@ import {
   writeFileSync,
 } from "fs";
 import path = require("path");
+import { getAllMetricKeysFromDataSource } from "../utils/extensionParsing";
 
 export async function createAlert(context: vscode.ExtensionContext) {
   const extensionFile = getExtensionFilePath(context)!;
@@ -34,17 +35,21 @@ export async function createAlert(context: vscode.ExtensionContext) {
     readFileSync(extensionFile).toString()
   );
 
-  if (!extension.metrics) {
+  // TODO, we could ask the user if they want to create a new alert or edit an existing one?
+
+  // Ask the user to select a metric
+  let metricKeys = getAllMetricKeysFromDataSource(extension);
+  if (metricKeys.length === 0 && extension.metrics) {
+    metricKeys = extension.metrics.map((metric) => metric.key);
+  }
+
+  if (metricKeys.length === 0) {
     vscode.window.showWarningMessage(
       "No metrics defined in extension.yaml, please define them before creating alerts"
     );
     return;
   }
 
-  // TODO, we could ask the user if they want to create a new alert or edit an existing one?
-
-  // Ask the user to select metric
-  const metricKeys = extension.metrics.map((metric) => metric.key);
   const metricToUse = await vscode.window.showQuickPick(metricKeys, {
     placeHolder: "Choose a metric",
     title: "Extension workspace: Create Alert",
