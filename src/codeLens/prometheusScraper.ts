@@ -137,6 +137,8 @@ export class PrometheusCodeLensProvider implements vscode.CodeLensProvider {
       if (!details) {
         return;
       }
+      // Clear cached data since we're now scraping a different endpoint
+      this.cachedData.addPrometheusData({});
     }
     const scrapeSuccess = this.scrape();
     if (scrapeSuccess) {
