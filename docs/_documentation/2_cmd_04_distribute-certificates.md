@@ -33,6 +33,12 @@ detected).
 
 3. Local OneAgent & ActiveGate paths are checked for existence and the flow prompts whether
    the certificate should also be uploaded to these locations.
+   - Windows
+     - OneAgent: `%PROGRAMDATA%\dynatrace\oneagent\agent\config\certificates`
+     - ActiveGate: `<CONFIG>/remotepluginmodule/agent/conf/certificates/`
+   - Linux
+     - OneAgent: `%PROGRAMDATA%\dynatrace\oneagent\agent\config\certificates`
+     - ActiveGate: `/var/lib/dynatrace/oneagent/agent/config/certificates`
 
    <p class="notice--warning">
      <strong>⚠️ Warning:</strong>
