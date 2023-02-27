@@ -1,5 +1,19 @@
 # Change Log
 
+## Version 1.0.2 (27.02.2023)
+
+---
+
+### 🪲 Fixed in this version:
+- [#65 - WMI Code Lens does not clear correctly](https://github.com/dynatrace-extensions/dynatrace-extensions-copilot/issues/65)
+- Feature settings toggle not working for WMI & Screen Code Lens
+
+### 🚀 Improved in this version:
+- [#63 - Prometheus cached results clear when switching endpoints](https://github.com/dynatrace-extensions/dynatrace-extensions-copilot/issues/63)
+- [#67 - Create Alert command prefers metrics from datasource](https://github.com/dynatrace-extensions/dynatrace-extensions-copilot/issues/67)
+
+---
+
 ## Version 1.0.1 (23.02.2023)
 
 ### 🪲 Fixed in this version:
