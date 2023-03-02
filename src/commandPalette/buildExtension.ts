@@ -66,8 +66,13 @@ export async function buildExtension(
     {
       location: vscode.ProgressLocation.Notification,
       title: "Building extension",
+      cancellable: true,
     },
-    async progress => {
+    async (progress, cancelToken) => {
+      cancelToken.onCancellationRequested(() => {
+        vscode.window.showWarningMessage("Operation cancelled by user.");
+      });
+
       // Handle unsaved changes
       const extensionDocument = vscode.workspace.textDocuments.find(doc => doc.fileName.endsWith("extension.yaml"));
       if (extensionDocument?.isDirty) {
@@ -79,6 +84,10 @@ export async function buildExtension(
           return;
         }
       }
+      if (cancelToken.isCancellationRequested) {
+        return;
+      }
+
       // Pre-build workflow
       let updatedVersion = "";
       progress.report({ message: "Checking prerequisites" });
@@ -89,6 +98,10 @@ export async function buildExtension(
       } catch (err: any) {
         vscode.window.showErrorMessage(`Error during pre-build phase: ${err.message}`);
         return;
+      } finally {
+        if (cancelToken.isCancellationRequested) {
+          return;
+        }
       }
 
       // Package assembly workflow
@@ -103,6 +116,10 @@ export async function buildExtension(
       } catch (err: any) {
         vscode.window.showErrorMessage(`Error during archiving & signing: ${err.message}`);
         return;
+      } finally {
+        if (cancelToken.isCancellationRequested) {
+          return;
+        }
       }
 
       // Validation & upload workflow
