@@ -19,7 +19,7 @@ Once finished, the workspace appears in the new Dynatrace view.
 
 ## Demo
 
-![initialize]({{ site.baseurl }}/assets/gifs/cmd_init.gif)
+![initialize]({{ site.baseurl }}/dynatrace-extensions-copilot/assets/gifs/cmd_init.gif)
 
 ## Detailed command flow
 

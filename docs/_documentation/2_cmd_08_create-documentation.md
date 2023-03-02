@@ -14,7 +14,7 @@ folder, documenting (as best as possible) the extension package and its contents
 
 ## Demo
 
-![create_documentation]({{ site.baseurl }}/assets/gifs/create_documentation.gif)
+![create_documentation]({{ site.baseurl }}/dynatrace-extensions-copilot/assets/gifs/create_documentation.gif)
 
 ## Detailed command flow
 

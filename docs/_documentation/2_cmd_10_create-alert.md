@@ -14,7 +14,7 @@ A workflow to help you create alerts based on your extension's metrics
 
 ## Demo
 
-![create_alert]({{ site.baseurl }}/assets/gifs/create_alert_cmd.gif)
+![create_alert]({{ site.baseurl }}/dynatrace-extensions-copilot/assets/gifs/create_alert_cmd.gif)
 
 ## Detailed command flow
 
