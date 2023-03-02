@@ -1,8 +1,18 @@
 # Change Log
 
-## Version 1.0.2 (27.02.2023)
+## Version 1.0.3 (unreleased)
+
+### 🪲 Fixed in this version:
+- [#75 - Link to configure extension not working on dashboard](https://github.com/dynatrace-extensions/dynatrace-extensions-copilot/issues/75)
+- [#74 - Create documentation command fails at alert processing](https://github.com/dynatrace-extensions/dynatrace-extensions-copilot/issues/74)
+- [#72 - Create alert can generate invalid file name](https://github.com/dynatrace-extensions/dynatrace-extensions-copilot/issues/72)
+
+### 🚀 Improved in this version:
+- [#76 - Generated dashboard title to include extension name](https://github.com/dynatrace-extensions/dynatrace-extensions-copilot/issues/76)
 
 ---
+
+## Version 1.0.2 (27.02.2023)
 
 ### 🪲 Fixed in this version:
 - [#65 - WMI Code Lens does not clear correctly](https://github.com/dynatrace-extensions/dynatrace-extensions-copilot/issues/65)
