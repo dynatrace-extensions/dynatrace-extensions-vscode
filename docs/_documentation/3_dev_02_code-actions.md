@@ -15,7 +15,7 @@ Actions may include:
 
 ## Demo
 
-![auto_charts]({{ site.baseurl }}/dynatrace-extensions-copilot/assets/gifs/pro_chart_building.gif)
+![auto_charts]({{ site.baseurl }}assets/gifs/pro_chart_building.gif)
 
 ## Currently implemented triggers
 

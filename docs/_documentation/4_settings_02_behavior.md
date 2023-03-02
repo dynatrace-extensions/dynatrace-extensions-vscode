@@ -71,4 +71,4 @@ Diagnostics specific settings have been segmented based on area of diagnosis.
 For convenience, you can easily toggle these from the Workspaces section of the Dynatrace view.
 Simply right-click on any Workspace name and all feature settings can be toggled from there:
 
-![context_menu]({{ site.baseurl }}/dynatrace-extensions-copilot/assets/images/workspace_context_menu.png)
+![context_menu]({{ site.baseurl }}assets/images/workspace_context_menu.png)

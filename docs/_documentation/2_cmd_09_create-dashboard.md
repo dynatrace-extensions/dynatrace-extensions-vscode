@@ -15,7 +15,7 @@ landing page for the extension.
 
 ## Demo
 
-![create_dashboard]({{ site.baseurl }}/dynatrace-extensions-copilot/assets/gifs/create_dashboard.gif)
+![create_dashboard]({{ site.baseurl }}assets/gifs/create_dashboard.gif)
 
 ## Detailed command flow
 

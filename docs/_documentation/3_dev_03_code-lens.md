@@ -15,7 +15,7 @@ tenant or other external endpoints.
 - Validate any metric selector against a connected Dynatrace tenant
 - Run any metric selector and visualize the query results in a separate editor panel
 
-![metric_codelens]({{ site.baseurl }}/dynatrace-extensions-copilot/assets/gifs/metric_code_lens.gif)
+![metric_codelens]({{ site.baseurl }}assets/gifs/metric_code_lens.gif)
 
 ## Entity Selector Code Lenses
 
@@ -23,7 +23,7 @@ tenant or other external endpoints.
 - Validate any entity selector against a connected Dynatrace tenant
 - Run any entity selector and visualize the query results in the Dynatrace output panel
 
-![entity_selector_lens]({{ site.baseurl }}/dynatrace-extensions-copilot/assets/gifs/entity_selector_lens.gif)
+![entity_selector_lens]({{ site.baseurl }}assets/gifs/entity_selector_lens.gif)
 
 ## Prometheus Code Lenses
 
@@ -33,7 +33,7 @@ tenant or other external endpoints.
   - To automatically insert metric metadata in the `metrics` section of the YAML
 - Get a timestamp of when details were last scraped.
 
-![prometheus_codelens]({{ site.baseurl }}/dynatrace-extensions-copilot/assets/gifs/prometheus_scraper.gif)
+![prometheus_codelens]({{ site.baseurl }}assets/gifs/prometheus_scraper.gif)
 
 ## WMI Query Code Lenses
 
@@ -42,13 +42,13 @@ tenant or other external endpoints.
   - To browse the results of the query and check the column values
   - To get the number of unique dimensions that a query would create for this machine
 
-![wmi_codelens]({{ site.baseurl }}/dynatrace-extensions-copilot/assets/gifs/wmi_codelens.gif)
+![wmi_codelens]({{ site.baseurl }}assets/gifs/wmi_codelens.gif)
 
 ## Unified Analysis Screens Code Lenses
 
 - Open the List or Details Unified Analysis screen for any entity type
 
-![screen_code_lens]({{ site.baseurl }}/dynatrace-extensions-copilot/assets/gifs/screen_code_lens.gif)
+![screen_code_lens]({{ site.baseurl }}assets/gifs/screen_code_lens.gif)
 
 <p class="notice--warning">
   <strong>⚠️ Warning:</strong>

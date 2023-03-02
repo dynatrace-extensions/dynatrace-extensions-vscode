@@ -16,7 +16,7 @@ Builds your extension and its artefacts into a signed .zip archive which is plac
 
 ## Demo
 
-![build_command]({{ site.baseurl }}/dynatrace-extensions-copilot/assets/gifs/cmd_build.gif)
+![build_command]({{ site.baseurl }}assets/gifs/cmd_build.gif)
 
 ## Detailed command flow
 

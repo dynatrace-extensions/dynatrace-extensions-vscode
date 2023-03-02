@@ -8,7 +8,7 @@ toc_sticky: true
 Once the Copilot is installed your editor will show the Dynatrace icon in its activity bar.
 Use the Extension Workspaces view to keep track of all your projects and easily switch between.
 
-![workspaces]({{ site.baseurl }}/dynatrace-extensions-copilot/assets/images/workspaces_view.png)
+![workspaces]({{ site.baseurl }}assets/images/workspaces_view.png)
 
 ## Use cases
 

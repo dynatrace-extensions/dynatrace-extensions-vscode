@@ -13,7 +13,7 @@ Generates all the credentials needed for signing and validating Extensions 2.0.
 
 ## Demo
 
-![generate_certificates]({{ site.baseurl }}/dynatrace-extensions-copilot/assets/gifs/generate_certificates.gif)
+![generate_certificates]({{ site.baseurl }}assets/gifs/generate_certificates.gif)
 
 ## Detailed command flow
 

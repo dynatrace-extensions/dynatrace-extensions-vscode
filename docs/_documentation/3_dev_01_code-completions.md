@@ -18,7 +18,7 @@ can be inserted at the location of your cursor.
 
 ## Demo
 
-![code completions]({{ site.baseurl }}/dynatrace-extensions-copilot/assets/gifs/code_completions.gif)
+![code completions]({{ site.baseurl }}assets/gifs/code_completions.gif)
 
 ## Currently implemented triggers
 

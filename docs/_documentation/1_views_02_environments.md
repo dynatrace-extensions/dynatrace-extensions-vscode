@@ -8,7 +8,7 @@ toc_sticky: true
 Once the Copilot is installed your editor will show the Dynatrace icon in its activity bar.
 Use the Environments view to register Dynatrace tenants and easily switch between them.
 
-![workspaces]({{ site.baseurl }}/dynatrace-extensions-copilot/assets/images/environments_view.png)
+![workspaces]({{ site.baseurl }}assets/images/environments_view.png)
 
 ## Use cases
 

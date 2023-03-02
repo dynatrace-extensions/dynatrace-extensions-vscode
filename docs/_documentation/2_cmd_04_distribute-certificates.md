@@ -18,7 +18,7 @@ detected).
 
 ## Demo
 
-![distribute_certificate]({{ site.baseurl }}/dynatrace-extensions-copilot/assets/gifs/distribute_certificate.gif)
+![distribute_certificate]({{ site.baseurl }}assets/gifs/distribute_certificate.gif)
 
 ## Detailed command flow
 
