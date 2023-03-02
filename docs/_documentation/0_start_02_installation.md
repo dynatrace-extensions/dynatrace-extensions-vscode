@@ -10,7 +10,7 @@ You can either open the link above, or access the Extensions menu from your edit
 for "dynatrace". Access the extension and install it from there.
 
 <p align='center'>
-  <img src="/assets/images/copilot_on_marketplace.png"/>
+  <img src="/dynatrace-extensions-copilot/assets/images/copilot_on_marketplace.png"/>
 </p>
 
 <p class="notice--info">
