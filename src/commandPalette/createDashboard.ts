@@ -128,6 +128,7 @@ function buildDashboard(extension: ExtensionStub, short: string = "Extension"): 
   // Put together the details
   var dashboard = dashboardTemplate;
   dashboard = dashboard.replace("<extension-id>", extension.name);
+  dashboard = dashboard.replace("<dashboard-title>", `Extension Overview (${extension.name}:${extension.version})`);
   dashboard = dashboard.replace(/<extension-short>/g, short);
   dashboard = dashboard.replace("<currently-monitoring-width>", currentlyMonitoringWidth.toString());
   dashboard = dashboard.replace("<navigation-links>", navigationLinks.join(" | "));
@@ -438,7 +439,7 @@ const entityTitleTile = `\
 const dashboardTemplate = `\
 {
   "dashboardMetadata": {
-    "name": "<extension-short> Overview",
+    "name": "<dashboard-title>",
     "shared": true,
     "owner": "Dynatrace",
     "tags": [
