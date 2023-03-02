@@ -162,10 +162,7 @@ function createUniqueAlertFileName(alertsDir: string, alertName: string) : strin
 
   while (true) {
     currentFileNumber++;
-    // Convert alertName to lowerCase, only allow \w and - characters
-    // Make sure we don't have multiple - in a row
-    const alertNameForFile = alertName.toLowerCase().replace(/[^a-z0-9-]/g, "-").replace(/-+/g, "-");
-  
+    const alertNameForFile = createValidFileName(alertName);
   
     // Pad the number with zeros so the lenght is always 3
     const paddedFileNumber = currentFileNumber.toString().padStart(3, "0");
@@ -177,4 +174,15 @@ function createUniqueAlertFileName(alertsDir: string, alertName: string) : strin
     }
   }
 
+}
+
+export function createValidFileName(name: string) {
+  // Convert name to lowerCase, only allow \w and - characters
+  // It must follow the pattern [a-zA-Z0-9]+([-_./][a-zA-Z0-9]+)*
+  const nameForFile = name.toLowerCase()
+    .replace(/[^a-z0-9-]/g, "-") // Only allow a-z, 0-9 and -
+    .replace(/-+/g, "-") // Replace multiple '-' with a single '-'
+    .replace(/^-+|-+$/g, ''); // Remove leading and trailing '-'
+
+  return nameForFile;
 }
