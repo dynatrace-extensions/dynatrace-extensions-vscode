@@ -1,6 +1,6 @@
 # Change Log
 
-## Version 1.0.3 (unreleased)
+## Version 1.0.3 (03.03.2023)
 
 ### 🪲 Fixed in this version:
 - [#75 - Link to configure extension not working on dashboard](https://github.com/dynatrace-extensions/dynatrace-extensions-copilot/issues/75)
@@ -9,6 +9,7 @@
 
 ### 🚀 Improved in this version:
 - [#76 - Generated dashboard title to include extension name](https://github.com/dynatrace-extensions/dynatrace-extensions-copilot/issues/76)
+- [#62 - Long running commands can be cancelled](https://github.com/dynatrace-extensions/dynatrace-extensions-copilot/issues/62)
 
 ---
 
