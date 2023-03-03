@@ -38,4 +38,4 @@ guide you through all the setup required for first time use.
 
 ## Demo
 
-![setup_demo]({{ site.baseurl }}/assets/gifs/get_started.gif)
+![setup_demo]({{ site.baseurl }}assets/gifs/get_started.gif)
