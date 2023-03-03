@@ -21,9 +21,9 @@ import { copyFileSync, existsSync, mkdirSync, readFileSync, rmSync, writeFileSyn
 import { sign } from "../utils/cryptography";
 import { Dynatrace } from "../dynatrace-api/dynatrace";
 import { DynatraceAPIError } from "../dynatrace-api/errors";
-import { normalizeExtensionVersion, incrementExtensionVersion, getDatasourceName } from "../utils/extensionParsing";
+import { normalizeExtensionVersion, incrementExtensionVersion } from "../utils/extensionParsing";
 import { FastModeStatus } from "../statusBar/fastMode";
-import { exec, ExecOptions, ProcessEnvOptions } from "child_process";
+import { exec, ExecOptions } from "child_process";
 import { getPythonPath } from "../utils/otherExtensions";
 import { getExtensionFilePath, resolveRealPath } from "../utils/fileSystem";
 
@@ -66,8 +66,13 @@ export async function buildExtension(
     {
       location: vscode.ProgressLocation.Notification,
       title: "Building extension",
+      cancellable: true,
     },
-    async progress => {
+    async (progress, cancelToken) => {
+      cancelToken.onCancellationRequested(() => {
+        vscode.window.showWarningMessage("Operation cancelled by user.");
+      });
+
       // Handle unsaved changes
       const extensionDocument = vscode.workspace.textDocuments.find(doc => doc.fileName.endsWith("extension.yaml"));
       if (extensionDocument?.isDirty) {
@@ -79,6 +84,10 @@ export async function buildExtension(
           return;
         }
       }
+      if (cancelToken.isCancellationRequested) {
+        return;
+      }
+
       // Pre-build workflow
       let updatedVersion = "";
       progress.report({ message: "Checking prerequisites" });
@@ -89,6 +98,10 @@ export async function buildExtension(
       } catch (err: any) {
         vscode.window.showErrorMessage(`Error during pre-build phase: ${err.message}`);
         return;
+      } finally {
+        if (cancelToken.isCancellationRequested) {
+          return;
+        }
       }
 
       // Package assembly workflow
@@ -96,13 +109,17 @@ export async function buildExtension(
       const zipFilename = `${extensionName.replace(":", "_")}-${updatedVersion}.zip`;
       try {
         if (/^python:$/gm.test(extension)) {
-          await assemblePython(workspaceStorage, path.resolve(extensionDir, ".."), devCertKey, oc);
+          await assemblePython(workspaceStorage, path.resolve(extensionDir, ".."), devCertKey, oc, cancelToken);
         } else {
           assembleStandard(workspaceStorage, extensionDir, zipFilename, devCertKey);
         }
       } catch (err: any) {
         vscode.window.showErrorMessage(`Error during archiving & signing: ${err.message}`);
         return;
+      } finally {
+        if (cancelToken.isCancellationRequested) {
+          return;
+        }
       }
 
       // Validation & upload workflow
@@ -116,10 +133,14 @@ export async function buildExtension(
           updatedVersion,
           dt!,
           fastMode.status,
-          oc
+          oc,
+          cancelToken
         );
       } else {
         progress.report({ message: "Validating extension" });
+        if (cancelToken.isCancellationRequested) {
+          return;
+        }
         const valid = await validateExtension(workspaceStorage, zipFilename, distDir, oc, dt);
         if (valid) {
           vscode.window
@@ -229,13 +250,30 @@ function assembleStandard(workspaceStorage: string, extensionDir: string, zipFil
  * @param oc JSON output channel to communicate error details
  * @returns exit code or `null`
  */
-function runCommand(command: string, oc: vscode.OutputChannel, envOptions?: ExecOptions): Promise<number | null> {
+function runCommand(
+  command: string,
+  oc: vscode.OutputChannel,
+  cancelToken: vscode.CancellationToken,
+  envOptions?: ExecOptions
+): Promise<number | null> {
   let p = exec(command, envOptions);
   let [stdout, stderr] = ["", ""];
+
   return new Promise((resolve, reject) => {
-    p.stdout?.on("data", data => (stdout += data.toString()));
+    if (cancelToken.isCancellationRequested) {
+      p.kill("SIGINT");
+    }
+    p.stdout?.on("data", data => {
+      stdout += data.toString();
+      if (cancelToken.isCancellationRequested) {
+        p.kill("SIGINT");
+      }
+    });
     p.stderr?.on("data", data => (stderr += data.toString()));
     p.on("exit", code => {
+      if (cancelToken.isCancellationRequested) {
+        return resolve(1);
+      }
       if (code !== 0) {
         let [shortMessage, details] = [stderr, [""]];
         if (stderr.includes("ERROR") && stderr.includes("+")) {
@@ -270,7 +308,8 @@ async function assemblePython(
   workspaceStorage: string,
   extensionDir: string,
   certKeyPath: string,
-  oc: vscode.OutputChannel
+  oc: vscode.OutputChannel,
+  cancelToken: vscode.CancellationToken
 ) {
   let envOptions = {} as ExecOptions;
   const pythonPath = await getPythonPath();
@@ -287,7 +326,7 @@ async function assemblePython(
   }
 
   // Check we can run dt-sdk
-  await runCommand("dt-sdk --help", oc, envOptions); // this will throw if dt-sdk is not available
+  await runCommand("dt-sdk --help", oc, cancelToken, envOptions); // this will throw if dt-sdk is not available
 
   // Build
   await runCommand(
@@ -295,6 +334,7 @@ async function assemblePython(
       process.platform === "win32" ? "linux_x86_64" : "win_amd64"
     }"`,
     oc,
+    cancelToken,
     envOptions
   );
 }
@@ -352,6 +392,7 @@ async function validateExtension(
  * @param dt Dynatrace API Client
  * @param status status bar to be updated with build status
  * @param oc JSON output channel for communicating errors
+ * @param cancelToken command cancellation token
  */
 async function uploadAndActivate(
   workspaceStorage: string,
@@ -361,7 +402,8 @@ async function uploadAndActivate(
   extensionVersion: string,
   dt: Dynatrace,
   status: FastModeStatus,
-  oc: vscode.OutputChannel
+  oc: vscode.OutputChannel,
+  cancelToken: vscode.CancellationToken
 ) {
   try {
     // Check upload possible
@@ -379,6 +421,9 @@ async function uploadAndActivate(
     const file = readFileSync(path.resolve(workspaceStorage, zipFileName));
     // Upload to Dynatrace
     do {
+      if (cancelToken.isCancellationRequested) {
+        return;
+      }
       var lastError;
       var uploadStatus: string = await dt.extensionsV2
         .upload(file)
@@ -421,6 +466,8 @@ async function uploadAndActivate(
     );
     oc.show();
   } finally {
-    rmSync(path.resolve(workspaceStorage, zipFileName));
+    if (existsSync(path.resolve(workspaceStorage, zipFileName))) {
+      rmSync(path.resolve(workspaceStorage, zipFileName));
+    }
   }
 }

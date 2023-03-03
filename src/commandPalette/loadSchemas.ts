@@ -52,16 +52,21 @@ export async function loadSchemas(context: vscode.ExtensionContext, dt: Dynatrac
   var location = path.join(context.globalStorageUri.fsPath, version);
 
   // If directory exists, assume schemas already present
+  let cancelled;
   if (!existsSync(location)) {
-    downloadSchemaFiles(location, version, dt);
+    cancelled = await downloadSchemaFiles(location, version, dt);
   } else {
     const download = await vscode.window.showQuickPick(["Yes", "No"], {
       placeHolder: "Schema version already available. Do you wish to download again?",
     });
 
     if (download === "Yes") {
-      downloadSchemaFiles(location, version, dt);
+      cancelled = await downloadSchemaFiles(location, version, dt);
     }
+  }
+  if (cancelled === "cancelled") {
+    vscode.window.showWarningMessage("Operation cancelled by user");
+    return false;
   }
 
   // Update the YAML Schema extension to use the new version
@@ -97,13 +102,17 @@ export async function loadSchemas(context: vscode.ExtensionContext, dt: Dynatrac
  */
 function downloadSchemaFiles(location: string, version: string, dt: Dynatrace) {
   mkdirSync(location, { recursive: true });
-  vscode.window.withProgress(
+  return vscode.window.withProgress(
     {
       location: vscode.ProgressLocation.Notification,
       title: `Loading schemas ${version}`,
+      cancellable: true
     },
-    async progress => {
+    async (progress, cancelToken) => {
       progress.report({ message: "Fetching file names" });
+      if (cancelToken.isCancellationRequested) {
+        return "cancelled";
+      }
       const schemaFiles = (await dt.extensionsV2
         .listSchemaFiles(version)
         .catch(err => vscode.window.showErrorMessage(err.message))) as string[];
@@ -115,6 +124,9 @@ function downloadSchemaFiles(location: string, version: string, dt: Dynatrace) {
           axios.spread((...responses) => {
             responses.forEach(resp => {
               try {
+                if (cancelToken.isCancellationRequested) {
+                  return "cancelled";
+                }
                 let parts = resp.$id.split("/");
                 let fileName = parts[parts.length - 1];
                 writeFile(`${location}/${fileName}`, JSON.stringify(resp), err => {
