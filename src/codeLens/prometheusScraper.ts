@@ -51,7 +51,7 @@ export class PrometheusCodeLensProvider implements vscode.CodeLensProvider {
    */
   constructor(cachedDataProvider: CachedDataProvider) {
     this.codeLenses = [];
-    this.regex = /(prometheus:)/g;
+    this.regex = /^(prometheus:)/gm;
     vscode.commands.registerCommand("dt-ext-copilot.codelens.scrapeMetrics", (changeConfig: boolean) => {
       this.scrapeMetrics(changeConfig);
     });
