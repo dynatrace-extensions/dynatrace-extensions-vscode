@@ -1,5 +1,12 @@
 # Change Log
 
+## Version 1.1.0 (unreleased)
+
+### 🪲 Fixed in this version:
+- [#82 - Error message shown when opening VSCode outside of a workspace](https://github.com/dynatrace-extensions/dynatrace-extensions-copilot/issues/82)
+
+---
+
 ## Version 1.0.3 (03.03.2023)
 
 ### 🪲 Fixed in this version:

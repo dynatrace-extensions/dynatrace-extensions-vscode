@@ -66,16 +66,19 @@ export function checkEnvironmentConnected(environmentsTree: EnvironmentsTreeData
 
 /**
  * Checks whether a workspace is open within the current window or not.
+ * @param suppressMessaging if false, a message notification will be displayed to the user
  * @returns check status
  */
-export function checkWorkspaceOpen(): boolean {
+export function checkWorkspaceOpen(suppressMessaging: boolean = false): boolean {
   var status = true;
   if (!vscode.workspace.workspaceFolders || vscode.workspace.workspaceFolders.length === 0) {
-    vscode.window.showErrorMessage("You must be inside a workspace to use this command.", "Open folder").then(opt => {
-      if (opt === "Open folder") {
-        vscode.commands.executeCommand("vscode.openFolder");
-      }
-    });
+    if (!suppressMessaging) {
+      vscode.window.showErrorMessage("You must be inside a workspace to use this command.", "Open folder").then(opt => {
+        if (opt === "Open folder") {
+          vscode.commands.executeCommand("vscode.openFolder");
+        }
+      });
+    }
     status = false;
   }
   console.log(`Check - is a workspace open? > ${status}`);

@@ -108,7 +108,7 @@ export function activate(context: vscode.ExtensionContext) {
   const diagnosticsProvider = new DiagnosticsProvider(context, cachedDataProvider);
   const diagnosticFixProvider = new DiagnosticFixProvider(diagnosticsProvider);
   var editTimeout: NodeJS.Timeout | undefined;
-  if (checkWorkspaceOpen() && isExtensionsWorkspace(context, false)) {
+  if (checkWorkspaceOpen(true) && isExtensionsWorkspace(context, false)) {
     checkBitBucketReady().then(ready => {
       if (ready) {
         new BitBucketStatus(context);
