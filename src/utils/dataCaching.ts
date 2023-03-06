@@ -172,4 +172,8 @@ export class CachedDataProvider {
     const infos = oids.map(oid => this.getSingleOidInfo(oid));
     return await Promise.all(infos);
   }
+
+  public getSnmpData(): Record<string, OidInformation> {
+    return this.oidInfo;
+  }
 }

@@ -59,6 +59,7 @@ import { runWMIQuery, WmiQueryResult } from "./codeLens/utils/wmiUtils";
 import { WMIQueryResultsPanel } from "./webviews/wmiQueryResults";
 import { WmiCompletionProvider } from "./codeCompletions/wmi";
 import { createAlert } from "./commandPalette/createAlert";
+import { SnmpActionProvider } from "./codeActions/snmp";
 
 /**
  * Sets up the VSCode extension by registering all the available functionality as disposable objects.
@@ -101,6 +102,7 @@ export function activate(context: vscode.ExtensionContext) {
   const screensLensProvider = new ScreenLensProvider(tenantsTreeViewProvider);
   const prometheusLensProvider = new PrometheusCodeLensProvider(cachedDataProvider);
   const prometheusActionProvider = new PrometheusActionProvider(cachedDataProvider);
+  const snmpActionProvider = new SnmpActionProvider(cachedDataProvider);
   const wmiLensProvider = new WmiCodeLensProvider(cachedDataProvider);
   const fastModeChannel = vscode.window.createOutputChannel("Dynatrace Fast Mode", "json");
   const fastModeStatus = new FastModeStatus(fastModeChannel);
@@ -134,6 +136,10 @@ export function activate(context: vscode.ExtensionContext) {
     }),
     // Code actions for Prometheus data
     vscode.languages.registerCodeActionsProvider(extension2selector, prometheusActionProvider, {
+      providedCodeActionKinds: [vscode.CodeActionKind.QuickFix],
+    }),
+    // Code actions for SNMP data
+    vscode.languages.registerCodeActionsProvider(extension2selector, snmpActionProvider, {
       providedCodeActionKinds: [vscode.CodeActionKind.QuickFix],
     }),
     // Code actions for fixing issues
