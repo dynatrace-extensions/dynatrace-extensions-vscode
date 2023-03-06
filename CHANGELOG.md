@@ -6,6 +6,9 @@
 - [#82 - Error message shown when opening VSCode outside of a workspace](https://github.com/dynatrace-extensions/dynatrace-extensions-copilot/issues/82)
 - [#83 - Prometheus code lens appears too often](https://github.com/dynatrace-extensions/dynatrace-extensions-copilot/issues/83)
 
+### ✨ New in this version:
+- [#66 - Code actions for SNMP metric metadata](https://github.com/dynatrace-extensions/dynatrace-extensions-copilot/issues/66)
+
 ---
 
 ## Version 1.0.3 (03.03.2023)
