@@ -15,7 +15,6 @@
  */
 
 import * as vscode from "vscode";
-import * as yaml from "yaml";
 import { CachedDataProvider } from "../utils/dataCaching";
 import {
   getAttributesKeysFromTopology,
@@ -59,9 +58,9 @@ export class EntitySelectorCompletionProvider implements vscode.CompletionItemPr
     token: vscode.CancellationToken,
     context: vscode.CompletionContext
   ): vscode.CompletionItem[] {
-    var completionItems: vscode.CompletionItem[] = [];
-    var extension = yaml.parse(document.getText()) as ExtensionStub;
-    var line = document.lineAt(position.line).text.substring(0, position.character);
+    const completionItems: vscode.CompletionItem[] = [];
+    const extension = this.cachedData.getExtensionYaml(document.getText());
+    const line = document.lineAt(position.line).text.substring(0, position.character);
 
     this.builtinEntities = this.cachedData.getBuiltinEntities();
 
@@ -71,7 +70,7 @@ export class EntitySelectorCompletionProvider implements vscode.CompletionItemPr
 
       // If at the start of template, offer pre-defined selectors or option to build
       if (line.endsWith("entitySelectorTemplate: ")) {
-        completionItems.push(...this.createKnownSelectorCompletions(position, document));
+        completionItems.push(...this.createKnownSelectorCompletions(position, document, extension));
         completionItems.push(this.createBaseSelectorCompletion());
       }
       // If we just started a relationship definition, assume new selector start
@@ -124,10 +123,10 @@ export class EntitySelectorCompletionProvider implements vscode.CompletionItemPr
    */
   private createKnownSelectorCompletions(
     position: vscode.Position,
-    document: vscode.TextDocument
+    document: vscode.TextDocument,
+    extension: ExtensionStub
   ): vscode.CompletionItem[] {
     var completions: vscode.CompletionItem[] = [];
-    const extension = yaml.parse(document.getText()) as ExtensionStub;
     const parentBlocks = getParentBlocks(position.line, document.getText());
     const screenIdx = getBlockItemIndexAtLine("screens", position.line, document.getText());
 
@@ -146,7 +145,7 @@ export class EntitySelectorCompletionProvider implements vscode.CompletionItemPr
     }
 
     // Gather relationships of that entity, and convert to completion items
-    getRelationships(entityType, extension).forEach((rel) => {
+    getRelationships(entityType, extension).forEach(rel => {
       var relEntityName = getEntityName(rel.entity, extension);
       if (relEntityName === "") {
         relEntityName = rel.entity;
@@ -178,10 +177,8 @@ export class EntitySelectorCompletionProvider implements vscode.CompletionItemPr
   private createTypeCompletions(extension: ExtensionStub, selector: string): vscode.CompletionItem[] {
     var completions: vscode.CompletionItem[] = [];
     var usedTypes = this.getTypesFromSelector(selector);
-    var customTypes = extension.topology.types.map((type) => type.name).filter((e) => !usedTypes.includes(e));
-    var builtinTypes = this.builtinEntities
-      .map((type) => type.type!.toLowerCase())
-      .filter((e) => !usedTypes.includes(e));
+    var customTypes = extension.topology.types.map(type => type.name).filter(e => !usedTypes.includes(e));
+    var builtinTypes = this.builtinEntities.map(type => type.type!.toLowerCase()).filter(e => !usedTypes.includes(e));
 
     if (customTypes.length > 0) {
       const customTypeCompletion = new vscode.CompletionItem("Custom entity types", vscode.CompletionItemKind.Class);
@@ -220,7 +217,7 @@ export class EntitySelectorCompletionProvider implements vscode.CompletionItemPr
     var completions: vscode.CompletionItem[] = [];
     var operators = this.getAvailableOperators(selector, extension);
 
-    operators.forEach((operator) => {
+    operators.forEach(operator => {
       const operatorCompletion = new vscode.CompletionItem(operator.name, vscode.CompletionItemKind.Constant);
       operatorCompletion.detail = "Copilot suggestion";
       operatorCompletion.documentation = operator.description;
@@ -356,7 +353,7 @@ export class EntitySelectorCompletionProvider implements vscode.CompletionItemPr
     };
 
     return [
-      ...singleUseOperators.filter((operator) => !selector.includes(operator.name)),
+      ...singleUseOperators.filter(operator => !selector.includes(operator.name)),
       ...otherOperators,
       attributeOperator,
     ];

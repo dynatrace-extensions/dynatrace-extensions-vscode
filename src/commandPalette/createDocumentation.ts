@@ -15,11 +15,11 @@
  */
 
 import * as vscode from "vscode";
-import * as yaml from "yaml";
 import * as path from "path";
 import { readFileSync, writeFileSync } from "fs";
 import { getAllMetricsByFeatureSet } from "../utils/extensionParsing";
 import { getExtensionFilePath } from "../utils/fileSystem";
+import { CachedDataProvider } from "../utils/dataCaching";
 
 /**
  * Delivers the "Create documentation" command functionality.
@@ -27,14 +27,14 @@ import { getExtensionFilePath } from "../utils/fileSystem";
  * a README.md file which is written in the workspace at the same level as the extension folder.
  * @returns void
  */
-export async function createDocumentation(context: vscode.ExtensionContext) {
+export async function createDocumentation(cachedData: CachedDataProvider, context: vscode.ExtensionContext) {
   await vscode.window.withProgress(
     { location: vscode.ProgressLocation.Notification, title: "Creating documentation" },
     async progress => {
       progress.report({ message: "Parsing metadata" });
-      var extensionYaml = getExtensionFilePath(context)!;
-      var extensionDir = path.dirname(extensionYaml);
-      var extension = yaml.parse(readFileSync(extensionYaml).toString());
+      const extensionFile = getExtensionFilePath(context)!;
+      const extensionDir = path.dirname(extensionFile);
+      const extension = cachedData.getExtensionYaml(readFileSync(extensionFile).toString());
 
       progress.report({ message: "Writing README.md" });
       writeDocumentation(extension, extensionDir);

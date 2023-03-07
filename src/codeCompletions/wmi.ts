@@ -40,7 +40,7 @@ export class WmiCompletionProvider implements vscode.CompletionItemProvider {
   ): vscode.ProviderResult<
     vscode.CompletionItem[] | vscode.CompletionList<vscode.CompletionItem>
   > {
-    const extension = yaml.parse(document.getText()) as ExtensionStub;
+    const extension = this.cachedData.getExtensionYaml(document.getText());
 
     // Exit early if different datasource
     if (!extension.wmi) {

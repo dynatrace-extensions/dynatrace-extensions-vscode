@@ -14,39 +14,28 @@
   limitations under the License.
  */
 
-import { EnvironmentsTreeDataProvider } from "../treeViews/environmentsTreeView";
 import * as vscode from "vscode";
-import * as yaml from "yaml";
 import * as crypto from "crypto";
 import { getExtensionFilePath } from "../utils/fileSystem";
-import {
-  existsSync,
-  mkdirSync,
-  readdirSync,
-  readFileSync,
-  writeFileSync,
-} from "fs";
+import { existsSync, mkdirSync, readdirSync, readFileSync, writeFileSync } from "fs";
 import path = require("path");
 import { getAllMetricKeysFromDataSource } from "../utils/extensionParsing";
+import { CachedDataProvider } from "../utils/dataCaching";
 
-export async function createAlert(context: vscode.ExtensionContext) {
+export async function createAlert(cachedData: CachedDataProvider, context: vscode.ExtensionContext) {
   const extensionFile = getExtensionFilePath(context)!;
-  const extension: ExtensionStub = yaml.parse(
-    readFileSync(extensionFile).toString()
-  );
+  const extension = cachedData.getExtensionYaml(readFileSync(extensionFile).toString());
 
   // TODO, we could ask the user if they want to create a new alert or edit an existing one?
 
   // Ask the user to select a metric
   let metricKeys = getAllMetricKeysFromDataSource(extension);
   if (metricKeys.length === 0 && extension.metrics) {
-    metricKeys = extension.metrics.map((metric) => metric.key);
+    metricKeys = extension.metrics.map(metric => metric.key);
   }
 
   if (metricKeys.length === 0) {
-    vscode.window.showWarningMessage(
-      "No metrics defined in extension.yaml, please define them before creating alerts"
-    );
+    vscode.window.showWarningMessage("No metrics defined in extension.yaml, please define them before creating alerts");
     return;
   }
 
@@ -55,9 +44,7 @@ export async function createAlert(context: vscode.ExtensionContext) {
     title: "Extension workspace: Create Alert",
   });
   if (!metricToUse) {
-    vscode.window.showErrorMessage(
-      "No metric was selected. Operation cancelled."
-    );
+    vscode.window.showErrorMessage("No metric was selected. Operation cancelled.");
     return;
   }
 
@@ -67,9 +54,7 @@ export async function createAlert(context: vscode.ExtensionContext) {
     title: "Extension workspace: Create Alert",
   });
   if (!alertName) {
-    vscode.window.showErrorMessage(
-      "No alert name was entered. Operation cancelled."
-    );
+    vscode.window.showErrorMessage("No alert name was entered. Operation cancelled.");
     return;
   }
 
@@ -79,9 +64,7 @@ export async function createAlert(context: vscode.ExtensionContext) {
     title: "Extension workspace: Create Alert",
   });
   if (!alertCondition) {
-    vscode.window.showErrorMessage(
-      "No alert condition was selected. Operation cancelled."
-    );
+    vscode.window.showErrorMessage("No alert condition was selected. Operation cancelled.");
     return;
   }
 
@@ -92,15 +75,12 @@ export async function createAlert(context: vscode.ExtensionContext) {
   });
 
   if (!threshold || isNaN(Number(threshold))) {
-    vscode.window.showErrorMessage(
-      "No valid threshold was entered. Operation cancelled."
-    );
+    vscode.window.showErrorMessage("No valid threshold was entered. Operation cancelled.");
     return;
   }
 
   // Convert threshold to a number
   const numberThreshold = Number(threshold);
-
 
   // Create directories for alerts if they don't exist
   const extensionDir = path.resolve(extensionFile, "..");
@@ -115,8 +95,7 @@ export async function createAlert(context: vscode.ExtensionContext) {
     id: crypto.randomUUID(),
     metricSelector: metricToUse,
     name: alertName,
-    description:
-      "The {metricname} value was {alert_condition} normal behavior. Dimensions: {dims}",
+    description: "The {metricname} value was {alert_condition} normal behavior. Dimensions: {dims}",
     enabled: true,
     monitoringStrategy: {
       type: "STATIC_THRESHOLD",
@@ -148,14 +127,12 @@ export async function createAlert(context: vscode.ExtensionContext) {
     path: `alerts/${fileName}`,
   });
 
-  writeFileSync(extensionFile, yaml.stringify(extension, { lineWidth: 0 }));
+  writeFileSync(extensionFile, cachedData.getStringifiedExtension(extension));
 
   vscode.window.showInformationMessage(`Alert '${alertName}' created on alerts/${fileName}`);
-
-
 }
 
-function createUniqueAlertFileName(alertsDir: string, alertName: string) : string {
+function createUniqueAlertFileName(alertsDir: string, alertName: string): string {
   // Count how many files we have inside the alerts directory with readDirSync
   let currentAlertFiles = readdirSync(alertsDir);
   let currentFileNumber = currentAlertFiles.length;
@@ -163,7 +140,7 @@ function createUniqueAlertFileName(alertsDir: string, alertName: string) : strin
   while (true) {
     currentFileNumber++;
     const alertNameForFile = createValidFileName(alertName);
-  
+
     // Pad the number with zeros so the lenght is always 3
     const paddedFileNumber = currentFileNumber.toString().padStart(3, "0");
     const fileName = `alert-${paddedFileNumber}-${alertNameForFile}.json`;
@@ -173,16 +150,16 @@ function createUniqueAlertFileName(alertsDir: string, alertName: string) : strin
       return fileName;
     }
   }
-
 }
 
 export function createValidFileName(name: string) {
   // Convert name to lowerCase, only allow \w and - characters
   // It must follow the pattern [a-zA-Z0-9]+([-_./][a-zA-Z0-9]+)*
-  const nameForFile = name.toLowerCase()
+  const nameForFile = name
+    .toLowerCase()
     .replace(/[^a-z0-9-]/g, "-") // Only allow a-z, 0-9 and -
     .replace(/-+/g, "-") // Replace multiple '-' with a single '-'
-    .replace(/^-+|-+$/g, ''); // Remove leading and trailing '-'
+    .replace(/^-+|-+$/g, ""); // Remove leading and trailing '-'
 
   return nameForFile;
 }

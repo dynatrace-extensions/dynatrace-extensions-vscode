@@ -142,7 +142,7 @@ export class WmiCodeLensProvider implements vscode.CodeLensProvider {
       return [];
     }
 
-    const extension = yaml.parse(text) as ExtensionStub;
+    const extension = this.cachedData.getExtensionYaml(text);
 
     // Find all query: definitions
     // They can be under the list of groups, or under the list subgroups

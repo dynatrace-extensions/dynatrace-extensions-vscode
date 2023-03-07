@@ -161,7 +161,7 @@ export class SelectorCodeLensProvider implements vscode.CodeLensProvider {
     }
     // Load yaml only for entity selectors
     if (this.selectorType === "entity") {
-      extension = yaml.parse(document.getText()) as ExtensionStub;
+      extension = this.cachedData.getExtensionYaml(document.getText());
     }
     // Create lenses
     await Promise.all(

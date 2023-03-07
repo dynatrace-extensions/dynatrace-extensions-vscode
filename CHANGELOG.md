@@ -12,6 +12,7 @@
 
 ### 🚀 Improved in this version:
 - [#85 - Git-based functionality removed](https://github.com/dynatrace-extensions/dynatrace-extensions-copilot/issues/85)
+- [#64 - Reduce the amount of yaml parsing invocations](https://github.com/dynatrace-extensions/dynatrace-extensions-copilot/issues/64)
 
 ---
 

@@ -15,13 +15,10 @@
  */
 
 import * as vscode from "vscode";
-import * as yaml from "yaml";
 import { PromData } from "../codeLens/prometheusScraper";
 import { CachedDataProvider } from "../utils/dataCaching";
 import {
   getAllMetricKeysAndValuesFromDataSource,
-  getAllMetricKeysFromDataSource,
-  getDatasourceName,
   getPrometheusLabelKeys,
   getPrometheusMetricKeys,
 } from "../utils/extensionParsing";
@@ -67,7 +64,7 @@ export class PrometheusActionProvider implements vscode.CodeActionProvider {
 
     const lineText = document.lineAt(range.start.line).text;
     const parentBlocks = getParentBlocks(range.start.line, document.getText());
-    const extension = yaml.parse(document.getText()) as ExtensionStub;
+    const extension = this.cachedData.getExtensionYaml(document.getText());
 
     // Metrics and dimensions
     if (

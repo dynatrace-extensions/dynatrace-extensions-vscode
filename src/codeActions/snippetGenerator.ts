@@ -15,7 +15,6 @@
  */
 
 import * as vscode from "vscode";
-import * as yaml from "yaml";
 import {
   getAllMetricsByFeatureSet,
   getAttributesFromTopology,
@@ -43,11 +42,21 @@ import {
   slugify,
 } from "./utils/snippetBuildingUtils";
 import { getBlockItemIndexAtLine, getParentBlocks } from "../utils/yamlParsing";
+import { CachedDataProvider } from "../utils/dataCaching";
 
 /**
  * Provider for Code Actions that insert snippets of code into the existing extension yaml.
  */
 export class SnippetGenerator implements vscode.CodeActionProvider {
+  private readonly cachedData: CachedDataProvider;
+
+  /**
+   * @param cachedDataProvider a provider for cacheable data
+   */
+  constructor (cachedDataProvider: CachedDataProvider) {
+    this.cachedData = cachedDataProvider;
+  }
+
   /**
    * Provides Code Actions that insert code snippets relevant to the triggered context.
    * @param document document that activated the provider
@@ -62,8 +71,8 @@ export class SnippetGenerator implements vscode.CodeActionProvider {
     context: vscode.CodeActionContext,
     token: vscode.CancellationToken
   ): vscode.ProviderResult<(vscode.CodeAction | vscode.Command)[]> {
-    var codeActions: vscode.CodeAction[] = [];
-    var extension = yaml.parse(document.getText()) as ExtensionStub;
+    const codeActions: vscode.CodeAction[] = [];
+    const extension = this.cachedData.getExtensionYaml(document.getText());
     var parentBlocks = getParentBlocks(range.start.line, document.getText());
     var lineText = document.lineAt(range.start.line).text;
 

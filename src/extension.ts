@@ -82,11 +82,11 @@ export function activate(context: vscode.ExtensionContext) {
   // Additional context: number of environments affects the welcome message for the tenants tree view
   vscode.commands.executeCommand("setContext", "dt-ext-copilot.numEnvironments", getAllEnvironments(context).length);
   // Create feature/data providers
-  const extensionsTreeViewProvider = new ExtensionsTreeDataProvider(context);
   const connectionStatusManager = new ConnectionStatusManager();
   const tenantsTreeViewProvider = new EnvironmentsTreeDataProvider(context, connectionStatusManager);
   const cachedDataProvider = new CachedDataProvider(tenantsTreeViewProvider);
-  const snippetCodeActionProvider = new SnippetGenerator();
+  const extensionsTreeViewProvider = new ExtensionsTreeDataProvider(cachedDataProvider, context);
+  const snippetCodeActionProvider = new SnippetGenerator(cachedDataProvider);
   const metricLensProvider = new SelectorCodeLensProvider(
     "metricSelector:",
     "metricSelectorsCodeLens",
@@ -97,7 +97,7 @@ export function activate(context: vscode.ExtensionContext) {
     "entitySelectorsCodeLens",
     cachedDataProvider
   );
-  const screensLensProvider = new ScreenLensProvider(tenantsTreeViewProvider);
+  const screensLensProvider = new ScreenLensProvider(tenantsTreeViewProvider, cachedDataProvider);
   const prometheusLensProvider = new PrometheusCodeLensProvider(cachedDataProvider);
   const prometheusActionProvider = new PrometheusActionProvider(cachedDataProvider);
   const snmpActionProvider = new SnmpActionProvider(cachedDataProvider);
@@ -112,7 +112,13 @@ export function activate(context: vscode.ExtensionContext) {
   // Perform all feature registrations
   context.subscriptions.push(
     // Commands for the Command Palette
-    ...registerCommandPaletteCommands(tenantsTreeViewProvider, diagnosticsProvider, genericChannel, context),
+    ...registerCommandPaletteCommands(
+      tenantsTreeViewProvider,
+      diagnosticsProvider,
+      cachedDataProvider,
+      genericChannel,
+      context
+    ),
     // Commands for enabling/disabling features
     ...registerFeatureSwitchCommands(),
     // Auto-completion providers
@@ -266,7 +272,11 @@ function registerCompletionProviders(
       ":"
     ),
     // Screens metadata/items
-    vscode.languages.registerCompletionItemProvider(documentSelector, new ScreensMetaCompletionProvider(), ":"),
+    vscode.languages.registerCompletionItemProvider(
+      documentSelector,
+      new ScreensMetaCompletionProvider(cachedDataProvider),
+      ":"
+    ),
     // Prometheus data
     vscode.languages.registerCompletionItemProvider(
       documentSelector,
@@ -282,6 +292,7 @@ function registerCompletionProviders(
  * This is so that all commands can be created in one function, keeping the activation function more tidy.
  * @param tenantsProvider a provider for environments tree data
  * @param diagnosticsProvider a provider for diagnostics
+ * @param cachedDataProvider a provider for cacheable data
  * @param outputChannel a JSON output channel for communicating data
  * @param context {@link vscode.ExtensionContext}
  * @returns list commands as disposables
@@ -289,6 +300,7 @@ function registerCompletionProviders(
 function registerCommandPaletteCommands(
   tenantsProvider: EnvironmentsTreeDataProvider,
   diagnosticsProvider: DiagnosticsProvider,
+  cachedDataProvider: CachedDataProvider,
   outputChannel: vscode.OutputChannel,
   context: vscode.ExtensionContext
 ): vscode.Disposable[] {
@@ -351,31 +363,31 @@ function registerCommandPaletteCommands(
         checkEnvironmentConnected(tenantsProvider) &&
         checkExtensionZipExists()
       ) {
-        uploadExtension((await tenantsProvider.getDynatraceClient())!);
+        uploadExtension((await tenantsProvider.getDynatraceClient())!, cachedDataProvider);
       }
     }),
     // Activate a given version of extension 2.0
     vscode.commands.registerCommand("dt-ext-copilot.activateExtension", async (version?: string) => {
       if (checkWorkspaceOpen() && isExtensionsWorkspace(context) && checkEnvironmentConnected(tenantsProvider)) {
-        activateExtension(context, (await tenantsProvider.getDynatraceClient())!, version);
+        activateExtension(context, (await tenantsProvider.getDynatraceClient())!, cachedDataProvider, version);
       }
     }),
     // Create Extension documentation
     vscode.commands.registerCommand("dt-ext-copilot.createDocumentation", () => {
       if (checkWorkspaceOpen() && isExtensionsWorkspace(context)) {
-        createDocumentation(context);
+        createDocumentation(cachedDataProvider, context);
       }
     }),
     // Create Overview dashboard
     vscode.commands.registerCommand("dt-ext-copilot.createDashboard", () => {
       if (checkWorkspaceOpen() && isExtensionsWorkspace(context)) {
-        createOverviewDashboard(tenantsProvider, outputChannel, context);
+        createOverviewDashboard(tenantsProvider, cachedDataProvider, outputChannel, context);
       }
     }),
     // Create Alert
     vscode.commands.registerCommand("dt-ext-copilot.createAlert", () => {
       if (checkWorkspaceOpen() && isExtensionsWorkspace(context)) {
-        createAlert(context);
+        createAlert(cachedDataProvider, context);
       }
     }),
   ];

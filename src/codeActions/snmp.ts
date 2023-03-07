@@ -15,24 +15,20 @@
  */
 
 import * as vscode from "vscode";
-import * as yaml from "yaml";
 import { CachedDataProvider } from "../utils/dataCaching";
 import { getMetricsFromDataSource } from "../utils/extensionParsing";
-import { OidInformation } from "../utils/snmp";
 import { buildMetricMetadataSnippet, indentSnippet } from "./utils/snippetBuildingUtils";
 
 /**
  * Provider for Code Actions for SNMP-based extensions, leveraging online OID information.
  */
 export class SnmpActionProvider implements vscode.CodeActionProvider {
-  private snmpData: Record<string, OidInformation>;
   private readonly cachedData: CachedDataProvider;
 
   /**
    * @param cachedDataProvider provider of cached data (i.e. prometheus scraped data)
    */
   constructor(cachedDataProvider: CachedDataProvider) {
-    this.snmpData = {};
     this.cachedData = cachedDataProvider;
   }
 
@@ -58,7 +54,7 @@ export class SnmpActionProvider implements vscode.CodeActionProvider {
     }
 
     const lineText = document.lineAt(range.start.line).text;
-    const extension = yaml.parse(document.getText()) as ExtensionStub;
+    const extension = this.cachedData.getExtensionYaml(document.getText());
 
     if (lineText.startsWith("metrics:")) {
       codeActions.push(...(await this.createMetadataInsertions(document, range, extension)));

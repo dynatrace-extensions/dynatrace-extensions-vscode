@@ -15,6 +15,7 @@
  */
 
 import Axios from "axios";
+import * as yaml from "yaml";
 import { EnvironmentsTreeDataProvider } from "../treeViews/environmentsTreeView";
 import { ValidationStatus } from "../codeLens/utils/selectorUtils";
 import { PromData } from "../codeLens/prometheusScraper";
@@ -33,6 +34,9 @@ export class CachedDataProvider {
   private prometheusData: PromData = {};
   private wmiData: Record<string, WmiQueryResult> = {};
   private oidInfo: Record<string, OidInformation> = {};
+  private extensionYaml: ExtensionStub | undefined;
+  private extensionText: string | undefined;
+  private extensionLineCounter: yaml.LineCounter | undefined;
 
   /**
    * @param environments a Dynatrace Environments provider
@@ -175,5 +179,23 @@ export class CachedDataProvider {
 
   public getSnmpData(): Record<string, OidInformation> {
     return this.oidInfo;
+  }
+
+  public getExtensionYaml(extension: string): ExtensionStub {
+    if (this.extensionText && this.extensionText === extension) {
+      return this.extensionYaml!;
+    }
+
+    this.extensionText = extension;
+    this.extensionLineCounter = new yaml.LineCounter();
+    this.extensionYaml = yaml.parse(extension, { lineCounter: this.extensionLineCounter });
+    return this.extensionYaml!;
+  }
+
+  public getStringifiedExtension(extensionYaml?: ExtensionStub): string {
+    if (extensionYaml) {
+      return yaml.stringify(extensionYaml, { lineCounter: this.extensionLineCounter, lineWidth: 0 });
+    }
+    return yaml.stringify(this.extensionYaml, { lineCounter: this.extensionLineCounter, lineWidth: 0 });
   }
 }

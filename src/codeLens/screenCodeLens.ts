@@ -15,9 +15,9 @@
  */
 
 import * as vscode from "vscode";
-import * as yaml from "yaml";
 import { getBlockItemIndexAtLine, getParentBlocks } from "../utils/yamlParsing";
 import { EnvironmentsTreeDataProvider } from "../treeViews/environmentsTreeView";
+import { CachedDataProvider } from "../utils/dataCaching";
 const open = require("open");
 
 /**
@@ -29,14 +29,16 @@ export class ScreenLensProvider implements vscode.CodeLensProvider {
   private _onDidChangeCodeLenses: vscode.EventEmitter<void> = new vscode.EventEmitter<void>();
   public readonly onDidChangeCodeLenses: vscode.Event<void> = this._onDidChangeCodeLenses.event;
   private readonly environments: EnvironmentsTreeDataProvider;
+  private readonly cachedData: CachedDataProvider;
 
   /**
    * @param environmentsProvider - a provider of Dynatrace environments data
    */
-  constructor(environmentsProvider: EnvironmentsTreeDataProvider) {
+  constructor(environmentsProvider: EnvironmentsTreeDataProvider, cachedDataProvider: CachedDataProvider) {
     this.codeLenses = [];
     this.regex = /^  - ./gm;
     this.environments = environmentsProvider;
+    this.cachedData = cachedDataProvider;
     vscode.commands.registerCommand(
       "dt-ext-copilot.openScreen",
       (entityType: string, screenType: "list" | "details") => {
@@ -65,7 +67,7 @@ export class ScreenLensProvider implements vscode.CodeLensProvider {
     }
 
     let matches;
-    const extension: ExtensionStub = yaml.parse(text);
+    const extension = this.cachedData.getExtensionYaml(text);
     while ((matches = regex.exec(text)) !== null) {
       const line = document.lineAt(document.positionAt(matches.index).line);
       // Check we're inside the list of screens
