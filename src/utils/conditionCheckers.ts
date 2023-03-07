@@ -18,7 +18,6 @@ import * as path from "path";
 import * as vscode from "vscode";
 import { existsSync, readdirSync, readFileSync } from "fs";
 import { EnvironmentsTreeDataProvider } from "../treeViews/environmentsTreeView";
-import { env } from "process";
 import axios from "axios";
 import { getExtensionFilePath, resolveRealPath } from "./fileSystem";
 
@@ -200,31 +199,6 @@ export function checkExtensionZipExists(): boolean {
     return true;
   }
   return false;
-}
-
-/**
- * Checks whether we're ready for BitBucket operations.
- * This means there is a DTBBPAT environment variable, we can reach the BitBucket URL
- * and we're in a repo that's pointing to artifactory for extensions release.
- * @returns status of check
- */
-export async function checkBitBucketReady(): Promise<Boolean> {
-  // DTBBPAT - Dynatrace BitBucket Personal Access Token
-  if (!env.DTBBPAT) {
-    console.log("DTBBPAT is missing. Can't do BB PRs.");
-    return false;
-  }
-  // Dynatrace BitBucket URL
-  if (!(await checkUrlReachable("https://bitbucket.lab.dynatrace.org"))) {
-    console.log("BitBucket URL not reachable. Can't do BB PRs.");
-    return false;
-  }
-  // Gradle points to artifactory
-  if (!checkDtInternalProperties()) {
-    console.log("Repo not mapped to artifactory. Can't do BB PRs.");
-    return false;
-  }
-  return true;
 }
 
 /**

@@ -2,12 +2,16 @@
 
 ## Version 1.1.0 (unreleased)
 
+### ✨ New in this version:
+- [#66 - Code actions for SNMP metric metadata](https://github.com/dynatrace-extensions/dynatrace-extensions-copilot/issues/66)
+
 ### 🪲 Fixed in this version:
 - [#82 - Error message shown when opening VSCode outside of a workspace](https://github.com/dynatrace-extensions/dynatrace-extensions-copilot/issues/82)
 - [#83 - Prometheus code lens appears too often](https://github.com/dynatrace-extensions/dynatrace-extensions-copilot/issues/83)
+- [#86 - Extension not bundled correctly](https://github.com/dynatrace-extensions/dynatrace-extensions-copilot/issues/86)
 
-### ✨ New in this version:
-- [#66 - Code actions for SNMP metric metadata](https://github.com/dynatrace-extensions/dynatrace-extensions-copilot/issues/66)
+### 🚀 Improved in this version:
+- [#85 - Git-based functionality removed](https://github.com/dynatrace-extensions/dynatrace-extensions-copilot/issues/85)
 
 ---
 

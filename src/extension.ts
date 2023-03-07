@@ -23,7 +23,6 @@ import { createDocumentation } from "./commandPalette/createDocumentation";
 import { buildExtension } from "./commandPalette/buildExtension";
 import { TopologyCompletionProvider } from "./codeCompletions/topology";
 import {
-  checkBitBucketReady,
   checkCertificateExists,
   checkEnvironmentConnected,
   checkExtensionZipExists,
@@ -52,7 +51,6 @@ import { PrometheusCompletionProvider } from "./codeCompletions/prometheus";
 import { PrometheusActionProvider } from "./codeActions/prometheus";
 import { createOverviewDashboard } from "./commandPalette/createDashboard";
 import { ScreenLensProvider } from "./codeLens/screenCodeLens";
-import { BitBucketStatus } from "./statusBar/bitbucket";
 import { DiagnosticFixProvider } from "./diagnostics/diagnosticFixProvider";
 import { WmiCodeLensProvider } from "./codeLens/wmiCodeLens";
 import { runWMIQuery, WmiQueryResult } from "./codeLens/utils/wmiUtils";
@@ -110,13 +108,6 @@ export function activate(context: vscode.ExtensionContext) {
   const diagnosticsProvider = new DiagnosticsProvider(context, cachedDataProvider);
   const diagnosticFixProvider = new DiagnosticFixProvider(diagnosticsProvider);
   var editTimeout: NodeJS.Timeout | undefined;
-  if (checkWorkspaceOpen(true) && isExtensionsWorkspace(context, false)) {
-    checkBitBucketReady().then(ready => {
-      if (ready) {
-        new BitBucketStatus(context);
-      }
-    });
-  }
 
   // Perform all feature registrations
   context.subscriptions.push(
@@ -240,8 +231,6 @@ export function activate(context: vscode.ExtensionContext) {
   // We may have an initialization pending from previous window/activation.
   const pendingInit = context.globalState.get("dt-ext-copilot.initPending");
   if (pendingInit) {
-    console.log("PENDING");
-    console.log(pendingInit);
     vscode.commands.executeCommand("dt-ext-copilot.initWorkspace");
   }
 }
