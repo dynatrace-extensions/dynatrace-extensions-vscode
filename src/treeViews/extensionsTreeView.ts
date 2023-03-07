@@ -104,8 +104,8 @@ export class ExtensionsTreeDataProvider implements vscode.TreeDataProvider<Exten
             vscode.TreeItemCollapsibleState.None,
             vscode.Uri.file(path.join(workspacePath, filepath)),
             {
-              light: path.join(__filename, "..", "..", "assets", "icons", "plugin_light.png"),
-              dark: path.join(__filename, "..", "..", "assets", "icons", "plugin_dark.png"),
+              light: path.join(__filename, "..", "assets", "icons", "plugin_light.png"),
+              dark: path.join(__filename, "..", "assets", "icons", "plugin_dark.png"),
             },
             "extension",
             `${extension.name}-${extension.version}`,
@@ -124,8 +124,8 @@ export class ExtensionsTreeDataProvider implements vscode.TreeDataProvider<Exten
           workspace.folder as vscode.Uri,
           vscode.workspace.workspaceFolders &&
           vscode.workspace.workspaceFolders[0].uri.fsPath === (workspace.folder as vscode.Uri).fsPath
-            ? path.join(__filename, "..", "..", "assets", "icons", "workspace_current.png")
-            : path.join(__filename, "..", "..", "assets", "icons", "workspace.png"),
+            ? path.join(__filename, "..", "assets", "icons", "workspace_current.png")
+            : path.join(__filename, "..", "assets", "icons", "workspace.png"),
           "extensionWorkspace",
           workspace.id
         )

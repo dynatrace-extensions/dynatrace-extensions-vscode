@@ -1,14 +1,27 @@
-.vscode/**
-.vscode-test/**
-src/**
+# Project files
+.vscode/
+.vscode-test/
+.github/
 .gitignore
 .yarnrc
-vsc-extension-quickstart.md
-**/tsconfig.json
-**/.eslintrc.json
-**/*.map
-**/*.ts
-previews/**
-docs/**
-.github/**
-dist/**
+.eslintrc.json
+.vscodeignore
+tsconfig.json
+package.json
+package-lock.json
+*.md
+CNAME
+
+# Documentation
+docs/
+
+# Uncompiled source code
+src/
+out/
+node_modules
+## Except the bundle and assets
+!out/assets/
+!out/main.js
+
+# Packaged distributions
+dist/

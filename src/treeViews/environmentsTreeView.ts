@@ -131,8 +131,8 @@ export class EnvironmentsTreeDataProvider implements vscode.TreeDataProvider<Env
                   element.token,
                   "tenantExtension",
                   {
-                    light: path.join(__filename, "..", "..", "assets", "icons", "plugin_light.png"),
-                    dark: path.join(__filename, "..", "..", "assets", "icons", "plugin_dark.png"),
+                    light: path.join(__filename, "..", "assets", "icons", "plugin_light.png"),
+                    dark: path.join(__filename, "..", "assets", "icons", "plugin_dark.png"),
                   },
                   `${extension.extensionName}-${extension.version}`,
                   `${extension.extensionName} (${extension.version})`
@@ -188,8 +188,8 @@ export class EnvironmentsTreeDataProvider implements vscode.TreeDataProvider<Env
         decryptToken(environment.token),
         environment.current ? "currentDynatraceEnvironment" : "dynatraceEnvironment",
         environment.current
-          ? path.join(__filename, "..", "..", "assets", "icons", "environment_current.png")
-          : path.join(__filename, "..", "..", "assets", "icons", "environment.png"),
+          ? path.join(__filename, "..", "assets", "icons", "environment_current.png")
+          : path.join(__filename, "..", "assets", "icons", "environment.png"),
         environment.id,
         environment.name,
         environment.current
