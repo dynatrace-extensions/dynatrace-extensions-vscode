@@ -15,9 +15,9 @@
  */
 
 import * as vscode from "vscode";
-import { decryptToken, encryptToken } from "../../utils/cryptography";
+import { encryptToken } from "../../utils/cryptography";
 import { getAllEnvironments, registerEnvironment, removeEnvironment } from "../../utils/fileSystem";
-import { EnvironmentTreeItem } from "../environmentsTreeView";
+import { DynatraceEnvironment, MonitoringConfiguration } from "../environmentsTreeView";
 
 /**
  * A workflow for registering a new Dynatrace Environment within the VSCode extension.
@@ -94,7 +94,7 @@ export async function addEnvironment(context: vscode.ExtensionContext) {
  * @param environment the existing environment
  * @returns
  */
-export async function editEnvironment(context: vscode.ExtensionContext, environment: EnvironmentTreeItem) {
+export async function editEnvironment(context: vscode.ExtensionContext, environment: DynatraceEnvironment) {
   var url = await vscode.window.showInputBox({
     title: "The new URL for this environment",
     placeHolder: "The URL at which this environment is accessible...",
@@ -147,7 +147,7 @@ export async function editEnvironment(context: vscode.ExtensionContext, environm
  * @param environment the existing environment
  * @returns
  */
-export async function deleteEnvironment(context: vscode.ExtensionContext, environment: EnvironmentTreeItem) {
+export async function deleteEnvironment(context: vscode.ExtensionContext, environment: DynatraceEnvironment) {
   const confirm = await vscode.window.showQuickPick(["Yes", "No"], {
     title: `Delete environment ${environment.label}?`,
     canPickMany: false,
@@ -198,4 +198,14 @@ export async function changeConnection(context: vscode.ExtensionContext): Promis
     return [true, currentEnv.name as string];
   }
   return [false, ""];
+}
+
+export function editMonitoringConfiguration(config: MonitoringConfiguration) {
+  console.log(config);
+  vscode.window.showInformationMessage("You've hit Edit on this config. Congrats.");
+}
+
+export function deleteMonitoringConfiguration(config: MonitoringConfiguration) {
+  console.log(config);
+  vscode.window.showInformationMessage("You've hit Delete on this config. Congrats.");
 }
