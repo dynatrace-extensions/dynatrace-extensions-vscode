@@ -28,6 +28,7 @@ import {
   changeConnection,
   editMonitoringConfiguration,
   deleteMonitoringConfiguration,
+  addMonitoringConfiguration,
 } from "./commands/environments";
 
 /**
@@ -98,11 +99,14 @@ export class EnvironmentsTreeDataProvider implements vscode.TreeDataProvider<Env
         this.refresh();
       });
     });
-
-    // Commands for Extensions
-    // COMING SOON - if any
-
     // Commands for monitoring configurations
+    vscode.commands.registerCommand("dt-ext-copilot-environments.addConfig", (extension: DeployedExtension) => {
+      addMonitoringConfiguration(extension, context).then(success => {
+        if (success) {
+          this.refresh();
+        }
+      });
+    });
     vscode.commands.registerCommand("dt-ext-copilot-environments.editConfig", (config: MonitoringConfiguration) => {
       editMonitoringConfiguration(config, context).then(success => {
         if (success) {
@@ -291,7 +295,7 @@ interface IDeployedExtension extends EnvironmentsTreeItem {
 /**
  * Represents an Extension 2.0 that is deployed to the connected Dynatrace Environment.
  */
-class DeployedExtension extends vscode.TreeItem implements IDeployedExtension {
+export class DeployedExtension extends vscode.TreeItem implements IDeployedExtension {
   id: string;
   dt: Dynatrace;
   extensionVersion: string;

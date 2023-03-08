@@ -19,8 +19,9 @@ import * as path from "path";
 import { DynatraceAPIError } from "../../dynatrace-api/errors";
 import { encryptToken } from "../../utils/cryptography";
 import { getAllEnvironments, registerEnvironment, removeEnvironment } from "../../utils/fileSystem";
-import { DynatraceEnvironment, MonitoringConfiguration } from "../environmentsTreeView";
+import { DeployedExtension, DynatraceEnvironment, MonitoringConfiguration } from "../environmentsTreeView";
 import { readFileSync, rmSync, writeFileSync } from "fs";
+import { createObjectFromSchema } from "../../utils/schemaParsing";
 
 /**
  * A workflow for registering a new Dynatrace Environment within the VSCode extension.
@@ -223,8 +224,12 @@ export async function editMonitoringConfiguration(
       return JSON.stringify(configDetails, undefined, 4);
     });
 
+  const headerContent = `
+// This is your monitoring configuration. Make any changes as needed below.
+// Lines starting with '//' will be ignored. The configuration will be updated once you save and close this tab.`;
+
   // Allow the user to make changes
-  const response = await getConfigurationDetailsViaFile(existingConfig, context);
+  const response = await getConfigurationDetailsViaFile(headerContent, existingConfig, true, context);
   if (response === "No changes.") {
     vscode.window.showInformationMessage("No changes were made. Operation cancelled.");
     return false;
@@ -244,25 +249,25 @@ export async function editMonitoringConfiguration(
 }
 
 /**
- * Create a temporary file and serve it to the user as an interface for collecting any configuration changes.
+ * Create a temporary file and serve it to the user as an interface for collecting changes.
  * The file is removed once the user closes it.
- * @param existingContent existing configuration details as stringified JSON
+ * @param headerContent informational content (comments) to inform the user about usage
+ * @param defaultDetails existing details as stringified JSON
+ * @param rejectNoChanges if true, the promise is rejected if the file content is unchanged
  * @param context vscode.ExtensionContext
  * @returns a Promise that will either resolve with the stringified content of the configuration or will
  * reject with the message "No changes.".
  */
 async function getConfigurationDetailsViaFile(
-  existingContent: string,
+  headerContent: string,
+  defaultDetails: string,
+  rejectNoChanges: boolean = true,
   context: vscode.ExtensionContext
 ): Promise<string> {
   // Create a file to act as an interface for making changes
   const tempConfigFile = path.resolve(context.globalStorageUri.fsPath, "tempConfigFile.jsonc");
-  const moniroingConfigStub = `
-// This is your monitoring configuration. Make any changes as needed below.
-// Lines starting with '//' will be ignored. The configuration will be updated once you save and close this tab.
-${existingContent}
-`;
-  writeFileSync(tempConfigFile, moniroingConfigStub);
+  const configFileContent = headerContent + "\n" + defaultDetails;
+  writeFileSync(tempConfigFile, configFileContent);
 
   // Open the file for the user to edit
   await vscode.workspace
@@ -276,7 +281,7 @@ ${existingContent}
       if (!editors.map(editor => editor.document.fileName).includes(tempConfigFile)) {
         disposable.dispose();
         // Grab all lines that don't start with '//'
-        const newContent = readFileSync(tempConfigFile)
+        const newDetails = readFileSync(tempConfigFile)
           .toString()
           .split("\n")
           .filter(line => !line.startsWith("//") && line !== "")
@@ -284,10 +289,10 @@ ${existingContent}
         // Remove the file since no longer needed
         rmSync(tempConfigFile);
         // Resolve or reject the promise
-        if (newContent === existingContent) {
+        if (newDetails === defaultDetails && rejectNoChanges) {
           reject("No changes.");
         } else {
-          resolve(newContent);
+          resolve(newDetails);
         }
       }
     });
@@ -320,6 +325,42 @@ export async function deleteMonitoringConfiguration(config: MonitoringConfigurat
     })
     .catch((err: DynatraceAPIError) => {
       vscode.window.showErrorMessage(`Delete operation failed: ${err.message}`);
+      return false;
+    });
+}
+
+/**
+ * Adds a new configuration to the extension associated with the DeployedExtension tree view item.
+ * A temporary file is used to generate a monitoring configuration template that the user can edit
+ * before it's sent to Dynatrace. Once the file is saved & closed, the details are POST-ed.
+ * @param extension the deployed extension to add a configuration to
+ * @param context vscode.ExtensionContext
+ * @returns success of the operation
+ */
+export async function addMonitoringConfiguration(extension: DeployedExtension, context: vscode.ExtensionContext) {
+  // Create a monitoring configuration template
+  const extensionSchema = await extension.dt.extensionsV2.getExtensionSchema(extension.id, extension.extensionVersion);
+  const configObject = [{ value: createObjectFromSchema(extensionSchema), scope: "" }];
+  const headerContent = `
+// This a simple monitoring configuration template. Make any changes as needed below.
+// Lines starting with '//' will be ignored. A configuration instance will be created once you save and close this tab.`;
+
+  // Allow the user to make changes
+  const response = await getConfigurationDetailsViaFile(
+    headerContent,
+    JSON.stringify(configObject, undefined, 4),
+    false,
+    context
+  );
+  return await extension.dt.extensionsV2
+    .postMonitoringConfiguration(extension.id, JSON.parse(response))
+    .then(() => {
+      vscode.window.showInformationMessage("Configuration successfully created.");
+      return true;
+    })
+    .catch((err: DynatraceAPIError) => {
+      vscode.window.showErrorMessage(`Create operation failed: ${err.message}`);
+      console.log(err.errorParams.data);
       return false;
     });
 }

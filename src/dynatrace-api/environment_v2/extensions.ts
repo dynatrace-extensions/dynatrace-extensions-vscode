@@ -187,4 +187,16 @@ export class ExtensionsServiceV2 {
       "PUT"
     );
   }
+
+  async postMonitoringConfiguration(extensionName: string, configurationDetails: any) {
+    return this.httpClient.makeRequest(
+      `${this.endpoint}/${extensionName}/monitoringConfigurations`,
+      configurationDetails,
+      "POST"
+    );
+  }
+
+  async getExtensionSchema(extensionName: string, extensionVersion: string) {
+    return this.httpClient.makeRequest(`${this.endpoint}/${extensionName}/${extensionVersion}/schema`);
+  }
 }

@@ -149,6 +149,11 @@
 				"icon": "$(trash)"
 			},
 			{
+				"command": "dt-ext-copilot-environments.addConfig",
+				"title": "Add configuration",
+				"icon": "$(plus)"
+			},
+			{
 				"command": "dt-ext-copilot-workspaces.enableMetricSelectors",
 				"title": "🔎 Enable metric selector code lens"
 			},
@@ -426,6 +431,10 @@
 					"when": "false"
 				},
 				{
+					"command": "dt-ext-copilot-environments.addConfig",
+					"when": "false"
+				},
+				{
 					"command": "dt-ext-copilot-workspaces.enableMetricSelectors",
 					"when": "false"
 				},
@@ -612,6 +621,11 @@
 					"command": "dt-ext-copilot-environments.deleteEnvironment",
 					"when": "view == dt-ext-copilot-environments && viewItem == dynatraceEnvironment || viewItem == currentDynatraceEnvironment",
 					"group": "inline@3"
+				},
+				{
+					"command": "dt-ext-copilot-environments.addConfig",
+					"when": "view == dt-ext-copilot-environments && viewItem == deployedExtension",
+					"group": "inline@1"
 				},
 				{
 					"command": "dt-ext-copilot-environments.editConfig",
