@@ -139,6 +139,16 @@
 				"icon": "$(trash)"
 			},
 			{
+				"command": "dt-ext-copilot-environments.editConfig",
+				"title": "Edit configuration",
+				"icon": "$(pencil)"
+			},
+			{
+				"command": "dt-ext-copilot-environments.deleteConfig",
+				"title": "Delete configuration",
+				"icon": "$(trash)"
+			},
+			{
 				"command": "dt-ext-copilot-workspaces.enableMetricSelectors",
 				"title": "🔎 Enable metric selector code lens"
 			},
@@ -408,6 +418,14 @@
 					"when": "false"
 				},
 				{
+					"command": "dt-ext-copilot-environments.editConfig",
+					"when": "false"
+				},
+				{
+					"command": "dt-ext-copilot-environments.deleteConfig",
+					"when": "false"
+				},
+				{
 					"command": "dt-ext-copilot-workspaces.enableMetricSelectors",
 					"when": "false"
 				},
@@ -594,6 +612,16 @@
 					"command": "dt-ext-copilot-environments.deleteEnvironment",
 					"when": "view == dt-ext-copilot-environments && viewItem == dynatraceEnvironment || viewItem == currentDynatraceEnvironment",
 					"group": "inline@3"
+				},
+				{
+					"command": "dt-ext-copilot-environments.editConfig",
+					"when": "view == dt-ext-copilot-environments && viewItem == monitoringConfiguration",
+					"group": "inline@1"
+				},
+				{
+					"command": "dt-ext-copilot-environments.deleteConfig",
+					"when": "view == dt-ext-copilot-environments && viewItem == monitoringConfiguration",
+					"group": "inline@2"
 				}
 			],
 			"dt-ext-copilot.diagnostics-menu": [
