@@ -104,10 +104,18 @@ export class EnvironmentsTreeDataProvider implements vscode.TreeDataProvider<Env
 
     // Commands for monitoring configurations
     vscode.commands.registerCommand("dt-ext-copilot-environments.editConfig", (config: MonitoringConfiguration) => {
-      editMonitoringConfiguration(config);
+      editMonitoringConfiguration(config, context).then(success => {
+        if (success) {
+          this.refresh();
+        }
+      });
     });
     vscode.commands.registerCommand("dt-ext-copilot-environments.deleteConfig", (config: MonitoringConfiguration) => {
-      deleteMonitoringConfiguration(config);
+      deleteMonitoringConfiguration(config).then(success => {
+        if (success) {
+          this.refresh();
+        }
+      });
     });
   }
 
@@ -217,6 +225,10 @@ export class EnvironmentsTreeDataProvider implements vscode.TreeDataProvider<Env
   }
 }
 
+/**
+ * Represents a Tree Item for the Environments tree view of the Copilot.
+ * These are the minimum details every other object should include.
+ */
 export interface EnvironmentsTreeItem extends vscode.TreeItem {
   id: string;
   contextValue: string;
@@ -230,6 +242,9 @@ interface IDynatraceEnvironment extends EnvironmentsTreeItem {
   contextValue: "currentDynatraceEnvironment" | "dynatraceEnvironment";
 }
 
+/**
+ * Represents a Dynatrace (SaaS or Managed) Environment registered with the Copilot.
+ */
 export class DynatraceEnvironment extends vscode.TreeItem implements IDynatraceEnvironment {
   id: string;
   dt: Dynatrace;
@@ -238,6 +253,14 @@ export class DynatraceEnvironment extends vscode.TreeItem implements IDynatraceE
   current: boolean;
   contextValue: "currentDynatraceEnvironment" | "dynatraceEnvironment";
 
+  /**
+   * @param collapsibleState defines whether this item can be expanded further or not
+   * @param url the URL to this environment
+   * @param token a Dynatrace API Token to use when authenticating with this environment
+   * @param id the ID of id of this environment (Tenant ID)
+   * @param label an optional label for displaying this environment (otherwise will use ID)
+   * @param current whether this environment should be used for API operations currently
+   */
   constructor(
     collapsibleState: vscode.TreeItemCollapsibleState,
     url: string,
@@ -265,12 +288,21 @@ interface IDeployedExtension extends EnvironmentsTreeItem {
   contextValue: "deployedExtension";
 }
 
+/**
+ * Represents an Extension 2.0 that is deployed to the connected Dynatrace Environment.
+ */
 class DeployedExtension extends vscode.TreeItem implements IDeployedExtension {
   id: string;
   dt: Dynatrace;
   extensionVersion: string;
   contextValue: "deployedExtension";
 
+  /**
+   * @param collapsibleState defines whether this item can be expanded further or not
+   * @param extensionName the name (ID) of the extension it represents
+   * @param extensionVersion the latest activated version of this extension
+   * @param dt the Dyntrace Client instance to use for API Operations
+   */
   constructor(
     collapsibleState: vscode.TreeItemCollapsibleState,
     extensionName: string,
@@ -294,12 +326,24 @@ interface IMonitoringConfiguration extends EnvironmentsTreeItem {
   contextValue: "monitoringConfiguration";
 }
 
+/**
+ * Represents an instance of an Extension 2.0 configuration that is present on the connected
+ * Dynatrace Environment.
+ */
 export class MonitoringConfiguration extends vscode.TreeItem implements IMonitoringConfiguration {
   id: string;
   dt: Dynatrace;
   extensionName: string;
   contextValue: "monitoringConfiguration";
 
+  /**
+   * @param configurationId the ID of the monitoring configuration object
+   * @param version the version of the extension it is configured for
+   * @param description the description the user entered
+   * @param extensionName the name of the extension it configures
+   * @param monitoringStatus the last known status of this configuraation
+   * @param dt the Dyntrace Client instance to use for API Operations
+   */
   constructor(
     configurationId: string,
     version: string,
