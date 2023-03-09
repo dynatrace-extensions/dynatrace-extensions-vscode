@@ -82,8 +82,9 @@ export function activate(context: vscode.ExtensionContext) {
   // Additional context: number of environments affects the welcome message for the tenants tree view
   vscode.commands.executeCommand("setContext", "dt-ext-copilot.numEnvironments", getAllEnvironments(context).length);
   // Create feature/data providers
+  const genericChannel = vscode.window.createOutputChannel("Dynatrace", "json");
   const connectionStatusManager = new ConnectionStatusManager();
-  const tenantsTreeViewProvider = new EnvironmentsTreeDataProvider(context, connectionStatusManager);
+  const tenantsTreeViewProvider = new EnvironmentsTreeDataProvider(context, connectionStatusManager, genericChannel);
   const cachedDataProvider = new CachedDataProvider(tenantsTreeViewProvider);
   const extensionsTreeViewProvider = new ExtensionsTreeDataProvider(cachedDataProvider, context);
   const snippetCodeActionProvider = new SnippetGenerator(cachedDataProvider);
@@ -104,7 +105,6 @@ export function activate(context: vscode.ExtensionContext) {
   const wmiLensProvider = new WmiCodeLensProvider(cachedDataProvider);
   const fastModeChannel = vscode.window.createOutputChannel("Dynatrace Fast Mode", "json");
   const fastModeStatus = new FastModeStatus(fastModeChannel);
-  const genericChannel = vscode.window.createOutputChannel("Dynatrace", "json");
   const diagnosticsProvider = new DiagnosticsProvider(context, cachedDataProvider);
   const diagnosticFixProvider = new DiagnosticFixProvider(diagnosticsProvider);
   var editTimeout: NodeJS.Timeout | undefined;

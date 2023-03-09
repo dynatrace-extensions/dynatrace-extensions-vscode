@@ -40,6 +40,7 @@ import {
 export class EnvironmentsTreeDataProvider implements vscode.TreeDataProvider<EnvironmentsTreeItem> {
   context: vscode.ExtensionContext;
   connectionStatus: ConnectionStatusManager;
+  oc: vscode.OutputChannel;
   private _onDidChangeTreeData: vscode.EventEmitter<EnvironmentsTreeItem | undefined | void> = new vscode.EventEmitter<
     EnvironmentsTreeItem | undefined | void
   >();
@@ -49,9 +50,14 @@ export class EnvironmentsTreeDataProvider implements vscode.TreeDataProvider<Env
    * @param context VSCode Extension Context
    * @param connectionStatus a connection status manager, to update the status bar
    */
-  constructor(context: vscode.ExtensionContext, connectionStatus: ConnectionStatusManager) {
+  constructor(
+    context: vscode.ExtensionContext,
+    connectionStatus: ConnectionStatusManager,
+    errorChannel: vscode.OutputChannel
+  ) {
     this.context = context;
     this.connectionStatus = connectionStatus;
+    this.oc = errorChannel;
     this.getCurrentEnvironment().then(environment =>
       this.connectionStatus.updateStatusBar(Boolean(environment), environment?.label?.toString())
     );
@@ -101,14 +107,14 @@ export class EnvironmentsTreeDataProvider implements vscode.TreeDataProvider<Env
     });
     // Commands for monitoring configurations
     vscode.commands.registerCommand("dt-ext-copilot-environments.addConfig", (extension: DeployedExtension) => {
-      addMonitoringConfiguration(extension, context).then(success => {
+      addMonitoringConfiguration(extension, context, this.oc).then(success => {
         if (success) {
           this.refresh();
         }
       });
     });
     vscode.commands.registerCommand("dt-ext-copilot-environments.editConfig", (config: MonitoringConfiguration) => {
-      editMonitoringConfiguration(config, context).then(success => {
+      editMonitoringConfiguration(config, context, this.oc).then(success => {
         if (success) {
           this.refresh();
         }

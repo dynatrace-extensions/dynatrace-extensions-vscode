@@ -209,11 +209,13 @@ export async function changeConnection(context: vscode.ExtensionContext): Promis
  * Changes are collected via a temporary file.
  * @param config the MonitoringConfiguration to be updated
  * @param context vscode.ExtensionContext
+ * @param oc a JSON output channel to communicate errors to
  * @returns success of the command
  */
 export async function editMonitoringConfiguration(
   config: MonitoringConfiguration,
-  context: vscode.ExtensionContext
+  context: vscode.ExtensionContext,
+  oc: vscode.OutputChannel
 ): Promise<boolean> {
   // Fetch the current configuration details
   const existingConfig = await config.dt.extensionsV2
@@ -229,23 +231,29 @@ export async function editMonitoringConfiguration(
 // Lines starting with '//' will be ignored. The configuration will be updated once you save and close this tab.`;
 
   // Allow the user to make changes
-  const response = await getConfigurationDetailsViaFile(headerContent, existingConfig, true, context);
-  if (response === "No changes.") {
-    vscode.window.showInformationMessage("No changes were made. Operation cancelled.");
-    return false;
-  }
-
-  // Push the changes
-  return config.dt.extensionsV2
-    .putMonitoringConfiguration(config.extensionName, config.id, JSON.parse(response))
-    .then(() => {
-      vscode.window.showInformationMessage("Configuration updated successfully.");
-      return true;
-    })
-    .catch((err: DynatraceAPIError) => {
-      vscode.window.showErrorMessage(`Update operation failed: ${err.message}`);
+  return await getConfigurationDetailsViaFile(headerContent, existingConfig, true, context).then(
+    // Push the changes
+    response =>
+      config.dt.extensionsV2
+        .putMonitoringConfiguration(config.extensionName, config.id, JSON.parse(response))
+        .then(() => {
+          vscode.window.showInformationMessage("Configuration updated successfully.");
+          return true;
+        })
+        .catch((err: DynatraceAPIError) => {
+          vscode.window.showErrorMessage(`Update operation failed: ${err.message}`);
+          oc.replace(JSON.stringify(err.errorParams.data, undefined, 2));
+          oc.show();
+          return false;
+        }),
+    // Otherwise cancel operation
+    response => {
+      if (response === "No changes.") {
+        vscode.window.showInformationMessage("No changes were made. Operation cancelled.");
+      }
       return false;
-    });
+    }
+  );
 }
 
 /**
@@ -335,9 +343,14 @@ export async function deleteMonitoringConfiguration(config: MonitoringConfigurat
  * before it's sent to Dynatrace. Once the file is saved & closed, the details are POST-ed.
  * @param extension the deployed extension to add a configuration to
  * @param context vscode.ExtensionContext
+ * @param oc a JSON output channel to communicate errors to
  * @returns success of the operation
  */
-export async function addMonitoringConfiguration(extension: DeployedExtension, context: vscode.ExtensionContext) {
+export async function addMonitoringConfiguration(
+  extension: DeployedExtension,
+  context: vscode.ExtensionContext,
+  oc: vscode.OutputChannel
+) {
   // Create a monitoring configuration template
   const extensionSchema = await extension.dt.extensionsV2.getExtensionSchema(extension.id, extension.extensionVersion);
   const configObject = [{ value: createObjectFromSchema(extensionSchema), scope: "" }];
@@ -359,8 +372,9 @@ export async function addMonitoringConfiguration(extension: DeployedExtension, c
       return true;
     })
     .catch((err: DynatraceAPIError) => {
-      vscode.window.showErrorMessage(`Create operation failed: ${err.message}`);
-      console.log(err.errorParams.data);
+      vscode.window.showErrorMessage("Create operation failed.");
+      oc.replace(JSON.stringify(err.errorParams.data, undefined, 2));
+      oc.show();
       return false;
     });
 }
