@@ -57,40 +57,7 @@ export function createObjectFromSchema(schema: any) {
       const defaultValue = schema.properties[propertyKey].default;
       // Process primitives
       if (typeof schema.properties[propertyKey].type === "string") {
-        switch (schema.properties[propertyKey].type) {
-          case "local_time":
-            configObject[propertyKey] = defaultValue ?? "00:00";
-            break;
-          case "boolean":
-            configObject[propertyKey] = defaultValue ?? false;
-            break;
-          case "secret":
-          case "text":
-            configObject[propertyKey] = defaultValue ?? "";
-            break;
-          case "integer":
-            configObject[propertyKey] = defaultValue ?? handleNumber(schema.properties[propertyKey]);
-            break;
-          case "set":
-          case "list":
-            configObject[propertyKey] = defaultValue ?? [];
-            // Attempt to populate the list
-            if (
-              !defaultValue &&
-              schema.properties[propertyKey].items &&
-              schema.properties[propertyKey].items.type &&
-              schema.properties[propertyKey].items.type["$ref"]
-            ) {
-              const ref = schema.properties[propertyKey].items.type["$ref"] as string;
-              const [available, value] = handleRef(schema, ref);
-              if (available) {
-                configObject[propertyKey].push(value);
-              }
-            }
-            break;
-          default:
-            console.log(`Cannot process property of type "${schema.properties[propertyKey].type}". Unkown primitive.`);
-        }
+        configObject[propertyKey] = defaultValue ?? getValueForPrimitive(schema, propertyKey);
         // Process complex types
       } else if (schema.properties[propertyKey].type["$ref"]) {
         if (defaultValue) {
@@ -108,6 +75,47 @@ export function createObjectFromSchema(schema: any) {
   });
 
   return configObject;
+}
+
+/**
+ * Gives a "primitive" type of property some value according to its type.
+ * The only primitives with more logic are "set" and "list" for which we attempt to extract
+ * either an enum value or an instance of a referenced complex type.
+ * @param schema the schema this property is part of
+ * @param propertyKey the key of the property it defines
+ * @returns value or null in case the primitive is not implemented
+ */
+function getValueForPrimitive(schema: any, propertyKey: string) {
+  switch (schema.properties[propertyKey].type) {
+    case "local_time":
+      return "00:00";
+    case "boolean":
+      return false;
+    case "secret":
+    case "text":
+      return "";
+    case "integer":
+      return handleNumber(schema.properties[propertyKey]);
+    case "set":
+    case "list":
+      // Attempt to populate the list
+      const listValue = [];
+      if (
+        schema.properties[propertyKey].items &&
+        schema.properties[propertyKey].items.type &&
+        schema.properties[propertyKey].items.type["$ref"]
+      ) {
+        const ref = schema.properties[propertyKey].items.type["$ref"] as string;
+        const [available, value] = handleRef(schema, ref);
+        if (available) {
+          listValue.push(value);
+        }
+      }
+      return listValue;
+    default:
+      console.log(`Cannot process property of type "${schema.properties[propertyKey].type}". Unkown primitive.`);
+      return null;
+  }
 }
 
 /**
