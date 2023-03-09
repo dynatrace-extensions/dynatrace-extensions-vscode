@@ -24,103 +24,255 @@
 export function createObjectFromSchema(schema: any) {
   const configObject: Record<string, any> = {};
 
-  if (schema.properties) {
-    Object.keys(schema.properties).forEach(propertyKey => {
-      if (schema.properties[propertyKey].type && schema.properties[propertyKey].nullable === false) {
-        const defaultValue = schema.properties[propertyKey].default;
-        if (typeof schema.properties[propertyKey].type === "string") {
-          // TODO: Check preconditions here
-          switch (schema.properties[propertyKey].type) {
-            case "boolean":
-              configObject[propertyKey] = defaultValue ?? false;
-              break;
-            case "secret":
-            case "text":
-              configObject[propertyKey] = defaultValue ?? "";
-              break;
-            case "integer":
-              if (!defaultValue) {
-                if (
-                  schema.properties[propertyKey].constraints &&
-                  schema.properties[propertyKey].constraints[0] &&
-                  schema.properties[propertyKey].constraints[0].minimum
-                ) {
-                  configObject[propertyKey] = schema.properties[propertyKey].constraints[0].minimum;
-                } else {
-                  configObject[propertyKey] = 0;
-                }
-              } else {
-                configObject[propertyKey] = defaultValue;
-              }
-              break;
-            case "set":
-            case "list":
-              if (!defaultValue) {
-                configObject[propertyKey] = [];
-                if (
-                  schema.properties[propertyKey].items &&
-                  schema.properties[propertyKey].items.type &&
-                  schema.properties[propertyKey].items.type["$ref"]
-                ) {
-                  const typeRef = schema.properties[propertyKey].items.type["$ref"] as string;
-                  if (typeRef.startsWith("#/enums")) {
-                    const enumKey = typeRef.split("#/enums/")[1];
-                    if (
-                      schema.enums &&
-                      schema.enums[enumKey] &&
-                      schema.enums[enumKey].items &&
-                      schema.enums[enumKey].items[0] &&
-                      schema.enums[enumKey].items[0].value
-                    ) {
-                      configObject[propertyKey].push(schema.enums[enumKey].items[0].value);
-                    }
-                  } else if (typeRef.startsWith("#/types")) {
-                    const typeName = typeRef.split("#/types/")[1];
-                    if (schema.types && schema.types[typeName]) {
-                      const typeSchema = schema.types[typeName];
-                      typeSchema.types = schema.types;
-                      typeSchema.enums = schema.enums;
-                      delete typeSchema.types[typeName];
-                      console.log(typeSchema);
-                      const typeObject = createObjectFromSchema(typeSchema);
-                      configObject[propertyKey].push(typeObject);
-                    }
-                  }
-                }
-              } else {
-                configObject[propertyKey] = defaultValue;
-              }
-              break;
-          }
-        } else if (schema.properties[propertyKey].type["$ref"]) {
-          const ref = schema.properties[propertyKey].type["$ref"] as string;
-          if (ref.startsWith("#/types")) {
-            const typeName = ref.split("#/types/")[1];
-            if (schema.types && schema.types[typeName]) {
-              const typeSchema = schema.types[typeName];
-              typeSchema.types = schema.types;
-              typeSchema.enums = schema.enums;
-              delete typeSchema.types[propertyKey];
-              const typeObject = createObjectFromSchema(typeSchema);
-              if (typeObject) {
-                configObject[propertyKey] = typeObject;
-              }
-            }
-          } else if (ref.startsWith("#/enums")) {
-            const enumName = ref.split("#/enums/")[1];
-            if (
-              schema.enums &&
-              schema.enums[enumName] &&
-              schema.enums[enumName].items &&
-              schema.enums[enumName].items[0] &&
-              schema.enums[enumName].items[0].value
-            ) {
-              configObject[propertyKey] = schema.enums[enumName].items[0].value;
-            }
+  if (!schema.properties) {
+    return {};
+  }
+
+  Object.keys(schema.properties).forEach(propertyKey => {
+    // If the object instance already has this property it was probably set to meet
+    // a precondition so we should not attempt to process it again.
+    if (Object.keys(configObject).includes(propertyKey)) {
+      return;
+    }
+    if (schema.properties[propertyKey].type && schema.properties[propertyKey].nullable === false) {
+      if (schema.properties[propertyKey].precondition) {
+        // First, check preconditions for this property
+        const [meets, changesNeeded] = meetsPreconditions(schema.properties[propertyKey].precondition, configObject);
+        // If we don't meet preconditions due to other missing properties
+        if (!meets) {
+          if (changesNeeded.length > 0) {
+            // Set the properties such that we meet the preconditions
+            changesNeeded.forEach((change: Record<string, any>) => {
+              Object.keys(change).forEach(key => {
+                configObject[key] = change[key];
+              });
+            });
+            // Otherwise, skip the current property (it doesn't apply)
+          } else {
+            return;
           }
         }
       }
-    });
-  }
+      // Then, attempt to assign a value to it
+      const defaultValue = schema.properties[propertyKey].default;
+      // Process primitives
+      if (typeof schema.properties[propertyKey].type === "string") {
+        switch (schema.properties[propertyKey].type) {
+          case "local_time":
+            configObject[propertyKey] = defaultValue ?? "00:00";
+            break;
+          case "boolean":
+            configObject[propertyKey] = defaultValue ?? false;
+            break;
+          case "secret":
+          case "text":
+            configObject[propertyKey] = defaultValue ?? "";
+            break;
+          case "integer":
+            configObject[propertyKey] = defaultValue ?? handleNumber(schema.properties[propertyKey]);
+            break;
+          case "set":
+          case "list":
+            configObject[propertyKey] = defaultValue ?? [];
+            // Attempt to populate the list
+            if (
+              !defaultValue &&
+              schema.properties[propertyKey].items &&
+              schema.properties[propertyKey].items.type &&
+              schema.properties[propertyKey].items.type["$ref"]
+            ) {
+              const ref = schema.properties[propertyKey].items.type["$ref"] as string;
+              const [available, value] = handleRef(schema, ref);
+              if (available) {
+                configObject[propertyKey].push(value);
+              }
+            }
+            break;
+          default:
+            console.log(`Cannot process property of type "${schema.properties[propertyKey].type}". Unkown primitive.`);
+        }
+        // Process complex types
+      } else if (schema.properties[propertyKey].type["$ref"]) {
+        if (defaultValue) {
+          // If we're lucky enough to have a default value, use it
+          configObject[propertyKey] = defaultValue;
+        } else {
+          const ref = schema.properties[propertyKey].type["$ref"] as string;
+          const [available, value] = handleRef(schema, ref);
+          if (available) {
+            configObject[propertyKey] = value;
+          }
+        }
+      }
+    }
+  });
+
   return configObject;
+}
+
+/**
+ * Processes a current configuration object against a precondition definition.
+ * The return is a tuple where the first element is a boolean indicating whether the precondition
+ * is met or not, and the second element is a list of key/value records that can be applied to the
+ * configuration object to meet the precondition.
+ * @param precondition precondition definition
+ * @param configObject current object being assessed
+ * @param negate whether a "NOT" type of precondition is assessed
+ * @returns tuple of assessment result and changes needed to meet the precondition
+ */
+function meetsPreconditions(
+  precondition: any,
+  configObject: any,
+  negate: boolean = false
+): [boolean, Record<string, any>[]] {
+  switch (precondition.type) {
+    case "EQUALS":
+      return !negate && configObject[precondition.property]
+        ? [configObject[precondition.property] === precondition.expectedValue, []]
+        : [false, [{ [precondition.property]: precondition.expectedValue }]];
+    case "IN":
+      return !negate && configObject[precondition.property]
+        ? [Array.from(precondition.expectedValues).includes(configObject[precondition.property]), []]
+        : [false, [{ [precondition.property]: precondition.expectedValues[0] }]];
+    case "NULL":
+      return !negate && configObject[precondition.property] ? [false, [{ [precondition.property]: null }]] : [true, []];
+    case "NOT":
+      return meetsPreconditions(precondition.precondition, configObject, true);
+    case "AND":
+      const andPreconditions = precondition.preconditions;
+      const andMeetsArray: [boolean, Record<string, any>[]][] = Array.from(
+        andPreconditions.map((andPrecondition: any) => meetsPreconditions(andPrecondition, configObject))
+      );
+      if (
+        andMeetsArray.some(result => {
+          const [meets, changes] = result;
+          return !meets && changes.length === 0;
+        })
+      ) {
+        return [false, []];
+      } else if (
+        andMeetsArray.every(result => {
+          const [meets] = result;
+          return meets;
+        })
+      ) {
+        return [true, []];
+      }
+      return [
+        false,
+        andMeetsArray
+          .filter(result => {
+            const [meets, changes] = result;
+            return !meets && changes.length > 0;
+          })
+          .map(result => {
+            const [, changes] = result;
+            return changes[0];
+          }),
+      ];
+    case "OR":
+      const orPreconditions = precondition.preconditions;
+      const orMeetsArray: [boolean, Record<string, any>[]][] = Array.from(
+        orPreconditions.map((orPrecondition: any) => meetsPreconditions(orPrecondition, configObject))
+      );
+      if (
+        orMeetsArray.every(result => {
+          const [meets, changes] = result;
+          return !meets && changes.length === 0;
+        })
+      ) {
+        return [false, []];
+      } else if (
+        orMeetsArray.some(result => {
+          const [meets] = result;
+          return meets;
+        })
+      ) {
+        return [true, []];
+      }
+      return [
+        false,
+        orMeetsArray.filter(result => {
+          const [meets, changes] = result;
+          return !meets && changes.length > 0;
+        })[0][1], // Just pick up the first change, it's an OR
+      ];
+    default:
+      console.log(`Cannot process precondition of type "${precondition.type}". Unknown type.`);
+      return [true, []];
+  }
+}
+
+/**
+ * Handles generating a number for the given property. Attempts to parse any constraints
+ * and provide a valid number, otherwise defaults to 0.
+ * @param definition property definition for this number
+ * @returns number or zero
+ */
+function handleNumber(definition: any): number {
+  if (definition.constraints && Array.isArray(definition.constraints)) {
+    const rangeConstraints = Array.from(definition.constraints).filter((c: any) => c.type && c.type === "RANGE");
+    if (rangeConstraints.length > 0) {
+      return (rangeConstraints[0] as { minimum: number }).minimum;
+    }
+  }
+
+  return 0;
+}
+
+/**
+ * Processes a complex type reference from within a schema attempting to
+ * extract a value of compute an object instance.
+ * @param schema schema that the reference is part of
+ * @param ref the string value of $ref
+ * @returns tuple of value extraction success and the extracted value
+ */
+function handleRef(schema: any, ref: string): [boolean, any] {
+  if (ref.startsWith("#/enums")) {
+    const enumName = ref.split("#/enums/")[1];
+    return extractEnum(schema, enumName);
+  }
+  if (ref.startsWith("#/types")) {
+    const typeName = ref.split("#/types/")[1];
+    return [true, extractTypeObj(schema, typeName)];
+  }
+  return [false, undefined];
+}
+
+/**
+ * Extracts the first available value of an enum.
+ * @param schema schema that the referenced enum is part of
+ * @param enumName the name of the enum
+ * @returns tuple of value extraction success and the extracted value
+ */
+function extractEnum(schema: any, enumName: string): [boolean, any] {
+  if (
+    schema.enums &&
+    schema.enums[enumName] &&
+    schema.enums[enumName].items &&
+    schema.enums[enumName].items[0] &&
+    schema.enums[enumName].items[0].value
+  ) {
+    return [true, schema.enums[enumName].items[0].value];
+  }
+  return [false, undefined];
+}
+
+/**
+ * Parses the schema of a custom type returning some instance of the object.
+ * Object contains minimum viable details based on the type schema.
+ * @param schema schema that the refernced type is part of
+ * @param typeName the name of the object type to process
+ * @returns object instance
+ */
+function extractTypeObj(schema: any, typeName: string): any {
+  // Extract a sub schema
+  const subSchema = schema.types[typeName];
+  // Persist the original types & enums as they may be used downstream
+  subSchema.types = schema.types;
+  subSchema.enums = schema.enums;
+  // Remove circular references
+  delete subSchema.types[typeName];
+  // Parse as if new schema
+  return createObjectFromSchema(subSchema);
 }
