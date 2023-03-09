@@ -134,7 +134,7 @@ interface ListScreenCard {
 interface DetailsScreenCard {
   key: string;
   entitySelectorTemplate?: string;
-  type: "ENTITIES_LIST" | "CHART_GROUP" | "MESSAGE" | "LOGS" | "EVENTS";
+  type: "ENTITIES_LIST" | "CHART_GROUP" | "MESSAGE" | "LOGS" | "EVENTS" | "METRIC_TABLE";
 }
 
 interface DetailsSettings {
@@ -152,6 +152,7 @@ interface ScreenStub {
   detailsSettings?: DetailsSettings;
   detailsInjections?: DetailsScreenCard[];
   entitiesListCards?: EntitiesListCardStub[];
+  metricTableCards?: MetricTableCardStub[];
   chartsCards?: ChartsCardStub[];
   messageCards?: any[];
   logsCards?: any[];
@@ -192,6 +193,11 @@ interface EntitiesListCardStub {
   filtering?: Filtering;
   columns?: any[];
   charts?: ChartStub[];
+}
+
+interface MetricTableCardStub {
+  key: string;
+  displayName?: string;
 }
 
 interface ChartsCardStub {

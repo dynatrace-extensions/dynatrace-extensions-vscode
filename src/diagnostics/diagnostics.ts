@@ -15,7 +15,6 @@
  */
 
 import * as vscode from "vscode";
-import * as yaml from "yaml";
 import { checkDtInternalProperties } from "../utils/conditionCheckers";
 import { CachedDataProvider } from "../utils/dataCaching";
 import {
