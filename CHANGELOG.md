@@ -1,6 +1,6 @@
 # Change Log
 
-## Version 1.1.0 (unreleased)
+## Version 1.1.0 (10.03.2023)
 
 ### ✨ New in this version:
 - [#66 - Code actions for SNMP metric metadata](https://github.com/dynatrace-extensions/dynatrace-extensions-copilot/issues/66)
