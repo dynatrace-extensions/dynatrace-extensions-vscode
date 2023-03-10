@@ -4,15 +4,19 @@
 
 ### ✨ New in this version:
 - [#66 - Code actions for SNMP metric metadata](https://github.com/dynatrace-extensions/dynatrace-extensions-copilot/issues/66)
+- [#80 - Initial support for monitoring configurations](https://github.com/dynatrace-extensions/dynatrace-extensions-copilot/issues/80)
 
 ### 🪲 Fixed in this version:
 - [#82 - Error message shown when opening VSCode outside of a workspace](https://github.com/dynatrace-extensions/dynatrace-extensions-copilot/issues/82)
 - [#83 - Prometheus code lens appears too often](https://github.com/dynatrace-extensions/dynatrace-extensions-copilot/issues/83)
 - [#86 - Extension not bundled correctly](https://github.com/dynatrace-extensions/dynatrace-extensions-copilot/issues/86)
+- [#87 - Metric table cards not diagnosed correctly](https://github.com/dynatrace-extensions/dynatrace-extensions-copilot/issues/87)
 
 ### 🚀 Improved in this version:
 - [#85 - Git-based functionality removed](https://github.com/dynatrace-extensions/dynatrace-extensions-copilot/issues/85)
 - [#64 - Reduce the amount of yaml parsing invocations](https://github.com/dynatrace-extensions/dynatrace-extensions-copilot/issues/64)
+- Installation package reduced to ~420KB
+- Extension startup times consistent at 100-250 ms
 
 ---
 

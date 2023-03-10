@@ -97,11 +97,11 @@ export class HttpClient {
       .catch((err) => {
         let message = `Error making request to ${url}: ${err.message}.`;
         console.log(message);
-        console.log(err.response.data.error);
+        console.log(err.response.data);
         throw new DynatraceAPIError(message, {
           code: err.response.data.error ? err.response.data.error.code : err.status,
           message: err.response.data.error ? err.response.data.error.message : err.message,
-          data: err.response.data.error || err
+          data: err.response.data.error || err.response.data
         });
       });
   }

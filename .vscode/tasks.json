@@ -5,9 +5,10 @@
 	"tasks": [
 		{
 			"type": "npm",
-			"script": "watch",
-			"problemMatcher": "$tsc-watch",
+			"script": "esbuild-watch",
 			"isBackground": true,
+			// Requires https://marketplace.visualstudio.com/items?itemName=connor4312.esbuild-problem-matchers
+			"problemMatcher": "$esbuild-watch",
 			"presentation": {
 				"reveal": "never"
 			},
