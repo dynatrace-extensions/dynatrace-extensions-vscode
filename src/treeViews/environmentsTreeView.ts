@@ -288,8 +288,8 @@ export class DynatraceEnvironment extends vscode.TreeItem implements IDynatraceE
     this.current = current;
     this.contextValue = this.current ? "currentDynatraceEnvironment" : "dynatraceEnvironment";
     this.iconPath = this.current
-      ? path.join(__filename, "..", "assets", "icons", "environment_current.png")
-      : path.join(__filename, "..", "assets", "icons", "environment.png");
+      ? path.join(__filename, "..", "..", "src", "assets", "icons", "environment_current.png")
+      : path.join(__filename, "..", "..", "src", "assets", "icons", "environment.png");
   }
 }
 
@@ -325,8 +325,8 @@ export class DeployedExtension extends vscode.TreeItem implements IDeployedExten
     this.extensionVersion = extensionVersion;
     this.contextValue = "deployedExtension";
     this.iconPath = {
-      light: path.join(__filename, "..", "assets", "icons", "plugin_light.png"),
-      dark: path.join(__filename, "..", "assets", "icons", "plugin_dark.png"),
+      light: path.join(__filename, "..", "..", "src", "assets", "icons", "plugin_light.png"),
+      dark: path.join(__filename, "..", "..", "src", "assets", "icons", "plugin_dark.png"),
     };
   }
 }

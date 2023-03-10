@@ -20,8 +20,8 @@ src/
 out/
 node_modules
 ## Except the bundle and assets
-!out/assets/
 !out/main.js
+!src/assets
 
 # Packaged distributions
 dist/
