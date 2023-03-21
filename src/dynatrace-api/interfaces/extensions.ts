@@ -27,6 +27,20 @@ interface MinimalExtension {
   version: string;
 }
 
+interface ExtensionV1ListDto {
+  extensions: ExtensionV1DTO[];
+  totalResults: number;
+  nextPageKey?: string;
+}
+
+interface ExtensionV1DTO {
+  id: string;
+  name: string;
+  type: "ACTIVEGATE" | "CODEMODULE" | "JMX" | "ONEAGENT" | "PMI" | "UNKNOWN";
+}
+
+
+
 interface ExtensionMonitoringConfiguration {
   objectId: string;
   scope: string;
