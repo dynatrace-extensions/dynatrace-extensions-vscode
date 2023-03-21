@@ -48,7 +48,7 @@
      * @returns the binary of the extension
      */
     async getExtensionBinary(extensionId: string): Promise<Uint8Array> {
-      return this.httpClient.makeRequest(`${this.endpoint}/${extensionId}/binary`, null, "GET");
+      return this.httpClient.makeRequest(`${this.endpoint}/${extensionId}/binary`, null, "GET", {}, null, null, "arraybuffer");
     }
   
   }
