@@ -106,9 +106,9 @@ interface MetricMetadata {
   key: string;
   metadata: {
     displayName: string;
-    description: string;
-    unit: string;
-    tags: string[];
+    description?: string;
+    unit?: string;
+    tags?: string[];
   };
 }
 
@@ -260,4 +260,72 @@ interface PythonDatasource {
       path: string;
     };
   };
+}
+
+export interface JMXExtensionV2 {
+  name: string;
+  version: string;
+  minDynatraceVersion: string;
+  author: {
+      name: string;
+  }
+  jmx?: {
+    groups: JMXGroup[];
+  }
+  metrics?: MetricMetadata[];
+}
+
+interface JMXGroup extends DatasourceGroup {
+  group: string;
+  subgroups: JMXSubGroup[];
+}
+
+export interface JMXSubGroup extends SubGroup {
+  subgroup: string;
+  query: string;
+  queryFilters?: JMXFilter[];
+}
+
+interface JMXFilter {
+  field: string;
+  filter: string;
+}
+
+export interface JMXExtensionV1 {
+  name: string;
+  metricGroup?: string;
+  version: string;
+  type: string;
+  metrics: MetricDto[];
+}
+
+export interface MetricDto {
+  timeseries: TimeseriesDto;
+  source: SourceDto;
+  entity: string;
+}
+
+export interface TimeseriesDto {
+  key: string;
+  unit: string;
+  displayname: string;
+  dimensions: string[];
+}
+
+export interface SourceDto {
+  domain: string;
+  keyProperties: {[key: string]: string};
+  allowAdditionalKeys: boolean;
+  attribute: string;
+  calculateRate: boolean;
+  calculateDelta: boolean;
+  splitting?: SplittingDto;
+  splittings?: SplittingDto[];
+  aggregation?: string;
+}
+
+export interface SplittingDto {
+  keyProperty: string;
+  name: string;
+  type: string;
 }
