@@ -44,7 +44,7 @@ export async function convertJMXExtension(context: vscode.ExtensionContext, dt: 
         const options: vscode.OpenDialogOptions = {
             canSelectMany: false,
             openLabel: "Select",
-            title: "Select JMX v1 plugin.json",
+            title: "Select JMX v1 plugin zip or plugin.json file",
             filters: {
                 // eslint-disable-next-line @typescript-eslint/naming-convention
                 "JMX v1 plugin": ["json", "zip"]              
