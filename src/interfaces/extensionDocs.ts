@@ -27,9 +27,9 @@ interface DashboardDoc {
 interface MetricDoc {
   key: string;
   name: string;
-  description: string;
-  unit: string;
-  tags: string[];
+  description?: string;
+  unit?: string;
+  tags?: string[];
   entities: string[];
 }
 

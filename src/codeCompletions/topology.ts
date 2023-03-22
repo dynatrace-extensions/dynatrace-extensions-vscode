@@ -16,6 +16,7 @@
 
 import * as vscode from "vscode";
 import * as yaml from "yaml";
+import { ExtensionStub } from "../interfaces/extensionMeta";
 import { CachedDataProvider } from "../utils/dataCaching";
 import {
   getAttributesKeysFromTopology,

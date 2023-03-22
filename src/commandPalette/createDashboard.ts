@@ -21,6 +21,7 @@ import { existsSync, mkdirSync, readFileSync, writeFileSync } from "fs";
 import { EnvironmentsTreeDataProvider } from "../treeViews/environmentsTreeView";
 import { getExtensionFilePath } from "../utils/fileSystem";
 import { CachedDataProvider } from "../utils/dataCaching";
+import { ExtensionStub } from "../interfaces/extensionMeta";
 
 /**
  * Workflow for creating an overview dashboard based on the content of the extension.yaml.
@@ -62,7 +63,7 @@ export async function createOverviewDashboard(
   if (!extension.dashboards) {
     extension.dashboards = [{ path: DASHBOARD_PATH }];
     writeFileSync(extensionFile, cachedData.getStringifiedExtension(extension));
-  } else if (extension.dashboards.findIndex(d => d.path === DASHBOARD_PATH) === -1) {
+  } else if (extension.dashboards.findIndex( (d: { path: string }) => d.path === DASHBOARD_PATH) === -1) {
     extension.dashboards.push({ path: DASHBOARD_PATH });
     writeFileSync(extensionFile, cachedData.getStringifiedExtension(extension));
   }

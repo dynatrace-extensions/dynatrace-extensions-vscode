@@ -15,6 +15,7 @@
  */
 
 import * as vscode from "vscode";
+import { ExtensionStub } from "../interfaces/extensionMeta";
 import { checkDtInternalProperties } from "../utils/conditionCheckers";
 import { CachedDataProvider } from "../utils/dataCaching";
 import {

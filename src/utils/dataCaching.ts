@@ -21,6 +21,7 @@ import { ValidationStatus } from "../codeLens/utils/selectorUtils";
 import { PromData } from "../codeLens/prometheusScraper";
 import { WmiQueryResult } from "../codeLens/utils/wmiUtils";
 import { fetchOID, OidInformation } from "./snmp";
+import { ExtensionStub } from "../interfaces/extensionMeta";
 
 /**
  * A utility class for caching reusable data that other components depend on.

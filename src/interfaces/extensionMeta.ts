@@ -19,7 +19,7 @@ interface TopologyStub {
   relationships: RelationshipStub[];
 }
 
-interface TopologyType {
+export interface TopologyType {
   displayName: string;
   name: string;
   rules: {
@@ -58,7 +58,7 @@ interface MetricStub {
   featureSet?: string;
 }
 
-interface DatasourceGroup {
+export interface DatasourceGroup {
   featureSet?: string;
   dimensions?: DimensionStub[];
   metrics?: MetricStub[];
@@ -102,7 +102,7 @@ interface WmiSubGroup extends SubGroup {
   type?: "logfileEvent" | "metric" | "notificationEvent";
 }
 
-interface MetricMetadata {
+export interface MetricMetadata {
   key: string;
   metadata: {
     displayName: string;
@@ -225,7 +225,7 @@ interface SingleMetricConfig {
   metric: { metricSelector: string };
 }
 
-interface ExtensionStub {
+export interface ExtensionStub {
   name: string;
   version: string;
   minDynatraceVersion: string;

@@ -21,6 +21,7 @@ import { existsSync, mkdirSync, readdirSync, readFileSync, writeFileSync } from 
 import path = require("path");
 import { getAllMetricKeysFromDataSource } from "../utils/extensionParsing";
 import { CachedDataProvider } from "../utils/dataCaching";
+import { MetricMetadata } from "../interfaces/extensionMeta";
 
 export async function createAlert(cachedData: CachedDataProvider, context: vscode.ExtensionContext) {
   const extensionFile = getExtensionFilePath(context)!;
@@ -31,7 +32,7 @@ export async function createAlert(cachedData: CachedDataProvider, context: vscod
   // Ask the user to select a metric
   let metricKeys = getAllMetricKeysFromDataSource(extension);
   if (metricKeys.length === 0 && extension.metrics) {
-    metricKeys = extension.metrics.map(metric => metric.key);
+    metricKeys = extension.metrics.map((metric: MetricMetadata) => metric.key);
   }
 
   if (metricKeys.length === 0) {
