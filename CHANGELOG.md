@@ -1,5 +1,50 @@
 # Change Log
 
+## Version 1.1.0 (10.03.2023)
+
+### ✨ New in this version:
+- [#66 - Code actions for SNMP metric metadata](https://github.com/dynatrace-extensions/dynatrace-extensions-copilot/issues/66)
+- [#80 - Initial support for monitoring configurations](https://github.com/dynatrace-extensions/dynatrace-extensions-copilot/issues/80)
+
+### 🪲 Fixed in this version:
+- [#82 - Error message shown when opening VSCode outside of a workspace](https://github.com/dynatrace-extensions/dynatrace-extensions-copilot/issues/82)
+- [#83 - Prometheus code lens appears too often](https://github.com/dynatrace-extensions/dynatrace-extensions-copilot/issues/83)
+- [#86 - Extension not bundled correctly](https://github.com/dynatrace-extensions/dynatrace-extensions-copilot/issues/86)
+- [#87 - Metric table cards not diagnosed correctly](https://github.com/dynatrace-extensions/dynatrace-extensions-copilot/issues/87)
+
+### 🚀 Improved in this version:
+- [#85 - Git-based functionality removed](https://github.com/dynatrace-extensions/dynatrace-extensions-copilot/issues/85)
+- [#64 - Reduce the amount of yaml parsing invocations](https://github.com/dynatrace-extensions/dynatrace-extensions-copilot/issues/64)
+- Installation package reduced to ~420KB
+- Extension startup times consistent at 100-250 ms
+
+---
+
+## Version 1.0.3 (03.03.2023)
+
+### 🪲 Fixed in this version:
+- [#75 - Link to configure extension not working on dashboard](https://github.com/dynatrace-extensions/dynatrace-extensions-copilot/issues/75)
+- [#74 - Create documentation command fails at alert processing](https://github.com/dynatrace-extensions/dynatrace-extensions-copilot/issues/74)
+- [#72 - Create alert can generate invalid file name](https://github.com/dynatrace-extensions/dynatrace-extensions-copilot/issues/72)
+
+### 🚀 Improved in this version:
+- [#76 - Generated dashboard title to include extension name](https://github.com/dynatrace-extensions/dynatrace-extensions-copilot/issues/76)
+- [#62 - Long running commands can be cancelled](https://github.com/dynatrace-extensions/dynatrace-extensions-copilot/issues/62)
+
+---
+
+## Version 1.0.2 (27.02.2023)
+
+### 🪲 Fixed in this version:
+- [#65 - WMI Code Lens does not clear correctly](https://github.com/dynatrace-extensions/dynatrace-extensions-copilot/issues/65)
+- Feature settings toggle not working for WMI & Screen Code Lens
+
+### 🚀 Improved in this version:
+- [#63 - Prometheus cached results clear when switching endpoints](https://github.com/dynatrace-extensions/dynatrace-extensions-copilot/issues/63)
+- [#67 - Create Alert command prefers metrics from datasource](https://github.com/dynatrace-extensions/dynatrace-extensions-copilot/issues/67)
+
+---
+
 ## Version 1.0.1 (23.02.2023)
 
 ### 🪲 Fixed in this version:

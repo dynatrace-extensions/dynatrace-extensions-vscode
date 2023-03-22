@@ -15,13 +15,13 @@
  */
 
 import * as path from "path";
-import * as yaml from "yaml";
 import * as vscode from "vscode";
 import * as glob from "glob";
 import { readFileSync } from "fs";
 import { getAllWorkspaces } from "../utils/fileSystem";
 import { ExtensionWorkspace } from "../interfaces/treeViewData";
 import { deleteWorkspace } from "./commands/workspaces";
+import { CachedDataProvider } from "../utils/dataCaching";
 
 /**
  * A tree data provider that renders all Extensions 2.0 project workspaces that have been
@@ -30,16 +30,19 @@ import { deleteWorkspace } from "./commands/workspaces";
  */
 export class ExtensionsTreeDataProvider implements vscode.TreeDataProvider<ExtensionProjectItem> {
   context: vscode.ExtensionContext;
+  private readonly cachedData: CachedDataProvider;
   private _onDidChangeTreeData: vscode.EventEmitter<ExtensionProjectItem | undefined | void> = new vscode.EventEmitter<
     ExtensionProjectItem | undefined | void
   >();
   readonly onDidChangeTreeData: vscode.Event<ExtensionProjectItem | undefined | void> = this._onDidChangeTreeData.event;
 
   /**
+   * @param cachedDataProvider a provider for cacheable data
    * @param context VSCode Extension context
    */
-  constructor(context: vscode.ExtensionContext) {
+  constructor(cachedDataProvider: CachedDataProvider, context: vscode.ExtensionContext) {
     this.context = context;
+    this.cachedData = cachedDataProvider;
     this.registerCommands(context);
   }
 
@@ -97,15 +100,15 @@ export class ExtensionsTreeDataProvider implements vscode.TreeDataProvider<Exten
         ...glob.sync("*/extension/extension.yaml", { cwd: workspacePath }),
       ];
       extensionFiles.forEach(filepath => {
-        let extension: ExtensionStub = yaml.parse(readFileSync(path.join(workspacePath, filepath)).toString());
+        const extension = this.cachedData.getExtensionYaml(readFileSync(path.join(workspacePath, filepath)).toString());
         extensions.push(
           new ExtensionProjectItem(
             extension.name,
             vscode.TreeItemCollapsibleState.None,
             vscode.Uri.file(path.join(workspacePath, filepath)),
             {
-              light: path.join(__filename, "..", "..", "assets", "icons", "plugin_light.png"),
-              dark: path.join(__filename, "..", "..", "assets", "icons", "plugin_dark.png"),
+              light: path.join(__filename, "..", "..", "src", "assets", "icons", "plugin_light.png"),
+              dark: path.join(__filename, "..", "..", "src", "assets", "icons", "plugin_dark.png"),
             },
             "extension",
             `${extension.name}-${extension.version}`,
@@ -124,8 +127,8 @@ export class ExtensionsTreeDataProvider implements vscode.TreeDataProvider<Exten
           workspace.folder as vscode.Uri,
           vscode.workspace.workspaceFolders &&
           vscode.workspace.workspaceFolders[0].uri.fsPath === (workspace.folder as vscode.Uri).fsPath
-            ? path.join(__filename, "..", "..", "assets", "icons", "workspace_current.png")
-            : path.join(__filename, "..", "..", "assets", "icons", "workspace.png"),
+            ? path.join(__filename, "..", "..", "src", "assets", "icons", "workspace_current.png")
+            : path.join(__filename, "..", "..", "src", "assets", "icons", "workspace.png"),
           "extensionWorkspace",
           workspace.id
         )

@@ -148,4 +148,55 @@ export class ExtensionsServiceV2 {
       `${this.endpoint}/${extensionName}/monitoringConfigurations/${configurationId}/status`
     );
   }
+
+  /**
+   * Deletes the specified monitoring configuration.
+   * @param extensionName The name of the requested extension 2.0
+   * @param configurationId The ID of the requested monitoring configuration
+   * @returns response data
+   */
+  async deleteMonitoringConfiguration(extensionName: string, configurationId: string) {
+    return this.httpClient.makeRequest(
+      `${this.endpoint}/${extensionName}/monitoringConfigurations/${configurationId}`,
+      {},
+      "DELETE"
+    );
+  }
+
+  /**
+   * Gets the details of the specified monitoring configuration.
+   * @param extensionName The name of the requested extension 2.0
+   * @param configurationId The ID of the requested monitoring configuration
+   * @returns details of the monitoring configuration object
+   */
+  async getMonitoringConfiguration(extensionName: string, configurationId: string) {
+    return this.httpClient.makeRequest(`${this.endpoint}/${extensionName}/monitoringConfigurations/${configurationId}`);
+  }
+
+  /**
+   * Updates the specified monitoring configuration.
+   * @param extensionName The name of the requested extension 2.0
+   * @param configurationId The ID of the requested monitoring configuration
+   * @param configurationDetails The new details of the configuration object
+   * @returns response data
+   */
+  async putMonitoringConfiguration(extensionName: string, configurationId: string, configurationDetails: any) {
+    return this.httpClient.makeRequest(
+      `${this.endpoint}/${extensionName}/monitoringConfigurations/${configurationId}`,
+      configurationDetails,
+      "PUT"
+    );
+  }
+
+  async postMonitoringConfiguration(extensionName: string, configurationDetails: any) {
+    return this.httpClient.makeRequest(
+      `${this.endpoint}/${extensionName}/monitoringConfigurations`,
+      configurationDetails,
+      "POST"
+    );
+  }
+
+  async getExtensionSchema(extensionName: string, extensionVersion: string) {
+    return this.httpClient.makeRequest(`${this.endpoint}/${extensionName}/${extensionVersion}/schema`);
+  }
 }

@@ -15,7 +15,7 @@ environment.
 
 ## Demo
 
-![activate_ext_command]({{ site.baseurl }}/assets/gifs/activate_extension.gif)
+![activate_ext_command]({{ site.baseurl }}assets/gifs/activate_extension.gif)
 
 ## Detailed command flow
 

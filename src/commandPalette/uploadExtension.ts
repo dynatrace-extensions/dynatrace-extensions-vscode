@@ -18,18 +18,19 @@ import { lstatSync, readdirSync, readFileSync } from "fs";
 import * as path from "path";
 import * as vscode from "vscode";
 import AdmZip = require("adm-zip");
-import * as yaml from "yaml";
 import { Dynatrace } from "../dynatrace-api/dynatrace";
 import { DynatraceAPIError } from "../dynatrace-api/errors";
+import { CachedDataProvider } from "../utils/dataCaching";
 
 /**
  * Uploads the latest avaialable extension 2.0 package from the `dist` folder of
  * a registered extensions workspace. In case the maximum number of versions is reached,
  * the user is prompted for deletion. At the end, the activate extension command is linked.
  * @param dt Dynatrace API Client
+ * @param cachedData provider for cacheable data
  * @returns void
  */
-export async function uploadExtension(dt: Dynatrace) {
+export async function uploadExtension(dt: Dynatrace, cachedData: CachedDataProvider) {
   // Get the most recent entry in dist folder
   var distDir = path.join(vscode.workspace.workspaceFolders![0].uri.fsPath, "dist");
   var extensionZip = readdirSync(distDir)
@@ -45,15 +46,15 @@ export async function uploadExtension(dt: Dynatrace) {
       .filter((entry) => entry.entryName === "extension.zip")[0]
       .getData()
   );
-  var extension = yaml.parse(
+  const extension = cachedData.getExtensionYaml(
     zip
       .getEntries()
       .filter((entry) => entry.entryName === "extension.yaml")[0]
       .getData()
       .toString("utf-8")
-  ) as ExtensionStub;
-  var extensionVersion = extension.version;
-  var extensionName = extension.name;
+  );
+  const extensionVersion = extension.version;
+  const extensionName = extension.name;
 
   // Check for maximum number of allowed versions and prompt for deletion
   var existingVersions = await dt.extensionsV2.listVersions(extensionName).catch((err) => {

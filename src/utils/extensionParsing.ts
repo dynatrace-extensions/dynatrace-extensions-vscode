@@ -889,7 +889,7 @@ export function getEntityChartCardKeys(screenIdx: number, extension: ExtensionSt
 
 type CardMeta = {
   key: string;
-  type: "ENTITIES_LIST" | "CHART_GROUP" | "MESSAGE" | "LOGS" | "EVENTS";
+  type: "ENTITIES_LIST" | "CHART_GROUP" | "MESSAGE" | "LOGS" | "EVENTS" | "METRIC_TABLE";
 };
 
 /**
@@ -949,7 +949,7 @@ export function getReferencedCardsMeta(screenIdx: number, extension: ExtensionSt
 export function getDefinedCardsMeta(
   screenIdx: number,
   extension: ExtensionStub,
-  cardType?: "entitiesListCards" | "chartsCards" | "eventsCards" | "logsCards" | "messageCards"
+  cardType?: "entitiesListCards" | "chartsCards" | "eventsCards" | "logsCards" | "messageCards" | "metricTableCards"
 ): CardMeta[] {
   var cards: CardMeta[] = [];
 
@@ -994,6 +994,15 @@ export function getDefinedCardsMeta(
       extension.screens![screenIdx].eventsCards?.forEach(card => {
         if (cards.findIndex(c => c.key === card.key) === -1) {
           cards.push({ key: card.key, type: "EVENTS" });
+        }
+      });
+    }
+  }
+  if (!cardType || cardType === "metricTableCards") {
+    if (extension.screens![screenIdx].metricTableCards) {
+      extension.screens![screenIdx].metricTableCards?.forEach(card => {
+        if (cards.findIndex(c => c.key === card.key) === -1) {
+          cards.push({ key: card.key, type: "METRIC_TABLE" });
         }
       });
     }

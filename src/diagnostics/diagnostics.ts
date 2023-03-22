@@ -15,7 +15,6 @@
  */
 
 import * as vscode from "vscode";
-import * as yaml from "yaml";
 import { checkDtInternalProperties } from "../utils/conditionCheckers";
 import { CachedDataProvider } from "../utils/dataCaching";
 import {
@@ -80,7 +79,7 @@ export class DiagnosticsProvider {
       return;
     }
 
-    const extension = yaml.parse(document.getText());
+    const extension = this.cachedData.getExtensionYaml(document.getText());
 
     // Diagnostic collections should be awaited all in parallel
     const diagnostics = await Promise.all([

@@ -15,11 +15,11 @@
  */
 
 import * as vscode from "vscode";
-import * as yaml from "yaml";
 import * as path from "path";
 import { readFileSync, writeFileSync } from "fs";
 import { getAllMetricsByFeatureSet } from "../utils/extensionParsing";
 import { getExtensionFilePath } from "../utils/fileSystem";
+import { CachedDataProvider } from "../utils/dataCaching";
 
 /**
  * Delivers the "Create documentation" command functionality.
@@ -27,14 +27,14 @@ import { getExtensionFilePath } from "../utils/fileSystem";
  * a README.md file which is written in the workspace at the same level as the extension folder.
  * @returns void
  */
-export async function createDocumentation(context: vscode.ExtensionContext) {
+export async function createDocumentation(cachedData: CachedDataProvider, context: vscode.ExtensionContext) {
   await vscode.window.withProgress(
     { location: vscode.ProgressLocation.Notification, title: "Creating documentation" },
     async progress => {
       progress.report({ message: "Parsing metadata" });
-      var extensionYaml = getExtensionFilePath(context)!;
-      var extensionDir = path.dirname(extensionYaml);
-      var extension = yaml.parse(readFileSync(extensionYaml).toString());
+      const extensionFile = getExtensionFilePath(context)!;
+      const extensionDir = path.dirname(extensionFile);
+      const extension = cachedData.getExtensionYaml(readFileSync(extensionFile).toString());
 
       progress.report({ message: "Writing README.md" });
       writeDocumentation(extension, extensionDir);
@@ -86,8 +86,10 @@ function writeDocumentation(extension: ExtensionStub, extensionDir: string) {
       "## Alerts\n\nCustom events for alerting are packaged along with the extension. These should be reviewed and ajusted as needed before enabling from the Settings page.\nAlerts:\n";
     alerts.forEach(alert => {
       docContent += `* ${alert.name}`;
-      let eIdx = entities.findIndex(e => e.type === alert.entity);
-      docContent += eIdx === -1 ? "" : ` (applies to ${entities[eIdx].name})\n`;
+      if (alert.entity) {
+        const eIdx = entities.findIndex(e => e.type === alert.entity);
+        docContent += eIdx === -1 ? "" : ` (applies to ${entities[eIdx].name})\n`;
+      }
       docContent += `  ${alert.description}\n`;
     });
     docContent += "\n";
@@ -144,16 +146,30 @@ function extractAlerts(extension: ExtensionStub, extensionDir: string): AlertDoc
     let violatingSamples = alert.monitoringStrategy.violatingSamples;
     let samples = alert.monitoringStrategy.samples;
     let threshold = alert.monitoringStrategy.threshold;
-    let unit = alert.monitoringStrategy.unit.toLowerCase();
-    let severity = alert.severity.replace("_", " ").toUpperCase();
-    let entity = alert.primaryDimensionKey.toLowerCase();
-    if (entity.startsWith("dt.entity.")) {
-      entity = entity.substring(10, entity.length);
+    let unit;
+    if (alert.monitoringStrategy.unit) {
+      unit = alert.monitoringStrategy.unit.toLowerCase();
+    }
+    if (unit) {
+      threshold += ` ${unit}`;
+    }
+    let alertSeverity = "an alert";
+    if (alert.severity) {
+      alertSeverity = `a ${alert.severity.replace("_", " ").toUpperCase()} alert`;
+    } else if (alert.eventType) {
+      alertSeverity = `a ${alert.eventType.replace("_", " ").toUpperCase()} alert`;
+    }
+    let entity;
+    if (alert.primaryDimensionKey) {
+      entity = alert.primaryDimensionKey.toLowerCase();
+      if (entity.startsWith("dt.entity.")) {
+        entity = entity.substring(10, entity.length);
+      }
     }
 
     return {
       name: alert.name,
-      description: `Will raise a ${severity} alert when the metric is ${alertCondition} ${threshold} ${unit} for ${violatingSamples} out of ${samples} monitoring intervals`,
+      description: `Will raise ${alertSeverity} when the metric is ${alertCondition} ${threshold} for ${violatingSamples} out of ${samples} monitoring intervals`,
       entity: entity,
     };
   });

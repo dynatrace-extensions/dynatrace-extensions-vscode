@@ -15,7 +15,7 @@ the version in there too.
 
 ## Demo
 
-![load_schemas]({{ site.baseurl }}/assets/gifs/load_schemas.gif)
+![load_schemas]({{ site.baseurl }}assets/gifs/load_schemas.gif)
 
 ## Detailed command flow
 

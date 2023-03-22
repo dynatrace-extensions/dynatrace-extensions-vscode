@@ -17,7 +17,7 @@
 interface AlertDoc {
   name: string;
   description: string;
-  entity: string;
+  entity?: string;
 }
 
 interface DashboardDoc {

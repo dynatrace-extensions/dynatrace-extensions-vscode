@@ -11,7 +11,7 @@ see updates in their connected Dynatrace environment.
 
 ## Demo
 
-![fast_dev_mode]({{ site.baseurl }}/assets/gifs/fast_dev_mode.gif)
+![fast_dev_mode]({{ site.baseurl }}assets/gifs/fast_dev_mode.gif)
 
 ## How does it work?
 

@@ -149,19 +149,19 @@ export const OID_DOT_ZERO_IN_TABLE: CopilotDiagnostic = {
 };
 
 export const OID_DOT_ZERO_MISSING: CopilotDiagnostic = {
-  code: "DEC016",
+  code: "DEC017",
   severity: vscode.DiagnosticSeverity.Error,
   message: "Invalid OID syntax. OIDs must end in '.0' when they are not part of a 'table' subgroup.",
 };
 
 export const OID_STATIC_OBJ_IN_TABLE: CopilotDiagnostic = {
-  code: "DEC017",
+  code: "DEC018",
   severity: vscode.DiagnosticSeverity.Error,
   message: "Type conflict. This OID is static but being used inside a 'table' subgroup.",
 };
 
 export const OID_TABLE_OBJ_AS_STATIC: CopilotDiagnostic = {
-  code: "DEC018",
+  code: "DEC019",
   severity: vscode.DiagnosticSeverity.Error,
   message: "Type conflict. This OID maps to table entries but is not being used inside a 'table' subgroup.",
 };

@@ -1,5 +1,5 @@
 <p align="center">
-  <img src="./src/assets/logos/copilot_logo.png" width=300>
+  <img src="./docs/assets/images/copilot_logo.png" width=300>
 </p>
 
 <h1 align="center">Dynatrace Extensions Copilot</h1>

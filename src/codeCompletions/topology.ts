@@ -54,7 +54,7 @@ export class TopologyCompletionProvider implements vscode.CompletionItemProvider
     context: vscode.CompletionContext
   ): vscode.CompletionItem[] {
     var completionItems: vscode.CompletionItem[] = [];
-    var extension = yaml.parse(document.getText()) as ExtensionStub;
+    var extension = this.cachedData.getExtensionYaml(document.getText());
     var parentBlocks = getParentBlocks(position.line, document.getText());
     var line = document.lineAt(position.line).text.substring(0, position.character);
 

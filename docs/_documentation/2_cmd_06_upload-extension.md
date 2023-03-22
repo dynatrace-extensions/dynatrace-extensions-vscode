@@ -16,7 +16,7 @@ Dynatrace tenant.
 
 ## Demo
 
-![upload_ext_command]({{ site.baseurl }}/assets/gifs/upload_extension.gif)
+![upload_ext_command]({{ site.baseurl }}assets/gifs/upload_extension.gif)
 
 ## Detailed command flow
 

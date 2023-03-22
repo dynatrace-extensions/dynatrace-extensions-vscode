@@ -15,7 +15,6 @@
  */
 
 import * as vscode from "vscode";
-import * as yaml from "yaml";
 import { PromData } from "../codeLens/prometheusScraper";
 import { CachedDataProvider } from "../utils/dataCaching";
 import {
@@ -55,10 +54,10 @@ export class PrometheusCompletionProvider implements vscode.CompletionItemProvid
     token: vscode.CancellationToken,
     context: vscode.CompletionContext
   ): vscode.CompletionItem[] {
-    var completionItems: vscode.CompletionItem[] = [];
-    var extension = yaml.parse(document.getText()) as ExtensionStub;
-    var parentBlocks = getParentBlocks(position.line, document.getText());
-    var line = document.lineAt(position.line).text.substring(0, position.character);
+    const completionItems: vscode.CompletionItem[] = [];
+    const extension = this.cachedData.getExtensionYaml(document.getText());
+    const parentBlocks = getParentBlocks(position.line, document.getText());
+    const line = document.lineAt(position.line).text.substring(0, position.character);
 
     this.prometheusData = this.cachedData.getPrometheusData();
 
@@ -66,7 +65,7 @@ export class PrometheusCompletionProvider implements vscode.CompletionItemProvid
     if (getDatasourceName(extension) !== "prometheus" || !this.prometheusData) {
       return [];
     }
-    
+
     // Metric details
     if (line.endsWith("value: ")) {
       // Existing datasource yaml details
@@ -102,7 +101,7 @@ export class PrometheusCompletionProvider implements vscode.CompletionItemProvid
    */
   private createMetricCompletion(existingKeys: string[]): vscode.CompletionItem[] {
     var completions: vscode.CompletionItem[] = [];
-    const availableKeys = Object.keys(this.prometheusData).filter((key) => !existingKeys.includes(key));
+    const availableKeys = Object.keys(this.prometheusData).filter(key => !existingKeys.includes(key));
 
     // Only create completion item if there are keys to insert
     if (availableKeys.length > 0) {
@@ -129,9 +128,9 @@ export class PrometheusCompletionProvider implements vscode.CompletionItemProvid
   private createDimensionCompletions(metricKeys: string[], existingKeys: string[]): vscode.CompletionItem[] {
     var completions: vscode.CompletionItem[] = [];
     var dimensions: string[] = [];
-    Object.keys(this.prometheusData).forEach((key) => {
+    Object.keys(this.prometheusData).forEach(key => {
       if (this.prometheusData[key].dimensions) {
-        this.prometheusData[key].dimensions!.forEach((dimension) => {
+        this.prometheusData[key].dimensions!.forEach(dimension => {
           if (
             (metricKeys.length === 0 || metricKeys.includes(key)) &&
             !existingKeys.includes(dimension) &&
@@ -170,10 +169,7 @@ export class PrometheusCompletionProvider implements vscode.CompletionItemProvid
     if (metricValue && metricValue.startsWith("metric:")) {
       const promKey = metricValue.split("metric:")[1];
       if (Object.keys(this.prometheusData).includes(promKey)) {
-        const descriptionCompletion = new vscode.CompletionItem(
-          "Add description",
-          vscode.CompletionItemKind.Constant
-        );
+        const descriptionCompletion = new vscode.CompletionItem("Add description", vscode.CompletionItemKind.Constant);
         descriptionCompletion.detail = "Copilot Suggestion";
         descriptionCompletion.documentation =
           "Automatically add metric description from your Prometheus endpoint scraped data.";

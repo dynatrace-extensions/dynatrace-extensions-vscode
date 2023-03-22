@@ -15,12 +15,19 @@
  */
 
 import * as vscode from "vscode";
-import * as yaml from "yaml";
+import { CachedDataProvider } from "../utils/dataCaching";
 import { getReferencedCardsMeta, getDefinedCardsMeta } from "../utils/extensionParsing";
 import { getBlockItemIndexAtLine, getParentBlocks } from "../utils/yamlParsing";
 
 export class ScreensMetaCompletionProvider implements vscode.CompletionItemProvider {
-  constructor() {}
+  private readonly cachedData: CachedDataProvider;
+
+  /**
+   * @param cachedDataProvider a provider for cacheable data
+   */
+  constructor(cachedDataProvider: CachedDataProvider) {
+    this.cachedData = cachedDataProvider;
+  }
 
   provideCompletionItems(
     document: vscode.TextDocument,
@@ -28,11 +35,11 @@ export class ScreensMetaCompletionProvider implements vscode.CompletionItemProvi
     token: vscode.CancellationToken,
     context: vscode.CompletionContext
   ): vscode.CompletionItem[] {
-    var completions: vscode.CompletionItem[] = [];
-    var extension = yaml.parse(document.getText()) as ExtensionStub;
-    var parentBlocks = getParentBlocks(position.line, document.getText());
-    var line = document.lineAt(position.line).text.substring(0, position.character);
-    var screenIdx = getBlockItemIndexAtLine("screens", position.line, document.getText());
+    const completions: vscode.CompletionItem[] = [];
+    const extension = this.cachedData.getExtensionYaml(document.getText());
+    const parentBlocks = getParentBlocks(position.line, document.getText());
+    const line = document.lineAt(position.line).text.substring(0, position.character);
+    const screenIdx = getBlockItemIndexAtLine("screens", position.line, document.getText());
 
     // Screen Card Key Suggestions
     // -----
@@ -82,14 +89,14 @@ export class ScreensMetaCompletionProvider implements vscode.CompletionItemProvi
     var completions: vscode.CompletionItem[] = [];
 
     if (location === "definition") {
-      var cardsInserted = getDefinedCardsMeta(screenIdx, extension, cardType).map((c) => c.key);
+      var cardsInserted = getDefinedCardsMeta(screenIdx, extension, cardType).map(c => c.key);
       getReferencedCardsMeta(screenIdx, extension)
         .filter(
           // Stupid way of matching card types between yaml key and yaml value
-          (card) =>
+          card =>
             card.type.substring(0, 4).toLowerCase() === cardType!.substring(0, 4) && !cardsInserted.includes(card.key)
         )
-        .forEach((card) => {
+        .forEach(card => {
           const cardCompletion = new vscode.CompletionItem(card.key, vscode.CompletionItemKind.Field);
           cardCompletion.detail = "Copilot suggestion";
           cardCompletion.documentation =
@@ -97,10 +104,10 @@ export class ScreensMetaCompletionProvider implements vscode.CompletionItemProvi
           completions.push(cardCompletion);
         });
     } else if (location === "layout") {
-      var cardsInserted = getReferencedCardsMeta(screenIdx, extension).map((c) => c.key);
+      var cardsInserted = getReferencedCardsMeta(screenIdx, extension).map(c => c.key);
       getDefinedCardsMeta(screenIdx, extension)
-        .filter((card) => !cardsInserted.includes(card.key))
-        .forEach((card) => {
+        .filter(card => !cardsInserted.includes(card.key))
+        .forEach(card => {
           const cardCompletion = new vscode.CompletionItem(card.key, vscode.CompletionItemKind.Field);
           cardCompletion.detail = "Copilot suggestion";
           cardCompletion.documentation =
