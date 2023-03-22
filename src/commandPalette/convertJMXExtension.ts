@@ -19,6 +19,7 @@ import * as jszip from "jszip";
 import * as yaml from "yaml";
 import { Dynatrace } from "../dynatrace-api/dynatrace";
 import { JMXExtensionV1, JMXExtensionV2, JMXSubGroup, MetricDto, SourceDto } from "../interfaces/extensionMeta";
+import { slugify } from "../codeActions/utils/snippetBuildingUtils";
 
 const OPTION_LOCAL_FILE = "Local (filesystem)";
 const OPTION_DYNATRACE_ENVIRONMENT = "Remote (dynatrace environment)";
@@ -104,7 +105,7 @@ export async function convertJMXExtension(context: vscode.ExtensionContext, dt: 
             // eslint-disable-next-line @typescript-eslint/naming-convention
             "JMX v2 extension": ["yaml"]
         },
-        defaultUri: vscode.Uri.file(`${jmxV2Extension.name}.yaml`),
+        defaultUri: vscode.Uri.file(`${slugify(jmxV2Extension.name)}.yaml`),
     };
     const extensionYAMLFile = await vscode.window.showSaveDialog(options);
     if (!extensionYAMLFile) {
