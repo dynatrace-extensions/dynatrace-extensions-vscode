@@ -115,6 +115,11 @@ export async function convertJMXExtension(context: vscode.ExtensionContext, dt: 
     // Save the file as yaml
     const yamlFileContents = yaml.stringify(jmxV2Extension);
     await vscode.workspace.fs.writeFile(extensionYAMLFile, Buffer.from(yamlFileContents));
+
+    // Open the file
+    const document = await vscode.workspace.openTextDocument(extensionYAMLFile);
+    await vscode.window.showTextDocument(document);
+    
     
 }
 
