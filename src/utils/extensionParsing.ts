@@ -14,6 +14,8 @@
   limitations under the License.
  */
 
+import { DatasourceGroup, ExtensionStub } from "../interfaces/extensionMeta";
+
 /**
  * Normalize semi-invalid versions of extension because they get re-written cluster-side.
  * E.g. version can be 3 and cluster will re-write to 3.0.0

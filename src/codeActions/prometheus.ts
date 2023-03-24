@@ -17,6 +17,8 @@
 import * as vscode from "vscode";
 import { PromData } from "../codeLens/prometheusScraper";
 import { CachedDataProvider } from "../utils/dataCaching";
+import { ExtensionStub } from "../interfaces/extensionMeta";
+
 import {
   getAllMetricKeysAndValuesFromDataSource,
   getPrometheusLabelKeys,

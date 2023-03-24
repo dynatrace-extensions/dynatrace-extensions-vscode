@@ -33,6 +33,7 @@ import {
   relationSnippet,
   screenSnippet,
 } from "./snippets";
+import { ExtensionStub, TopologyType } from "../../interfaces/extensionMeta";
 
 /**
  * Builds a YAML snippet for an action that sends to extension configuration.

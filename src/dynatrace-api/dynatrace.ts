@@ -17,6 +17,7 @@
 import { CredentialVaultService } from "./configuration_v1/credentialVault";
 import { DashboardService } from "./configuration_v1/dashboards";
 import { ExtensionsServiceV2 } from "./environment_v2/extensions";
+import { ExtensionsServiceV1 } from "./configuration_v1/extensions";
 import { MetricService } from "./environment_v2/metrics";
 import { EntityServiceV2 } from "./environment_v2/monitoredEntities";
 import { SettingsService } from "./environment_v2/settings";
@@ -28,6 +29,7 @@ import { HttpClient } from "./http_client";
 export class Dynatrace {
   private readonly _httpClient: HttpClient;
   public readonly extensionsV2: ExtensionsServiceV2;
+  public readonly extensionsV1: ExtensionsServiceV1;
   public readonly credentialVault: CredentialVaultService;
   public readonly entitiesV2: EntityServiceV2;
   public readonly metrics: MetricService;
@@ -46,5 +48,6 @@ export class Dynatrace {
     this.metrics = new MetricService(this._httpClient);
     this.settings = new SettingsService(this._httpClient);
     this.dashboards = new DashboardService(this._httpClient);
+    this.extensionsV1 = new ExtensionsServiceV1(this._httpClient);
   }
 }

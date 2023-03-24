@@ -46,7 +46,8 @@ export class HttpClient {
     method: string = "GET",
     headers: any = {},
     queryParams?: any,
-    files?: any
+    files?: any,
+    responseType?: any
   ): Promise<any> {
     let url = `${this.baseUrl}${path}`;
 
@@ -80,6 +81,7 @@ export class HttpClient {
         params: params,
         method: method,
         data: files ? form! : body,
+        responseType
       })
       .then((res) => {
         if (res.status >= 400) {

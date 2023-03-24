@@ -15,6 +15,7 @@
  */
 
 import * as vscode from "vscode";
+import { ExtensionStub } from "../interfaces/extensionMeta";
 import { CachedDataProvider } from "../utils/dataCaching";
 import { getMetricsFromDataSource } from "../utils/extensionParsing";
 import { buildMetricMetadataSnippet, indentSnippet } from "./utils/snippetBuildingUtils";

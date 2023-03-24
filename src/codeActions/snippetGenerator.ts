@@ -43,6 +43,7 @@ import {
 } from "./utils/snippetBuildingUtils";
 import { getBlockItemIndexAtLine, getParentBlocks } from "../utils/yamlParsing";
 import { CachedDataProvider } from "../utils/dataCaching";
+import { ExtensionStub } from "../interfaces/extensionMeta";
 
 /**
  * Provider for Code Actions that insert snippets of code into the existing extension yaml.

@@ -57,6 +57,7 @@ import { runWMIQuery, WmiQueryResult } from "./codeLens/utils/wmiUtils";
 import { WMIQueryResultsPanel } from "./webviews/wmiQueryResults";
 import { WmiCompletionProvider } from "./codeCompletions/wmi";
 import { createAlert } from "./commandPalette/createAlert";
+import { convertJMXExtension } from "./commandPalette/convertJMXExtension";
 import { SnmpActionProvider } from "./codeActions/snmp";
 
 /**
@@ -390,6 +391,11 @@ function registerCommandPaletteCommands(
         createAlert(cachedDataProvider, context);
       }
     }),
+    // Convert JMX Extension from 1.0 to 2.0
+    vscode.commands.registerCommand("dt-ext-copilot.convertJmxExtension", async () => {
+        convertJMXExtension(context, (await tenantsProvider.getDynatraceClient())!);
+    })
+
   ];
 }
 

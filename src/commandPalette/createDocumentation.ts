@@ -20,6 +20,7 @@ import { readFileSync, writeFileSync } from "fs";
 import { getAllMetricsByFeatureSet } from "../utils/extensionParsing";
 import { getExtensionFilePath } from "../utils/fileSystem";
 import { CachedDataProvider } from "../utils/dataCaching";
+import { ExtensionStub } from "../interfaces/extensionMeta";
 
 /**
  * Delivers the "Create documentation" command functionality.

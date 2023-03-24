@@ -15,6 +15,7 @@
  */
 
 import * as vscode from "vscode";
+import { ExtensionStub } from "../interfaces/extensionMeta";
 import { CachedDataProvider } from "../utils/dataCaching";
 import { getReferencedCardsMeta, getDefinedCardsMeta } from "../utils/extensionParsing";
 import { getBlockItemIndexAtLine, getParentBlocks } from "../utils/yamlParsing";
