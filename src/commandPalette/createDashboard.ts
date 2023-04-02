@@ -117,7 +117,7 @@ function buildDashboard(extension: ExtensionStub, short: string = "Extension"): 
     // with a Python datasource or an unknown datasource.
     const extensionDatasource = getExtensionDatasource(extension);
     var entityMetrics: { key: string; name: string }[] = [];
-    if (extensionDatasource) {
+    if (extensionDatasource.length > 0) {
       entityMetrics = getEntityMetrics(idx, extension)
         .map(m => ({
           key: m,
