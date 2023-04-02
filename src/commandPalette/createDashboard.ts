@@ -16,7 +16,12 @@
 
 import * as vscode from "vscode";
 import * as path from "path";
-import { getEntityMetrics, getMetricDisplayName } from "../utils/extensionParsing";
+import {
+  getEntityMetrics,
+  getEntityMetricsMatchingDimensionsByRequiredDimensions,
+  getExtensionDatasource,
+  getMetricDisplayName
+} from "../utils/extensionParsing";
 import { existsSync, mkdirSync, readFileSync, writeFileSync } from "fs";
 import { EnvironmentsTreeDataProvider } from "../treeViews/environmentsTreeView";
 import { getExtensionFilePath } from "../utils/fileSystem";
@@ -99,18 +104,38 @@ function buildDashboard(extension: ExtensionStub, short: string = "Extension"): 
   var customTiles: string[] = [];
 
   // Gather dynamic content
-  const currentlyMonitoringWidth = Math.max(extension.topology.types.length * 152, 304);
   extension.topology.types.forEach((type, idx) => {
-    var tableQueries: string[] = [];
-    navigationLinks.push(`[${type.displayName}](ui/entity/list/${type.name})`);
+    // Markdown tile with entity title
     customTiles.push(buildEntityTitleTile(type.displayName, 76 + (idx + 1) * 304));
-    const entityMetrics = getEntityMetrics(idx, extension)
-      .map(m => ({
-        key: m,
-        name: getMetricDisplayName(m, extension),
-      }))
-      .filter(m => m.name !== "");
-    // First found metric used for entity table, graph chart, and single value tile
+    // Add this entity to the tile that will contain entity navigation links
+    navigationLinks.push(`[${type.displayName}](ui/entity/list/${type.name})`);
+    // Queries that will be used to populate a table tile for specific entity
+    var tableQueries: string[] = [];
+    // When extensionDatasource array is not empty, that means Copilot knows this
+    // datasource and can extract metrics from groups/subgroups within that datasource.
+    // Otherwise, when extensionDatasource is empty, that means that we are dealing
+    // with a Python datasource or an unknown datasource.
+    const extensionDatasource = getExtensionDatasource(extension);
+    var entityMetrics: { key: string; name: string }[] = [];
+    if (extensionDatasource) {
+      entityMetrics = getEntityMetrics(idx, extension)
+        .map(m => ({
+          key: m,
+          name: getMetricDisplayName(m, extension),
+        }))
+        .filter(m => m.name !== "");
+    } else {
+      // Retrieve all metrics attributable to this entity type based on the metrics
+      // section of extension.yaml cross-referenced with metrics defined in the source 
+      // rules and required dimension of the current entity type.
+      entityMetrics = getEntityMetricsMatchingDimensionsByRequiredDimensions(idx, extension)
+        .map(m => ({
+          key: m,
+          name: getMetricDisplayName(m, extension),
+        }))
+        .filter(m => m.name !== "");
+    }
+      // First found metric used for entity table, graph chart, and single value tile
     if (entityMetrics.length > 0) {
       customTiles.push(buildCurrentlyMonitoringTile(type.displayName, type.name, entityMetrics[0].key, idx * 152));
       tableQueries.push(buildTableQuery("A", entityMetrics[0].key, type.name));
@@ -127,6 +152,10 @@ function buildDashboard(extension: ExtensionStub, short: string = "Extension"): 
     }
     customTiles.push(buildEntityTableTile(type.displayName, 114 + (idx + 1) * 304, tableQueries.join(",\n")));
   });
+
+  // Compute width of currently monitoring tile
+  const currentlyMonitoringWidth = Math.max(extension.topology.types.length * 152, 304);
+
   // Put together the details
   var dashboard = dashboardTemplate;
   dashboard = dashboard.replace("<extension-id>", extension.name);

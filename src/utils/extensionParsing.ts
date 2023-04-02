@@ -192,9 +192,12 @@ export function getMetricKeysFromEntitiesListCard(
  * @param typeIdx index of entity type within the topology section
  * @param extension extension.yaml serialized as object
  * @param excludeKeys keys to exclude from the response
+ * @returns list of metric keys
  */
 export function getEntityMetrics(typeIdx: number, extension: ExtensionStub, excludeKeys: string[] = []) {
   var matchingMetrics: string[] = [];
+  // Get metrics keys as found within the datasource section. This returns nothing
+  // if we are dealing with Python datasource or an unknown datasource.
   var allMetrics = getAllMetricKeysFromDataSource(extension);
   var patterns = getEntityMetricPatterns(typeIdx, extension);
   if (allMetrics) {
@@ -213,6 +216,62 @@ export function getEntityMetrics(typeIdx: number, extension: ExtensionStub, excl
           }
         })
       );
+    });
+    return matchingMetrics.filter(metric => !excludeKeys.includes(metric));
+  }
+  return [];
+}
+
+/**
+ * Extracts all metrics for a given entity with a condition that they match with
+ * metrics defined in the "metrics:" section of extension.yaml file and match not only
+ * by key but also by required dimensions, meaning that all of the required dimensions
+ * of the entity are contained within the metric defined in the "metrics:" section.
+ * Exclusions can be provided as a list of keys.
+ * @param typeIdx index of entity type within the topology section
+ * @param extension extension.yaml serialized as object
+ * @param excludeKeys keys to exclude from the response
+ * @returns list of matching metric objects
+ */
+export function getEntityMetricsMatchingDimensionsByRequiredDimensions(
+  typeIdx: number, extension: ExtensionStub, excludeKeys: string[] = []
+) {
+  var matchingMetrics: string[] = [];
+  const patterns = getEntityMetricPatterns(typeIdx, extension);
+  const requiredDimensions = getEntityRequiredDimensions(typeIdx, extension);
+  // This won't return anything if the metrics section is not defined in extension.yaml
+  if (extension.metrics) {
+    patterns.forEach(pattern => {
+      let matcher = pattern.split("(")[0];
+      let value = pattern.split("(")[1].split(")")[0];
+      // Find all metrics that match the value from the pattern
+      const metricsMatchingPattern = extension.metrics.filter(metric => {
+        switch (matcher) {
+          case "$eq":
+            return metric.key === value && !matchingMetrics.includes(metric.key);
+          case "$prefix":
+            return metric.key.startsWith(value) && !matchingMetrics.includes(metric.key);
+          default:
+            return false;
+        }
+      });
+      // Now, filter these metrics even further by checking if they have the required dimensions.
+      const metricsMatchingPatternAndDimensions = metricsMatchingPattern.filter(metric => {
+        // If entity definition has no required dimensions, it can be used with matching
+        // metric irrespective of the dimensions it has.
+        if (requiredDimensions.length === 0) {
+          return true;
+        }
+        // Only match those metrics that contain all dimensions that are listed under
+        // the requiredDimensions property of the entity definition.
+        const metricDimensions = metric.metadata.dimensions ? metric.metadata.dimensions.map(d => d.key) : [];
+        if (requiredDimensions.every(v => metricDimensions.includes(v))) {
+          return true;
+        }
+        return false;
+      });
+
+      matchingMetrics.push(...metricsMatchingPatternAndDimensions.map(m => m.key)); 
     });
     return matchingMetrics.filter(metric => !excludeKeys.includes(metric));
   }
@@ -528,6 +587,12 @@ export function getAllMetricsByFeatureSet(extension: ExtensionStub): FeatureSetD
     }
   });
 
+  // If no metrics were collected from the datasource, then add all metrics
+  // found in the "metrics:"" section to the default feature set.
+  if (featureSets.length === 1 && featureSets[0].name === "default" && featureSets[0].metrics.length === 0) {
+    featureSets[0].metrics = extension.metrics.map(m => m.key);
+  }
+
   return featureSets;
 }
 
@@ -555,9 +620,32 @@ export function getEntityMetricPatterns(typeIdx: number, extension: ExtensionStu
 }
 
 /**
+ * Extracts all required dimensions for Metrics sourceType across all rules of a given
+ * topology type. The topology type must be referenced by index.
+ * @param typeIdx index of the topology type
+ * @param extension extension.yaml serialized as object
+ * @returns list of required dimensions
+ */
+export function getEntityRequiredDimensions(typeIdx: number, extension: ExtensionStub) {
+  var requiredDimensions: string[] = [];
+  if (extension.topology.types[typeIdx].rules) {
+    extension.topology.types[typeIdx].rules.forEach(rule => {
+      if (rule.requiredDimensions) {
+        rule.requiredDimensions.forEach(dimension => {
+          if (!requiredDimensions.includes(dimension.key)) {
+            requiredDimensions.push(dimension.key);
+          }
+        });
+      }
+    });
+  }
+  return requiredDimensions;
+}
+
+/**
  * Extracts all metrics keys detected within the datasource section of the extension.yaml
  * @param extension extension.yaml serialized as object
- * @returns list of metric keys
+ * @returns list of metric keys found within a datasource
  */
 export function getAllMetricKeysFromDataSource(extension: ExtensionStub): string[] {
   var metrics: string[] = [];

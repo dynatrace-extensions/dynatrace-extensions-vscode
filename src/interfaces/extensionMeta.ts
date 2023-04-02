@@ -102,6 +102,11 @@ interface WmiSubGroup extends SubGroup {
   type?: "logfileEvent" | "metric" | "notificationEvent";
 }
 
+interface MetricDimensionStub {
+  key: string;
+  displayName?: string;
+}
+
 export interface MetricMetadata {
   key: string;
   metadata: {
@@ -109,6 +114,7 @@ export interface MetricMetadata {
     description?: string;
     unit?: string;
     tags?: string[];
+    dimensions?: MetricDimensionStub[];
   };
 }
 

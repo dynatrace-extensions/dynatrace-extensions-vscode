@@ -17,7 +17,9 @@
 import {
   getAllMetricsByFeatureSet,
   getEntityMetrics,
+  getEntityMetricsMatchingDimensionsByRequiredDimensions,
   getEntityName,
+  getExtensionDatasource,
   getRelationships,
 } from "../../utils/extensionParsing";
 import {
@@ -347,9 +349,13 @@ export function getAllEntitiesListsSnippet(entityType: string, extension: Extens
  */
 export function getAllChartCardsSnippet(entityType: string, extension: ExtensionStub): string {
   const typeIdx = extension.topology.types.findIndex((type) => type.name === entityType);
-  const entityMetrics = getEntityMetrics(typeIdx, extension);
+  const extensionDatasource = getExtensionDatasource(extension);
+  const entityMetrics = extensionDatasource.length > 0 ?
+    getEntityMetrics(typeIdx, extension) :
+    getEntityMetricsMatchingDimensionsByRequiredDimensions(typeIdx, extension);
   const cards: { key: string; featureSet: string; metrics: string[] }[] = [];
 
+  // This won't work for datasources with no feature sets
   getAllMetricsByFeatureSet(extension).forEach((fs) => {
     let metrics = fs.metrics.filter((m) => entityMetrics.includes(m));
     if (metrics.length > 0) {
