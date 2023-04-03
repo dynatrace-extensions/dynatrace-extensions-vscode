@@ -330,9 +330,10 @@ async function assemblePython(
 
   // Build
   await runCommand(
-    `dt-sdk build -k "${certKeyPath}" "${extensionDir}" -t "${workspaceStorage}" -e "${
-      process.platform === "win32" ? "linux_x86_64" : "win_amd64"
-    }"`,
+    `dt-sdk build -k "${certKeyPath}" "${extensionDir}" -t "${workspaceStorage}" ${
+      process.platform === "win32" ? "-e linux_x86_64"
+      : (process.platform === "linux" ? "-e win_amd64" : "-e linux_x86_64 -e win_amd64")
+    }`,
     oc,
     cancelToken,
     envOptions
