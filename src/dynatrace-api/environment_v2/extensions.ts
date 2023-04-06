@@ -188,6 +188,13 @@ export class ExtensionsServiceV2 {
     );
   }
 
+  /**
+   * Creates a new monitoring configuration for the requested extension, using
+   * the provided configuration details
+   * @param extensionName name of the extension to configure
+   * @param configurationDetails details of the monitoring configuration
+   * @returns response data
+   */
   async postMonitoringConfiguration(extensionName: string, configurationDetails: any) {
     return this.httpClient.makeRequest(
       `${this.endpoint}/${extensionName}/monitoringConfigurations`,
@@ -196,6 +203,12 @@ export class ExtensionsServiceV2 {
     );
   }
 
+  /**
+   * Gets the settings 2.0 schema for an extension 2.0
+   * @param extensionName name of the requested extension
+   * @param extensionVersion version of the requested extension
+   * @returns schema of the extension
+   */
   async getExtensionSchema(extensionName: string, extensionVersion: string) {
     return this.httpClient.makeRequest(`${this.endpoint}/${extensionName}/${extensionVersion}/schema`);
   }
