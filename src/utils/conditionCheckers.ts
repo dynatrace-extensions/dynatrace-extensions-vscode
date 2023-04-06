@@ -14,12 +14,18 @@
   limitations under the License.
  */
 
+/********************************************************************************
+ * UTILITIES FOR CHECKING CONDITIONS AND RETURNING A SIMPLE STATUS OF THE CHECK
+ ********************************************************************************/
+
 import * as path from "path";
 import * as vscode from "vscode";
 import { existsSync, readdirSync, readFileSync } from "fs";
 import { EnvironmentsTreeDataProvider } from "../treeViews/environmentsTreeView";
 import axios from "axios";
 import { getExtensionFilePath, resolveRealPath } from "./fileSystem";
+import { ExecOptions } from "child_process";
+import { runCommand } from "./subprocesses";
 
 /**
  * Checks whether one or more VSCode settings are configured.
@@ -269,6 +275,11 @@ export async function checkDtInternalProperties(): Promise<Boolean> {
   return status;
 }
 
+/**
+ * Checks whether the OneAgent is installed on the local machine.
+ * Note - it is a shallow check, dependent only on installation directory existence!
+ * @returns status of check
+ */
 export function checkOneAgentInstalled(): boolean {
   const oaWinPath = "C:\\ProgramData\\dynatrace\\oneagent\\agent\\config";
   const oaLinPath = "/var/lib/dynatrace/oneagent/agent/config";
@@ -278,6 +289,11 @@ export function checkOneAgentInstalled(): boolean {
   return status;
 }
 
+/**
+ * Checks whether the ActiveGate is installed on the local machine.
+ * Note - it is a shallow check, dependent only on installation directory existence!
+ * @returns status of check
+ */
 export function checkActiveGateInstalled(): boolean {
   const agWinPath = "C:\\ProgramData\\dynatrace\\remotepluginmodule\\agent\\conf";
   const agLinPath = "/var/lib/dynatrace/remotepluginmodule/agent/conf";
@@ -285,4 +301,22 @@ export function checkActiveGateInstalled(): boolean {
 
   console.log(`Check - is ActiveGate installed locally? > ${status}`);
   return status;
+}
+
+/**
+ * Checks whether the DT-SDK is installed on the Python environment.
+ * Doesn't care so much about reasoning, just provides the status of the check.
+ * @param oc: {@link vscode.OutputChannel}
+ * @param cancelToken: {@link vscode.CancellationToken}
+ * @param envOptions: {@link ExecOptions}
+ * @returns status of check
+ */
+export async function checkDtSdkPresent(
+  oc?: vscode.OutputChannel,
+  cancelToken?: vscode.CancellationToken,
+  envOptions?: ExecOptions
+): Promise<boolean> {
+  return await runCommand("dt-sdk --help", oc, cancelToken, envOptions)
+    .then(() => true)
+    .catch(() => false);
 }

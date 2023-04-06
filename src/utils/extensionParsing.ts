@@ -14,6 +14,10 @@
   limitations under the License.
  */
 
+/********************************************************************************
+ * UTILITIES FOR PARSING CONTENT OF AN ALREADY SERIALIZED EXTENSION
+ ********************************************************************************/
+
 import { DatasourceGroup, ExtensionStub } from "../interfaces/extensionMeta";
 
 /**

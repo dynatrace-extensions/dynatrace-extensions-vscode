@@ -14,6 +14,10 @@
   limitations under the License.
  */
 
+/********************************************************************************
+ * UTILITIES FOR IN-MEMORY CACHING AND DATA RE-USE
+ ********************************************************************************/
+
 import Axios from "axios";
 import * as yaml from "yaml";
 import { EnvironmentsTreeDataProvider } from "../treeViews/environmentsTreeView";
