@@ -12,7 +12,16 @@ deployment attempts.
 
 ## How do diagnostics work in VS Code?
 
-> Coming soon
+On every document change (edit of the extension manifest), the diagnostics suite will trigger
+an update of all diagnostic items applicable to that file. Based on findings, relevant content
+is highlighted within the manifest and hovering over the highlight will provide more details
+about the issue.
+
+Some issues may provide a "Quick fix" link as part of the hover information. If this is availble
+it will trigger a content change of the document in order to solve the issue highlighted.
+
+Finally, if "Error" severity issues are present (highlighted red), the Copilot will not build
+the extension. You must first resolve these issues before a build can continue.
 
 ## Currently implemented diagnostics
 

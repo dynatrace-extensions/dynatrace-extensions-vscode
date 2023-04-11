@@ -29,6 +29,13 @@ contains the latest available version in brackets.
 Expand further to see all monitoring configurations of the extension - the configured
 version is displayed in brackets while a colored circle displays its last known status.
 
+### Configure deployed extensions
+
+Create a new Monitoring Configuration for your deployed extension by clicking the `+` icon
+next to the extension name.
+
+Make changes Monitoring Configurations by clicking the pen icon next to their name.
+
 ### Target your operations
 
 Your currently connected environment is the target for all API based operations the Copilot

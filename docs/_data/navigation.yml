@@ -41,6 +41,8 @@ docs:
         url: /docs/cmd/create-dashboard
       - title: 🔔 Create alert
         url: /docs/cmd/create-alert/
+      - title: 🔃 Convert JMX Extension
+        url: /docs/cmd/convert-jmx-extension
   - title: 🤖 Development assistance
     children:
       - title: 🎹 Code completions
