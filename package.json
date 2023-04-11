@@ -8,7 +8,7 @@
 		"email": "extensions@dynatrace.com",
 		"url": "https://info.dynatrace.com/global_all_wp_dynatrace_services_platform_extensions_fact_sheet_13656_fulfillment.html"
 	},
-	"version": "1.1.1",
+	"version": "1.2.0",
 	"repository": {
 		"type": "git",
 		"url": "https://github.com/dynatrace-extensions/dynatrace-extensions-copilot.git"
@@ -328,22 +328,6 @@
 						"description": "Bring your own: use the developer certificate & key from this location instead of generating new ones",
 						"order": 1,
 						"scope": "resource"
-					},
-					"dynatrace.developerKeyLocation": {
-						"type": "string",
-						"description": "Bring your own: use the developer key file at this path instead of generating a new one.",
-						"order": 3,
-						"scope": "resource",
-						"markdownDeprecationMessage": "**Deprecated:** This setting is ignored. Please use `#dynatrace.developerCertkeyLocation#` instead.",
-						"deprecationMessage": "DEPRECATED: This setting is ignored. Please use dynatrace.developerCertkeyLocation instead."
-					},
-					"dynatrace.developerCertificateLocation": {
-						"type": "string",
-						"description": "Bring your own: use the developer certificate file at this path instead of generating a new one.",
-						"order": 4,
-						"scope": "resource",
-						"markdownDeprecationMessage": "**Deprecated:** This setting is ignored. Please use `#dynatrace.developerCertkeyLocation#` instead.",
-						"deprecationMessage": "DEPRECATED: This setting is ignored. Please use dynatrace.developerCertkeyLocation instead."
 					},
 					"dynatrace.rootOrCaCertificateLocation": {
 						"type": "string",
