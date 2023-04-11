@@ -14,6 +14,10 @@
   limitations under the License.
  */
 
+/********************************************************************************
+ * UTILITIES RELATED TO CRYPTOGRAPHIC FUNCTIONS AND HELPERS
+ ********************************************************************************/
+
 import * as crypto from "crypto";
 import * as fs from "fs";
 import * as forge from "node-forge";

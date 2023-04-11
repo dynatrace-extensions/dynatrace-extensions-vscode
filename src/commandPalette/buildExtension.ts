@@ -23,9 +23,11 @@ import { Dynatrace } from "../dynatrace-api/dynatrace";
 import { DynatraceAPIError } from "../dynatrace-api/errors";
 import { normalizeExtensionVersion, incrementExtensionVersion } from "../utils/extensionParsing";
 import { FastModeStatus } from "../statusBar/fastMode";
-import { exec, ExecOptions } from "child_process";
-import { getPythonPath } from "../utils/otherExtensions";
 import { getExtensionFilePath, resolveRealPath } from "../utils/fileSystem";
+import { runCommand } from "../utils/subprocesses";
+import { getPythonVenvOpts } from "../utils/otherExtensions";
+import { checkDtSdkPresent } from "../utils/conditionCheckers";
+import { ExecOptions } from "child_process";
 
 type FastModeOptions = {
   status: FastModeStatus;
@@ -109,7 +111,21 @@ export async function buildExtension(
       const zipFilename = `${extensionName.replace(":", "_")}-${updatedVersion}.zip`;
       try {
         if (/^python:$/gm.test(extension)) {
-          await assemblePython(workspaceStorage, path.resolve(extensionDir, ".."), devCertKey, oc, cancelToken);
+          const envOptions = await getPythonVenvOpts();
+          const sdkAvailable = await checkDtSdkPresent(oc, cancelToken, envOptions);
+          if (sdkAvailable) {
+            await assemblePython(
+              workspaceStorage,
+              path.resolve(extensionDir, ".."),
+              devCertKey,
+              envOptions,
+              oc,
+              cancelToken
+            );
+          } else {
+            vscode.window.showErrorMessage("Cannot build Python extension - dt-sdk package not available");
+            return;
+          }
         } else {
           assembleStandard(workspaceStorage, extensionDir, zipFilename, devCertKey);
         }
@@ -242,60 +258,6 @@ function assembleStandard(workspaceStorage: string, extensionDir: string, zipFil
 }
 
 /**
- * Executes the given command in a child process and wraps the whole thing in a Promise.
- * This way the execution is async but other code can await it.
- * On success, returns the exit code (if any). Will throw any error with the message
- * part of the stderr (the rest is included via output channel)
- * @param command the command to execute
- * @param oc JSON output channel to communicate error details
- * @returns exit code or `null`
- */
-function runCommand(
-  command: string,
-  oc: vscode.OutputChannel,
-  cancelToken: vscode.CancellationToken,
-  envOptions?: ExecOptions
-): Promise<number | null> {
-  let p = exec(command, envOptions);
-  let [stdout, stderr] = ["", ""];
-
-  return new Promise((resolve, reject) => {
-    if (cancelToken.isCancellationRequested) {
-      p.kill("SIGINT");
-    }
-    p.stdout?.on("data", data => {
-      stdout += data.toString();
-      if (cancelToken.isCancellationRequested) {
-        p.kill("SIGINT");
-      }
-    });
-    p.stderr?.on("data", data => (stderr += data.toString()));
-    p.on("exit", code => {
-      if (cancelToken.isCancellationRequested) {
-        return resolve(1);
-      }
-      if (code !== 0) {
-        let [shortMessage, details] = [stderr, [""]];
-        if (stderr.includes("ERROR") && stderr.includes("+")) {
-          [shortMessage, ...details] = stderr.substring(stderr.indexOf("ERROR") + 7).split("+");
-        }
-        oc.replace(
-          JSON.stringify(
-            { error: shortMessage.split("\r\n"), detailedOutput: `+${details.join("+")}`.split("\r\n") },
-            null,
-            2
-          )
-        );
-        oc.show();
-        reject(Error(shortMessage));
-      }
-      console.log(stdout);
-      return resolve(code);
-    });
-  });
-}
-
-/**
  * Carries out the archiving and signing parts of the extension build workflow.
  * This function is meant for Python extesnions 2.0, therefore all the steps are carried
  * out through `dt-sdk` which must be available on the machine.
@@ -308,31 +270,18 @@ async function assemblePython(
   workspaceStorage: string,
   extensionDir: string,
   certKeyPath: string,
+  envOptions: ExecOptions,
   oc: vscode.OutputChannel,
   cancelToken: vscode.CancellationToken
 ) {
-  let envOptions = {} as ExecOptions;
-  const pythonPath = await getPythonPath();
-
-  if (pythonPath !== "python") {
-    envOptions = {
-      env: {
-        // eslint-disable-next-line @typescript-eslint/naming-convention
-        PATH: `${path.resolve(pythonPath, "..")}${path.delimiter}${process.env.PATH}`, // add the python bin directory to the PATH
-        // eslint-disable-next-line @typescript-eslint/naming-convention
-        VIRTUAL_ENV: path.resolve(pythonPath, "..", ".."), // virtual env is right above bin directory
-      },
-    };
-  }
-
-  // Check we can run dt-sdk
-  await runCommand("dt-sdk --help", oc, cancelToken, envOptions); // this will throw if dt-sdk is not available
-
   // Build
   await runCommand(
     `dt-sdk build -k "${certKeyPath}" "${extensionDir}" -t "${workspaceStorage}" ${
-      process.platform === "win32" ? "-e linux_x86_64"
-      : (process.platform === "linux" ? "-e win_amd64" : "-e linux_x86_64 -e win_amd64")
+      process.platform === "win32"
+        ? "-e linux_x86_64"
+        : process.platform === "linux"
+        ? "-e win_amd64"
+        : "-e linux_x86_64 -e win_amd64"
     }`,
     oc,
     cancelToken,

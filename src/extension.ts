@@ -392,10 +392,9 @@ function registerCommandPaletteCommands(
       }
     }),
     // Convert JMX Extension from 1.0 to 2.0
-    vscode.commands.registerCommand("dt-ext-copilot.convertJmxExtension", async () => {
-        convertJMXExtension(context, (await tenantsProvider.getDynatraceClient())!);
-    })
-
+    vscode.commands.registerCommand("dt-ext-copilot.convertJmxExtension", async (outputPath?: string) => {
+      convertJMXExtension((await tenantsProvider.getDynatraceClient())!, outputPath);
+    }),
   ];
 }
 

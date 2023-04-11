@@ -14,6 +14,10 @@
   limitations under the License.
  */
 
+/********************************************************************************
+ * UTILITIES FOR AGNOSTICALLY/GNERICALLY PARSING SCHEMAS 
+ ********************************************************************************/
+
 /**
  * Creates an Object from a given JSON schema definition by attempting to parse its
  * properties and structure to come up with the mandatory properties and some value.

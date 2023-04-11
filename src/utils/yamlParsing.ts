@@ -1,5 +1,3 @@
-import * as vscode from "vscode";
-
 /**
   Copyright 2022 Dynatrace LLC
 
@@ -15,6 +13,12 @@ import * as vscode from "vscode";
   See the License for the specific language governing permissions and
   limitations under the License.
  */
+
+/********************************************************************************
+ * UTILITIES FOR PARSING RAW YAML CONTENT
+ ********************************************************************************/
+
+import * as vscode from "vscode";
 
 /**
  * Given a block label and a line within a yaml content, will calculate the item index
