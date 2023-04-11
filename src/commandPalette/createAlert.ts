@@ -25,7 +25,8 @@ import { MetricMetadata } from "../interfaces/extensionMeta";
 
 export async function createAlert(cachedData: CachedDataProvider, context: vscode.ExtensionContext) {
   const extensionFile = getExtensionFilePath(context)!;
-  const extension = cachedData.getExtensionYaml(readFileSync(extensionFile).toString());
+  const extensionText = readFileSync(extensionFile).toString();
+  const extension = cachedData.getExtensionYaml(extensionText);
 
   // TODO, we could ask the user if they want to create a new alert or edit an existing one?
 
@@ -121,14 +122,23 @@ export async function createAlert(cachedData: CachedDataProvider, context: vscod
   writeFileSync(alertFile, alertFileContent);
 
   // Add the alert to the extension.yaml file
-  if (!extension.alerts) {
-    extension.alerts = [];
+  const alertsMatch = extensionText.search(/^alerts:$/gm);
+  let updatedExtensionText;
+  if (alertsMatch > -1) {
+    if (!extensionText.includes(`path: alerts/${fileName}`)) {
+      const indent = extensionText.slice(alertsMatch).indexOf("-") - 8;
+      const beforeText = extensionText.slice(0, alertsMatch);
+      const afterText = extensionText.slice(alertsMatch + 8);
+      updatedExtensionText = `${beforeText}alerts:\n${' '.repeat(indent)}- path: alerts/${fileName}\n${afterText}`;
+    } else {
+      // Nothing to do, alert is already present
+      updatedExtensionText = extensionText;
+    }
+  } else {
+    updatedExtensionText = `${extensionText}\nalerts:\n  - path: alerts/${fileName}\n`;
   }
-  extension.alerts.push({
-    path: `alerts/${fileName}`,
-  });
 
-  writeFileSync(extensionFile, cachedData.getStringifiedExtension(extension));
+  writeFileSync(extensionFile, updatedExtensionText);
 
   vscode.window.showInformationMessage(`Alert '${alertName}' created on alerts/${fileName}`);
 }

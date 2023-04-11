@@ -41,7 +41,8 @@ export async function createOverviewDashboard(
   const DASHBOARD_PATH = "dashboards/overview_dashboard.json";
   // Read extension.yaml
   const extensionFile = getExtensionFilePath(context)!;
-  const extension = cachedData.getExtensionYaml(readFileSync(extensionFile).toString());
+  const extensionText = readFileSync(extensionFile).toString();
+  const extension = cachedData.getExtensionYaml(extensionText);
   // Check topology. No topology = pointless dashboard
   if (!extension.topology) {
     vscode.window.showWarningMessage("Please define your topology before running this command.");
@@ -60,13 +61,24 @@ export async function createOverviewDashboard(
   const dashboardFile = path.resolve(dashboardsDir, "overview_dashboard.json");
   writeFileSync(dashboardFile, dashboardJson);
   // Edit extension.yaml to include it
-  if (!extension.dashboards) {
-    extension.dashboards = [{ path: DASHBOARD_PATH }];
-    writeFileSync(extensionFile, cachedData.getStringifiedExtension(extension));
-  } else if (extension.dashboards.findIndex( (d: { path: string }) => d.path === DASHBOARD_PATH) === -1) {
-    extension.dashboards.push({ path: DASHBOARD_PATH });
-    writeFileSync(extensionFile, cachedData.getStringifiedExtension(extension));
+  const dashboardsMatch = extensionText.search(/^dashboards:$/gm);
+  let updatedExtensionText;
+  if (dashboardsMatch > -1) {
+    if (!extensionText.includes(`path: dashboards/overview_dashboard.json`)) {
+      const indent = extensionText.slice(dashboardsMatch).indexOf("-") - 12;
+      const beforeText = extensionText.slice(0, dashboardsMatch);
+      const afterText = extensionText.slice(dashboardsMatch + 12);
+      updatedExtensionText = `${beforeText}dashboards:\n${' '.repeat(indent)}- path: dashboards/overview_dashboard.json\n${afterText}`;
+    } else {
+      // Nothing to do, dashboard is already present
+      updatedExtensionText = extensionText;
+    }
+  } else {
+    updatedExtensionText = `${extensionText}\nalerts:\n  - path: dashboards/overview_dashboard.json\n`;
   }
+
+  writeFileSync(extensionFile, updatedExtensionText);
+
   vscode.window.showInformationMessage("Dashboard created successfully");
 
   // If we're connected to the API, prompt for upload.
