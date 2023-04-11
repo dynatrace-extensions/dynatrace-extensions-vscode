@@ -124,7 +124,7 @@ export async function convertJMXExtension(dt: Dynatrace, outputPath?: string) {
   }
   // Save the file as yaml
   const yamlFileContents = yaml.stringify(jmxV2Extension);
-  writeFileSync(extensionYAMLFile, Buffer.from(yamlFileContents));
+  writeFileSync(extensionYAMLFile, yamlFileContents);
 
   // Open the file
   const document = await vscode.workspace.openTextDocument(extensionYAMLFile);

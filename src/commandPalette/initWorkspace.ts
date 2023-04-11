@@ -22,7 +22,8 @@ import { getExtensionFilePath, initWorkspaceStorage, registerWorkspace } from ".
 import { loadSchemas } from "./loadSchemas";
 import { Dynatrace } from "../dynatrace-api/dynatrace";
 import { runCommand } from "../utils/subprocesses";
-import { existsSync, readdirSync, renameSync, rmSync } from "fs";
+import { existsSync, mkdirSync, readFileSync, readdirSync, renameSync, rmSync } from "fs";
+import AdmZip = require("adm-zip");
 
 const PROJECT_TYPES = {
   defaultExtension: {
@@ -171,10 +172,17 @@ export async function initWorkspace(context: vscode.ExtensionContext, dt: Dynatr
           await pythonExtensionSetup(rootPath, context.storageUri!.fsPath);
           break;
         case PROJECT_TYPES.jmxConversion:
-          await vscode.commands.executeCommand("dt-ext-copilot.convertJmxExtension", dt, rootPath);
+          const extensionDir = path.resolve(rootPath, "extension");
+          if (!existsSync(extensionDir)) {
+            mkdirSync(extensionDir);
+          }
+          await vscode.commands.executeCommand(
+            "dt-ext-copilot.convertJmxExtension",
+            path.resolve(extensionDir, "extension.yaml")
+          );
           break;
         case PROJECT_TYPES.existingExtension:
-          await existingExtensionSetup(dt);
+          await existingExtensionSetup(dt, rootPath);
           break;
         default:
           defaultExtensionSetup(schemaVersion, rootPath, context);
@@ -231,9 +239,10 @@ async function pythonExtensionSetup(rootPath: string, tempPath: string) {
  * User is prompted to select an extension from their tenant, which is then downloaded
  * and unpacked in the workspace root folder. Requires an environment connection.
  * @param dt Dynatrace API Client
+ * @param rootPath path to the workspace root folder
  * @returns
  */
-async function existingExtensionSetup(dt: Dynatrace) {
+async function existingExtensionSetup(dt: Dynatrace, rootPath: string) {
   const download = await vscode.window.showQuickPick(
     (
       await dt.extensionsV2.list()
@@ -251,9 +260,41 @@ async function existingExtensionSetup(dt: Dynatrace) {
     vscode.window.showErrorMessage("No selection made. Operation aborted.");
     return;
   }
-  // TODO: CHECK AND FIX WITH PROPER CALL:
-  const extensionZip = dt.extensionsV2.getExtensionSchema(download.extension.extensionName, download.extension.version);
-  // TODO: ALSO NEED TO UNPACK THE EXTENSION...
+
+  const extensionDir = path.resolve(rootPath, "extension");
+  if (!existsSync(extensionDir)) {
+    mkdirSync(extensionDir);
+  }
+
+  const zipData = await dt.extensionsV2.getExtension(
+    download.extension.extensionName,
+    download.extension.version,
+    true
+  );
+  const extensionPackage = new AdmZip(zipData);
+  const extensionZip = new AdmZip(extensionPackage.getEntry("extension.zip")?.getData());
+  extensionZip.extractAllTo(extensionDir);
+
+  // Additional extraction is needed for python extensions
+  const extensionYaml = readFileSync(path.resolve(extensionDir, "extension.yaml")).toString();
+  try {
+    if (/^python:/gm.test(extensionYaml)) {
+      const moduleName = /^ *module: (.*?)$/gm.exec(extensionYaml)![1];
+      extensionZip
+        .getEntries()
+        .filter(e => {
+          console.log(e.name);
+          return e.name.startsWith(moduleName);
+        })
+        .forEach(e => {
+          const moduleZip = new AdmZip(e.getData());
+          moduleZip.extractAllTo(rootPath);
+        });
+    }
+  } catch (err) {
+    console.log(err);
+    vscode.window.showWarningMessage("Not all files were extracted successfully. Manual edits are still needed.");
+  }
 }
 
 /**
