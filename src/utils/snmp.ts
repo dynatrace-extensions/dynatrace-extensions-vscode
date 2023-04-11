@@ -83,11 +83,7 @@ export function isTable(info: OidInformation): boolean {
  * @returns OID metadata info
  */
 function processOidData(data: string) {
-  const details = data.split("<br>").map(p => p.trim());
-
-  if (data.includes("ltmRuleEventStatEntry")) {
-    console.log(data);
-  }
+  const details = data.split("<br/>").map(p => p.trim());
 
   const descriptionIdx = details.indexOf("DESCRIPTION");
 
