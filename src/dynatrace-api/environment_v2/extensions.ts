@@ -212,4 +212,26 @@ export class ExtensionsServiceV2 {
   async getExtensionSchema(extensionName: string, extensionVersion: string) {
     return this.httpClient.makeRequest(`${this.endpoint}/${extensionName}/${extensionVersion}/schema`);
   }
+
+  /**
+   * Gets the details of the specified version of the extension 2.0.
+   * @param extensionName name of the requested extension
+   * @param extensionVersion version of the requested extension
+   * @param downloadPackage if false, only the metadata of the extension is fetched
+   * @returns either JSON metadata or extension zip package
+   */
+  async getExtension(extensionName: string, extensionVersion: string, downloadPackage: boolean = false) {
+    const headers: any = {};
+    headers["Accept"] = downloadPackage ? "application/octet-stream" : "application/json; charset=utf-8";
+
+    return this.httpClient.makeRequest(
+      `${this.endpoint}/${extensionName}/${extensionVersion}`,
+      {},
+      "GET",
+      headers,
+      {},
+      undefined,
+      downloadPackage ? "arraybuffer" : "json"
+    );
+  }
 }
