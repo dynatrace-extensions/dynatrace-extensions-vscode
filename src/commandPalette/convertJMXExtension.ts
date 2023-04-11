@@ -165,7 +165,7 @@ function convertJMXExtensionToV2(jmxV1Extension: JMXExtensionV1): JMXExtensionV2
   const extensionName = jmxV1Extension.metricGroup || jmxV1Extension.name;
 
   const jmxV2Extension: JMXExtensionV2 = {
-    name: `custom:${extensionName}`,
+    name: `custom:${extensionName.toLowerCase()}`,
     version: "1.0.0",
     minDynatraceVersion: "1.265",
     author: {
