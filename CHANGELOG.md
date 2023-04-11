@@ -1,5 +1,20 @@
 # Change Log
 
+## Version 1.2.0 (11.04.2023)
+
+### ✨ New in this version:
+- [#99 - Specialized project initialization](https://github.com/dynatrace-extensions/dynatrace-extensions-copilot/issues/99)
+- [#71 - JMX v1 to v2 converter](https://github.com/dynatrace-extensions/dynatrace-extensions-copilot/issues/71)
+
+### 🪲 Fixed in this version:
+- [#103 - SNMP diagnostics highlight all OIDs as unknown](https://github.com/dynatrace-extensions/dynatrace-extensions-copilot/issues/103)
+- [#94 - When building python extensions, only one extra platform is supported](https://github.com/dynatrace-extensions/dynatrace-extensions-copilot/issues/94)
+
+### 🚀 Improved in this version:
+- [#100 - Comments and indentation are removed when generating an overview dashboard](https://github.com/dynatrace-extensions/dynatrace-extensions-copilot/issues/100)
+
+---
+
 ## Version 1.1.0 (10.03.2023)
 
 ### ✨ New in this version:
