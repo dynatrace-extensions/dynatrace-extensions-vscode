@@ -1,0 +1,83 @@
+name: Multi-platform build & publish
+
+on: workflow_dispatch
+
+jobs:
+  build:
+    strategy:
+      matrix:
+        include:
+        - os: windows-latest
+          platform: win32
+          arch: x64
+          npm_config_arch: x64
+        - os: windows-latest
+          platform: win32
+          arch: ia32
+          npm_config_arch: ia32
+        - os: windows-latest
+          platform: win32
+          arch: arm64
+          npm_config_arch: arm
+        - os: ubuntu-latest
+          platform: linux
+          arch: x64
+          npm_config_arch: x64
+        - os: ubuntu-latest
+          platform: linux
+          arch: arm64
+          npm_config_arch: arm64
+        - os: ubuntu-latest
+          platform: linux
+          arch: armhf
+          npm_config_arch: arm
+        - os: ubuntu-latest
+          platform: alpine
+          arch: x64
+          npm_config_arch: x64
+        - os: ubuntu-latest
+          platform: alpine
+          arch: arm64
+          npm_config_arch: arm64
+        - os: macos-latest
+          platform: darwin
+          arch: x64
+          npm_config_arch: x64
+        - os: macos-latest
+          platform: darwin
+          arch: arm64
+          npm_config_arch: arm64
+    runs-on: ${{ matrix.os }}
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v3
+      - name: Install Node
+        uses: actions/setup-node@v3
+        with:
+          node-version: 16.x
+      - name: Install Linux dependencies
+        run: sudo apt install xvfb -y
+        if: runner.os == 'Linux'
+      - name: Install extension
+        run: npm install
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          npm_config_arch: ${{ matrix.npm_config_arch }}
+      - shell: pwsh
+        run: echo "target=${{ matrix.platform }}-${{ matrix.arch }}" >> $env:GITHUB_ENV
+      - name: Package
+        run: npx vsce package --target ${{ env.target }}
+      - uses: actions/upload-artifact@v3
+        with:
+            name: ${{ env.target }}
+            path: "*.vsix"
+
+  publish:
+    runs-on: ubuntu-latest
+    needs: build
+    if: success() && startsWith(github.ref, 'refs/tags/')
+    steps:
+      - uses: actions/download-artifact@v3
+      - run: npx vsce publish --packagePath $(find . -iname *.vsix)
+        env:
+          VSCE_PAT: ${{ secrets.VSCE_PAT }}

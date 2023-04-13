@@ -341,7 +341,7 @@ function registerCommandPaletteCommands(
       if (checkWorkspaceOpen() && checkEnvironmentConnected(tenantsProvider)) {
         initWorkspaceStorage(context);
         if (checkCertificateExists("ca")) {
-          distributeCertificate(context, (await tenantsProvider.getDynatraceClient())!);
+          await distributeCertificate(context, (await tenantsProvider.getDynatraceClient())!);
         }
       }
     }),
@@ -370,25 +370,25 @@ function registerCommandPaletteCommands(
     // Activate a given version of extension 2.0
     vscode.commands.registerCommand("dt-ext-copilot.activateExtension", async (version?: string) => {
       if (checkWorkspaceOpen() && isExtensionsWorkspace(context) && checkEnvironmentConnected(tenantsProvider)) {
-        activateExtension(context, (await tenantsProvider.getDynatraceClient())!, cachedDataProvider, version);
+        activateExtension((await tenantsProvider.getDynatraceClient())!, cachedDataProvider, version);
       }
     }),
     // Create Extension documentation
     vscode.commands.registerCommand("dt-ext-copilot.createDocumentation", () => {
       if (checkWorkspaceOpen() && isExtensionsWorkspace(context)) {
-        createDocumentation(cachedDataProvider, context);
+        createDocumentation(cachedDataProvider);
       }
     }),
     // Create Overview dashboard
     vscode.commands.registerCommand("dt-ext-copilot.createDashboard", () => {
       if (checkWorkspaceOpen() && isExtensionsWorkspace(context)) {
-        createOverviewDashboard(tenantsProvider, cachedDataProvider, outputChannel, context);
+        createOverviewDashboard(tenantsProvider, cachedDataProvider, outputChannel);
       }
     }),
     // Create Alert
     vscode.commands.registerCommand("dt-ext-copilot.createAlert", () => {
       if (checkWorkspaceOpen() && isExtensionsWorkspace(context)) {
-        createAlert(cachedDataProvider, context);
+        createAlert(cachedDataProvider);
       }
     }),
     // Convert JMX Extension from 1.0 to 2.0

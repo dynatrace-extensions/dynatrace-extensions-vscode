@@ -23,8 +23,8 @@ import { getAllMetricKeysFromDataSource } from "../utils/extensionParsing";
 import { CachedDataProvider } from "../utils/dataCaching";
 import { MetricMetadata } from "../interfaces/extensionMeta";
 
-export async function createAlert(cachedData: CachedDataProvider, context: vscode.ExtensionContext) {
-  const extensionFile = getExtensionFilePath(context)!;
+export async function createAlert(cachedData: CachedDataProvider) {
+  const extensionFile = getExtensionFilePath()!;
   const extensionText = readFileSync(extensionFile).toString();
   const extension = cachedData.getExtensionYaml(extensionText);
 

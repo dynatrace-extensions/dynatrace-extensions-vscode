@@ -57,7 +57,7 @@ export async function buildExtension(
   const devCertKey = resolveRealPath(workSpaceConfig.get("developerCertkeyLocation") as string);
   const workspaceRoot = vscode.workspace.workspaceFolders![0].uri.fsPath;
   const distDir = path.resolve(workspaceRoot, "dist");
-  const extensionFile = fastMode ? fastMode.document.fileName : getExtensionFilePath(context)!;
+  const extensionFile = fastMode ? fastMode.document.fileName : getExtensionFilePath()!;
   const extensionDir = path.resolve(extensionFile, "..");
   // Current name and version
   const extension = readFileSync(extensionFile).toString();

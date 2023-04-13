@@ -151,7 +151,7 @@ export async function initWorkspace(context: vscode.ExtensionContext, dt: Dynatr
 
       // Determine type of extension project
       let projectType;
-      if (getExtensionFilePath(context)) {
+      if (getExtensionFilePath()) {
         projectType = PROJECT_TYPES.defaultExtension;
       } else {
         projectType = await vscode.window.showQuickPick(Object.values(PROJECT_TYPES), {
@@ -185,7 +185,7 @@ export async function initWorkspace(context: vscode.ExtensionContext, dt: Dynatr
           await existingExtensionSetup(dt, rootPath);
           break;
         default:
-          defaultExtensionSetup(schemaVersion, rootPath, context);
+          defaultExtensionSetup(schemaVersion, rootPath);
       }
     }
   );
@@ -302,11 +302,10 @@ async function existingExtensionSetup(dt: Dynatrace, rootPath: string) {
  * Generates a small stub with the minimum mandatory details for any extension.
  * @param schemaVersion version of schema for this workspace
  * @param rootPath the root of the workspace
- * @param context {@link vscode.ExtensionContext}
  */
-function defaultExtensionSetup(schemaVersion: string, rootPath: string, context: vscode.ExtensionContext) {
+function defaultExtensionSetup(schemaVersion: string, rootPath: string) {
   // Only modify artefacts if extension.yaml not already present in workspace
-  if (!getExtensionFilePath(context)) {
+  if (!getExtensionFilePath()) {
     // Create extension directory
     const extensionDir = vscode.Uri.file(path.resolve(path.join(rootPath, "extension")));
     vscode.workspace.fs.createDirectory(extensionDir);

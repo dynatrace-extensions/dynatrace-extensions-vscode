@@ -76,9 +76,7 @@ export function registerWorkspace(context: vscode.ExtensionContext) {
   var workspace: ExtensionWorkspace = {
     name: vscode.workspace.name!,
     id: path.basename(path.dirname(context.storageUri!.fsPath)),
-    folder: decodeURI(
-      JSON.parse(readFileSync(path.join(path.dirname(context.storageUri!.fsPath), "workspace.json")).toString()).folder
-    ),
+    folder: vscode.workspace.workspaceFolders![0].uri.fsPath
   };
 
   var currentIndex = workspaces.findIndex(ws => ws.id === workspace.id);
@@ -260,15 +258,10 @@ export function uploadComponentCert(certPath: string, component: "OneAgent" | "A
  * Searches the known extension workspace path for the extension.yaml file and returns the
  * found result so long as the extension directory is in the root of the workspace or one
  * directory deep (e.g. src/extension/extension.yaml)
- * @param context
  * @returns
  */
-export function getExtensionFilePath(context: vscode.ExtensionContext): string | undefined {
-  const workspaceRootPath = vscode.Uri.parse(
-    decodeURI(
-      JSON.parse(readFileSync(path.join(path.dirname(context.storageUri!.fsPath), "workspace.json")).toString()).folder
-    )
-  ).fsPath;
+export function getExtensionFilePath(): string | undefined {
+  const workspaceRootPath = vscode.workspace.workspaceFolders![0].uri.fsPath;
   console.log(`Looking for extension.yaml in workspace root: ${workspaceRootPath}`);
   let matches = glob.sync("extension/extension.yaml", { cwd: workspaceRootPath });
   if (matches.length === 0) {

@@ -110,7 +110,7 @@ export class DiagnosticsProvider {
    */
   public async isValidForBuilding(): Promise<boolean> {
     let status = true;
-    const extensionYamlFile = getExtensionFilePath(this.context)!;
+    const extensionYamlFile = getExtensionFilePath()!;
     const diagnostics = this.collection.get(vscode.Uri.file(extensionYamlFile));
 
     if (diagnostics && diagnostics.findIndex(diag => diag.severity === vscode.DiagnosticSeverity.Error) > -1) {
