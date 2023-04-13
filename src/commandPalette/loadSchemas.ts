@@ -76,7 +76,7 @@ export async function loadSchemas(context: vscode.ExtensionContext, dt: Dynatrac
 
   try {
     // If extension.yaml already exists, update the version there too
-    const extensionFile = getExtensionFilePath(context);
+    const extensionFile = getExtensionFilePath();
     if (extensionFile) {
       const extensionContent = readFileSync(extensionFile).toString();
       writeFileSync(

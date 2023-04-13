@@ -99,7 +99,7 @@ export function checkWorkspaceOpen(suppressMessaging: boolean = false): boolean 
 export function isExtensionsWorkspace(context: vscode.ExtensionContext, showWarningMessage: boolean = true): boolean {
   var status = false;
   if (context.storageUri && existsSync(context.storageUri.fsPath)) {
-    const extensionYaml = getExtensionFilePath(context);
+    const extensionYaml = getExtensionFilePath();
     if (!extensionYaml) {
       if (showWarningMessage) {
         vscode.window.showWarningMessage(

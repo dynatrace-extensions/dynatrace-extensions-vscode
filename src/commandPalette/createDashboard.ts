@@ -29,6 +29,7 @@ import { ExtensionStub } from "../interfaces/extensionMeta";
  * data to render and is pointless. The extension yaml is adapted to include the newly
  * created dashboard. At the end, the user is prompted to upload the dashboard to Dynatrace
  * @param tenantsProvider environments details proivder
+ * @param cachedData provider for cacheable data
  * @param outputChannel JSON output channel for communicating errors
  * @returns
  */
@@ -36,11 +37,10 @@ export async function createOverviewDashboard(
   tenantsProvider: EnvironmentsTreeDataProvider,
   cachedData: CachedDataProvider,
   outputChannel: vscode.OutputChannel,
-  context: vscode.ExtensionContext
 ) {
   const DASHBOARD_PATH = "dashboards/overview_dashboard.json";
   // Read extension.yaml
-  const extensionFile = getExtensionFilePath(context)!;
+  const extensionFile = getExtensionFilePath()!;
   const extensionText = readFileSync(extensionFile).toString();
   const extension = cachedData.getExtensionYaml(extensionText);
   // Check topology. No topology = pointless dashboard
@@ -64,17 +64,17 @@ export async function createOverviewDashboard(
   const dashboardsMatch = extensionText.search(/^dashboards:$/gm);
   let updatedExtensionText;
   if (dashboardsMatch > -1) {
-    if (!extensionText.includes(`path: dashboards/overview_dashboard.json`)) {
+    if (!extensionText.includes(`path: ${DASHBOARD_PATH}`)) {
       const indent = extensionText.slice(dashboardsMatch).indexOf("-") - 12;
       const beforeText = extensionText.slice(0, dashboardsMatch);
       const afterText = extensionText.slice(dashboardsMatch + 12);
-      updatedExtensionText = `${beforeText}dashboards:\n${' '.repeat(indent)}- path: dashboards/overview_dashboard.json\n${afterText}`;
+      updatedExtensionText = `${beforeText}dashboards:\n${' '.repeat(indent)}- path: ${DASHBOARD_PATH}\n${afterText}`;
     } else {
       // Nothing to do, dashboard is already present
       updatedExtensionText = extensionText;
     }
   } else {
-    updatedExtensionText = `${extensionText}\nalerts:\n  - path: dashboards/overview_dashboard.json\n`;
+    updatedExtensionText = `${extensionText}\nalerts:\n  - path: ${DASHBOARD_PATH}\n`;
   }
 
   writeFileSync(extensionFile, updatedExtensionText);

@@ -24,10 +24,11 @@ import { getExtensionFilePath } from "../utils/fileSystem";
  * Activates the extension found in the currently open workspace. If a version is not provided
  * already, the user is prompted for selection from the versions found on the tenant.
  * @param dt Dynatrace API Client
+ * @param cachedData provider for cacheable data
  * @param version optional version to activate
  */
-export async function activateExtension(context: vscode.ExtensionContext, dt: Dynatrace, cachedData: CachedDataProvider, version?: string) {
-  const extensionFile = getExtensionFilePath(context)!;
+export async function activateExtension(dt: Dynatrace, cachedData: CachedDataProvider, version?: string) {
+  const extensionFile = getExtensionFilePath()!;
   const extension =  cachedData.getExtensionYaml(readFileSync(extensionFile).toString());
 
   // If version was not provided, prompt user for selection

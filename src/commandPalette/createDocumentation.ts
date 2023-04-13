@@ -26,14 +26,15 @@ import { ExtensionStub } from "../interfaces/extensionMeta";
  * Delivers the "Create documentation" command functionality.
  * Reads through the extension.yaml file and any associated alerts/dashboards JSONs and produces content for
  * a README.md file which is written in the workspace at the same level as the extension folder.
+ * @param cachedData provider for cacheable data
  * @returns void
  */
-export async function createDocumentation(cachedData: CachedDataProvider, context: vscode.ExtensionContext) {
+export async function createDocumentation(cachedData: CachedDataProvider) {
   await vscode.window.withProgress(
     { location: vscode.ProgressLocation.Notification, title: "Creating documentation" },
     async progress => {
       progress.report({ message: "Parsing metadata" });
-      const extensionFile = getExtensionFilePath(context)!;
+      const extensionFile = getExtensionFilePath()!;
       const extensionDir = path.dirname(extensionFile);
       const extension = cachedData.getExtensionYaml(readFileSync(extensionFile).toString());
 

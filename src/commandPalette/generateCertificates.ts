@@ -179,7 +179,7 @@ export async function generateCerts(context: vscode.ExtensionContext): Promise<b
       .update("rootOrCaCertificateLocation", path.join(certsDir, "ca.pem"), useGlobal === "Yes" ? true : undefined);
 
     // Link command - Upload Certificates
-    var choice = await vscode.window.showInformationMessage(
+    const choice = await vscode.window.showInformationMessage(
       "Settings updated. Would you like to upload the CA certificate to Dynatrace?",
       "Yes",
       "No"
