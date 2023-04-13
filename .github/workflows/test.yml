@@ -1,28 +1,27 @@
 
-name: NodeJS Build & Test
+name: CI Tests
 
 on:
   push:
-    branches: [ "main" ]
+    branches:
+      - "main"
   pull_request:
-    branches: [ "main" ]
+    branches:
+      - "main"
 
 jobs:
-  build:
-
-    runs-on: ubuntu-latest
-
+  test:
+    runs-on: ubuntu-latest    
     steps:
       - name: Checkout
         uses: actions/checkout@v3
-      - name: Setup Node.js 16.x
+      - name: Install Node
         uses: actions/setup-node@v3
         with:
           node-version: 16.x
-          cache: 'npm'
-      - name: Install VS Code linux dependencies
+      - name: Install Linux deps
         run: sudo apt install xvfb -y
-      - name: Install app and dependencies
+      - name: Install Extension
         run: npm install
       - name: Pre-test activities
         run: npm run pretest
