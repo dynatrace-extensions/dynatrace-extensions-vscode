@@ -74,7 +74,7 @@ export async function createOverviewDashboard(
       updatedExtensionText = extensionText;
     }
   } else {
-    updatedExtensionText = `${extensionText}\nalerts:\n  - path: ${DASHBOARD_PATH}\n`;
+    updatedExtensionText = `${extensionText}\ndashboards:\n  - path: ${DASHBOARD_PATH}\n`;
   }
 
   writeFileSync(extensionFile, updatedExtensionText);
