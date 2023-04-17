@@ -1,5 +1,19 @@
 # Change Log
 
+## Version 1.2.2 (17.04.2023)
+
+### 🪲 Fixed in this version:
+- Overview dashboard not added correctly to yaml
+
+---
+
+## Version 1.2.1 (13.04.2023)
+
+### 🚀 Improved in this version:
+- [#97 - Support for WSL2 and dev containers](https://github.com/dynatrace-extensions/dynatrace-extensions-copilot/issues/97)
+
+---
+
 ## Version 1.2.0 (11.04.2023)
 
 ### ✨ New in this version:
