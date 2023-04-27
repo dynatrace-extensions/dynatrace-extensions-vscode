@@ -6,7 +6,14 @@
         "sourceType": "module"
     },
     "plugins": [
-        "@typescript-eslint"
+        "@typescript-eslint",
+        "prettier"
+    ],
+    "extends": [
+        "plugin:prettier/recommended",
+        "plugin:@typescript-eslint/recommended",
+        "prettier",
+        "prettier/@typescript-eslint"
     ],
     "rules": {
         "@typescript-eslint/naming-convention": "warn",
