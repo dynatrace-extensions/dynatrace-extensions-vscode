@@ -771,7 +771,7 @@
 		"eslint-plugin-functional": "^5.0.8",
 		"mocha": "^9.2.2",
 		"mock-fs": "^5.1.4",
-		"typescript": ">=4.6.4"
+		"typescript": "^5.0.4"
 	},
 	"dependencies": {
 		"adm-zip": "^0.5.9",
