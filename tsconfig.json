@@ -16,4 +16,5 @@
 		"noImplicitReturns": false,
 		"esModuleInterop": true,
 	},
+	"exclude": ["out", "dist", "**/*.d.ts", "node_modules", "src/test"]
 }

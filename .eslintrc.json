@@ -105,5 +105,5 @@
       }
     ]
   },
-  "ignorePatterns": ["out", "dist", "**/*.d.ts", "node_modules"]
+  "ignorePatterns": ["out", "dist", "**/*.d.ts", "node_modules", "src/test"]
 }
