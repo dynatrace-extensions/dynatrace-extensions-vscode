@@ -768,6 +768,7 @@
 		"@vscode/vsce": "^2.19.0",
 		"esbuild": "^0.15.7",
 		"eslint": "^8.14.0",
+		"eslint-config-airbnb-typescript": "^17.0.0",
 		"eslint-config-prettier": "^8.8.0",
 		"eslint-plugin-functional": "^5.0.8",
 		"eslint-plugin-prettier": "^4.2.1",
