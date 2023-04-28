@@ -6,7 +6,16 @@
     "sourceType": "module",
     "project": ["./**/tsconfig.json"]
   },
-  "plugins": ["@typescript-eslint", "prettier", "functional"],
+  "plugins": [
+    "@typescript-eslint",
+    "prettier",
+    "import",
+    "functional",
+    "no-unsanitized",
+    "no-secrets",
+    "react",
+    "@lwc/eslint-plugin-lwc"
+  ],
   "extends": [
     "eslint:recommended",
     "plugin:prettier/recommended",
