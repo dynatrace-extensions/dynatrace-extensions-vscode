@@ -14,8 +14,7 @@
     "plugin:@typescript-eslint/strict",
     "plugin:@typescript-eslint/recommended-requiring-type-checking",
     "prettier",
-    "airbnb-typescript",
-    "prettier/@typescript-eslint"
+    "airbnb-typescript"
   ],
   "rules": {
     "camelcase": [2, { "properties": "never" }],
