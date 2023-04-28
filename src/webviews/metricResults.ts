@@ -45,7 +45,7 @@ export class MetricResultsPanel {
       MetricResultsPanel.viewType,
       "Query results",
       column || vscode.ViewColumn.Two,
-      { enableScripts: true }
+      { enableScripts: true },
     );
 
     MetricResultsPanel.currentPanel = new MetricResultsPanel(panel, data);
@@ -71,18 +71,18 @@ export class MetricResultsPanel {
 
     // Update the content based on view changes
     this._panel.onDidChangeViewState(
-      (e) => {
+      e => {
         if (this._panel.visible) {
           this._update(data);
         }
       },
       null,
-      this._disposables
+      this._disposables,
     );
 
     // Handle messages from the webview
     this._panel.webview.onDidReceiveMessage(
-      (message) => {
+      message => {
         switch (message.command) {
           case "alert":
             vscode.window.showErrorMessage(message.text);
@@ -90,7 +90,7 @@ export class MetricResultsPanel {
         }
       },
       null,
-      this._disposables
+      this._disposables,
     );
   }
 
@@ -123,80 +123,79 @@ export class MetricResultsPanel {
 
   private _getHTMLForGraphData(webview: vscode.Webview, data: MetricSeriesCollection[] | string) {
     const nonce = getNonce();
-    //<meta http-equiv="Content-Security-Policy" content="default-src 'none';script-src 'nonce-${nonce}';">
     if (Array.isArray(data)) {
       var timestamps: string[] = [];
       var values: any[] = [];
-      data.forEach((metricCollection) => {
-        metricCollection.data.map((metricData) => {
-          timestamps.push(...metricData.timestamps.map((timestamp) => timestampToStr(timestamp)));
+      data.forEach(metricCollection => {
+        metricCollection.data.map(metricData => {
+          timestamps.push(...metricData.timestamps.map(timestamp => timestampToStr(timestamp)));
         });
-        metricCollection.data.map((metricData) => {
+        metricCollection.data.map(metricData => {
           values.push(...metricData.values);
         });
       });
 
       // TODO: Add a more secure CSP that still allows inline style.
       return `<!DOCTYPE html>
-              <html lang="en>
-                <head>
-                  <meta charset="UTF-8">
-                  <meta name="viewport" content="width=device-width, initial-scale=1.0">
-              
-                  <title>Metric results</title>
-                </head>
-                <script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/2.9.4/Chart.js"></script>
-                <body>
-                  <h1 id="lines-of-code-counter">Metric Query Results</h1>
-                  <div style="background-color: white; width: 100%; max-width: 600px; padding: 20px 0;">
-                    <canvas id="myChart"></canvas>
-                  </div>
-                  <h2>Query details:</h2>
-                  <ul>
-                    <li><h3>Metric selector: ${JSON.stringify(data[0].metricId)}</h3></li>
-                    <li><h3>Timeframe used: last 2 hours</h3></li>
-                    <li><h3>Resolution: 5 minutes</h3></li>
-                  </ul>
-                </body>
-                <script>
-                  var xValues = ${JSON.stringify(timestamps)};
-                  var yValues = ${JSON.stringify(values)};
-                  const dash = (ctx, value) => ctx.p0.skip || ctx.p1.skip ? value : undefined;
-                  
-                  new Chart("myChart", {
-                    type: "line",
-                    data: {
-                      labels: xValues,
-                      datasets: [{
-                        fill: false,
-                        label: "Metric query data",
-                        data: yValues,
-                        borderColor: "#008cdb",
-                        borderWidth: 4,
-                        tension: 0,
-                        segment: {
-                          borderColor: ctx => dash(ctx, 'rgb(0,0,0,0.2)') || "#008cdb",
-                          borderDash: ctx => dash(ctx, [6, 6]) || [6, 0],
-                        },
-                        spanGaps: false
-                      }]
-                    },
-                    options: {
-                      legend: {display: true, position: "bottom"},
-                      elements: {
-                        point: {
-                          backgroundColor: "rgba(0, 107, 186, 0.5)",
-                          borderColor: "#008cdb",
-                          borderWidth: 2,
-                          hoverRadius: 5
-                        }
-                      }
-                    }
-                  });
-                </script>
-              </html>`;
+         <html lang="en>
+           <head>
+             <meta charset="UTF-8">
+             <meta name="viewport" content="width=device-width, initial-scale=1.0">
+        
+             <title>Metric results</title>
+           </head>
+           <script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/2.9.4/Chart.js"></script>
+           <body>
+             <h1 id="lines-of-code-counter">Metric Query Results</h1>
+             <div style="background-color: white; width: 100%; max-width: 600px; padding: 20px 0;">
+               <canvas id="myChart"></canvas>
+             </div>
+             <h2>Query details:</h2>
+             <ul>
+               <li><h3>Metric selector: ${JSON.stringify(data[0].metricId)}</h3></li>
+               <li><h3>Timeframe used: last 2 hours</h3></li>
+               <li><h3>Resolution: 5 minutes</h3></li>
+             </ul>
+           </body>
+           <script>
+             var xValues = ${JSON.stringify(timestamps)};
+             var yValues = ${JSON.stringify(values)};
+             const dash = (ctx, value) => ctx.p0.skip || ctx.p1.skip ? value : undefined;
+            
+             new Chart("myChart", {
+               type: "line",
+               data: {
+                 labels: xValues,
+                 datasets: [{
+                   fill: false,
+                   label: "Metric query data",
+                   data: yValues,
+                   borderColor: "#008cdb",
+                   borderWidth: 4,
+                   tension: 0,
+                   segment: {
+                     borderColor: ctx => dash(ctx, 'rgb(0,0,0,0.2)') || "#008cdb",
+                     borderDash: ctx => dash(ctx, [6, 6]) || [6, 0],
+                   },
+                   spanGaps: false
+                 }]
+               },
+               options: {
+                 legend: {display: true, position: "bottom"},
+                 elements: {
+                   point: {
+                     backgroundColor: "rgba(0, 107, 186, 0.5)",
+                     borderColor: "#008cdb",
+                     borderWidth: 2,
+                     hoverRadius: 5
+                   }
+                 }
+               }
+             });
+           </script>
+         </html>`;
     }
-    
+
     return `<!DOCTYPE html>
             <html lang="en>
             <head>

@@ -32,7 +32,9 @@ import { resolveRealPath, uploadComponentCert } from "../utils/fileSystem";
  */
 export async function distributeCertificate(context: vscode.ExtensionContext, dt: Dynatrace) {
   const certPath = resolveRealPath(
-    vscode.workspace.getConfiguration("dynatrace", null).get("rootOrCaCertificateLocation") as string
+    vscode.workspace
+      .getConfiguration("dynatrace", null)
+      .get("rootOrCaCertificateLocation") as string,
   );
   const certContent = readFileSync(certPath as string).toString();
 
@@ -56,7 +58,9 @@ export async function distributeCertificate(context: vscode.ExtensionContext, dt
     await dt.credentialVault
       .putCertificate(caCertId, certContent, oldCert.name, oldCert.description)
       .then(() => {
-        vscode.window.showInformationMessage("Certificate successfully updated in the Credential Vault.");
+        vscode.window.showInformationMessage(
+          "Certificate successfully updated in the Credential Vault.",
+        );
       })
       .catch((err: DynatraceAPIError) => {
         vscode.window.showErrorMessage(`Certificate update failed: ${err.message}`);
@@ -70,7 +74,9 @@ export async function distributeCertificate(context: vscode.ExtensionContext, dt
       ignoreFocusOut: true,
     });
     if (!certName || certName === "") {
-      vscode.window.showErrorMessage("Certificate name is mandatory. Skipping upload to Credentials Vault.");
+      vscode.window.showErrorMessage(
+        "Certificate name is mandatory. Skipping upload to Credentials Vault.",
+      );
     } else {
       // Prompt user for Certificate Description
       const certDescr = await vscode.window.showInputBox({
@@ -84,7 +90,9 @@ export async function distributeCertificate(context: vscode.ExtensionContext, dt
         .postCertificate(certContent, certName, certDescr ?? "")
         .then(res => {
           context.workspaceState.update("caCertId", res.id);
-          vscode.window.showInformationMessage("Certificate successfully uploaded to Credentials Vault.");
+          vscode.window.showInformationMessage(
+            "Certificate successfully uploaded to Credentials Vault.",
+          );
         })
         .catch((err: DynatraceAPIError) => {
           vscode.window.showErrorMessage(`Certificate upload failed: ${err.message}`);
@@ -100,23 +108,28 @@ export async function distributeCertificate(context: vscode.ExtensionContext, dt
     const choice = await vscode.window.showInformationMessage(
       "Do you want to also distribute this certificate to locally installed OneAgents/ActiveGates?",
       "Yes",
-      "No"
+      "No",
     );
     if (choice === "Yes") {
       try {
         if (oaPresent) {
           uploadComponentCert(certPath as string, "OneAgent");
-          vscode.window.showInformationMessage("Certificate successfully uploaded to local OneAgent.");
+          vscode.window.showInformationMessage(
+            "Certificate successfully uploaded to local OneAgent.",
+          );
         }
         if (agPresent) {
           uploadComponentCert(certPath as string, "ActiveGate");
-          vscode.window.showInformationMessage("Certificate successfully uploaded to local ActiveGate.");
+          vscode.window.showInformationMessage(
+            "Certificate successfully uploaded to local ActiveGate.",
+          );
         }
       } catch (err: any) {
         vscode.window.showErrorMessage(
           err.code === "EPERM"
-            ? "Writing certificate locally failed due to access permissions. Try again after running VS Code as Administrator."
-            : `Writing certificate locally failed: ${err.message}`
+            ? "Writing certificate locally failed due to access permissions. " +
+                "Try again after running VS Code as Administrator."
+            : `Writing certificate locally failed: ${err.message}`,
         );
       }
     }

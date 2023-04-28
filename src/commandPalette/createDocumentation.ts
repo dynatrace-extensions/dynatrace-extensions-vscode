@@ -24,8 +24,9 @@ import { ExtensionStub } from "../interfaces/extensionMeta";
 
 /**
  * Delivers the "Create documentation" command functionality.
- * Reads through the extension.yaml file and any associated alerts/dashboards JSONs and produces content for
- * a README.md file which is written in the workspace at the same level as the extension folder.
+ * Reads through the extension.yaml file and any associated alerts/dashboards JSONs and produces
+ * content for a README.md file which is written in the workspace at the same level as the extension
+ * folder.
  * @param cachedData provider for cacheable data
  * @returns void
  */
@@ -40,13 +41,14 @@ export async function createDocumentation(cachedData: CachedDataProvider) {
 
       progress.report({ message: "Writing README.md" });
       writeDocumentation(extension, extensionDir);
-    }
+    },
   );
 }
 
 /**
  * Invokes all other data collection functions and puts together the documentation style content.
- * Writes the content to README.md in the workspace. If README.md exists already it will be overwritten.
+ * Writes the content to README.md in the workspace. If README.md exists already it will be
+ * overwritten.
  * @param extension extension.yaml content parsed into an object
  * @param extensionDir path to the extension folder
  */
@@ -64,7 +66,8 @@ function writeDocumentation(extension: ExtensionStub, extensionDir: string) {
   var docContent = `# ${extension.name}\n\n`;
   docContent += `**Latest version:** ${extension.version}\n`;
   docContent +=
-    "This extension is built using the Dynatrace Extension 2.0 Framework.\nThis means it will benefit of additional assets that can help you browse through the data.\n\n";
+    "This extension is built using the Dynatrace Extension 2.0 Framework.\nThis means it will " +
+    "benefit of additional assets that can help you browse through the data.\n\n";
   if (entities.length > 0) {
     docContent += "## Topology\n\nThis extension will create the following types of entities:\n";
     entities.forEach(entity => {
@@ -85,7 +88,8 @@ function writeDocumentation(extension: ExtensionStub, extensionDir: string) {
   }
   if (alerts.length > 0) {
     docContent +=
-      "## Alerts\n\nCustom events for alerting are packaged along with the extension. These should be reviewed and ajusted as needed before enabling from the Settings page.\nAlerts:\n";
+      "## Alerts\n\nCustom events for alerting are packaged along with the extension. These " +
+      "should be reviewed and ajusted as needed before enabling from the Settings page.\nAlerts:\n";
     alerts.forEach(alert => {
       docContent += `* ${alert.name}`;
       if (alert.entity) {
@@ -97,7 +101,9 @@ function writeDocumentation(extension: ExtensionStub, extensionDir: string) {
     docContent += "\n";
   }
   if (dashboards.length > 0) {
-    docContent += `## Dashboards\n\nThis extension is packaged with ${dashboards.length} dashboards which should serve as a starting point for data analysis.`;
+    docContent +=
+      `## Dashboards\n\nThis extension is packaged with ${dashboards.length} ` +
+      "dashboards which should serve as a starting point for data analysis.";
     docContent += "\nYou can find these by opening the Dashboards menu and searching for:\n\n";
     dashboards.forEach(dashboard => {
       docContent += `* ${dashboard.name}\n`;
@@ -108,7 +114,8 @@ function writeDocumentation(extension: ExtensionStub, extensionDir: string) {
   if (featureSets) {
     docContent += "## Feature sets\n\n";
     docContent +=
-      "Feature sets can be used to opt in and out of metric data collection.\nThis extension groups together metrics within the following feature sets:\n\n";
+      "Feature sets can be used to opt in and out of metric data collection.\nThis extension " +
+      "groups together metrics within the following feature sets:\n\n";
     featureSets.forEach(featureSet => {
       docContent += `* ${featureSet.name}\n`;
       featureSet.metrics.forEach(metric => {
@@ -119,7 +126,8 @@ function writeDocumentation(extension: ExtensionStub, extensionDir: string) {
   }
   if (extension.vars) {
     docContent +=
-      "## Variables\n\nVariables are used in monitoring configurations for filtering and adding additional dimensions.\n";
+      "## Variables\n\nVariables are used in monitoring configurations for filtering and adding " +
+      "additional dimensions.\n";
     docContent += "This extension exposes the following variables:\n\n";
     extension.vars.forEach(v => {
       docContent += `* \`${v.id}\` (${v.type}) - ${v.displayName}\n`;
@@ -132,7 +140,8 @@ function writeDocumentation(extension: ExtensionStub, extensionDir: string) {
 }
 
 /**
- * Reads extension.yaml data and extracts relevant details for documenting custom events for alerting.
+ * Reads extension.yaml data and extracts relevant details for documenting custom events for
+ * alerting.
  * @param extension extension.yaml content parsed into an object
  * @param extensionDir path to the extension folder
  * @returns processed alerts metadata
@@ -171,7 +180,9 @@ function extractAlerts(extension: ExtensionStub, extensionDir: string): AlertDoc
 
     return {
       name: alert.name,
-      description: `Will raise ${alertSeverity} when the metric is ${alertCondition} ${threshold} for ${violatingSamples} out of ${samples} monitoring intervals`,
+      description:
+        `Will raise ${alertSeverity} when the metric is ${alertCondition} ${threshold} ` +
+        `for ${violatingSamples} out of ${samples} monitoring intervals`,
       entity: entity,
     };
   });
@@ -270,7 +281,7 @@ function mapEntitiesToMetrics(entities: EntityDoc[], metrics: MetricDoc[]): Metr
             }
             return false;
           })
-          .map(m => m.key)
+          .map(m => m.key),
       );
     });
     entity.metrics = entityMetrics;

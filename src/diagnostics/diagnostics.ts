@@ -26,7 +26,12 @@ import {
 } from "../utils/extensionParsing";
 import { getExtensionFilePath } from "../utils/fileSystem";
 import { isOidReadable, isTable, OidInformation } from "../utils/snmp";
-import { getBlockItemIndexAtLine, getListItemIndexes, getNextElementIdx, isSameList } from "../utils/yamlParsing";
+import {
+  getBlockItemIndexAtLine,
+  getListItemIndexes,
+  getNextElementIdx,
+  isSameList,
+} from "../utils/yamlParsing";
 import {
   copilotDiagnostic,
   COUNT_METRIC_KEY_SUFFIX,
@@ -113,7 +118,10 @@ export class DiagnosticsProvider {
     const extensionYamlFile = getExtensionFilePath()!;
     const diagnostics = this.collection.get(vscode.Uri.file(extensionYamlFile));
 
-    if (diagnostics && diagnostics.findIndex(diag => diag.severity === vscode.DiagnosticSeverity.Error) > -1) {
+    if (
+      diagnostics &&
+      diagnostics.findIndex(diag => diag.severity === vscode.DiagnosticSeverity.Error) > -1
+    ) {
       vscode.window.showErrorMessage("Extension cannot be built. Fix problems first.");
       vscode.commands.executeCommand("workbench.action.problems.focus");
       status = false;
@@ -135,12 +143,22 @@ export class DiagnosticsProvider {
     const lineNo = contentLines.findIndex(line => line.startsWith("name:"));
 
     // Honor the user's settings
-    if (!vscode.workspace.getConfiguration().get("dynatrace.diagnostics.extensionName", false) as boolean) {
+    if (
+      !vscode.workspace
+        .getConfiguration()
+        .get("dynatrace.diagnostics.extensionName", false) as boolean
+    ) {
       return [];
     }
 
     if (lineNo === -1) {
-      diagnostics.push(copilotDiagnostic(new vscode.Position(1, 0), new vscode.Position(1, 0), EXTENSION_NAME_MISSING));
+      diagnostics.push(
+        copilotDiagnostic(
+          new vscode.Position(1, 0),
+          new vscode.Position(1, 0),
+          EXTENSION_NAME_MISSING,
+        ),
+      );
     } else {
       const nameRegex = /^(custom:)*(?!\.)(?!.*\.\.)(?!.*\.$)[a-z0-9-_\.]+$/;
       const extensionName = contentLines[lineNo].split("name:")[1].trim();
@@ -174,13 +192,15 @@ export class DiagnosticsProvider {
    */
   private async diagnoseMetricKeys(
     document: vscode.TextDocument,
-    extension: ExtensionStub
+    extension: ExtensionStub,
   ): Promise<vscode.Diagnostic[]> {
     const content = document.getText();
     var diagnostics: vscode.Diagnostic[] = [];
 
     // Honor the user's settings
-    if (!vscode.workspace.getConfiguration().get("dynatrace.diagnostics.metricKeys", false) as boolean) {
+    if (
+      !vscode.workspace.getConfiguration().get("dynatrace.diagnostics.metricKeys", false) as boolean
+    ) {
       return [];
     }
 
@@ -188,18 +208,21 @@ export class DiagnosticsProvider {
       .filter(
         m =>
           (m.type === "count" && !(m.key.endsWith(".count") || m.key.endsWith("_count"))) ||
-          (m.type === "gauge" && (m.key.endsWith(".count") || m.key.endsWith("_count")))
+          (m.type === "gauge" && (m.key.endsWith(".count") || m.key.endsWith("_count"))),
       )
       .forEach(m => {
-        const metricRegex = new RegExp(`key: "?${m.key.replace(/\./g, "\\.")}"?(?:$|(?: .*$))`, "gm");
+        const metricRegex = new RegExp(
+          `key: "?${m.key.replace(/\./g, "\\.")}"?(?:$|(?: .*$))`,
+          "gm",
+        );
         let match;
         while ((match = metricRegex.exec(content)) !== null) {
           diagnostics.push(
             copilotDiagnostic(
               document.positionAt(match.index + match[0].indexOf(m.key)),
               document.positionAt(match.index + match[0].indexOf(m.key) + m.key.length),
-              m.type === "count" ? COUNT_METRIC_KEY_SUFFIX : GAUGE_METRIC_KEY_SUFFIX
-            )
+              m.type === "count" ? COUNT_METRIC_KEY_SUFFIX : GAUGE_METRIC_KEY_SUFFIX,
+            ),
           );
         }
       });
@@ -217,14 +240,16 @@ export class DiagnosticsProvider {
    */
   private async diagnoseCardKeys(
     document: vscode.TextDocument,
-    extension: ExtensionStub
+    extension: ExtensionStub,
   ): Promise<vscode.Diagnostic[]> {
     const content = document.getText();
     let diagnostics: vscode.Diagnostic[] = [];
 
     // Honor the user's settings and bail early if no screens
     if (
-      (!vscode.workspace.getConfiguration().get("dynatrace.diagnostics.cardKeys", false) as boolean) ||
+      (!vscode.workspace
+        .getConfiguration()
+        .get("dynatrace.diagnostics.cardKeys", false) as boolean) ||
       !extension.screens
     ) {
       return [];
@@ -242,8 +267,8 @@ export class DiagnosticsProvider {
             copilotDiagnostic(
               document.positionAt(keyStart),
               document.positionAt(keyStart + `key: ${rc.key}`.length),
-              REFERENCED_CARD_NOT_DEFINED
-            )
+              REFERENCED_CARD_NOT_DEFINED,
+            ),
           );
         });
       defCards
@@ -254,8 +279,8 @@ export class DiagnosticsProvider {
             copilotDiagnostic(
               document.positionAt(keyStart),
               document.positionAt(keyStart + `key: ${dc.key}`.length),
-              DEFINED_CARD_NOT_REFERENCED
-            )
+              DEFINED_CARD_NOT_REFERENCED,
+            ),
           );
         });
     });
@@ -271,21 +296,28 @@ export class DiagnosticsProvider {
    */
   private async diagnoseMetricOids(
     document: vscode.TextDocument,
-    extension: ExtensionStub
+    extension: ExtensionStub,
   ): Promise<vscode.Diagnostic[]> {
     const content = document.getText();
     const diagnostics: vscode.Diagnostic[] = [];
 
     // Honor the user's settings and bail early if no screens
-    if ((!vscode.workspace.getConfiguration().get("dynatrace.diagnostics.snmp", false) as boolean) || !extension.snmp) {
+    if (
+      (!vscode.workspace.getConfiguration().get("dynatrace.diagnostics.snmp", false) as boolean) ||
+      !extension.snmp
+    ) {
       return [];
     }
 
     // Get metrics and keep the OID-based ones
-    const metrics = getMetricsFromDataSource(extension, true).filter(m => m.value && m.value.startsWith("oid:"));
+    const metrics = getMetricsFromDataSource(extension, true).filter(
+      m => m.value && m.value.startsWith("oid:"),
+    );
     // Reduce the time by bulk fetching all required OIDs
     const oidInfos = await this.cachedData.getBulkOidsInfo(
-      metrics.map(m => (m.value!.endsWith(".0") ? m.value!.slice(4, m.value!.length - 2) : m.value!.slice(4)))
+      metrics.map(m =>
+        m.value!.endsWith(".0") ? m.value!.slice(4, m.value!.length - 2) : m.value!.slice(4),
+      ),
     );
     const metricInfos = metrics.map((m, i) => ({
       key: m.key,
@@ -296,7 +328,10 @@ export class DiagnosticsProvider {
 
     for (const metric of metricInfos) {
       const oid = metric.value!.slice(4);
-      const oidRegex = new RegExp(`value: "?oid:${oid.replace(/\./g, "\\.")}"?(?:$|(?: .*$))`, "gm");
+      const oidRegex = new RegExp(
+        `value: "?oid:${oid.replace(/\./g, "\\.")}"?(?:$|(?: .*$))`,
+        "gm",
+      );
 
       let match;
       while ((match = oidRegex.exec(content)) !== null) {
@@ -327,11 +362,14 @@ export class DiagnosticsProvider {
               nextDashIdx !== -1
                 ? isSameList(nextDashIdx, document)
                   ? content.lastIndexOf("\n", nextDashIdx)
-                  : content.indexOf(document.lineAt(document.positionAt(nextDashIdx).line - 1).text, match.index)
+                  : content.indexOf(
+                      document.lineAt(document.positionAt(nextDashIdx).line - 1).text,
+                      match.index,
+                    )
                 : getNextElementIdx(
                     document.lineAt(document.positionAt(match.index)).lineNumber,
                     document,
-                    match.index
+                    match.index,
                   );
 
             if (metric.type === "gauge" && metric.info.syntax.startsWith("Counter")) {
@@ -341,14 +379,22 @@ export class DiagnosticsProvider {
             }
             if (
               metric.type === "count" &&
-              (metric.info.syntax === "Gauge" || metric.info.syntax.toLowerCase().includes("integer"))
+              (metric.info.syntax === "Gauge" ||
+                metric.info.syntax.toLowerCase().includes("integer"))
             ) {
               if (content.substring(blockStart, blockEnd).includes(metric.key)) {
                 diagnostics.push(copilotDiagnostic(startPos, endPos, OID_GAUGE_AS_COUNTER));
               }
             }
             diagnostics.push(
-              ...(await this.createTableOidDiagnostics(metric, oid, startPos, endPos, content, extension))
+              ...(await this.createTableOidDiagnostics(
+                metric,
+                oid,
+                startPos,
+                endPos,
+                content,
+                extension,
+              )),
             );
           }
         }
@@ -366,22 +412,30 @@ export class DiagnosticsProvider {
    */
   private async diagnoseDimensionOids(
     document: vscode.TextDocument,
-    extension: ExtensionStub
+    extension: ExtensionStub,
   ): Promise<vscode.Diagnostic[]> {
     const content = document.getText();
     const diagnostics: vscode.Diagnostic[] = [];
 
     // Honor the user's settings and bail early if no screens
-    if ((!vscode.workspace.getConfiguration().get("dynatrace.diagnostics.snmp", false) as boolean) || !extension.snmp) {
+    if (
+      (!vscode.workspace.getConfiguration().get("dynatrace.diagnostics.snmp", false) as boolean) ||
+      !extension.snmp
+    ) {
       return [];
     }
 
     // Get dimensions and tidy up OIDs (.0 ending is not valid for lookups)
     const dimensions = getDimensionsFromDataSource(extension, true)
       .filter(d => d.value && d.value.startsWith("oid:"))
-      .map(d => ({ key: d.key, value: d.value?.endsWith(".0") ? d.value.slice(0, d.value.length - 2) : d.value }));
+      .map(d => ({
+        key: d.key,
+        value: d.value?.endsWith(".0") ? d.value.slice(0, d.value.length - 2) : d.value,
+      }));
     // Reduce the time by bulk fetching all required OIDs
-    const dimensionOidInfos = await this.cachedData.getBulkOidsInfo(dimensions.map(d => d.value!.split("oid:")[1]));
+    const dimensionOidInfos = await this.cachedData.getBulkOidsInfo(
+      dimensions.map(d => d.value!.split("oid:")[1]),
+    );
     const dimensionInfos = dimensions.map((d, i) => ({
       key: d.key,
       value: d.value,
@@ -390,7 +444,10 @@ export class DiagnosticsProvider {
 
     for (const dimension of dimensionInfos) {
       const oid = dimension.value!.slice(4);
-      const oidRegex = new RegExp(`value: "?oid:${oid.replace(/\./g, "\\.")}"?(?:$|(?: .*$))`, "gm");
+      const oidRegex = new RegExp(
+        `value: "?oid:${oid.replace(/\./g, "\\.")}"?(?:$|(?: .*$))`,
+        "gm",
+      );
 
       let match;
       while ((match = oidRegex.exec(content)) !== null) {
@@ -408,7 +465,14 @@ export class DiagnosticsProvider {
           // Check things we can infer from the data
         } else {
           diagnostics.push(
-            ...(await this.createTableOidDiagnostics(dimension, oid, startPos, endPos, content, extension))
+            ...(await this.createTableOidDiagnostics(
+              dimension,
+              oid,
+              startPos,
+              endPos,
+              content,
+              extension,
+            )),
           );
         }
       }
@@ -418,8 +482,9 @@ export class DiagnosticsProvider {
   }
 
   /**
-   * Logic for checking whether a metric or dimension OID has any issues when it is related in some way to
-   * a table: e.g. either subgroup defined as table but OID isn't or OID is for table but subgroup isn't
+   * Logic for checking whether a metric or dimension OID has any issues when it is related in some
+   * way to a table: e.g. either subgroup defined as table but OID isn't or OID is for table but
+   * subgroup isn't.
    * @param usageInfo
    * @param oid
    * @param startPos
@@ -440,14 +505,17 @@ export class DiagnosticsProvider {
     startPos: vscode.Position,
     endPos: vscode.Position,
     content: string,
-    extension: ExtensionStub
+    extension: ExtensionStub,
   ): Promise<vscode.Diagnostic[]> {
     const diagnostics: vscode.Diagnostic[] = [];
     const groupIdx = getBlockItemIndexAtLine("snmp", startPos.line, content);
     const subgroupIdx = getBlockItemIndexAtLine("subgroups", startPos.line, content);
 
     // Honor the user's settings and bail early if no screens
-    if ((!vscode.workspace.getConfiguration().get("dynatrace.diagnostics.snmp", false) as boolean) || !extension.snmp) {
+    if (
+      (!vscode.workspace.getConfiguration().get("dynatrace.diagnostics.snmp", false) as boolean) ||
+      !extension.snmp
+    ) {
       return [];
     }
 
@@ -460,7 +528,7 @@ export class DiagnosticsProvider {
             // Get data for grandparent OID, then check for signs of table
             const grandparentInfo = await this.cachedData.getSingleOidInfo(
               // Get the second last index of '.' and slice oid from start
-              oid.slice(0, oid.slice(0, oid.lastIndexOf(".")).lastIndexOf("."))
+              oid.slice(0, oid.slice(0, oid.lastIndexOf(".")).lastIndexOf(".")),
             );
             if (!isTable(grandparentInfo)) {
               diagnostics.push(copilotDiagnostic(startPos, endPos, OID_STATIC_OBJ_IN_TABLE));
@@ -473,7 +541,10 @@ export class DiagnosticsProvider {
             // Get data for grandparent OID, then check for signs of table
             const grandparentInfo = await this.cachedData.getSingleOidInfo(
               // Remove '.0', get the second last index of '.' and slice oid from start
-              oid.slice(0, oid.slice(0, oid.slice(0, oid.length - 2).lastIndexOf(".")).lastIndexOf("."))
+              oid.slice(
+                0,
+                oid.slice(0, oid.slice(0, oid.length - 2).lastIndexOf(".")).lastIndexOf("."),
+              ),
             );
             if (isTable(grandparentInfo)) {
               diagnostics.push(copilotDiagnostic(startPos, endPos, OID_TABLE_OBJ_AS_STATIC));

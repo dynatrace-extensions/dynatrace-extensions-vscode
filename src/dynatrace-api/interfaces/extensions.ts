@@ -39,8 +39,6 @@ interface ExtensionV1DTO {
   type: "ACTIVEGATE" | "CODEMODULE" | "JMX" | "ONEAGENT" | "PMI" | "UNKNOWN";
 }
 
-
-
 interface ExtensionMonitoringConfiguration {
   objectId: string;
   scope: string;

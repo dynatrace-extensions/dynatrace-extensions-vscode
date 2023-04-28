@@ -30,14 +30,22 @@ export class EntityServiceV2 {
 
   /**
    * Gets the list of all monitored entities matching the query parameters.
-   * @param entitySelector Defines the scope of the query. Only entities matching the specified criteria are included into response.
+   * @param entitySelector Defines the scope of the query. Only entities matching the specified
+   * criteria are included into response.
    * @param from The start of the requested timeframe. Defaults to now-3d.
    * @param to The end of the requested timeframe. Defaults to current timestamp.
-   * @param fields Defines the list of entity properties included in the response. The ID and the name of an entity are always included to the response.
+   * @param fields Defines the list of entity properties included in the response. The ID and the
+   * name of an entity are always included to the response.
    * @param sort Defines the ordering of the entities returned.
    * @returns list of entities
    */
-  async list(entitySelector: string, from?: string, to?: string, fields?: string, sort?: string): Promise<Entity[]> {
+  async list(
+    entitySelector: string,
+    from?: string,
+    to?: string,
+    fields?: string,
+    sort?: string,
+  ): Promise<Entity[]> {
     return this.httpClient.paginatedCall(this.endpoint, "entities", {
       entitySelector: entitySelector,
       from: from,
@@ -52,11 +60,16 @@ export class EntityServiceV2 {
    * @param entityId The ID of the required entity.
    * @param from The start of the requested timeframe. Defaults to now-3d.
    * @param to The end of the requested timeframe. Defaults to current timestamp.
-   * @param fields Defines the list of entity properties included in the response. The ID and the name of an entity are always included to the response.
+   * @param fields Defines the list of entity properties included in the response. The ID and the
+   * name of an entity are always included to the response.
    * @returns the requested entity
    */
   async get(entityId: string, from?: string, to?: string, fields?: string) {
-    return this.httpClient.makeRequest(`${this.endpoint}/${entityId}`, { from: from, to: to, fields: fields });
+    return this.httpClient.makeRequest(`${this.endpoint}/${entityId}`, {
+      from: from,
+      to: to,
+      fields: fields,
+    });
   }
 
   /**

@@ -34,7 +34,10 @@ export class ScreenLensProvider implements vscode.CodeLensProvider {
   /**
    * @param environmentsProvider - a provider of Dynatrace environments data
    */
-  constructor(environmentsProvider: EnvironmentsTreeDataProvider, cachedDataProvider: CachedDataProvider) {
+  constructor(
+    environmentsProvider: EnvironmentsTreeDataProvider,
+    cachedDataProvider: CachedDataProvider,
+  ) {
     this.codeLenses = [];
     this.regex = /^  - ./gm;
     this.environments = environmentsProvider;
@@ -43,7 +46,7 @@ export class ScreenLensProvider implements vscode.CodeLensProvider {
       "dt-ext-copilot.openScreen",
       (entityType: string, screenType: "list" | "details") => {
         this.openScreen(entityType, screenType);
-      }
+      },
     );
   }
 
@@ -55,14 +58,17 @@ export class ScreenLensProvider implements vscode.CodeLensProvider {
    */
   public provideCodeLenses(
     document: vscode.TextDocument,
-    token: vscode.CancellationToken
+    token: vscode.CancellationToken,
   ): vscode.ProviderResult<vscode.CodeLens[]> {
     this.codeLenses = [];
     const regex = new RegExp(this.regex);
     const text = document.getText();
 
     // If no screens or feature disabled, don't continue
-    if (!text.includes("screens:") || !vscode.workspace.getConfiguration("dynatrace", null).get("screenCodeLens")) {
+    if (
+      !text.includes("screens:") ||
+      !vscode.workspace.getConfiguration("dynatrace", null).get("screenCodeLens")
+    ) {
       return [];
     }
 
@@ -95,7 +101,7 @@ export class ScreenLensProvider implements vscode.CodeLensProvider {
             tooltip: "Open this entity's Details View in Dynatrace",
             command: "dt-ext-copilot.openScreen",
             arguments: [entityType, "details"],
-          })
+          }),
         );
       }
     }
@@ -117,7 +123,8 @@ export class ScreenLensProvider implements vscode.CodeLensProvider {
           open(`${tenant.url}/ui/entity/list/${entityType}`);
         }
         if (screenType === "details") {
-          const entityId = (await tenant.dt.entitiesV2.list(`type("${entityType}")`, "now-5m"))[0].entityId;
+          const entityId = (await tenant.dt.entitiesV2.list(`type("${entityType}")`, "now-5m"))[0]
+            .entityId;
           open(`${tenant.url}/ui/entity/${entityId}`);
         }
       }

@@ -37,7 +37,9 @@ export async function createAlert(cachedData: CachedDataProvider) {
   }
 
   if (metricKeys.length === 0) {
-    vscode.window.showWarningMessage("No metrics defined in extension.yaml, please define them before creating alerts");
+    vscode.window.showWarningMessage(
+      "No metrics defined in extension.yaml, please define them before creating alerts",
+    );
     return;
   }
 
@@ -129,7 +131,9 @@ export async function createAlert(cachedData: CachedDataProvider) {
       const indent = extensionText.slice(alertsMatch).indexOf("-") - 8;
       const beforeText = extensionText.slice(0, alertsMatch);
       const afterText = extensionText.slice(alertsMatch + 8);
-      updatedExtensionText = `${beforeText}alerts:\n${' '.repeat(indent)}- path: alerts/${fileName}\n${afterText}`;
+      updatedExtensionText = `${beforeText}alerts:\n${" ".repeat(
+        indent,
+      )}- path: alerts/${fileName}\n${afterText}`;
     } else {
       // Nothing to do, alert is already present
       updatedExtensionText = extensionText;

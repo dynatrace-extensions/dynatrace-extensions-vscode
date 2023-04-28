@@ -41,10 +41,10 @@ export class EnvironmentsTreeDataProvider implements vscode.TreeDataProvider<Env
   context: vscode.ExtensionContext;
   connectionStatus: ConnectionStatusManager;
   oc: vscode.OutputChannel;
-  private _onDidChangeTreeData: vscode.EventEmitter<EnvironmentsTreeItem | undefined | void> = new vscode.EventEmitter<
-    EnvironmentsTreeItem | undefined | void
-  >();
-  readonly onDidChangeTreeData: vscode.Event<EnvironmentsTreeItem | undefined | void> = this._onDidChangeTreeData.event;
+  private _onDidChangeTreeData: vscode.EventEmitter<EnvironmentsTreeItem | undefined | void> =
+    new vscode.EventEmitter<EnvironmentsTreeItem | undefined | void>();
+  readonly onDidChangeTreeData: vscode.Event<EnvironmentsTreeItem | undefined | void> =
+    this._onDidChangeTreeData.event;
 
   /**
    * @param context VSCode Extension Context
@@ -53,13 +53,13 @@ export class EnvironmentsTreeDataProvider implements vscode.TreeDataProvider<Env
   constructor(
     context: vscode.ExtensionContext,
     connectionStatus: ConnectionStatusManager,
-    errorChannel: vscode.OutputChannel
+    errorChannel: vscode.OutputChannel,
   ) {
     this.context = context;
     this.connectionStatus = connectionStatus;
     this.oc = errorChannel;
     this.getCurrentEnvironment().then(environment =>
-      this.connectionStatus.updateStatusBar(Boolean(environment), environment?.label?.toString())
+      this.connectionStatus.updateStatusBar(Boolean(environment), environment?.label?.toString()),
     );
     this.registerCommands(context);
   }
@@ -72,7 +72,7 @@ export class EnvironmentsTreeDataProvider implements vscode.TreeDataProvider<Env
     // Commands for Environments
     vscode.commands.registerCommand("dt-ext-copilot-environments.refresh", () => this.refresh());
     vscode.commands.registerCommand("dt-ext-copilot-environments.addEnvironment", () =>
-      addEnvironment(context).then(() => this.refresh())
+      addEnvironment(context).then(() => this.refresh()),
     );
     vscode.commands.registerCommand(
       "dt-ext-copilot-environments.useEnvironment",
@@ -82,22 +82,22 @@ export class EnvironmentsTreeDataProvider implements vscode.TreeDataProvider<Env
           environment.url,
           encryptToken(environment.token),
           environment.label?.toString(),
-          true
+          true,
         );
         this.refresh();
-      }
+      },
     );
     vscode.commands.registerCommand(
       "dt-ext-copilot-environments.editEnvironment",
       (environment: DynatraceEnvironment) => {
         editEnvironment(context, environment).then(() => this.refresh());
-      }
+      },
     );
     vscode.commands.registerCommand(
       "dt-ext-copilot-environments.deleteEnvironment",
       (environment: DynatraceEnvironment) => {
         deleteEnvironment(context, environment).then(() => this.refresh());
-      }
+      },
     );
     vscode.commands.registerCommand("dt-ext-copilot-environments.changeConnection", () => {
       changeConnection(context).then(([connected, environment]) => {
@@ -106,27 +106,36 @@ export class EnvironmentsTreeDataProvider implements vscode.TreeDataProvider<Env
       });
     });
     // Commands for monitoring configurations
-    vscode.commands.registerCommand("dt-ext-copilot-environments.addConfig", (extension: DeployedExtension) => {
-      addMonitoringConfiguration(extension, context, this.oc).then(success => {
-        if (success) {
-          this.refresh();
-        }
-      });
-    });
-    vscode.commands.registerCommand("dt-ext-copilot-environments.editConfig", (config: MonitoringConfiguration) => {
-      editMonitoringConfiguration(config, context, this.oc).then(success => {
-        if (success) {
-          this.refresh();
-        }
-      });
-    });
-    vscode.commands.registerCommand("dt-ext-copilot-environments.deleteConfig", (config: MonitoringConfiguration) => {
-      deleteMonitoringConfiguration(config).then(success => {
-        if (success) {
-          this.refresh();
-        }
-      });
-    });
+    vscode.commands.registerCommand(
+      "dt-ext-copilot-environments.addConfig",
+      (extension: DeployedExtension) => {
+        addMonitoringConfiguration(extension, context, this.oc).then(success => {
+          if (success) {
+            this.refresh();
+          }
+        });
+      },
+    );
+    vscode.commands.registerCommand(
+      "dt-ext-copilot-environments.editConfig",
+      (config: MonitoringConfiguration) => {
+        editMonitoringConfiguration(config, context, this.oc).then(success => {
+          if (success) {
+            this.refresh();
+          }
+        });
+      },
+    );
+    vscode.commands.registerCommand(
+      "dt-ext-copilot-environments.deleteConfig",
+      (config: MonitoringConfiguration) => {
+        deleteMonitoringConfiguration(config).then(success => {
+          if (success) {
+            this.refresh();
+          }
+        });
+      },
+    );
   }
 
   /**
@@ -166,9 +175,9 @@ export class EnvironmentsTreeDataProvider implements vscode.TreeDataProvider<Env
                     vscode.TreeItemCollapsibleState.Collapsed,
                     extension.extensionName,
                     extension.version,
-                    element.dt
-                  )
-              )
+                    element.dt,
+                  ),
+              ),
             );
         // For Extensions, configurations are the children items
         case "deployedExtension":
@@ -178,7 +187,7 @@ export class EnvironmentsTreeDataProvider implements vscode.TreeDataProvider<Env
                 configs.map(async config => {
                   const status = await element.dt.extensionsV2.getMonitoringConfigurationStatus(
                     element.id,
-                    config.objectId
+                    config.objectId,
                   );
                   return new MonitoringConfiguration(
                     config.objectId,
@@ -186,10 +195,10 @@ export class EnvironmentsTreeDataProvider implements vscode.TreeDataProvider<Env
                     config.value.description,
                     element.id,
                     status.status,
-                    element.dt
+                    element.dt,
                   );
-                })
-              )
+                }),
+              ),
           );
         default:
           return [];
@@ -207,7 +216,7 @@ export class EnvironmentsTreeDataProvider implements vscode.TreeDataProvider<Env
         decryptToken(environment.token),
         environment.id,
         environment.name,
-        environment.current
+        environment.current,
       );
     });
   }
@@ -219,7 +228,9 @@ export class EnvironmentsTreeDataProvider implements vscode.TreeDataProvider<Env
   async getCurrentEnvironment(): Promise<DynatraceEnvironment | undefined> {
     return await this.getChildren()
       .then(children =>
-        (children as DynatraceEnvironment[]).filter(c => c.contextValue === "currentDynatraceEnvironment")
+        (children as DynatraceEnvironment[]).filter(
+          c => c.contextValue === "currentDynatraceEnvironment",
+        ),
       )
       .then(children => children.pop());
   }
@@ -277,7 +288,7 @@ export class DynatraceEnvironment extends vscode.TreeItem implements IDynatraceE
     token: string,
     id: string,
     label?: string,
-    current: boolean = false
+    current: boolean = false,
   ) {
     super(label ?? id, collapsibleState);
     this.url = url;
@@ -317,7 +328,7 @@ export class DeployedExtension extends vscode.TreeItem implements IDeployedExten
     collapsibleState: vscode.TreeItemCollapsibleState,
     extensionName: string,
     extensionVersion: string,
-    dt: Dynatrace
+    dt: Dynatrace,
   ) {
     super(`${extensionName} (${extensionVersion})`, collapsibleState);
     this.id = extensionName;
@@ -360,7 +371,7 @@ export class MonitoringConfiguration extends vscode.TreeItem implements IMonitor
     description: string,
     extensionName: string,
     monitoringStatus: "ERROR" | "OK" | "UNKNOWN",
-    dt: Dynatrace
+    dt: Dynatrace,
   ) {
     const statusSymbol = (() => {
       switch (monitoringStatus) {

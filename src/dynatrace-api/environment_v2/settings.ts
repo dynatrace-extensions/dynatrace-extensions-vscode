@@ -41,7 +41,8 @@ export class SettingsService {
    * If nothing is persisted, no items will be returned.
    * @param schemaIds A list of comma-separated schema IDs to which the requested objects belong.
    * @param scopes A list of comma-separated scopes, that the requested objects target.
-   * @param fields A list of fields to be included to the response. The provided set of fields replaces the default set.
+   * @param fields A list of fields to be included to the response. The provided set of fields
+   * replaces the default set.
    * @param pageSize The amount of settings objects in a single response payload.
    * @returns list of settings objects matching criteria
    */
@@ -49,7 +50,7 @@ export class SettingsService {
     schemaIds?: string,
     scopes?: string,
     fields?: string,
-    pageSize?: number
+    pageSize?: number,
   ): Promise<SettingsObject[]> {
     return this.httpClient.paginatedCall(this.objectsEndpoint, "items", {
       schemaIds: schemaIds,
@@ -72,7 +73,8 @@ export class SettingsService {
   /**
    * Creates a new settings object.
    * You can upload several objects at once. In that case each object returns its own response code.
-   * @param validateOnly If true, the request runs only validation of the submitted settings objects, without saving them.
+   * @param validateOnly If true, the request runs only validation of the submitted settings objects
+   * without saving them.
    * @param payload Contains the settings objects to be created.
    * @returns
    */

@@ -31,10 +31,10 @@ import { CachedDataProvider } from "../utils/dataCaching";
 export class ExtensionsTreeDataProvider implements vscode.TreeDataProvider<ExtensionProjectItem> {
   context: vscode.ExtensionContext;
   private readonly cachedData: CachedDataProvider;
-  private _onDidChangeTreeData: vscode.EventEmitter<ExtensionProjectItem | undefined | void> = new vscode.EventEmitter<
-    ExtensionProjectItem | undefined | void
-  >();
-  readonly onDidChangeTreeData: vscode.Event<ExtensionProjectItem | undefined | void> = this._onDidChangeTreeData.event;
+  private _onDidChangeTreeData: vscode.EventEmitter<ExtensionProjectItem | undefined | void> =
+    new vscode.EventEmitter<ExtensionProjectItem | undefined | void>();
+  readonly onDidChangeTreeData: vscode.Event<ExtensionProjectItem | undefined | void> =
+    this._onDidChangeTreeData.event;
 
   /**
    * @param cachedDataProvider a provider for cacheable data
@@ -48,7 +48,8 @@ export class ExtensionsTreeDataProvider implements vscode.TreeDataProvider<Exten
 
   /**
    * Registers the commands that this Tree View needs to work with.
-   * Commands include adding, opening, or deleting a workspace, opening an extension file, or refreshing this view.
+   * Commands include adding, opening, or deleting a workspace, opening an extension file, or
+   * refreshing this view.
    * @param context {@link vscode.ExtensionContext}
    */
   private registerCommands(context: vscode.ExtensionContext) {
@@ -57,15 +58,24 @@ export class ExtensionsTreeDataProvider implements vscode.TreeDataProvider<Exten
         context.globalState.update("dt-ext-copilot.initPending", true);
         vscode.commands.executeCommand("vscode.openFolder");
       });
-    vscode.commands.registerCommand("dt-ext-copilot-workspaces.openWorkspace", (workspace: ExtensionProjectItem) => {
-      vscode.commands.executeCommand("vscode.openFolder", workspace.path);
-    });
-    vscode.commands.registerCommand("dt-ext-copilot-workspaces.deleteWorkspace", (workspace: ExtensionProjectItem) => {
-      deleteWorkspace(context, workspace).then(() => this.refresh());
-    });
-    vscode.commands.registerCommand("dt-ext-copilot-workspaces.editExtension", (extension: ExtensionProjectItem) => {
-      vscode.commands.executeCommand("vscode.open", extension.path);
-    });
+    vscode.commands.registerCommand(
+      "dt-ext-copilot-workspaces.openWorkspace",
+      (workspace: ExtensionProjectItem) => {
+        vscode.commands.executeCommand("vscode.openFolder", workspace.path);
+      },
+    );
+    vscode.commands.registerCommand(
+      "dt-ext-copilot-workspaces.deleteWorkspace",
+      (workspace: ExtensionProjectItem) => {
+        deleteWorkspace(context, workspace).then(() => this.refresh());
+      },
+    );
+    vscode.commands.registerCommand(
+      "dt-ext-copilot-workspaces.editExtension",
+      (extension: ExtensionProjectItem) => {
+        vscode.commands.executeCommand("vscode.open", extension.path);
+      },
+    );
   }
 
   /**
@@ -100,20 +110,30 @@ export class ExtensionsTreeDataProvider implements vscode.TreeDataProvider<Exten
         ...glob.sync("*/extension/extension.yaml", { cwd: workspacePath }),
       ];
       extensionFiles.forEach(filepath => {
-        const extension = this.cachedData.getExtensionYaml(readFileSync(path.join(workspacePath, filepath)).toString());
+        const extension = this.cachedData.getExtensionYaml(
+          readFileSync(path.join(workspacePath, filepath)).toString(),
+        );
         extensions.push(
           new ExtensionProjectItem(
             extension.name,
             vscode.TreeItemCollapsibleState.None,
             vscode.Uri.file(path.join(workspacePath, filepath)),
             {
-              light: path.join(__filename, "..", "..", "src", "assets", "icons", "plugin_light.png"),
+              light: path.join(
+                __filename,
+                "..",
+                "..",
+                "src",
+                "assets",
+                "icons",
+                "plugin_light.png",
+              ),
               dark: path.join(__filename, "..", "..", "src", "assets", "icons", "plugin_dark.png"),
             },
             "extension",
             `${extension.name}-${extension.version}`,
-            extension.version
-          )
+            extension.version,
+          ),
         );
       });
       return extensions;
@@ -126,12 +146,13 @@ export class ExtensionsTreeDataProvider implements vscode.TreeDataProvider<Exten
           vscode.TreeItemCollapsibleState.Collapsed,
           workspace.folder as vscode.Uri,
           vscode.workspace.workspaceFolders &&
-          vscode.workspace.workspaceFolders[0].uri.fsPath === (workspace.folder as vscode.Uri).fsPath
+          vscode.workspace.workspaceFolders[0].uri.fsPath ===
+            (workspace.folder as vscode.Uri).fsPath
             ? path.join(__filename, "..", "..", "src", "assets", "icons", "workspace_current.png")
             : path.join(__filename, "..", "..", "src", "assets", "icons", "workspace.png"),
           "extensionWorkspace",
-          workspace.id
-        )
+          workspace.id,
+        ),
     );
   }
 }
@@ -150,17 +171,22 @@ export class ExtensionProjectItem extends vscode.TreeItem {
    * @param collapsibleState whether the item supports and is either collapsed or expanded
    * @param path the path to the workspace or extension (depending on item type)
    * @param icon the icon to display next to the label
-   * @param contextValue a keyword that can be referenced in package.json to single out this item type
+   * @param contextValue a keyword that can be referenced in package.json to single out this
+   * item type
    * @param version if item represents an extension, what version is it
    */
   constructor(
     label: string,
     collapsibleState: vscode.TreeItemCollapsibleState,
     path: vscode.Uri,
-    icon: string | vscode.Uri | { light: string | vscode.Uri; dark: string | vscode.Uri } | vscode.ThemeIcon,
+    icon:
+      | string
+      | vscode.Uri
+      | { light: string | vscode.Uri; dark: string | vscode.Uri }
+      | vscode.ThemeIcon,
     contextValue: string,
     id: string,
-    version?: string
+    version?: string,
   ) {
     super(label, collapsibleState);
 

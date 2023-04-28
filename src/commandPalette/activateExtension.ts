@@ -27,20 +27,24 @@ import { getExtensionFilePath } from "../utils/fileSystem";
  * @param cachedData provider for cacheable data
  * @param version optional version to activate
  */
-export async function activateExtension(dt: Dynatrace, cachedData: CachedDataProvider, version?: string) {
+export async function activateExtension(
+  dt: Dynatrace,
+  cachedData: CachedDataProvider,
+  version?: string,
+) {
   const extensionFile = getExtensionFilePath()!;
-  const extension =  cachedData.getExtensionYaml(readFileSync(extensionFile).toString());
+  const extension = cachedData.getExtensionYaml(readFileSync(extensionFile).toString());
 
   // If version was not provided, prompt user for selection
   if (!version) {
     version = await vscode.window.showQuickPick(
-      dt.extensionsV2.listVersions(extension.name).then((res) => res.map((me) => me.version)),
+      dt.extensionsV2.listVersions(extension.name).then(res => res.map(me => me.version)),
       {
         canPickMany: false,
         ignoreFocusOut: true,
         title: "Activate extension",
         placeHolder: "Choose a version to activate",
-      }
+      },
     );
   }
 
@@ -51,7 +55,7 @@ export async function activateExtension(dt: Dynatrace, cachedData: CachedDataPro
       .then(() => {
         vscode.window.showInformationMessage("Extension activated successfully");
       })
-      .catch((err) => {
+      .catch(err => {
         vscode.window.showErrorMessage(err.message);
       });
   } else {

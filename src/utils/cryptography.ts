@@ -82,7 +82,10 @@ function getContentFromMergedFile(filePath: string): [string, string] {
     throw new Error("CertKey file invalid: unable to find Certificate content");
   }
 
-  return [contetLines.slice(keyStart, keyEnd + 1).join("\n"), contetLines.slice(certStart, certEnd + 1).join("\n")];
+  return [
+    contetLines.slice(keyStart, keyEnd + 1).join("\n"),
+    contetLines.slice(certStart, certEnd + 1).join("\n"),
+  ];
 }
 
 /**

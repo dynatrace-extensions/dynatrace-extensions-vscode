@@ -36,7 +36,7 @@ export class IconCompletionProvider implements vscode.CompletionItemProvider {
     document: vscode.TextDocument,
     position: vscode.Position,
     token: vscode.CancellationToken,
-    context: vscode.CompletionContext
+    context: vscode.CompletionContext,
   ): Promise<vscode.CompletionItem[]> {
     var completionItems: vscode.CompletionItem[] = [];
     var parentBlocks = getParentBlocks(position.line, document.getText());
@@ -61,10 +61,14 @@ export class IconCompletionProvider implements vscode.CompletionItemProvider {
    * @returns
    */
   private createIconCompletion(): vscode.CompletionItem {
-    const iconCompletion = new vscode.CompletionItem("Browse icons", vscode.CompletionItemKind.Enum);
+    const iconCompletion = new vscode.CompletionItem(
+      "Browse icons",
+      vscode.CompletionItemKind.Enum,
+    );
     iconCompletion.detail = "Copilot suggestion";
     iconCompletion.documentation = new vscode.MarkdownString(
-      "Browse Barista icon IDs that can be used here. You can explore the whole icon set [online](https://barista.dynatrace.com/resources/icons)."
+      "Browse Barista icon IDs that can be used here. You can explore the whole icon set " +
+        "[online](https://barista.dynatrace.com/resources/icons).",
     );
     iconCompletion.insertText = new vscode.SnippetString();
     iconCompletion.insertText.appendChoice(this.baristaIcons);

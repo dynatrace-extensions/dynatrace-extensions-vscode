@@ -64,7 +64,7 @@ export class CredentialVaultService {
     certificateId: string,
     certificate: string,
     name: string,
-    description: string = ""
+    description: string = "",
   ): Promise<any> {
     var payload = {
       name: name,

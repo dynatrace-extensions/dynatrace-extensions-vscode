@@ -167,11 +167,15 @@ export function isSameList(itemIdx: number, document: vscode.TextDocument) {
   return prevIndent === indent;
 }
 
-export function getNextElementIdx(lineNumber: number, document: vscode.TextDocument, startAt: number) {
+export function getNextElementIdx(
+  lineNumber: number,
+  document: vscode.TextDocument,
+  startAt: number,
+) {
   const content = document.getText();
   const prevIndent = /[a-z]/g.exec(document.lineAt(lineNumber).text)!.index;
   let indent;
-  for (let li = lineNumber + 1; li <= document.lineCount-1; li++) {
+  for (let li = lineNumber + 1; li <= document.lineCount - 1; li++) {
     const line = document.lineAt(li).text;
     const lineRe = new RegExp("[a-z]", "g").exec(line);
     indent = lineRe ? lineRe.index : 9999;

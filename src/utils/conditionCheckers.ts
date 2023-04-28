@@ -40,7 +40,10 @@ export function checkSettings(...settings: string[]): boolean {
     if (!config.get(setting)) {
       console.log(`Setting ${setting} not found. Check failed.`);
       vscode.window
-        .showErrorMessage(`Missing one or more required settings. Check ${setting}`, "Open settings")
+        .showErrorMessage(
+          `Missing one or more required settings. Check ${setting}`,
+          "Open settings",
+        )
         .then(opt => {
           if (opt === "Open settings") {
             vscode.commands.executeCommand("workbench.action.openSettings", "Dynatrace");
@@ -61,7 +64,9 @@ export function checkSettings(...settings: string[]): boolean {
 export function checkEnvironmentConnected(environmentsTree: EnvironmentsTreeDataProvider): boolean {
   var status = true;
   if (!environmentsTree.getCurrentEnvironment()) {
-    vscode.window.showErrorMessage("You must be connected to a Dynatrace Environment to use this command.");
+    vscode.window.showErrorMessage(
+      "You must be connected to a Dynatrace Environment to use this command.",
+    );
     status = false;
   }
 
@@ -78,11 +83,13 @@ export function checkWorkspaceOpen(suppressMessaging: boolean = false): boolean 
   var status = true;
   if (!vscode.workspace.workspaceFolders || vscode.workspace.workspaceFolders.length === 0) {
     if (!suppressMessaging) {
-      vscode.window.showErrorMessage("You must be inside a workspace to use this command.", "Open folder").then(opt => {
-        if (opt === "Open folder") {
-          vscode.commands.executeCommand("vscode.openFolder");
-        }
-      });
+      vscode.window
+        .showErrorMessage("You must be inside a workspace to use this command.", "Open folder")
+        .then(opt => {
+          if (opt === "Open folder") {
+            vscode.commands.executeCommand("vscode.openFolder");
+          }
+        });
     }
     status = false;
   }
@@ -96,14 +103,18 @@ export function checkWorkspaceOpen(suppressMessaging: boolean = false): boolean 
  * @param showWarningMessage when true, displays a warning message to the user
  * @returns check status
  */
-export function isExtensionsWorkspace(context: vscode.ExtensionContext, showWarningMessage: boolean = true): boolean {
+export function isExtensionsWorkspace(
+  context: vscode.ExtensionContext,
+  showWarningMessage: boolean = true,
+): boolean {
   var status = false;
   if (context.storageUri && existsSync(context.storageUri.fsPath)) {
     const extensionYaml = getExtensionFilePath();
     if (!extensionYaml) {
       if (showWarningMessage) {
         vscode.window.showWarningMessage(
-          "This command must be run from an Extensions Workspace. Ensure your `extension` folder is within the root of the workspace."
+          "This command must be run from an Extensions Workspace. " +
+            "Ensure your `extension` folder is within the root of the workspace.",
         );
       }
     } else {
@@ -121,7 +132,9 @@ export function isExtensionsWorkspace(context: vscode.ExtensionContext, showWarn
  * @param context
  * @returns true if operation should continue, false for cancellation
  */
-export async function checkOverwriteCertificates(context: vscode.ExtensionContext): Promise<boolean> {
+export async function checkOverwriteCertificates(
+  context: vscode.ExtensionContext,
+): Promise<boolean> {
   var status = true;
   var certsDir = path.join(context.storageUri!.fsPath, "certificates");
   if (existsSync(certsDir)) {
@@ -150,8 +163,12 @@ export async function checkOverwriteCertificates(context: vscode.ExtensionContex
  */
 export function checkCertificateExists(type: "ca" | "dev" | "all"): boolean {
   var allExist = true;
-  var devCertkeyPath = vscode.workspace.getConfiguration("dynatrace", null).get("developerCertkeyLocation");
-  var caCertPath = vscode.workspace.getConfiguration("dynatrace", null).get("rootOrCaCertificateLocation");
+  var devCertkeyPath = vscode.workspace
+    .getConfiguration("dynatrace", null)
+    .get("developerCertkeyLocation");
+  var caCertPath = vscode.workspace
+    .getConfiguration("dynatrace", null)
+    .get("rootOrCaCertificateLocation");
 
   if (type === "ca" || type === "all") {
     if (!caCertPath) {
@@ -174,7 +191,7 @@ export function checkCertificateExists(type: "ca" | "dev" | "all"): boolean {
       .showErrorMessage(
         "Workspace does not have the required certificates associated with it.",
         "Generate new ones",
-        "Open settings"
+        "Open settings",
       )
       .then(opt => {
         switch (opt) {
@@ -314,7 +331,7 @@ export function checkActiveGateInstalled(): boolean {
 export async function checkDtSdkPresent(
   oc?: vscode.OutputChannel,
   cancelToken?: vscode.CancellationToken,
-  envOptions?: ExecOptions
+  envOptions?: ExecOptions,
 ): Promise<boolean> {
   return await runCommand("dt-sdk --help", oc, cancelToken, envOptions)
     .then(() => true)

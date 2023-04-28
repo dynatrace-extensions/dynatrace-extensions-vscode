@@ -30,7 +30,7 @@ export class DashboardService {
   /**
    * Create a dashboard
    * @param dashboard dashboard definition
-   * @returns 
+   * @returns
    */
   async post(dashboard: Dashboard) {
     return this.httpClient.makeRequest(this.endpoint, dashboard, "POST");

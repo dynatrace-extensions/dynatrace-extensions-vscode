@@ -32,7 +32,9 @@ export class FastModeStatus {
     this.outputChannel = oc;
     vscode.commands.registerCommand(this.commandId, () => this.outputChannel.show());
     this.statusBarItem.command = this.commandId;
-    this.updateStatusBar(vscode.workspace.getConfiguration("dynatrace", null).get("fastDevelopmentMode") as boolean);
+    this.updateStatusBar(
+      vscode.workspace.getConfiguration("dynatrace", null).get("fastDevelopmentMode") as boolean,
+    );
   }
 
   /**
@@ -45,7 +47,7 @@ export class FastModeStatus {
 
   /**
    * Update the Fast Development Mode status bar.
-   * The status only shows when the mode is enabled, and can display the build version and last 
+   * The status only shows when the mode is enabled, and can display the build version and last
    * known build status.
    * @param active Whether Fast Development Mode is enabled or not
    * @param version The current version of the extension build

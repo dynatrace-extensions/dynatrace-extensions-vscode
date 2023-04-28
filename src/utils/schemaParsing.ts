@@ -15,7 +15,7 @@
  */
 
 /********************************************************************************
- * UTILITIES FOR AGNOSTICALLY/GNERICALLY PARSING SCHEMAS 
+ * UTILITIES FOR AGNOSTICALLY/GNERICALLY PARSING SCHEMAS
  ********************************************************************************/
 
 /**
@@ -41,7 +41,10 @@ export function createObjectFromSchema(schema: any) {
     if (schema.properties[propertyKey].type && schema.properties[propertyKey].nullable === false) {
       if (schema.properties[propertyKey].precondition) {
         // First, check preconditions for this property
-        const [meets, changesNeeded] = meetsPreconditions(schema.properties[propertyKey].precondition, configObject);
+        const [meets, changesNeeded] = meetsPreconditions(
+          schema.properties[propertyKey].precondition,
+          configObject,
+        );
         // If we don't meet preconditions due to other missing properties
         if (!meets) {
           if (changesNeeded.length > 0) {
@@ -117,7 +120,10 @@ function getValueForPrimitive(schema: any, propertyKey: string) {
       }
       return listValue;
     default:
-      console.log(`Cannot process property of type "${schema.properties[propertyKey].type}". Unkown primitive.`);
+      console.log(
+        `Cannot process property of type "${schema.properties[propertyKey].type}". ` +
+          "Unkown primitive.",
+      );
       return null;
   }
 }
@@ -135,7 +141,7 @@ function getValueForPrimitive(schema: any, propertyKey: string) {
 function meetsPreconditions(
   precondition: any,
   configObject: any,
-  negate: boolean = false
+  negate: boolean = false,
 ): [boolean, Record<string, any>[]] {
   switch (precondition.type) {
     case "EQUALS":
@@ -144,16 +150,23 @@ function meetsPreconditions(
         : [false, [{ [precondition.property]: precondition.expectedValue }]];
     case "IN":
       return !negate && configObject[precondition.property]
-        ? [Array.from(precondition.expectedValues).includes(configObject[precondition.property]), []]
+        ? [
+            Array.from(precondition.expectedValues).includes(configObject[precondition.property]),
+            [],
+          ]
         : [false, [{ [precondition.property]: precondition.expectedValues[0] }]];
     case "NULL":
-      return !negate && configObject[precondition.property] ? [false, [{ [precondition.property]: null }]] : [true, []];
+      return !negate && configObject[precondition.property]
+        ? [false, [{ [precondition.property]: null }]]
+        : [true, []];
     case "NOT":
       return meetsPreconditions(precondition.precondition, configObject, true);
     case "AND":
       const andPreconditions = precondition.preconditions;
       const andMeetsArray: [boolean, Record<string, any>[]][] = Array.from(
-        andPreconditions.map((andPrecondition: any) => meetsPreconditions(andPrecondition, configObject))
+        andPreconditions.map((andPrecondition: any) =>
+          meetsPreconditions(andPrecondition, configObject),
+        ),
       );
       if (
         andMeetsArray.some(result => {
@@ -185,7 +198,9 @@ function meetsPreconditions(
     case "OR":
       const orPreconditions = precondition.preconditions;
       const orMeetsArray: [boolean, Record<string, any>[]][] = Array.from(
-        orPreconditions.map((orPrecondition: any) => meetsPreconditions(orPrecondition, configObject))
+        orPreconditions.map((orPrecondition: any) =>
+          meetsPreconditions(orPrecondition, configObject),
+        ),
       );
       if (
         orMeetsArray.every(result => {
@@ -223,7 +238,9 @@ function meetsPreconditions(
  */
 function handleNumber(definition: any): number {
   if (definition.constraints && Array.isArray(definition.constraints)) {
-    const rangeConstraints = Array.from(definition.constraints).filter((c: any) => c.type && c.type === "RANGE");
+    const rangeConstraints = Array.from(definition.constraints).filter(
+      (c: any) => c.type && c.type === "RANGE",
+    );
     if (rangeConstraints.length > 0) {
       return (rangeConstraints[0] as { minimum: number }).minimum;
     }

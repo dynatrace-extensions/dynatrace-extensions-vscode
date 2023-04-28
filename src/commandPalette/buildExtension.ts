@@ -49,7 +49,7 @@ export async function buildExtension(
   context: vscode.ExtensionContext,
   oc: vscode.OutputChannel,
   dt?: Dynatrace,
-  fastMode?: FastModeOptions
+  fastMode?: FastModeOptions,
 ) {
   // Basic details we already know exist
   const workspaceStorage = context.storageUri!.fsPath;
@@ -76,13 +76,17 @@ export async function buildExtension(
       });
 
       // Handle unsaved changes
-      const extensionDocument = vscode.workspace.textDocuments.find(doc => doc.fileName.endsWith("extension.yaml"));
+      const extensionDocument = vscode.workspace.textDocuments.find(doc =>
+        doc.fileName.endsWith("extension.yaml"),
+      );
       if (extensionDocument?.isDirty) {
         const saved = await extensionDocument.save();
         if (saved) {
           vscode.window.showInformationMessage("Document saved automatically.");
         } else {
-          vscode.window.showErrorMessage("Failed to save extension manifest. Build command cancelled.");
+          vscode.window.showErrorMessage(
+            "Failed to save extension manifest. Build command cancelled.",
+          );
           return;
         }
       }
@@ -95,8 +99,24 @@ export async function buildExtension(
       progress.report({ message: "Checking prerequisites" });
       try {
         updatedVersion = fastMode
-          ? await preBuildTasks(distDir, extensionFile, extension, extensionName, currentVersion, true, dt)
-          : await preBuildTasks(distDir, extensionFile, extension, extensionName, currentVersion, false, dt);
+          ? await preBuildTasks(
+              distDir,
+              extensionFile,
+              extension,
+              extensionName,
+              currentVersion,
+              true,
+              dt,
+            )
+          : await preBuildTasks(
+              distDir,
+              extensionFile,
+              extension,
+              extensionName,
+              currentVersion,
+              false,
+              dt,
+            );
       } catch (err: any) {
         vscode.window.showErrorMessage(`Error during pre-build phase: ${err.message}`);
         return;
@@ -120,10 +140,12 @@ export async function buildExtension(
               devCertKey,
               envOptions,
               oc,
-              cancelToken
+              cancelToken,
             );
           } else {
-            vscode.window.showErrorMessage("Cannot build Python extension - dt-sdk package not available");
+            vscode.window.showErrorMessage(
+              "Cannot build Python extension - dt-sdk package not available",
+            );
             return;
           }
         } else {
@@ -150,7 +172,7 @@ export async function buildExtension(
           dt!,
           fastMode.status,
           oc,
-          cancelToken
+          cancelToken,
         );
       } else {
         progress.report({ message: "Validating extension" });
@@ -163,7 +185,7 @@ export async function buildExtension(
             .showInformationMessage(
               "Extension built successfully. Would you like to upload it to Dynatrace?",
               "Yes",
-              "No"
+              "No",
             )
             .then(choice => {
               if (choice === "Yes") {
@@ -172,7 +194,7 @@ export async function buildExtension(
             });
         }
       }
-    }
+    },
   );
 }
 
@@ -195,7 +217,7 @@ async function preBuildTasks(
   extensionName: string,
   currentVersion: string,
   forceIncrement: boolean = false,
-  dt?: Dynatrace
+  dt?: Dynatrace,
 ): Promise<string> {
   // Create the dist folder if it doesn't exist
   if (!existsSync(distDir)) {
@@ -217,7 +239,10 @@ async function preBuildTasks(
       .then(ext => ext.map(e => e.version))
       .catch(() => [] as string[]);
     if (versions.includes(currentVersion)) {
-      writeFileSync(extensionFile, extensionContent.replace(versionRegex, `version: ${nextVersion}`));
+      writeFileSync(
+        extensionFile,
+        extensionContent.replace(versionRegex, `version: ${nextVersion}`),
+      );
       vscode.window.showInformationMessage("Extension version automatically increased.");
       return nextVersion;
     }
@@ -234,7 +259,12 @@ async function preBuildTasks(
  * @param zipFileName the name of the .zip file for this build
  * @param devCertKeyPath the path to the developer's fused credential file
  */
-function assembleStandard(workspaceStorage: string, extensionDir: string, zipFileName: string, devCertKeyPath: string) {
+function assembleStandard(
+  workspaceStorage: string,
+  extensionDir: string,
+  zipFileName: string,
+  devCertKeyPath: string,
+) {
   // Build the inner .zip archive
   const innerZip = new AdmZip();
   innerZip.addLocalFolder(extensionDir);
@@ -272,7 +302,7 @@ async function assemblePython(
   certKeyPath: string,
   envOptions: ExecOptions,
   oc: vscode.OutputChannel,
-  cancelToken: vscode.CancellationToken
+  cancelToken: vscode.CancellationToken,
 ) {
   // Build
   await runCommand(
@@ -285,7 +315,7 @@ async function assemblePython(
     }`,
     oc,
     cancelToken,
-    envOptions
+    envOptions,
   );
 }
 
@@ -306,18 +336,20 @@ async function validateExtension(
   zipFileName: string,
   distDir: string,
   oc: vscode.OutputChannel,
-  dt?: Dynatrace
+  dt?: Dynatrace,
 ) {
   var valid = true;
   const outerZipPath = path.resolve(workspaceStorage, zipFileName);
   const finalZipPath = path.resolve(distDir, zipFileName);
   if (dt) {
-    await dt.extensionsV2.upload(readFileSync(outerZipPath), true).catch((err: DynatraceAPIError) => {
-      vscode.window.showErrorMessage("Extension validation failed.");
-      oc.replace(JSON.stringify(err.errorParams.data, null, 2));
-      oc.show();
-      valid = false;
-    });
+    await dt.extensionsV2
+      .upload(readFileSync(outerZipPath), true)
+      .catch((err: DynatraceAPIError) => {
+        vscode.window.showErrorMessage("Extension validation failed.");
+        oc.replace(JSON.stringify(err.errorParams.data, null, 2));
+        oc.show();
+        valid = false;
+      });
   }
   // Copy .zip archive into dist dir
   if (valid) {
@@ -353,7 +385,7 @@ async function uploadAndActivate(
   dt: Dynatrace,
   status: FastModeStatus,
   oc: vscode.OutputChannel,
-  cancelToken: vscode.CancellationToken
+  cancelToken: vscode.CancellationToken,
 ) {
   try {
     // Check upload possible
@@ -362,10 +394,15 @@ async function uploadAndActivate(
     });
     if (existingVersions.length >= 10) {
       // Try delete oldest version
-      await dt.extensionsV2.deleteVersion(extensionName, existingVersions[0].version).catch(async () => {
-        // Try delete newest version
-        await dt.extensionsV2.deleteVersion(extensionName, existingVersions[existingVersions.length - 1].version);
-      });
+      await dt.extensionsV2
+        .deleteVersion(extensionName, existingVersions[0].version)
+        .catch(async () => {
+          // Try delete newest version
+          await dt.extensionsV2.deleteVersion(
+            extensionName,
+            existingVersions[existingVersions.length - 1].version,
+          );
+        });
     }
 
     const file = readFileSync(path.resolve(workspaceStorage, zipFileName));
@@ -411,8 +448,8 @@ async function uploadAndActivate(
           errorDetails: err.errorParams,
         },
         null,
-        2
-      )
+        2,
+      ),
     );
     oc.show();
   } finally {

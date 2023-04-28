@@ -47,7 +47,7 @@ export class HttpClient {
     headers: any = {},
     queryParams?: any,
     files?: any,
-    responseType?: any
+    responseType?: any,
   ): Promise<any> {
     let url = `${this.baseUrl}${path}`;
 
@@ -69,9 +69,9 @@ export class HttpClient {
     headers["Authorization"] = `Api-Token ${this.apiToken}`;
 
     console.debug(
-      `Making ${method} request to ${url} ${params ? "with params " + JSON.stringify(params) : ""} ${
-        body ? " and body " + JSON.stringify(body) : ""
-      }`
+      `Making ${method} request to ${url} ${
+        params ? "with params " + JSON.stringify(params) : ""
+      } ${body ? " and body " + JSON.stringify(body) : ""}`,
     );
 
     return axios
@@ -81,9 +81,9 @@ export class HttpClient {
         params: params,
         method: method,
         data: files ? form! : body,
-        responseType
+        responseType,
       })
-      .then((res) => {
+      .then(res => {
         if (res.status >= 400) {
           let message = `Error making request to ${url}: ${res.status}. Response: ${res.data}`;
           console.log("DYNATRACE ERROR");
@@ -91,19 +91,19 @@ export class HttpClient {
           throw new DynatraceAPIError(message, {
             code: res.data.error.code,
             message: res.data.error.message,
-            data: res.data.error
+            data: res.data.error,
           });
         }
         return res.data;
       })
-      .catch((err) => {
+      .catch(err => {
         let message = `Error making request to ${url}: ${err.message}.`;
         console.log(message);
         console.log(err.response.data);
         throw new DynatraceAPIError(message, {
           code: err.response.data.error ? err.response.data.error.code : err.status,
           message: err.response.data.error ? err.response.data.error.message : err.message,
-          data: err.response.data.error || err.response.data
+          data: err.response.data.error || err.response.data,
         });
       });
   }
@@ -125,7 +125,7 @@ export class HttpClient {
         params = { nextPageKey: nextPageKey };
       }
 
-      await this.makeRequest(path, params, "GET", headers).then((res) => {
+      await this.makeRequest(path, params, "GET", headers).then(res => {
         nextPageKey = res.nextPageKey;
         items.push(...res[item]);
       });

@@ -199,8 +199,14 @@ export class CachedDataProvider {
 
   public getStringifiedExtension(extensionYaml?: ExtensionStub): string {
     if (extensionYaml) {
-      return yaml.stringify(extensionYaml, { lineCounter: this.extensionLineCounter, lineWidth: 0 });
+      return yaml.stringify(extensionYaml, {
+        lineCounter: this.extensionLineCounter,
+        lineWidth: 0,
+      });
     }
-    return yaml.stringify(this.extensionYaml, { lineCounter: this.extensionLineCounter, lineWidth: 0 });
+    return yaml.stringify(this.extensionYaml, {
+      lineCounter: this.extensionLineCounter,
+      lineWidth: 0,
+    });
   }
 }

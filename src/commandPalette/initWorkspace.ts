@@ -57,7 +57,11 @@ const PROJECT_TYPES = {
  * @param callback optional callback function to call once initialization complete
  * @returns
  */
-export async function initWorkspace(context: vscode.ExtensionContext, dt: Dynatrace, callback?: () => any) {
+export async function initWorkspace(
+  context: vscode.ExtensionContext,
+  dt: Dynatrace,
+  callback?: () => any,
+) {
   // First, we set up the common aspects that apply to all extension projects
   let schemaVersion: string;
   const success = await vscode.window.withProgress(
@@ -82,9 +86,11 @@ export async function initWorkspace(context: vscode.ExtensionContext, dt: Dynatr
         vscode.window.showInformationMessage(`Using cached schema version ${schemaVersion}`);
         const mainSchema = path.join(
           path.join(context.globalStorageUri.fsPath, schemaVersion),
-          "extension.schema.json"
+          "extension.schema.json",
         );
-        vscode.workspace.getConfiguration().update("yaml.schemas", { [mainSchema]: "extension.yaml" });
+        vscode.workspace
+          .getConfiguration()
+          .update("yaml.schemas", { [mainSchema]: "extension.yaml" });
       }
 
       // Now that the workspace exists, storage can be created
@@ -92,23 +98,31 @@ export async function initWorkspace(context: vscode.ExtensionContext, dt: Dynatr
 
       // Which certificates to use?
       progress.report({ message: "Setting up workspace certificates" });
-      var certChoice = await vscode.window.showQuickPick(["Use your own certificates", "Generate new ones"], {
-        canPickMany: false,
-        ignoreFocusOut: true,
-        title: "Initialize Workspace: Certificates",
-        placeHolder: "What certificates would you like to use for signing extensions in this workspace?",
-      });
+      var certChoice = await vscode.window.showQuickPick(
+        ["Use your own certificates", "Generate new ones"],
+        {
+          canPickMany: false,
+          ignoreFocusOut: true,
+          title: "Initialize Workspace: Certificates",
+          placeHolder:
+            "What certificates would you like to use for signing extensions in this workspace?",
+        },
+      );
       switch (certChoice) {
         case "Use your own certificates":
           const hasCertificates = checkSettings("developerCertKeyLocation");
           console.log(hasCertificates);
           if (!hasCertificates) {
-            vscode.window.showErrorMessage("Personal certificates not found. Workspace not initialized.");
+            vscode.window.showErrorMessage(
+              "Personal certificates not found. Workspace not initialized.",
+            );
             return false;
           }
           break;
         case "Generate new ones":
-          const cmdSuccess = await vscode.commands.executeCommand("dt-ext-copilot.generateCertificates");
+          const cmdSuccess = await vscode.commands.executeCommand(
+            "dt-ext-copilot.generateCertificates",
+          );
           console.log(`CMD SUCCESS: ${cmdSuccess}`);
           if (!cmdSuccess) {
             vscode.window.showErrorMessage("Cannot initialize workspace without certificates.");
@@ -130,7 +144,7 @@ export async function initWorkspace(context: vscode.ExtensionContext, dt: Dynatr
         callback();
       }
       return true;
-    }
+    },
   );
 
   // Then, we create some the extension artefacts for the specific project type
@@ -178,7 +192,7 @@ export async function initWorkspace(context: vscode.ExtensionContext, dt: Dynatr
           }
           await vscode.commands.executeCommand(
             "dt-ext-copilot.convertJmxExtension",
-            path.resolve(extensionDir, "extension.yaml")
+            path.resolve(extensionDir, "extension.yaml"),
           );
           break;
         case PROJECT_TYPES.existingExtension:
@@ -187,7 +201,7 @@ export async function initWorkspace(context: vscode.ExtensionContext, dt: Dynatr
         default:
           defaultExtensionSetup(schemaVersion, rootPath);
       }
-    }
+    },
   );
 
   vscode.window.showInformationMessage("Workspace initialization completed successfully.");
@@ -195,20 +209,25 @@ export async function initWorkspace(context: vscode.ExtensionContext, dt: Dynatr
 
 /**
  * Sets up the workspace for a new Python extension.
- * Checks whether dt-sdk or VPN available, installs dt-sdk if needed, and creates a python extension.
+ * Checks whether dt-sdk or VPN available, installs dt-sdk if needed, and creates a python
+ * extension.
  * @param rootPath path of the workspace (extension is created in its root)
  * @param tempPath the workspace storage (provided by vscode) for temporary work
  * @returns
  */
 async function pythonExtensionSetup(rootPath: string, tempPath: string) {
   // Check: dt-sdk or VPN available
-  const artifactoryUrl = "https://artifactory.lab.dynatrace.org/artifactory/api/pypi/pypi-extensions-release/simple";
+  const artifactoryUrl =
+    "https://artifactory.lab.dynatrace.org/artifactory/api/pypi/pypi-extensions-release/simple";
   if (!(await checkDtSdkPresent())) {
     if (await checkUrlReachable(artifactoryUrl)) {
-      await runCommand(`pip install --upgrade dynatrace-extensions-python-sdk --extra-index-url ${artifactoryUrl}`);
+      await runCommand(
+        `pip install --upgrade dynatrace-extensions-python-sdk --extra-index-url ${artifactoryUrl}`,
+      );
     } else {
       vscode.window.showErrorMessage(
-        "The dt-sdk module is not installed and you are not on VPN. Python extension setup is not possible."
+        "The dt-sdk module is not installed and you are not on VPN. " +
+          "Python extension setup is not possible.",
       );
       return;
     }
@@ -221,15 +240,19 @@ async function pythonExtensionSetup(rootPath: string, tempPath: string) {
       ignoreFocusOut: true,
       validateInput: value => {
         if (!/^[a-z][a-zA-Z0-9_]*/.test(value)) {
-          return "The name must be a valid Python module: use letters, digits, and underscores only.";
+          return (
+            "The name must be a valid Python module: " +
+            "use letters, digits, and underscores only."
+          );
         }
+        return undefined;
       },
     })) ?? "my_python_extension";
   // Generate artefacts
   await runCommand(`dt-sdk create -o ${tempPath} ${chosenName}`);
   // Tidy up
   readdirSync(path.resolve(tempPath, chosenName)).forEach(p =>
-    renameSync(path.resolve(tempPath, chosenName, p), path.resolve(rootPath, p))
+    renameSync(path.resolve(tempPath, chosenName, p), path.resolve(rootPath, p)),
   );
   rmSync(path.resolve(tempPath, chosenName));
 }
@@ -254,7 +277,7 @@ async function existingExtensionSetup(dt: Dynatrace, rootPath: string) {
       title: "Choose an extension to download",
       canPickMany: false,
       ignoreFocusOut: true,
-    }
+    },
   );
   if (!download) {
     vscode.window.showErrorMessage("No selection made. Operation aborted.");
@@ -269,7 +292,7 @@ async function existingExtensionSetup(dt: Dynatrace, rootPath: string) {
   const zipData = await dt.extensionsV2.getExtension(
     download.extension.extensionName,
     download.extension.version,
-    true
+    true,
   );
   const extensionPackage = new AdmZip(zipData);
   const extensionZip = new AdmZip(extensionPackage.getEntry("extension.zip")?.getData());
@@ -293,7 +316,9 @@ async function existingExtensionSetup(dt: Dynatrace, rootPath: string) {
     }
   } catch (err) {
     console.log(err);
-    vscode.window.showWarningMessage("Not all files were extracted successfully. Manual edits are still needed.");
+    vscode.window.showWarningMessage(
+      "Not all files were extracted successfully. Manual edits are still needed.",
+    );
   }
 }
 
@@ -310,10 +335,12 @@ function defaultExtensionSetup(schemaVersion: string, rootPath: string) {
     const extensionDir = vscode.Uri.file(path.resolve(path.join(rootPath, "extension")));
     vscode.workspace.fs.createDirectory(extensionDir);
     // Add a basic extension stub
-    const extensionStub = `name: custom:my.awesome.extension\nversion: "0.0.1"\nminDynatraceVersion: "${schemaVersion}"\nauthor:\n  name: Your Name Here`;
+    const extensionStub =
+      'name: custom:my.awesome.extension\nversion: "0.0.1"\n' +
+      `minDynatraceVersion: "${schemaVersion}"\nauthor:\n  name: Your Name Here`;
     vscode.workspace.fs.writeFile(
       vscode.Uri.file(path.join(extensionDir.fsPath, "extension.yaml")),
-      new TextEncoder().encode(extensionStub)
+      new TextEncoder().encode(extensionStub),
     );
   }
 }

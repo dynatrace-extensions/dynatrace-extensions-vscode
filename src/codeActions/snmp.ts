@@ -45,7 +45,7 @@ export class SnmpActionProvider implements vscode.CodeActionProvider {
     document: vscode.TextDocument,
     range: vscode.Range | vscode.Selection,
     context: vscode.CodeActionContext,
-    token: vscode.CancellationToken
+    token: vscode.CancellationToken,
   ): Promise<vscode.CodeAction[]> {
     var codeActions: vscode.CodeAction[] = [];
 
@@ -76,7 +76,7 @@ export class SnmpActionProvider implements vscode.CodeActionProvider {
     actionName: string,
     textToInsert: string,
     document: vscode.TextDocument,
-    range: vscode.Range
+    range: vscode.Range,
   ): vscode.CodeAction {
     if (document.lineCount === range.start.line + 1) {
       textToInsert = "\n" + textToInsert;
@@ -100,14 +100,18 @@ export class SnmpActionProvider implements vscode.CodeActionProvider {
   private async createMetadataInsertions(
     document: vscode.TextDocument,
     range: vscode.Range | vscode.Selection,
-    extension: ExtensionStub
+    extension: ExtensionStub,
   ): Promise<vscode.CodeAction[]> {
     const codeActions: vscode.CodeAction[] = [];
     // Get metrics and keep the OID-based ones
-    const metrics = getMetricsFromDataSource(extension, true).filter(m => m.value && m.value.startsWith("oid:"));
+    const metrics = getMetricsFromDataSource(extension, true).filter(
+      m => m.value && m.value.startsWith("oid:"),
+    );
     // Reduce the time by bulk fetching all required OIDs
     const oidInfos = await this.cachedData.getBulkOidsInfo(
-      metrics.map(m => (m.value!.endsWith(".0") ? m.value!.slice(4, m.value!.length - 2) : m.value!.slice(4)))
+      metrics.map(m =>
+        m.value!.endsWith(".0") ? m.value!.slice(4, m.value!.length - 2) : m.value!.slice(4),
+      ),
     );
     // Map OID info to each metric
     const metricInfos = metrics.map((m, i) => ({
@@ -136,13 +140,13 @@ export class SnmpActionProvider implements vscode.CodeActionProvider {
                 metric.info.description ?? "",
                 undefined,
                 -2,
-                false
-              )
+                false,
+              ),
             )
             .join("\n"),
           document,
-          range
-        )
+          range,
+        ),
       );
     }
 
@@ -158,11 +162,11 @@ export class SnmpActionProvider implements vscode.CodeActionProvider {
               metric.info.description ?? "",
               undefined,
               -2,
-              false
+              false,
             ),
             document,
-            range
-          )
+            range,
+          ),
         );
       });
     }

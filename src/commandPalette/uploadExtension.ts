@@ -34,8 +34,8 @@ export async function uploadExtension(dt: Dynatrace, cachedData: CachedDataProvi
   // Get the most recent entry in dist folder
   var distDir = path.join(vscode.workspace.workspaceFolders![0].uri.fsPath, "dist");
   var extensionZip = readdirSync(distDir)
-    .filter((file) => file.endsWith(".zip") && lstatSync(path.join(distDir, file)).isFile())
-    .map((file) => ({ file, mtime: lstatSync(path.join(distDir, file)).mtime }))
+    .filter(file => file.endsWith(".zip") && lstatSync(path.join(distDir, file)).isFile())
+    .map(file => ({ file, mtime: lstatSync(path.join(distDir, file)).mtime }))
     .sort((a, b) => b.mtime.getTime() - a.mtime.getTime())[0].file;
 
   // Browse extension archive and extract the extension name and version
@@ -43,28 +43,28 @@ export async function uploadExtension(dt: Dynatrace, cachedData: CachedDataProvi
   zip = new AdmZip(
     zip
       .getEntries()
-      .filter((entry) => entry.entryName === "extension.zip")[0]
-      .getData()
+      .filter(entry => entry.entryName === "extension.zip")[0]
+      .getData(),
   );
   const extension = cachedData.getExtensionYaml(
     zip
       .getEntries()
-      .filter((entry) => entry.entryName === "extension.yaml")[0]
+      .filter(entry => entry.entryName === "extension.yaml")[0]
       .getData()
-      .toString("utf-8")
+      .toString("utf-8"),
   );
   const extensionVersion = extension.version;
   const extensionName = extension.name;
 
   // Check for maximum number of allowed versions and prompt for deletion
-  var existingVersions = await dt.extensionsV2.listVersions(extensionName).catch((err) => {
+  var existingVersions = await dt.extensionsV2.listVersions(extensionName).catch(err => {
     return [];
   });
   if (existingVersions.length >= 10) {
     var choice = await vscode.window.showWarningMessage(
       "Maximum number of extensions detected. Would you like to remove the last one?",
       "Yes",
-      "No"
+      "No",
     );
     if (choice !== "Yes") {
       vscode.window.showErrorMessage("Operation cancelled.");
@@ -78,22 +78,22 @@ export async function uploadExtension(dt: Dynatrace, cachedData: CachedDataProvi
         vscode.window.showInformationMessage("Oldest version removed successfully");
         return true;
       })
-      .catch((err) => {
+      .catch(err => {
         // Could not delete oldest version, prompt user to select another one
         vscode.window
           .showQuickPick(
             dt.extensionsV2
               .listVersions(extensionName)
-              .then((versions) => versions.slice(1).map((version) => version.version)),
+              .then(versions => versions.slice(1).map(version => version.version)),
             {
               canPickMany: false,
               ignoreFocusOut: true,
               title: "Could not delete latest version",
               placeHolder: "Please choose an alternative",
-            }
+            },
           )
           // Remove the user's chosen version
-          .then((version) => {
+          .then(version => {
             if (version) {
               dt.extensionsV2
                 .deleteVersion(extensionName, version)
@@ -101,7 +101,7 @@ export async function uploadExtension(dt: Dynatrace, cachedData: CachedDataProvi
                   vscode.window.showInformationMessage(`Version ${version} removed successfully`);
                   return true;
                 })
-                .catch((err) => {
+                .catch(err => {
                   vscode.window.showErrorMessage(err.message);
                   return false;
                 });
@@ -121,7 +121,7 @@ export async function uploadExtension(dt: Dynatrace, cachedData: CachedDataProvi
       title: "Uploading extension",
       cancellable: true,
     },
-    async (progress) => {
+    async progress => {
       const file = readFileSync(path.join(distDir, extensionZip));
       progress.report({ message: "Waiting to complete" });
       do {
@@ -131,11 +131,11 @@ export async function uploadExtension(dt: Dynatrace, cachedData: CachedDataProvi
           .catch((err: DynatraceAPIError) => err.errorParams.message);
         // Previous version deletion may not be complete yet, loop until done.
         if (status.startsWith("Extension versions quantity limit")) {
-          await new Promise((resolve) => setTimeout(resolve, 1000));
+          await new Promise(resolve => setTimeout(resolve, 1000));
         }
       } while (status.startsWith("Extension versions quantity limit"));
       return status;
-    }
+    },
   );
 
   // Prompt for version activation
@@ -143,7 +143,7 @@ export async function uploadExtension(dt: Dynatrace, cachedData: CachedDataProvi
     var choice = await vscode.window.showInformationMessage(
       "Extension uploaded successfully. Do you want to activate this version?",
       "Yes",
-      "No"
+      "No",
     );
     if (choice !== "Yes") {
       vscode.window.showInformationMessage("Operation completed.");

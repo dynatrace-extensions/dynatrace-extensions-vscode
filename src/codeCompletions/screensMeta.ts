@@ -34,7 +34,7 @@ export class ScreensMetaCompletionProvider implements vscode.CompletionItemProvi
     document: vscode.TextDocument,
     position: vscode.Position,
     token: vscode.CancellationToken,
-    context: vscode.CompletionContext
+    context: vscode.CompletionContext,
   ): vscode.CompletionItem[] {
     const completions: vscode.CompletionItem[] = [];
     const extension = this.cachedData.getExtensionYaml(document.getText());
@@ -46,12 +46,21 @@ export class ScreensMetaCompletionProvider implements vscode.CompletionItemProvi
     // -----
     if (line.endsWith("key: ")) {
       // In layout, suggestion include cards already defined (if any)
-      if (parentBlocks[parentBlocks.length - 1] === "cards" && parentBlocks[parentBlocks.length - 2] === "layout") {
+      if (
+        parentBlocks[parentBlocks.length - 1] === "cards" &&
+        parentBlocks[parentBlocks.length - 2] === "layout"
+      ) {
         completions.push(...this.createCardKeyCompletions("layout", screenIdx, extension));
       }
 
       // In card definitions, suggestions include keys from layout (if any)
-      const listableCards = ["entitiesListCards", "chartsCards", "eventsCards", "logsCards", "messageCards"];
+      const listableCards = [
+        "entitiesListCards",
+        "chartsCards",
+        "eventsCards",
+        "logsCards",
+        "messageCards",
+      ];
       if (listableCards.includes(parentBlocks[parentBlocks.length - 1])) {
         completions.push(
           ...this.createCardKeyCompletions(
@@ -63,8 +72,8 @@ export class ScreensMetaCompletionProvider implements vscode.CompletionItemProvi
               | "chartsCards"
               | "eventsCards"
               | "logsCards"
-              | "messageCards"
-          )
+              | "messageCards",
+          ),
         );
       }
     }
@@ -85,7 +94,7 @@ export class ScreensMetaCompletionProvider implements vscode.CompletionItemProvi
     location: "definition" | "layout",
     screenIdx: number,
     extension: ExtensionStub,
-    cardType?: "entitiesListCards" | "chartsCards" | "eventsCards" | "logsCards" | "messageCards"
+    cardType?: "entitiesListCards" | "chartsCards" | "eventsCards" | "logsCards" | "messageCards",
   ): vscode.CompletionItem[] {
     var completions: vscode.CompletionItem[] = [];
 
@@ -95,13 +104,18 @@ export class ScreensMetaCompletionProvider implements vscode.CompletionItemProvi
         .filter(
           // Stupid way of matching card types between yaml key and yaml value
           card =>
-            card.type.substring(0, 4).toLowerCase() === cardType!.substring(0, 4) && !cardsInserted.includes(card.key)
+            card.type.substring(0, 4).toLowerCase() === cardType!.substring(0, 4) &&
+            !cardsInserted.includes(card.key),
         )
         .forEach(card => {
-          const cardCompletion = new vscode.CompletionItem(card.key, vscode.CompletionItemKind.Field);
+          const cardCompletion = new vscode.CompletionItem(
+            card.key,
+            vscode.CompletionItemKind.Field,
+          );
           cardCompletion.detail = "Copilot suggestion";
           cardCompletion.documentation =
-            "Your layout section already has this card key, but you don't have a defintion for it yet.";
+            "Your layout section already has this card key, " +
+            "but you don't have a defintion for it yet.";
           completions.push(cardCompletion);
         });
     } else if (location === "layout") {
@@ -109,10 +123,14 @@ export class ScreensMetaCompletionProvider implements vscode.CompletionItemProvi
       getDefinedCardsMeta(screenIdx, extension)
         .filter(card => !cardsInserted.includes(card.key))
         .forEach(card => {
-          const cardCompletion = new vscode.CompletionItem(card.key, vscode.CompletionItemKind.Field);
+          const cardCompletion = new vscode.CompletionItem(
+            card.key,
+            vscode.CompletionItemKind.Field,
+          );
           cardCompletion.detail = "Copilot suggestion";
           cardCompletion.documentation =
-            "Your card definitions already include this key, but it's not yet included in any layout.";
+            "Your card definitions already include this key, " +
+            "but it's not yet included in any layout.";
           completions.push(cardCompletion);
         });
     }

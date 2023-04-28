@@ -68,7 +68,9 @@ export async function createOverviewDashboard(
       const indent = extensionText.slice(dashboardsMatch).indexOf("-") - 12;
       const beforeText = extensionText.slice(0, dashboardsMatch);
       const afterText = extensionText.slice(dashboardsMatch + 12);
-      updatedExtensionText = `${beforeText}dashboards:\n${' '.repeat(indent)}- path: ${DASHBOARD_PATH}\n${afterText}`;
+      updatedExtensionText = `${beforeText}dashboards:\n${" ".repeat(
+        indent,
+      )}- path: ${DASHBOARD_PATH}\n${afterText}`;
     } else {
       // Nothing to do, dashboard is already present
       updatedExtensionText = extensionText;
@@ -84,17 +86,19 @@ export async function createOverviewDashboard(
   // If we're connected to the API, prompt for upload.
   tenantsProvider.getDynatraceClient().then(dt => {
     if (dt) {
-      vscode.window.showInformationMessage("Would you like to upload it to Dynatrace?", "Yes", "No").then(choice => {
-        if (choice === "Yes") {
-          dt.dashboards
-            .post(JSON.parse(dashboardJson))
-            .then(() => vscode.window.showInformationMessage("Upload successful."))
-            .catch(err => {
-              outputChannel.replace(JSON.stringify(err, null, 2));
-              outputChannel.show();
-            });
-        }
-      });
+      vscode.window
+        .showInformationMessage("Would you like to upload it to Dynatrace?", "Yes", "No")
+        .then(choice => {
+          if (choice === "Yes") {
+            dt.dashboards
+              .post(JSON.parse(dashboardJson))
+              .then(() => vscode.window.showInformationMessage("Upload successful."))
+              .catch(err => {
+                outputChannel.replace(JSON.stringify(err, null, 2));
+                outputChannel.show();
+              });
+          }
+        });
     }
   });
 }
@@ -124,27 +128,49 @@ function buildDashboard(extension: ExtensionStub, short: string = "Extension"): 
       .filter(m => m.name !== "");
     // First found metric used for entity table, graph chart, and single value tile
     if (entityMetrics.length > 0) {
-      customTiles.push(buildCurrentlyMonitoringTile(type.displayName, type.name, entityMetrics[0].key, idx * 152));
+      customTiles.push(
+        buildCurrentlyMonitoringTile(type.displayName, type.name, entityMetrics[0].key, idx * 152),
+      );
       tableQueries.push(buildTableQuery("A", entityMetrics[0].key, type.name));
       customTiles.push(
-        buildGraphChartTile(entityMetrics[0].key, entityMetrics[0].name, type.name, 114 + (idx + 1) * 304, 570)
+        buildGraphChartTile(
+          entityMetrics[0].key,
+          entityMetrics[0].name,
+          type.name,
+          114 + (idx + 1) * 304,
+          570,
+        ),
       );
     }
     // Second found metric used for entity table and graph chart
     if (entityMetrics.length > 1) {
       tableQueries.push(buildTableQuery("B", entityMetrics[1].key, type.name));
       customTiles.push(
-        buildGraphChartTile(entityMetrics[1].key, entityMetrics[1].name, type.name, 114 + (idx + 1) * 304, 988)
+        buildGraphChartTile(
+          entityMetrics[1].key,
+          entityMetrics[1].name,
+          type.name,
+          114 + (idx + 1) * 304,
+          988,
+        ),
       );
     }
-    customTiles.push(buildEntityTableTile(type.displayName, 114 + (idx + 1) * 304, tableQueries.join(",\n")));
+    customTiles.push(
+      buildEntityTableTile(type.displayName, 114 + (idx + 1) * 304, tableQueries.join(",\n")),
+    );
   });
   // Put together the details
   var dashboard = dashboardTemplate;
   dashboard = dashboard.replace("<extension-id>", extension.name);
-  dashboard = dashboard.replace("<dashboard-title>", `Extension Overview (${extension.name}:${extension.version})`);
+  dashboard = dashboard.replace(
+    "<dashboard-title>",
+    `Extension Overview (${extension.name}:${extension.version})`,
+  );
   dashboard = dashboard.replace(/<extension-short>/g, short);
-  dashboard = dashboard.replace("<currently-monitoring-width>", currentlyMonitoringWidth.toString());
+  dashboard = dashboard.replace(
+    "<currently-monitoring-width>",
+    currentlyMonitoringWidth.toString(),
+  );
   dashboard = dashboard.replace("<navigation-links>", navigationLinks.join(" | "));
   dashboard = dashboard.replace("<custom-tiles>", [...customTiles].join(",\n"));
   return dashboard;
@@ -177,7 +203,7 @@ function buildCurrentlyMonitoringTile(
   entityName: string,
   entityType: string,
   metricKey: string,
-  leftBound: number
+  leftBound: number,
 ): string {
   let tile = currentlyMonitoringTile;
   tile = tile.replace("<entity-name>", entityName);
@@ -195,7 +221,11 @@ function buildCurrentlyMonitoringTile(
  * @param tableQueries table queries to use within the table (see {@link buildTableQuery})
  * @returns JSON string representing the tile
  */
-function buildEntityTableTile(entityName: string, topBound: number, tableQueries: string = ""): string {
+function buildEntityTableTile(
+  entityName: string,
+  topBound: number,
+  tableQueries: string = "",
+): string {
   let tile = entityTableTile;
   tile = tile.replace("<entity-name>", entityName);
   tile = tile.replace("<top-bound>", topBound.toString());
@@ -233,7 +263,7 @@ function buildGraphChartTile(
   metricName: string,
   entityType: string,
   topBound: number,
-  leftBound: number
+  leftBound: number,
 ): string {
   let tile = graphChartTile;
   tile = tile.replace("<metric-name>", metricName);

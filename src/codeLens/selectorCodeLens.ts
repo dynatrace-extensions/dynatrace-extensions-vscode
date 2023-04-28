@@ -149,7 +149,7 @@ export class SelectorCodeLensProvider implements vscode.CodeLensProvider {
    */
   public async provideCodeLenses(
     document: vscode.TextDocument,
-    token: vscode.CancellationToken
+    token: vscode.CancellationToken,
   ): Promise<vscode.CodeLens[]> {
     this.codeLenses = [];
     const regex = new RegExp(this.regex);
@@ -166,11 +166,11 @@ export class SelectorCodeLensProvider implements vscode.CodeLensProvider {
     }
     // Create lenses
     await Promise.all(
-      Array.from(text.matchAll(regex)).map((match) =>
-        this.createLenses(extension, match, document).then((lenses) =>
-          lenses.forEach((lens) => this.codeLenses.push(lens))
-        )
-      )
+      Array.from(text.matchAll(regex)).map(match =>
+        this.createLenses(extension, match, document).then(lenses =>
+          lenses.forEach(lens => this.codeLenses.push(lens)),
+        ),
+      ),
     );
     return this.codeLenses;
   }
@@ -185,7 +185,7 @@ export class SelectorCodeLensProvider implements vscode.CodeLensProvider {
   private async createLenses(
     extension: ExtensionStub,
     match: RegExpMatchArray,
-    document: vscode.TextDocument
+    document: vscode.TextDocument,
   ): Promise<vscode.CodeLens[]> {
     if (match.index) {
       const line = document.lineAt(document.positionAt(match.index).line);

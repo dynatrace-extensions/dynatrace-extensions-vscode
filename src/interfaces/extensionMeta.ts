@@ -67,7 +67,6 @@ export interface DatasourceGroup {
 
 interface SubGroup extends DatasourceGroup {
   metrics: MetricStub[];
-
 }
 
 interface WmiGroup extends DatasourceGroup {
@@ -267,11 +266,11 @@ export interface JMXExtensionV2 {
   version: string;
   minDynatraceVersion: string;
   author: {
-      name: string;
-  }
+    name: string;
+  };
   jmx?: {
     groups: JMXGroup[];
-  }
+  };
   metrics?: MetricMetadata[];
 }
 
@@ -314,7 +313,7 @@ export interface TimeseriesDto {
 
 export interface SourceDto {
   domain: string;
-  keyProperties: {[key: string]: string};
+  keyProperties: { [key: string]: string };
   allowAdditionalKeys: boolean;
   attribute: string;
   calculateRate: boolean;

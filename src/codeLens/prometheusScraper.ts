@@ -52,9 +52,12 @@ export class PrometheusCodeLensProvider implements vscode.CodeLensProvider {
   constructor(cachedDataProvider: CachedDataProvider) {
     this.codeLenses = [];
     this.regex = /^(prometheus:)/gm;
-    vscode.commands.registerCommand("dt-ext-copilot.codelens.scrapeMetrics", (changeConfig: boolean) => {
-      this.scrapeMetrics(changeConfig);
-    });
+    vscode.commands.registerCommand(
+      "dt-ext-copilot.codelens.scrapeMetrics",
+      (changeConfig: boolean) => {
+        this.scrapeMetrics(changeConfig);
+      },
+    );
     this.cachedData = cachedDataProvider;
   }
 
@@ -68,7 +71,7 @@ export class PrometheusCodeLensProvider implements vscode.CodeLensProvider {
    */
   public provideCodeLenses(
     document: vscode.TextDocument,
-    token: vscode.CancellationToken
+    token: vscode.CancellationToken,
   ): vscode.ProviderResult<vscode.CodeLens[]> {
     this.codeLenses = [];
     const regex = new RegExp(this.regex);
@@ -89,7 +92,7 @@ export class PrometheusCodeLensProvider implements vscode.CodeLensProvider {
             tooltip: "Connect to an exporter and scrape metrics, then use them in the Extension.",
             command: "dt-ext-copilot.codelens.scrapeMetrics",
             arguments: [],
-          })
+          }),
         );
         // Edit config lens
         if (this.lastScrape !== "N/A") {
@@ -99,7 +102,7 @@ export class PrometheusCodeLensProvider implements vscode.CodeLensProvider {
               tooltip: "Make changes to the endpoint connection details",
               command: "dt-ext-copilot.codelens.scrapeMetrics",
               arguments: [true],
-            })
+            }),
           );
         }
         // Status lens
@@ -116,7 +119,7 @@ export class PrometheusCodeLensProvider implements vscode.CodeLensProvider {
                 : `${this.lastScrape}. Found ${scrapedMetrics} metrics.`,
             command: "",
             arguments: [],
-          })
+          }),
         );
       }
     }
@@ -127,7 +130,7 @@ export class PrometheusCodeLensProvider implements vscode.CodeLensProvider {
   /**
    * Metric scraping workflow. If no previous details are known, these are collected.
    * Upon successful scraping and processing, timestamp is updated.
-   * @param changeConfig force collecting the details required for scraping, even if they exist already
+   * @param changeConfig collect the details required for scraping, even if they exist already
    * @returns void
    */
   private async scrapeMetrics(changeConfig: boolean = false) {
@@ -172,7 +175,7 @@ export class PrometheusCodeLensProvider implements vscode.CodeLensProvider {
         placeHolder: "Select your endpoint's authentication scheme",
         canPickMany: false,
         ignoreFocusOut: true,
-      }
+      },
     )) as PromAuth;
     // Endpoint authentication details
     switch (this.promAuth) {
@@ -247,16 +250,20 @@ export class PrometheusCodeLensProvider implements vscode.CodeLensProvider {
           return true;
         case "Username & password":
           axios
-            .get(this.promUrl!, { auth: { username: this.promUsername!, password: this.promPassword! } })
+            .get(this.promUrl!, {
+              auth: { username: this.promUsername!, password: this.promPassword! },
+            })
             .then(res => {
               this.processPrometheusData(res.data);
             });
           return true;
         case "Bearer token":
           // eslint-disable-next-line
-          axios.get(this.promUrl!, { headers: { Authorization: `Bearer ${this.promToken}` } }).then(res => {
-            this.processPrometheusData(res.data);
-          });
+          axios
+            .get(this.promUrl!, { headers: { Authorization: `Bearer ${this.promToken}` } })
+            .then(res => {
+              this.processPrometheusData(res.data);
+            });
           return true;
         default:
           return false;

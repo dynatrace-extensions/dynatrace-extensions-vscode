@@ -52,7 +52,7 @@ export async function fetchOID(oid: string) {
       }
       return {};
     })
-    .catch((err) => {
+    .catch(err => {
       console.log(err);
       return {};
     });
@@ -117,6 +117,8 @@ function cleanKeyName(key: string): string {
   const dashIdx = key.indexOf("-");
   const cleanKey = key.toLowerCase();
   return dashIdx !== -1
-    ? cleanKey.slice(0, dashIdx) + cleanKey.charAt(dashIdx + 1).toUpperCase() + cleanKey.slice(dashIdx + 2)
+    ? cleanKey.slice(0, dashIdx) +
+        cleanKey.charAt(dashIdx + 1).toUpperCase() +
+        cleanKey.slice(dashIdx + 2)
     : cleanKey;
 }

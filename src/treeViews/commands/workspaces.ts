@@ -28,7 +28,7 @@ import { ExtensionProjectItem } from "../extensionsTreeView";
  */
 export async function deleteWorkspace(
   context: vscode.ExtensionContext,
-  workspace: ExtensionProjectItem
+  workspace: ExtensionProjectItem,
 ) {
   const confirm = await vscode.window.showQuickPick(["Yes", "No"], {
     title: `Delete workspace ${workspace.label}?`,

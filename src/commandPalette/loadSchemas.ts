@@ -29,7 +29,10 @@ import { getExtensionFilePath } from "../utils/fileSystem";
  * @param dt Dynatrace API Client
  * @returns boolean - the success of the command
  */
-export async function loadSchemas(context: vscode.ExtensionContext, dt: Dynatrace): Promise<boolean> {
+export async function loadSchemas(
+  context: vscode.ExtensionContext,
+  dt: Dynatrace,
+): Promise<boolean> {
   // Fetch available schema versions from cluster
   const availableVersions = await dt.extensionsV2.listSchemaVersions().catch(err => {
     vscode.window.showErrorMessage(err.message);
@@ -81,11 +84,16 @@ export async function loadSchemas(context: vscode.ExtensionContext, dt: Dynatrac
       const extensionContent = readFileSync(extensionFile).toString();
       writeFileSync(
         extensionFile,
-        extensionContent.replace(/^minDynatraceVersion: ("?[0-9.]+"?)/gm, `minDynatraceVersion: ${version}`)
+        extensionContent.replace(
+          /^minDynatraceVersion: ("?[0-9.]+"?)/gm,
+          `minDynatraceVersion: ${version}`,
+        ),
       );
     }
   } catch (err: any) {
-    vscode.window.showErrorMessage("Extension YAML was not updated. Schema loading only partially complete.");
+    vscode.window.showErrorMessage(
+      "Extension YAML was not updated. Schema loading only partially complete.",
+    );
     vscode.window.showErrorMessage(err.message);
     return false;
   }
@@ -106,7 +114,7 @@ function downloadSchemaFiles(location: string, version: string, dt: Dynatrace) {
     {
       location: vscode.ProgressLocation.Notification,
       title: `Loading schemas ${version}`,
-      cancellable: true
+      cancellable: true,
     },
     async (progress, cancelToken) => {
       progress.report({ message: "Fetching file names" });
@@ -131,16 +139,18 @@ function downloadSchemaFiles(location: string, version: string, dt: Dynatrace) {
                 let fileName = parts[parts.length - 1];
                 writeFile(`${location}/${fileName}`, JSON.stringify(resp), err => {
                   if (err) {
-                    vscode.window.showErrorMessage(`Error writing file ${fileName}:\n${err.message}`);
+                    vscode.window.showErrorMessage(
+                      `Error writing file ${fileName}:\n${err.message}`,
+                    );
                   }
                 });
               } catch (err) {
                 vscode.window.showErrorMessage(`Error writing file:\n${(err as Error).message}`);
               }
             });
-          })
+          }),
         )
         .catch(err => vscode.window.showErrorMessage(err.message));
-    }
+    },
   );
 }

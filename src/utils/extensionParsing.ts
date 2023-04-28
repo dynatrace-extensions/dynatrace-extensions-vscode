@@ -42,9 +42,10 @@ export function normalizeExtensionVersion(version: string): string {
 export function incrementExtensionVersion(currentVersion: string) {
   currentVersion = normalizeExtensionVersion(currentVersion);
   let versionParts = currentVersion.split(".");
-  return [...versionParts.slice(0, versionParts.length - 1), Number(versionParts[versionParts.length - 1]) + 1].join(
-    "."
-  );
+  return [
+    ...versionParts.slice(0, versionParts.length - 1),
+    Number(versionParts[versionParts.length - 1]) + 1,
+  ].join(".");
 }
 
 /**
@@ -53,7 +54,10 @@ export function incrementExtensionVersion(currentVersion: string) {
  * @param extension extension.yaml serialized as object
  * @returns
  */
-export function getAttributesKeysFromTopology(entityType: string, extension: ExtensionStub): string[] {
+export function getAttributesKeysFromTopology(
+  entityType: string,
+  extension: ExtensionStub,
+): string[] {
   var attributes: string[] = [];
   if (extension.topology && extension.topology.types) {
     extension.topology.types
@@ -87,7 +91,7 @@ export function getAttributesKeysFromTopology(entityType: string, extension: Ext
 export function getAttributesFromTopology(
   entityType: string,
   extension: ExtensionStub,
-  excludeKeys?: string[]
+  excludeKeys?: string[],
 ): { key: string; displayName: string }[] {
   var attributes: { key: string; displayName: string }[] = [];
   if (extension.topology && extension.topology.types) {
@@ -98,13 +102,15 @@ export function getAttributesFromTopology(
           type.rules.forEach(rule => {
             if (rule.attributes) {
               rule.attributes
-                .filter(property => (property.key ? (excludeKeys ? !excludeKeys.includes(property.key) : true) : false))
+                .filter(property =>
+                  property.key ? (excludeKeys ? !excludeKeys.includes(property.key) : true) : false,
+                )
                 .forEach(property => {
                   if (
                     !attributes.some(
                       attribute =>
                         JSON.stringify(attribute) ===
-                        JSON.stringify({ key: property.key, displayName: property.displayName })
+                        JSON.stringify({ key: property.key, displayName: property.displayName }),
                     )
                   ) {
                     attributes.push({
@@ -129,7 +135,11 @@ export function getAttributesFromTopology(
  * @param extension extension.yaml serialized as object
  * @returns list of metric keys
  */
-export function getMetricKeysFromChartCard(screenIdx: number, cardIdx: number, extension: ExtensionStub): string[] {
+export function getMetricKeysFromChartCard(
+  screenIdx: number,
+  cardIdx: number,
+  extension: ExtensionStub,
+): string[] {
   var metrics: string[] = [];
   if (
     extension.screens &&
@@ -164,7 +174,7 @@ export function getMetricKeysFromChartCard(screenIdx: number, cardIdx: number, e
 export function getMetricKeysFromEntitiesListCard(
   screenIdx: number,
   cardIdx: number,
-  extension: ExtensionStub
+  extension: ExtensionStub,
 ): string[] {
   var metrics: string[] = [];
   if (
@@ -197,7 +207,11 @@ export function getMetricKeysFromEntitiesListCard(
  * @param extension extension.yaml serialized as object
  * @param excludeKeys keys to exclude from the response
  */
-export function getEntityMetrics(typeIdx: number, extension: ExtensionStub, excludeKeys: string[] = []) {
+export function getEntityMetrics(
+  typeIdx: number,
+  extension: ExtensionStub,
+  excludeKeys: string[] = [],
+) {
   var matchingMetrics: string[] = [];
   var allMetrics = getAllMetricKeysFromDataSource(extension);
   var patterns = getEntityMetricPatterns(typeIdx, extension);
@@ -215,7 +229,7 @@ export function getEntityMetrics(typeIdx: number, extension: ExtensionStub, excl
             default:
               return false;
           }
-        })
+        }),
       );
     });
     return matchingMetrics.filter(metric => !excludeKeys.includes(metric));
@@ -321,7 +335,7 @@ export function getDatasourceName(extension: ExtensionStub): string {
 export function getPrometheusMetricKeys(
   extension: ExtensionStub,
   groupIdx: number = -2,
-  subgroupIdx: number = -2
+  subgroupIdx: number = -2,
 ): string[] {
   var metricKeys: string[] = [];
   if (groupIdx !== -2) {
@@ -329,8 +343,10 @@ export function getPrometheusMetricKeys(
     if (extension.prometheus![groupIdx].metrics) {
       metricKeys.push(
         ...extension
-          .prometheus![groupIdx].metrics!.filter(metric => metric.value && metric.value.startsWith("metric:"))
-          .map(metric => metric.value.split("metric:")[1])
+          .prometheus![groupIdx].metrics!.filter(
+            metric => metric.value && metric.value.startsWith("metric:"),
+          )
+          .map(metric => metric.value.split("metric:")[1]),
       );
     }
     if (subgroupIdx !== -2) {
@@ -339,9 +355,9 @@ export function getPrometheusMetricKeys(
         metricKeys.push(
           ...extension
             .prometheus![groupIdx].subgroups![subgroupIdx].metrics!.filter(
-              metric => metric.value && metric.value.startsWith("metric:")
+              metric => metric.value && metric.value.startsWith("metric:"),
             )
-            .map(metric => metric.value.split("metric:")[1])
+            .map(metric => metric.value.split("metric:")[1]),
         );
       }
     }
@@ -361,7 +377,7 @@ export function getPrometheusMetricKeys(
 export function getPrometheusLabelKeys(
   extension: ExtensionStub,
   groupIdx: number = -2,
-  subgroupIdx: number = -2
+  subgroupIdx: number = -2,
 ): string[] {
   var labelKeys: string[] = [];
   if (groupIdx !== -2) {
@@ -370,9 +386,9 @@ export function getPrometheusLabelKeys(
       labelKeys.push(
         ...extension
           .prometheus![groupIdx].dimensions!.filter(
-            dimension => dimension.value && dimension.value.startsWith("label:")
+            dimension => dimension.value && dimension.value.startsWith("label:"),
           )
-          .map(dimension => dimension.value.split("label:")[1])
+          .map(dimension => dimension.value.split("label:")[1]),
       );
     }
     if (subgroupIdx !== -2) {
@@ -381,9 +397,9 @@ export function getPrometheusLabelKeys(
         labelKeys.push(
           ...extension
             .prometheus![groupIdx].subgroups![subgroupIdx].dimensions!.filter(
-              dimension => dimension.value && dimension.value.startsWith("label:")
+              dimension => dimension.value && dimension.value.startsWith("label:"),
             )
-            .map(dimension => dimension.value.split("label:")[1])
+            .map(dimension => dimension.value.split("label:")[1]),
         );
       }
     }
@@ -636,7 +652,10 @@ export function getMetricsFromDataSource(extension: ExtensionStub, includeValues
  * @param extension
  * @param includeValues
  */
-export function getDimensionsFromDataSource(extension: ExtensionStub, includeValues: boolean = false) {
+export function getDimensionsFromDataSource(
+  extension: ExtensionStub,
+  includeValues: boolean = false,
+) {
   var dimensions: { key: string; value?: string }[] = [];
   var datasource = getExtensionDatasource(extension);
   datasource.forEach(group => {
@@ -674,7 +693,9 @@ export function getDimensionsFromDataSource(extension: ExtensionStub, includeVal
  * @param extension extension.yaml serialized as object
  * @returns list of metric keys
  */
-export function getAllMetricKeysAndValuesFromDataSource(extension: ExtensionStub): { key: string; value: string }[] {
+export function getAllMetricKeysAndValuesFromDataSource(
+  extension: ExtensionStub,
+): { key: string; value: string }[] {
   var data: { key: string; value: string }[] = [];
   var datasource = getExtensionDatasource(extension);
   datasource.forEach(group => {
@@ -706,7 +727,10 @@ export function getAllMetricKeysAndValuesFromDataSource(extension: ExtensionStub
  * @param extension extension.yaml serialized as object
  * @returns list of dimension keys
  */
-export function getDimensionsFromMatchingMetrics(conditionPattern: string, extension: ExtensionStub): string[] {
+export function getDimensionsFromMatchingMetrics(
+  conditionPattern: string,
+  extension: ExtensionStub,
+): string[] {
   var dimensions: string[] = [];
   var matcher = conditionPattern.split("(")[0];
   var pattern = conditionPattern.split("(")[1].split(")")[0];
@@ -729,7 +753,9 @@ export function getDimensionsFromMatchingMetrics(conditionPattern: string, exten
       ) {
         if (group.dimensions) {
           dimensions.push(
-            ...group.dimensions.filter(dimension => !dimensions.includes(dimension.key)).map(dimension => dimension.key)
+            ...group.dimensions
+              .filter(dimension => !dimensions.includes(dimension.key))
+              .map(dimension => dimension.key),
           );
         }
       }
@@ -754,14 +780,14 @@ export function getDimensionsFromMatchingMetrics(conditionPattern: string, exten
             dimensions.push(
               ...group.dimensions
                 .filter(dimension => !dimensions.includes(dimension.key))
-                .map(dimension => dimension.key)
+                .map(dimension => dimension.key),
             );
           }
           if (subgroup.dimensions) {
             dimensions.push(
               ...subgroup.dimensions
                 .filter(dimension => !dimensions.includes(dimension.key))
-                .map(dimension => dimension.key)
+                .map(dimension => dimension.key),
             );
           }
         }
@@ -778,7 +804,11 @@ export function getDimensionsFromMatchingMetrics(conditionPattern: string, exten
  * @param extension extension.yaml serialized as object
  * @returns list of dimension keys
  */
-export function getRequiredDimensions(typeIdx: number, ruleIdx: number, extension: ExtensionStub): string[] {
+export function getRequiredDimensions(
+  typeIdx: number,
+  ruleIdx: number,
+  extension: ExtensionStub,
+): string[] {
   var requiredDimensions = extension.topology.types[typeIdx].rules[ruleIdx].requiredDimensions;
   if (!requiredDimensions) {
     return [];
@@ -796,7 +826,11 @@ export function getRequiredDimensions(typeIdx: number, ruleIdx: number, extensio
  * @param extension extension.yaml serialized as object
  * @returns list of relationships
  */
-export function getRelationshipTypes(entityType: string, direction: "to" | "from", extension: ExtensionStub): string[] {
+export function getRelationshipTypes(
+  entityType: string,
+  direction: "to" | "from",
+  extension: ExtensionStub,
+): string[] {
   return extension.topology.relationships
     .filter(rel => (direction === "to" ? rel.toType === entityType : rel.fromType === entityType))
     .map(rel => relationToCamelCase(rel.typeOfRelation));
@@ -810,7 +844,7 @@ export function getRelationshipTypes(entityType: string, direction: "to" | "from
  */
 export function getRelationships(
   entityType: string,
-  extension: ExtensionStub
+  extension: ExtensionStub,
 ): { entity: string; relation: string; direction: "to" | "from" }[] {
   if (extension.topology && extension.topology.relationships) {
     return extension.topology.relationships
@@ -955,7 +989,13 @@ export function getReferencedCardsMeta(screenIdx: number, extension: ExtensionSt
 export function getDefinedCardsMeta(
   screenIdx: number,
   extension: ExtensionStub,
-  cardType?: "entitiesListCards" | "chartsCards" | "eventsCards" | "logsCards" | "messageCards" | "metricTableCards"
+  cardType?:
+    | "entitiesListCards"
+    | "chartsCards"
+    | "eventsCards"
+    | "logsCards"
+    | "messageCards"
+    | "metricTableCards",
 ): CardMeta[] {
   var cards: CardMeta[] = [];
 

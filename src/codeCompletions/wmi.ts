@@ -15,7 +15,6 @@
  */
 
 import * as vscode from "vscode";
-import * as yaml from "yaml";
 import { CachedDataProvider } from "../utils/dataCaching";
 
 export class WmiCompletionProvider implements vscode.CompletionItemProvider {
@@ -36,10 +35,8 @@ export class WmiCompletionProvider implements vscode.CompletionItemProvider {
     document: vscode.TextDocument,
     position: vscode.Position,
     token: vscode.CancellationToken,
-    context: vscode.CompletionContext
-  ): vscode.ProviderResult<
-    vscode.CompletionItem[] | vscode.CompletionList<vscode.CompletionItem>
-  > {
+    context: vscode.CompletionContext,
+  ): vscode.CompletionItem[] {
     const extension = this.cachedData.getExtensionYaml(document.getText());
 
     // Exit early if different datasource
@@ -48,30 +45,22 @@ export class WmiCompletionProvider implements vscode.CompletionItemProvider {
     }
 
     // Get the current line
-    const line = document
-      .lineAt(position.line)
-      .text.substring(0, position.character);
+    const line = document.lineAt(position.line).text.substring(0, position.character);
 
     // If the line contains 'value:' or 'column:' the user is editing a dimension or metric
     if (line.includes("value: ") || line.includes("column:")) {
       // Find the first query definition found before this line
-      const closestQueryLine = this.findClosestOcurrence(
-        "query:",
-        position,
-        document
-      );
+      const closestQueryLine = this.findClosestOcurrence("query:", position, document);
 
       // Check that we found a query definition before proceeding
       if (closestQueryLine) {
-
         // The line would look something like 'query: SELECT Name FROM Win32_OperatingSystem
-        // So we grab the portion after 'query:' 
+        // So we grab the portion after 'query:'
         const queryString = closestQueryLine.split("query:")[1].trim();
 
         // Find out if we have a query result for this query
         // This is only true if the query was executed by WmiCodeLens
-        const cachedQueryResults =
-          this.cachedData.getWmiQueryResult(queryString);
+        const cachedQueryResults = this.cachedData.getWmiQueryResult(queryString);
         if (!cachedQueryResults || cachedQueryResults.results.length === 0) {
           return [];
         }
@@ -81,7 +70,7 @@ export class WmiCompletionProvider implements vscode.CompletionItemProvider {
         const colummnNames = Object.keys(firstResult);
 
         // Builds a list of completion items for each column
-        return colummnNames.map((name) => {
+        return colummnNames.map(name => {
           const suggestion = `column:${name}`;
           const value = firstResult[name];
 
@@ -89,17 +78,19 @@ export class WmiCompletionProvider implements vscode.CompletionItemProvider {
           const displayText = `${suggestion} (${value}) <${typeof value}>`;
           const completionItem = new vscode.CompletionItem(
             displayText,
-            vscode.CompletionItemKind.Field
+            vscode.CompletionItemKind.Field,
           );
           completionItem.insertText = suggestion;
           completionItem.detail = `WMI result suggestion`;
           completionItem.documentation = new vscode.MarkdownString(
-            `Suggestion: **${suggestion}**\n\nValue: **${value}**\n\nType: **${typeof value}**`
+            `Suggestion: **${suggestion}**\n\nValue: **${value}**\n\nType: **${typeof value}**`,
           );
           return completionItem;
         });
       }
     }
+
+    return [];
   }
 
   /**
@@ -112,7 +103,7 @@ export class WmiCompletionProvider implements vscode.CompletionItemProvider {
   findClosestOcurrence(
     target: string,
     position: vscode.Position,
-    document: vscode.TextDocument
+    document: vscode.TextDocument,
   ): string | undefined {
     for (let i = position.line; i >= 0; i--) {
       const line = document.lineAt(i).text;

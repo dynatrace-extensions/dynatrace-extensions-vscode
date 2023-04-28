@@ -18,7 +18,13 @@ import * as vscode from "vscode";
 import * as jszip from "jszip";
 import * as yaml from "yaml";
 import { Dynatrace } from "../dynatrace-api/dynatrace";
-import { JMXExtensionV1, JMXExtensionV2, JMXSubGroup, MetricDto, SourceDto } from "../interfaces/extensionMeta";
+import {
+  JMXExtensionV1,
+  JMXExtensionV2,
+  JMXSubGroup,
+  MetricDto,
+  SourceDto,
+} from "../interfaces/extensionMeta";
 import { slugify } from "../codeActions/utils/snippetBuildingUtils";
 import { writeFileSync } from "fs";
 
@@ -75,16 +81,19 @@ export async function convertJMXExtension(dt: Dynatrace, outputPath?: string) {
     }
   }
 
-  // If the user chose to browse from the Dynatrace environment, use the API to list the current extensions
+  // If the user chose to browse from the Dynatrace environment,
+  // use the API to list the current extensions
   if (pluginJSONOrigin === OPTION_DYNATRACE_ENVIRONMENT) {
     const currentExtensions = await dt.extensionsV1.getExtensions();
 
     // We only want JMX custom extensions (not the built-in ones)
     // Dynatrace created extensions cannot be downloaded via the API
     const currentJMXExtensions = currentExtensions.filter(
-      extension => extension.type === "JMX" && !extension.id.startsWith("dynatrace.")
+      extension => extension.type === "JMX" && !extension.id.startsWith("dynatrace."),
     );
-    const jmxExtensionNames = currentJMXExtensions.map(extension => `${extension.id} | ${extension.name}`);
+    const jmxExtensionNames = currentJMXExtensions.map(
+      extension => `${extension.id} | ${extension.name}`,
+    );
 
     const jmxExtensionName = await vscode.window.showQuickPick(jmxExtensionNames, {
       placeHolder: "Choose a JMX v1 extension",
@@ -117,7 +126,8 @@ export async function convertJMXExtension(dt: Dynatrace, outputPath?: string) {
     defaultUri: vscode.Uri.file(`${slugify(jmxV2Extension.name)}.yaml`),
   };
 
-  const extensionYAMLFile = outputPath ?? (await vscode.window.showSaveDialog(options).then(p => p?.fsPath));
+  const extensionYAMLFile =
+    outputPath ?? (await vscode.window.showSaveDialog(options).then(p => p?.fsPath));
   if (!extensionYAMLFile) {
     vscode.window.showErrorMessage("No file was selected. Operation cancelled.");
     return;
@@ -222,8 +232,10 @@ function convertJMXExtensionToV2(jmxV1Extension: JMXExtensionV1): JMXExtensionV2
 
 /**
  * Converts a v1 JMX query to the v2 format
- * Original: {"domain": "java.lang", "keyProperties": {"name": "G1 Eden Space", "type": "MemoryPool"}},
- * Converted: java.lang:name=G1 Eden Space,type=MemoryPool
+ * Original:
+ *   {"domain": "java.lang", "keyProperties": {"name": "G1 Eden Space", "type": "MemoryPool"}},
+ * Converted:
+ *   java.lang:name=G1 Eden Space,type=MemoryPool
  * @param v1MetricSource The plugin v1 metric 'source' property
  * @returns The query string
  */

@@ -94,7 +94,9 @@ export async function generateCerts(context: vscode.ExtensionContext): Promise<b
       try {
         var devKey = pki.rsa.generateKeyPair({ bits: 4096, e: 0x10001 });
       } catch (err: any) {
-        vscode.window.showErrorMessage("Error generating the RSA key pair for the Developer certificate");
+        vscode.window.showErrorMessage(
+          "Error generating the RSA key pair for the Developer certificate",
+        );
         console.log(err.message);
         return false;
       }
@@ -156,12 +158,12 @@ export async function generateCerts(context: vscode.ExtensionContext): Promise<b
       writeFileSync(path.join(certsDir, "ca.pem"), pki.certificateToPem(caCert));
       writeFileSync(
         path.join(certsDir, "developer.pem"),
-        pki.certificateToPem(devCert) + pki.privateKeyToPem(devKey.privateKey)
+        pki.certificateToPem(devCert) + pki.privateKeyToPem(devKey.privateKey),
       );
       console.log(`Wrote all certificates at location ${certsDir}`);
 
       return true;
-    }
+    },
   );
 
   if (success) {
@@ -169,20 +171,28 @@ export async function generateCerts(context: vscode.ExtensionContext): Promise<b
     const useGlobal = await vscode.window.showInformationMessage(
       "Certificates generated. Do you want to use these for all workspaces by default?",
       "Yes",
-      "No"
+      "No",
     );
     vscode.workspace
       .getConfiguration("dynatrace", null)
-      .update("developerCertkeyLocation", path.join(certsDir, "developer.pem"), useGlobal === "Yes" ? true : undefined);
+      .update(
+        "developerCertkeyLocation",
+        path.join(certsDir, "developer.pem"),
+        useGlobal === "Yes" ? true : undefined,
+      );
     vscode.workspace
       .getConfiguration("dynatrace", null)
-      .update("rootOrCaCertificateLocation", path.join(certsDir, "ca.pem"), useGlobal === "Yes" ? true : undefined);
+      .update(
+        "rootOrCaCertificateLocation",
+        path.join(certsDir, "ca.pem"),
+        useGlobal === "Yes" ? true : undefined,
+      );
 
     // Link command - Upload Certificates
     const choice = await vscode.window.showInformationMessage(
       "Settings updated. Would you like to upload the CA certificate to Dynatrace?",
       "Yes",
-      "No"
+      "No",
     );
     if (choice === "Yes") {
       await vscode.commands.executeCommand("dt-ext-copilot.distributeCertificate");

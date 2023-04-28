@@ -33,7 +33,9 @@ export class ExtensionsServiceV2 {
    * @returns list of versions
    */
   async listSchemaVersions(): Promise<string[]> {
-    return this.httpClient.makeRequest(this.schemaEndpoint).then((res: SchemaList) => res.versions.reverse());
+    return this.httpClient
+      .makeRequest(this.schemaEndpoint)
+      .then((res: SchemaList) => res.versions.reverse());
   }
 
   /**
@@ -75,7 +77,11 @@ export class ExtensionsServiceV2 {
    * @returns response data
    */
   async deleteVersion(extensionName: string, version: string) {
-    return this.httpClient.makeRequest(`${this.endpoint}/${extensionName}/${version}`, {}, "DELETE");
+    return this.httpClient.makeRequest(
+      `${this.endpoint}/${extensionName}/${version}`,
+      {},
+      "DELETE",
+    );
   }
 
   /**
@@ -91,7 +97,7 @@ export class ExtensionsServiceV2 {
       "POST",
       {},
       { validateOnly: validateOnly },
-      { file: file, name: "extension.zip" }
+      { file: file, name: "extension.zip" },
     );
   }
 
@@ -105,7 +111,7 @@ export class ExtensionsServiceV2 {
     return this.httpClient.makeRequest(
       `${this.endpoint}/${extensionName}/environmentConfiguration`,
       { version: version },
-      "PUT"
+      "PUT",
     );
   }
 
@@ -129,12 +135,16 @@ export class ExtensionsServiceV2 {
   async listMonitoringConfigurations(
     extensionName: string,
     version?: string,
-    activeOnly?: boolean
+    activeOnly?: boolean,
   ): Promise<ExtensionMonitoringConfiguration[]> {
-    return this.httpClient.paginatedCall(`${this.endpoint}/${extensionName}/monitoringConfigurations`, "items", {
-      version: version,
-      active: activeOnly,
-    });
+    return this.httpClient.paginatedCall(
+      `${this.endpoint}/${extensionName}/monitoringConfigurations`,
+      "items",
+      {
+        version: version,
+        active: activeOnly,
+      },
+    );
   }
 
   /**
@@ -143,9 +153,12 @@ export class ExtensionsServiceV2 {
    * @param configurationId The ID of the requested monitoring configuration.
    * @returns the status and timestamp as object
    */
-  async getMonitoringConfigurationStatus(extensionName: string, configurationId: string): Promise<ExtensionStatusDto> {
+  async getMonitoringConfigurationStatus(
+    extensionName: string,
+    configurationId: string,
+  ): Promise<ExtensionStatusDto> {
     return this.httpClient.makeRequest(
-      `${this.endpoint}/${extensionName}/monitoringConfigurations/${configurationId}/status`
+      `${this.endpoint}/${extensionName}/monitoringConfigurations/${configurationId}/status`,
     );
   }
 
@@ -159,7 +172,7 @@ export class ExtensionsServiceV2 {
     return this.httpClient.makeRequest(
       `${this.endpoint}/${extensionName}/monitoringConfigurations/${configurationId}`,
       {},
-      "DELETE"
+      "DELETE",
     );
   }
 
@@ -170,7 +183,9 @@ export class ExtensionsServiceV2 {
    * @returns details of the monitoring configuration object
    */
   async getMonitoringConfiguration(extensionName: string, configurationId: string) {
-    return this.httpClient.makeRequest(`${this.endpoint}/${extensionName}/monitoringConfigurations/${configurationId}`);
+    return this.httpClient.makeRequest(
+      `${this.endpoint}/${extensionName}/monitoringConfigurations/${configurationId}`,
+    );
   }
 
   /**
@@ -180,11 +195,15 @@ export class ExtensionsServiceV2 {
    * @param configurationDetails The new details of the configuration object
    * @returns response data
    */
-  async putMonitoringConfiguration(extensionName: string, configurationId: string, configurationDetails: any) {
+  async putMonitoringConfiguration(
+    extensionName: string,
+    configurationId: string,
+    configurationDetails: any,
+  ) {
     return this.httpClient.makeRequest(
       `${this.endpoint}/${extensionName}/monitoringConfigurations/${configurationId}`,
       configurationDetails,
-      "PUT"
+      "PUT",
     );
   }
 
@@ -199,7 +218,7 @@ export class ExtensionsServiceV2 {
     return this.httpClient.makeRequest(
       `${this.endpoint}/${extensionName}/monitoringConfigurations`,
       configurationDetails,
-      "POST"
+      "POST",
     );
   }
 
@@ -210,7 +229,9 @@ export class ExtensionsServiceV2 {
    * @returns schema of the extension
    */
   async getExtensionSchema(extensionName: string, extensionVersion: string) {
-    return this.httpClient.makeRequest(`${this.endpoint}/${extensionName}/${extensionVersion}/schema`);
+    return this.httpClient.makeRequest(
+      `${this.endpoint}/${extensionName}/${extensionVersion}/schema`,
+    );
   }
 
   /**
@@ -220,9 +241,15 @@ export class ExtensionsServiceV2 {
    * @param downloadPackage if false, only the metadata of the extension is fetched
    * @returns either JSON metadata or extension zip package
    */
-  async getExtension(extensionName: string, extensionVersion: string, downloadPackage: boolean = false) {
+  async getExtension(
+    extensionName: string,
+    extensionVersion: string,
+    downloadPackage: boolean = false,
+  ) {
     const headers: any = {};
-    headers["Accept"] = downloadPackage ? "application/octet-stream" : "application/json; charset=utf-8";
+    headers["Accept"] = downloadPackage
+      ? "application/octet-stream"
+      : "application/json; charset=utf-8";
 
     return this.httpClient.makeRequest(
       `${this.endpoint}/${extensionName}/${extensionVersion}`,
@@ -231,7 +258,7 @@ export class ExtensionsServiceV2 {
       headers,
       {},
       undefined,
-      downloadPackage ? "arraybuffer" : "json"
+      downloadPackage ? "arraybuffer" : "json",
     );
   }
 }

@@ -34,7 +34,7 @@ export function runCommand(
   command: string,
   oc?: vscode.OutputChannel,
   cancelToken?: vscode.CancellationToken,
-  envOptions?: ExecOptions
+  envOptions?: ExecOptions,
 ): Promise<number | null> {
   let p = exec(command, envOptions);
   let [stdout, stderr] = ["", ""];
@@ -62,10 +62,13 @@ export function runCommand(
         if (oc) {
           oc.replace(
             JSON.stringify(
-              { error: shortMessage.split("\r\n"), detailedOutput: `+${details.join("+")}`.split("\r\n") },
+              {
+                error: shortMessage.split("\r\n"),
+                detailedOutput: `+${details.join("+")}`.split("\r\n"),
+              },
               null,
-              2
-            )
+              2,
+            ),
           );
           oc.show();
         }

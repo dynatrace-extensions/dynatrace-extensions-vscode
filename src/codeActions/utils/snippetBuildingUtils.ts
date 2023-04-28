@@ -44,7 +44,11 @@ import { ExtensionStub, TopologyType } from "../../interfaces/extensionMeta";
  * @param indent level of indentation required
  * @returns the formatted and indented snippet
  */
-export function buildConfigActionSnippet(extensionId: string, subAction: boolean, indent: number): string {
+export function buildConfigActionSnippet(
+  extensionId: string,
+  subAction: boolean,
+  indent: number,
+): string {
   let subSnippet = configSubActionSnippet;
   subSnippet = subSnippet.replace("<extension-id>", extensionId);
 
@@ -77,18 +81,30 @@ export function buildScreenSnippet(
   chartCardsSnippet: string,
   cardKeysSnippet: string,
   indent: number,
-  withNewline: boolean = true
+  withNewline: boolean = true,
 ): string {
   let snippet = screenSnippet;
 
   snippet = snippet.replace(/<entity-type>/g, typeDefinition.name);
-  snippet = snippet.replace("<config-action>", "\n" + buildConfigActionSnippet(extensionId, false, indent + 2));
+  snippet = snippet.replace(
+    "<config-action>",
+    "\n" + buildConfigActionSnippet(extensionId, false, indent + 2),
+  );
   snippet = snippet.replace(/<extension-id>/g, extensionId);
   snippet = snippet.replace(/<entity-name>/g, typeDefinition.displayName);
   snippet = snippet.replace("<self-list-key>", `${slugify(typeDefinition.name)}_list_self`);
-  snippet = snippet.replace("<charts-cards>", "\n" + indentSnippet(chartCardsSnippet, indent, false));
-  snippet = snippet.replace("<entities-list-cards>", "\n" + indentSnippet(entitiesListCardsSnippet, indent, false));
-  snippet = snippet.replace("<details-layout-cards>", "\n" + indentSnippet(cardKeysSnippet, indent + 6, false));
+  snippet = snippet.replace(
+    "<charts-cards>",
+    "\n" + indentSnippet(chartCardsSnippet, indent, false),
+  );
+  snippet = snippet.replace(
+    "<entities-list-cards>",
+    "\n" + indentSnippet(entitiesListCardsSnippet, indent, false),
+  );
+  snippet = snippet.replace(
+    "<details-layout-cards>",
+    "\n" + indentSnippet(cardKeysSnippet, indent + 6, false),
+  );
 
   return indentSnippet(snippet, indent, withNewline);
 }
@@ -99,7 +115,7 @@ export function buildScreenSnippet(
  * @param property the entity's property being filtered on
  * @param name the display name of this filter
  * @param freeText when True this filter accepts free text and you must provide a modifier
- * @param modifier the behavior of the free text filter's value; must be omitted when freeText is false
+ * @param modifier the behavior of the free text filter's value; to be omitted when freeText is false
  * @param distinct when true, there can be only a single instance of this filter
  * @param indent level of indentation required
  * @returns the formatted and indented snippet
@@ -111,14 +127,16 @@ export function buildFilterSnippet(
   freeText: boolean,
   distinct: boolean,
   indent: number,
-  modifier?: "contains" | "equals" | "startsWith"
+  modifier?: "contains" | "equals" | "startsWith",
 ): string {
   let snippet = filterSnippet;
 
   snippet = snippet.replace("<filter-prop>", property);
   snippet = snippet.replace("<filter-name>", name);
   snippet = snippet.replace("<free-text>", String(freeText));
-  snippet = modifier ? snippet.replace("<modifier>", `modifier: ${modifier}`) : snippet.replace("\n  <modifier>", "");
+  snippet = modifier
+    ? snippet.replace("<modifier>", `modifier: ${modifier}`)
+    : snippet.replace("\n  <modifier>", "");
   snippet = snippet.replace("<distinct>", String(distinct));
   snippet = snippet.replace("<filtered-entity>", entityType);
 
@@ -159,14 +177,17 @@ export function buildEntitiesListCardSnippet(
   entityType: string,
   indent: number,
   entitySelector?: string,
-  withNewline: boolean = true
+  withNewline: boolean = true,
 ): string {
   let snippet = entitiesListCardSnippet;
 
   snippet = snippet.replace("<card-key>", slugify(key));
   snippet = snippet.replace("<page-size>", String(pageSize));
   snippet = snippet.replace("<card-name>", cardName);
-  snippet = snippet.replace("<filtering>", "\n" + indentSnippet(entityFilterGroupSnippet, indent+2, false));
+  snippet = snippet.replace(
+    "<filtering>",
+    "\n" + indentSnippet(entityFilterGroupSnippet, indent + 2, false),
+  );
   snippet = snippet.replace("<entity-type>", entityType);
 
   if (entitySelector) {
@@ -179,8 +200,8 @@ export function buildEntitiesListCardSnippet(
 }
 
 /**
- * Builds a YAML snippet for a charts card, with desiered indentation.
- * Details like feature set and entity type allow building more relevant and easy to understand cards.
+ * Builds a YAML snippet for a charts card, with desiered indentation. Details like feature set and
+ * entity type allow building more relevant and easy to understand cards.
  * @param key the chart card's key
  * @param featureSet the feature set it covers
  * @param metrics the metrics that should be translated to charts
@@ -195,10 +216,10 @@ export function buildChartCardSnippet(
   metrics: string[],
   entityType: string,
   indent: number,
-  withNewline: boolean = true
+  withNewline: boolean = true,
 ): string {
   let snippet = chartCardSnippet;
-  let charts = metrics.map((m) => buildGraphChartSnippet(m, entityType, 0, false)).join("\n");
+  let charts = metrics.map(m => buildGraphChartSnippet(m, entityType, 0, false)).join("\n");
 
   snippet = snippet.replace("<card-key>", slugify(key));
   snippet = snippet.replace("<card-name>", `${featureSet} metrics`);
@@ -219,7 +240,7 @@ export function buildAttributePropertySnippet(
   key: string,
   displayName: string,
   indent: number,
-  withNewline: boolean = true
+  withNewline: boolean = true,
 ): string {
   let snippet = attributeSnippet;
 
@@ -241,7 +262,7 @@ export function buildRelationPropertySnippet(
   entitySelector: string,
   displayName: string,
   indent: number,
-  withNewline: boolean = true
+  withNewline: boolean = true,
 ): string {
   let snippet = relationSnippet;
 
@@ -267,7 +288,7 @@ export function buildMetricMetadataSnippet(
   description: string,
   unit: string = "Unspecified",
   indent: number,
-  withNewline: boolean = true
+  withNewline: boolean = true,
 ): string {
   let snippet = metricMetadataSnippet;
 
@@ -292,7 +313,7 @@ export function buildGraphChartSnippet(
   metricKey: string,
   entityType: string,
   indent: number,
-  withNewline: boolean = true
+  withNewline: boolean = true,
 ): string {
   let snippet = graphChartSnippet;
 
@@ -320,9 +341,9 @@ export function getAllEntitiesListsSnippet(entityType: string, extension: Extens
       entityType,
       0,
       undefined,
-      false
+      false,
     ),
-    ...relationships.map((rel) => {
+    ...relationships.map(rel => {
       var relEntityName = getEntityName(rel.entity, extension) || rel.entity;
       return buildEntitiesListCardSnippet(
         `${entityType}-list-${rel.entity}`,
@@ -333,7 +354,7 @@ export function getAllEntitiesListsSnippet(entityType: string, extension: Extens
         `type(${rel.entity}),${rel.direction === "to" ? "from" : "to"}Relationships.${
           rel.relation
         }($(entityConditions))`,
-        false
+        false,
       );
     }),
   ].join("\n");
@@ -346,12 +367,12 @@ export function getAllEntitiesListsSnippet(entityType: string, extension: Extens
  * @returns yaml snippet
  */
 export function getAllChartCardsSnippet(entityType: string, extension: ExtensionStub): string {
-  const typeIdx = extension.topology.types.findIndex((type) => type.name === entityType);
+  const typeIdx = extension.topology.types.findIndex(type => type.name === entityType);
   const entityMetrics = getEntityMetrics(typeIdx, extension);
   const cards: { key: string; featureSet: string; metrics: string[] }[] = [];
 
-  getAllMetricsByFeatureSet(extension).forEach((fs) => {
-    let metrics = fs.metrics.filter((m) => entityMetrics.includes(m));
+  getAllMetricsByFeatureSet(extension).forEach(fs => {
+    let metrics = fs.metrics.filter(m => entityMetrics.includes(m));
     if (metrics.length > 0) {
       cards.push({
         key: `${entityType}-charts-${fs.name}`,
@@ -361,28 +382,32 @@ export function getAllChartCardsSnippet(entityType: string, extension: Extension
     }
   });
   return cards
-    .map((card) => buildChartCardSnippet(card.key, card.featureSet, card.metrics, entityType, 0, false))
+    .map(card =>
+      buildChartCardSnippet(card.key, card.featureSet, card.metrics, entityType, 0, false),
+    )
     .join("\n");
 }
 
 /**
- * Utility function to build a snippet of all possible card keys (ready to insert into screen layouts).
- * Card keys include card type, and span entity lists and chart cards. Keys do not include self entity
- * list.
+ * Utility function to build a snippet of all possible card keys (ready to insert into screen
+ * layouts).Card keys include card type, and span entity lists and chart cards. Keys do not include
+ * self entity list.
  * @param entityType entity type that cards apply to
  * @param extension extension yaml serialized as object
  * @returns yaml snippet
  */
 export function getAllCardKeysSnippet(entityType: string, extension: ExtensionStub): string {
   const relationships = getRelationships(entityType, extension);
-  const typeIdx = extension.topology.types.findIndex((type) => type.name === entityType);
+  const typeIdx = extension.topology.types.findIndex(type => type.name === entityType);
   const entityMetrics = getEntityMetrics(typeIdx, extension);
 
   return [
     ...getAllMetricsByFeatureSet(extension)
-      .filter((fs) => fs.metrics.findIndex((m) => entityMetrics.includes(m)) > -1)
-      .map((fs) => `- key: ${slugify(`${entityType}-charts-${fs.name}`)}\n  type: CHART_GROUP`),
-    ...relationships.map((rel) => `- key: ${slugify(`${entityType}-list-${rel.entity}`)}\n  type: ENTITIES_LIST`),
+      .filter(fs => fs.metrics.findIndex(m => entityMetrics.includes(m)) > -1)
+      .map(fs => `- key: ${slugify(`${entityType}-charts-${fs.name}`)}\n  type: CHART_GROUP`),
+    ...relationships.map(
+      rel => `- key: ${slugify(`${entityType}-list-${rel.entity}`)}\n  type: ENTITIES_LIST`,
+    ),
   ].join("\n");
 }
 
@@ -393,10 +418,14 @@ export function getAllCardKeysSnippet(entityType: string, extension: ExtensionSt
  * @param withNewline if true, a newline is added at the end of the snippet
  * @returns the indentend snippet
  */
-export function indentSnippet(snippet: string, indent: number, withNewline: boolean = true): string {
+export function indentSnippet(
+  snippet: string,
+  indent: number,
+  withNewline: boolean = true,
+): string {
   snippet = snippet
     .split("\n")
-    .map((line) => `${" ".repeat(indent + 2)}${line}`)
+    .map(line => `${" ".repeat(indent + 2)}${line}`)
     .join("\n");
   if (withNewline) {
     snippet += "\n";

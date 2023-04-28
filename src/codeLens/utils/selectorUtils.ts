@@ -31,8 +31,8 @@ export interface ValidationStatus {
 
 /**
  * Runs a query and reports the status of validating the result.
- * If no errors were experienced, the check is successful, otherwise it is considered failed and the details are
- * contained within the returned object.
+ * If no errors were experienced, the check is successful, otherwise it is considered failed and
+ * the details are contained within the returned object.
  * @param selector metric selector to validate
  * @param selectorType either metric or entity selector
  * @param dt Dynatrace API Client
@@ -41,7 +41,7 @@ export interface ValidationStatus {
 export async function validateSelector(
   selector: string,
   selectorType: "metric" | "entity",
-  dt: Dynatrace
+  dt: Dynatrace,
 ): Promise<ValidationStatus> {
   return selectorType === "metric"
     ? dt.metrics
@@ -55,7 +55,7 @@ export async function validateSelector(
                 code: err.errorParams.code,
                 message: err.errorParams.message,
               },
-            } as ValidationStatus)
+            } as ValidationStatus),
         )
     : dt.entitiesV2
         .list(selector)
@@ -68,7 +68,7 @@ export async function validateSelector(
                 code: err.errorParams.code,
                 message: err.errorParams.message,
               },
-            } as ValidationStatus)
+            } as ValidationStatus),
         );
 }
 
@@ -86,7 +86,7 @@ export async function runSelector(
   selector: string,
   selectorType: "metric" | "entity",
   dt: Dynatrace,
-  oc: vscode.OutputChannel
+  oc: vscode.OutputChannel,
 ) {
   if (selectorType === "metric") {
     dt.metrics
@@ -105,8 +105,8 @@ export async function runSelector(
               details: err.errorParams.data.constraintViolations,
             },
             null,
-            2
-          )
+            2,
+          ),
         );
         oc.show();
       });
@@ -129,8 +129,8 @@ export async function runSelector(
               details: err.errorParams.data.constraintViolations,
             },
             null,
-            2
-          )
+            2,
+          ),
         );
         oc.show();
       });
@@ -150,7 +150,7 @@ export function resolveSelectorTemplate(
   selectorTemplate: string,
   extension: ExtensionStub,
   document: vscode.TextDocument,
-  position: vscode.Position
+  position: vscode.Position,
 ): string {
   const screenIdx = getBlockItemIndexAtLine("screens", position.line, document.getText());
   const parentBlocks = getParentBlocks(position.line, document.getText());
@@ -161,7 +161,8 @@ export function resolveSelectorTemplate(
     parentBlocks[parentBlocks.length - 3] === "entitiesListCards"
   ) {
     const cardIdx = getBlockItemIndexAtLine("entitiesListCards", position.line, document.getText());
-    const selector = extension.screens![screenIdx].entitiesListCards![cardIdx].entitySelectorTemplate;
+    const selector =
+      extension.screens![screenIdx].entitiesListCards![cardIdx].entitySelectorTemplate;
     if (selector) {
       entityType = selector.split("type(")[1].split(")")[0].replace('"', "");
     }

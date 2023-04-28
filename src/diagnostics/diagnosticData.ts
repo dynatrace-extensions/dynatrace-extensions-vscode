@@ -32,7 +32,7 @@ interface CopilotDiagnostic {
 export function copilotDiagnostic(
   startPos: vscode.Position,
   endPos: vscode.Position,
-  diagnostic: CopilotDiagnostic
+  diagnostic: CopilotDiagnostic,
 ): vscode.Diagnostic {
   return {
     range: new vscode.Range(startPos, endPos),
@@ -67,7 +67,9 @@ export const EXTENSION_NAME_TOO_LONG: CopilotDiagnostic = {
 export const EXTENSION_NAME_INVALID: CopilotDiagnostic = {
   code: "DEC003",
   severity: vscode.DiagnosticSeverity.Error,
-  message: "Extension name is invalid. Must only contain lowercase letters, numbers, hyphens, underscores, or dots.",
+  message:
+    "Extension name is invalid. " +
+    "Must only contain lowercase letters, numbers, hyphens, underscores, or dots.",
 };
 
 export const EXTENSION_NAME_NON_CUSTOM: CopilotDiagnostic = {
@@ -139,7 +141,8 @@ export const OID_GAUGE_AS_COUNTER: CopilotDiagnostic = {
 export const OID_SYNTAX_INVALID: CopilotDiagnostic = {
   code: "DEC015",
   severity: vscode.DiagnosticSeverity.Error,
-  message: "Invalid OID syntax. OID must not start/end with '.' and may only contain dots and digits.",
+  message:
+    "Invalid OID syntax. OID must not start/end with '.' and may only contain dots and digits.",
 };
 
 export const OID_DOT_ZERO_IN_TABLE: CopilotDiagnostic = {
@@ -151,7 +154,8 @@ export const OID_DOT_ZERO_IN_TABLE: CopilotDiagnostic = {
 export const OID_DOT_ZERO_MISSING: CopilotDiagnostic = {
   code: "DEC017",
   severity: vscode.DiagnosticSeverity.Error,
-  message: "Invalid OID syntax. OIDs must end in '.0' when they are not part of a 'table' subgroup.",
+  message:
+    "Invalid OID syntax. OIDs must end in '.0' when they are not part of a 'table' subgroup.",
 };
 
 export const OID_STATIC_OBJ_IN_TABLE: CopilotDiagnostic = {
@@ -163,5 +167,7 @@ export const OID_STATIC_OBJ_IN_TABLE: CopilotDiagnostic = {
 export const OID_TABLE_OBJ_AS_STATIC: CopilotDiagnostic = {
   code: "DEC019",
   severity: vscode.DiagnosticSeverity.Error,
-  message: "Type conflict. This OID maps to table entries but is not being used inside a 'table' subgroup.",
+  message:
+    "Type conflict. " +
+    "This OID maps to table entries but is not being used inside a 'table' subgroup.",
 };

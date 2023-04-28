@@ -76,7 +76,7 @@ export function registerWorkspace(context: vscode.ExtensionContext) {
   var workspace: ExtensionWorkspace = {
     name: vscode.workspace.name!,
     id: path.basename(path.dirname(context.storageUri!.fsPath)),
-    folder: vscode.workspace.workspaceFolders![0].uri.fsPath
+    folder: vscode.workspace.workspaceFolders![0].uri.fsPath,
   };
 
   var currentIndex = workspaces.findIndex(ws => ws.id === workspace.id);
@@ -102,7 +102,7 @@ export function registerWorkspace(context: vscode.ExtensionContext) {
 export function findWorkspace(
   context: vscode.ExtensionContext,
   workspaceName?: string,
-  workspaceId?: string
+  workspaceId?: string,
 ): ExtensionWorkspace | undefined {
   if (workspaceName) {
     return getAllWorkspaces(context).find(ws => ws.name === workspaceName);
@@ -125,7 +125,7 @@ export function getAllWorkspaces(context: vscode.ExtensionContext): ExtensionWor
         id: extension.id,
         name: extension.name,
         folder: vscode.Uri.parse(decodeURI(extension.folder as string)),
-      } as ExtensionWorkspace)
+      } as ExtensionWorkspace),
   );
 }
 
@@ -154,10 +154,12 @@ export function registerEnvironment(
   url: string,
   token: string,
   name?: string,
-  current: boolean = false
+  current: boolean = false,
 ) {
   var environmentsJson = path.join(context.globalStorageUri.fsPath, "dynatraceEnvironments.json");
-  var environments: DynatraceEnvironmentData[] = JSON.parse(readFileSync(environmentsJson).toString());
+  var environments: DynatraceEnvironmentData[] = JSON.parse(
+    readFileSync(environmentsJson).toString(),
+  );
   let id = url.includes("/e/") ? url.split("/e/")[1] : url.split("https://")[1].substring(0, 8);
   var environment: DynatraceEnvironmentData = {
     id: id,
@@ -185,7 +187,11 @@ export function registerEnvironment(
   writeFileSync(environmentsJson, JSON.stringify(environments));
 
   // Update the state
-  vscode.commands.executeCommand("setContext", "dt-ext-copilot.numEnvironments", environments.length);
+  vscode.commands.executeCommand(
+    "setContext",
+    "dt-ext-copilot.numEnvironments",
+    environments.length,
+  );
 }
 
 /**
@@ -196,12 +202,18 @@ export function registerEnvironment(
  */
 export function removeEnvironment(context: vscode.ExtensionContext, environmentId: string) {
   var environmentsJson = path.join(context.globalStorageUri.fsPath, "dynatraceEnvironments.json");
-  var environments: DynatraceEnvironmentData[] = JSON.parse(readFileSync(environmentsJson).toString());
+  var environments: DynatraceEnvironmentData[] = JSON.parse(
+    readFileSync(environmentsJson).toString(),
+  );
 
   writeFileSync(environmentsJson, JSON.stringify(environments.filter(e => e.id !== environmentId)));
 
   // Update the state
-  vscode.commands.executeCommand("setContext", "dt-ext-copilot.numEnvironments", environments.length - 1);
+  vscode.commands.executeCommand(
+    "setContext",
+    "dt-ext-copilot.numEnvironments",
+    environments.length - 1,
+  );
 }
 
 /**
@@ -217,7 +229,11 @@ export function removeWorkspace(context: vscode.ExtensionContext, workspaceId: s
   writeFileSync(workspacesJson, JSON.stringify(workspaces.filter(w => w.id !== workspaceId)));
 
   // Update the state
-  vscode.commands.executeCommand("setContext", "dt-ext-copilot.numWorkspaces", workspaces.length - 1);
+  vscode.commands.executeCommand(
+    "setContext",
+    "dt-ext-copilot.numWorkspaces",
+    workspaces.length - 1,
+  );
 }
 
 /**
@@ -244,7 +260,10 @@ export function uploadComponentCert(certPath: string, component: "OneAgent" | "A
   // Avoid potential overwrites to some degree
   if (
     (existsSync(path.join(uploadDir, certFilename)) &&
-      !(readFileSync(certPath).toString() === readFileSync(path.join(uploadDir, certFilename)).toString())) ||
+      !(
+        readFileSync(certPath).toString() ===
+        readFileSync(path.join(uploadDir, certFilename)).toString()
+      )) ||
     !existsSync(path.join(uploadDir, certFilename))
   ) {
     console.log(`Copying certificate file from ${certPath} to ${uploadDir}`);
@@ -277,7 +296,7 @@ export function getExtensionFilePath(): string | undefined {
  * Resolves relative paths correctly. This is needed because VS Code extensions do not have
  * correct awareness of path relativity - they are all rooted in vscode installation directory
  * e.g. "C:\Program Files\Microsoft VS Code"
- * @param pathToResolve 
+ * @param pathToResolve
  * @returns resolved absolute path
  */
 export function resolveRealPath(pathToResolve: string): string {
@@ -293,7 +312,11 @@ export function resolveRealPath(pathToResolve: string): string {
       return path.resolve(os.homedir(), ...pathSegments);
     case ".":
     case "..":
-      return path.resolve(vscode.workspace.workspaceFolders![0].uri.fsPath, symbol, ...pathSegments);
+      return path.resolve(
+        vscode.workspace.workspaceFolders![0].uri.fsPath,
+        symbol,
+        ...pathSegments,
+      );
     default:
       return pathToResolve;
   }

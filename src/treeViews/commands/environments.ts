@@ -19,7 +19,11 @@ import * as path from "path";
 import { DynatraceAPIError } from "../../dynatrace-api/errors";
 import { encryptToken } from "../../utils/cryptography";
 import { getAllEnvironments, registerEnvironment, removeEnvironment } from "../../utils/fileSystem";
-import { DeployedExtension, DynatraceEnvironment, MonitoringConfiguration } from "../environmentsTreeView";
+import {
+  DeployedExtension,
+  DynatraceEnvironment,
+  MonitoringConfiguration,
+} from "../environmentsTreeView";
 import { readFileSync, rmSync, writeFileSync } from "fs";
 import { createObjectFromSchema } from "../../utils/schemaParsing";
 
@@ -46,7 +50,9 @@ export async function addEnvironment(context: vscode.ExtensionContext) {
           : null;
       }
       if ([".live.", ".dev.", ".sprint."].some(x => value.includes(x))) {
-        return !/^https?:\/\/[a-z0-9]*?\.(?:live|dev|sprint)\.dynatrace(?:labs)*.*?\.com+?(?:\/|$)$/.test(value)
+        return !/^https?:\/\/[a-z0-9]*?\.(?:live|dev|sprint)\.dynatrace(?:labs)*.*?\.com+?(?:\/|$)$/.test(
+          value,
+        )
           ? "This does not look right. It should be the base URL to your SaaS tenant."
           : null;
       }
@@ -98,7 +104,10 @@ export async function addEnvironment(context: vscode.ExtensionContext) {
  * @param environment the existing environment
  * @returns
  */
-export async function editEnvironment(context: vscode.ExtensionContext, environment: DynatraceEnvironment) {
+export async function editEnvironment(
+  context: vscode.ExtensionContext,
+  environment: DynatraceEnvironment,
+) {
   var url = await vscode.window.showInputBox({
     title: "The new URL for this environment",
     placeHolder: "The URL at which this environment is accessible...",
@@ -151,7 +160,10 @@ export async function editEnvironment(context: vscode.ExtensionContext, environm
  * @param environment the existing environment
  * @returns
  */
-export async function deleteEnvironment(context: vscode.ExtensionContext, environment: DynatraceEnvironment) {
+export async function deleteEnvironment(
+  context: vscode.ExtensionContext,
+  environment: DynatraceEnvironment,
+) {
   const confirm = await vscode.window.showQuickPick(["Yes", "No"], {
     title: `Delete environment ${environment.label}?`,
     canPickMany: false,
@@ -175,7 +187,9 @@ export async function deleteEnvironment(context: vscode.ExtensionContext, enviro
  * @param context VSCode Extension Context
  * @returns the connected status as boolean, and name of connected environment or "" as string
  */
-export async function changeConnection(context: vscode.ExtensionContext): Promise<[boolean, string]> {
+export async function changeConnection(
+  context: vscode.ExtensionContext,
+): Promise<[boolean, string]> {
   const environments = getAllEnvironments(context);
   const currentEnv = environments.find(e => e.current);
   const choice = await vscode.window.showQuickPick(
@@ -185,7 +199,7 @@ export async function changeConnection(context: vscode.ExtensionContext): Promis
       ignoreFocusOut: true,
       title: "Connect to a different environment",
       placeHolder: "Select an environment from the list",
-    }
+    },
   );
 
   // Use the newly selected environment
@@ -205,8 +219,8 @@ export async function changeConnection(context: vscode.ExtensionContext): Promis
 }
 
 /**
- * Make changes to the monitoring configuration associated with the MonitoringConfiguration tree item.
- * Changes are collected via a temporary file.
+ * Make changes to the monitoring configuration associated with the MonitoringConfiguration tree
+ * item. Changes are collected via a temporary file.
  * @param config the MonitoringConfiguration to be updated
  * @param context vscode.ExtensionContext
  * @param oc a JSON output channel to communicate errors to
@@ -215,7 +229,7 @@ export async function changeConnection(context: vscode.ExtensionContext): Promis
 export async function editMonitoringConfiguration(
   config: MonitoringConfiguration,
   context: vscode.ExtensionContext,
-  oc: vscode.OutputChannel
+  oc: vscode.OutputChannel,
 ): Promise<boolean> {
   // Fetch the current configuration details
   const existingConfig = await config.dt.extensionsV2
@@ -226,9 +240,11 @@ export async function editMonitoringConfiguration(
       return JSON.stringify(configDetails, undefined, 4);
     });
 
-  const headerContent = `
+  const headerContent =
+    `
 // This is your monitoring configuration. Make any changes as needed below.
-// Lines starting with '//' will be ignored. The configuration will be updated once you save and close this tab.`;
+// Lines starting with '//' will be ignored. The configuration will be updated ` +
+    "once you save and close this tab.";
 
   // Allow the user to make changes
   return await getConfigurationDetailsViaFile(headerContent, existingConfig, true, context).then(
@@ -252,7 +268,7 @@ export async function editMonitoringConfiguration(
         vscode.window.showInformationMessage("No changes were made. Operation cancelled.");
       }
       return false;
-    }
+    },
   );
 }
 
@@ -263,14 +279,14 @@ export async function editMonitoringConfiguration(
  * @param defaultDetails existing details as stringified JSON
  * @param rejectNoChanges if true, the promise is rejected if the file content is unchanged
  * @param context vscode.ExtensionContext
- * @returns a Promise that will either resolve with the stringified content of the configuration or will
- * reject with the message "No changes.".
+ * @returns a Promise that will either resolve with the stringified content of the configuration
+ * or will reject with the message "No changes.".
  */
 async function getConfigurationDetailsViaFile(
   headerContent: string,
   defaultDetails: string,
   rejectNoChanges: boolean = true,
-  context: vscode.ExtensionContext
+  context: vscode.ExtensionContext,
 ): Promise<string> {
   // Create a file to act as an interface for making changes
   const tempConfigFile = path.resolve(context.globalStorageUri.fsPath, "tempConfigFile.jsonc");
@@ -313,7 +329,9 @@ async function getConfigurationDetailsViaFile(
  * @param config the MonitoringConfiguration to be deleted
  * @returns the success of the operation
  */
-export async function deleteMonitoringConfiguration(config: MonitoringConfiguration): Promise<boolean> {
+export async function deleteMonitoringConfiguration(
+  config: MonitoringConfiguration,
+): Promise<boolean> {
   const confirm = await vscode.window.showQuickPick(["Yes", "No"], {
     title: `Delete configuration ${config.label}?`,
     canPickMany: false,
@@ -349,21 +367,26 @@ export async function deleteMonitoringConfiguration(config: MonitoringConfigurat
 export async function addMonitoringConfiguration(
   extension: DeployedExtension,
   context: vscode.ExtensionContext,
-  oc: vscode.OutputChannel
+  oc: vscode.OutputChannel,
 ) {
   // Create a monitoring configuration template
-  const extensionSchema = await extension.dt.extensionsV2.getExtensionSchema(extension.id, extension.extensionVersion);
+  const extensionSchema = await extension.dt.extensionsV2.getExtensionSchema(
+    extension.id,
+    extension.extensionVersion,
+  );
   const configObject = [{ value: createObjectFromSchema(extensionSchema), scope: "" }];
-  const headerContent = `
+  const headerContent =
+    `
 // This a simple monitoring configuration template. Make any changes as needed below.
-// Lines starting with '//' will be ignored. A configuration instance will be created once you save and close this tab.`;
+// Lines starting with '//' will be ignored. A configuration instance will be created ` +
+    "once you save and close this tab.";
 
   // Allow the user to make changes
   const response = await getConfigurationDetailsViaFile(
     headerContent,
     JSON.stringify(configObject, undefined, 4),
     false,
-    context
+    context,
   );
   return await extension.dt.extensionsV2
     .postMonitoringConfiguration(extension.id, JSON.parse(response))
