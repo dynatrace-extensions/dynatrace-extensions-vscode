@@ -16,7 +16,6 @@
 
 import open from "open";
 import * as vscode from "vscode";
-import { Entity } from "../dynatrace-api/interfaces/monitoredEntities";
 import { EnvironmentsTreeDataProvider } from "../treeViews/environmentsTreeView";
 import { CachedDataProvider } from "../utils/dataCaching";
 import { getBlockItemIndexAtLine, getParentBlocks } from "../utils/yamlParsing";
@@ -124,7 +123,7 @@ export class ScreenLensProvider implements vscode.CodeLensProvider {
         if (screenType === "details") {
           const entities = await tenant.dt.entitiesV2.list(`type("${entityType}")`, "now-5m");
           if (entities.length > 0) {
-            const entityId = (entities[0] as Entity).entityId;
+            const entityId = entities[0].entityId;
             await open(`${tenant.url}/ui/entity/${entityId}`);
           } else {
             await vscode.window.showErrorMessage(

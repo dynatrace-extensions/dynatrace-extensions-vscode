@@ -15,6 +15,7 @@
  */
 
 import { HttpClient } from "../http_client";
+import { MetricSeriesCollection } from "../interfaces/metrics";
 
 /**
  * Implementation of the Metrics V2 API
