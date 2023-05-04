@@ -1,20 +1,13 @@
 {
-	"compileOnSave": false,
-	"compilerOptions": {
-		"module": "commonjs",
-		"target": "ES2020",
-		"outDir": "out",
-		"lib": [
-			"ES2020", 
-			"DOM"
-		],
-		"sourceMap": true,
-		"rootDir": "src",
-		"strict": true,
-		"noFallthroughCasesInSwitch": true,
-		"useUnknownInCatchVariables": true,
-		"noImplicitReturns": false,
-		"esModuleInterop": true,
-	},
-	"exclude": ["out", "dist", "**/*.d.ts", "node_modules", "src/test"]
+  "compilerOptions": {
+    "module": "commonjs",
+    "target": "ES2020",
+    "outDir": "out",
+    "lib": ["ES2020", "DOM"],
+    "sourceMap": true,
+    "rootDir": "src",
+    "strict": false,
+    "esModuleInterop": false
+  },
+  "include": ["src/test/**/*.ts"]
 }

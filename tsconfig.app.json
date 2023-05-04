@@ -1,0 +1,13 @@
+{
+  "compileOnSave": false,
+  "compilerOptions": {
+    "strict": true,
+    "esModuleInterop": true,
+    "noFallthroughCasesInSwitch": true,
+    "useUnknownInCatchVariables": true,
+    "noImplicitReturns": false
+  },
+  "extends": ["./tsconfig.json"],
+  "include": ["src/**/*.ts"],
+  "exclude": ["src/test/**/*.ts"]
+}

@@ -14,7 +14,7 @@
   limitations under the License.
  */
 
-import open from "open";
+import * as open from "open";
 import * as vscode from "vscode";
 import { EnvironmentsTreeDataProvider } from "../treeViews/environmentsTreeView";
 import { CachedDataProvider } from "../utils/dataCaching";
