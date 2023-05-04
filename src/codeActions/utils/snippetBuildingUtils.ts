@@ -14,6 +14,7 @@
   limitations under the License.
  */
 
+import { ExtensionStub, TopologyType } from "../../interfaces/extensionMeta";
 import {
   getAllMetricsByFeatureSet,
   getEntityMetrics,
@@ -33,7 +34,65 @@ import {
   relationSnippet,
   screenSnippet,
 } from "./snippets";
-import { ExtensionStub, TopologyType } from "../../interfaces/extensionMeta";
+
+/**
+ * Indents a snippet by a given indentation level (indent is of two characters).
+ * @param snippet snippet to indent
+ * @param indent level of indentation required
+ * @param withNewline if true, a newline is added at the end of the snippet
+ * @returns the indentend snippet
+ */
+export function indentSnippet(
+  snippet: string,
+  indent: number,
+  withNewline: boolean = true,
+): string {
+  snippet = snippet
+    .split("\n")
+    .map(line => `${" ".repeat(indent + 2)}${line}`)
+    .join("\n");
+  if (withNewline) {
+    snippet += "\n";
+  }
+  return snippet;
+}
+
+/**
+ * Turns text into a "slug" representation.
+ * @param text
+ * @returns slug
+ */
+export function slugify(text: string): string {
+  return text
+    .toLowerCase()
+    .trim()
+    .replace(/[^a-z0-9\s_-]/g, "")
+    .replace(/[\s-]+/g, "_")
+    .replace(/^-+|-+$/g, "");
+}
+
+/**
+ * Builds a YAML snippet for a `chart`. This can be used in any section that supports charts,
+ * e.g. chartsCards, entitiesListCards, etc.
+ * @param metricKey metric key to use in the metric selector
+ * @param entityType entity type for this chart (used in metric selector)
+ * @param indent level of indentation required
+ * @param withNewline if true, a newline is added at the end of the snippet
+ * @returns the formatted and indented snippet
+ */
+export function buildGraphChartSnippet(
+  metricKey: string,
+  entityType: string,
+  indent: number,
+  withNewline: boolean = true,
+): string {
+  let snippet = graphChartSnippet;
+
+  snippet = snippet.replace(/<metric-key>/g, metricKey);
+  snippet = snippet.replace("<entity-type>", entityType);
+
+  return indentSnippet(snippet, indent, withNewline);
+}
 
 /**
  * Builds a YAML snippet for an action that sends to extension configuration.
@@ -219,7 +278,7 @@ export function buildChartCardSnippet(
   withNewline: boolean = true,
 ): string {
   let snippet = chartCardSnippet;
-  let charts = metrics.map(m => buildGraphChartSnippet(m, entityType, 0, false)).join("\n");
+  const charts = metrics.map(m => buildGraphChartSnippet(m, entityType, 0, false)).join("\n");
 
   snippet = snippet.replace("<card-key>", slugify(key));
   snippet = snippet.replace("<card-name>", `${featureSet} metrics`);
@@ -286,9 +345,9 @@ export function buildMetricMetadataSnippet(
   metricKey: string,
   displayName: string,
   description: string,
-  unit: string = "Unspecified",
   indent: number,
   withNewline: boolean = true,
+  unit: string = "Unspecified",
 ): string {
   let snippet = metricMetadataSnippet;
 
@@ -296,29 +355,6 @@ export function buildMetricMetadataSnippet(
   snippet = snippet.replace("<metric-name>", displayName);
   snippet = snippet.replace("<metric-description>", description);
   snippet = snippet.replace("<metric-unit>", unit);
-
-  return indentSnippet(snippet, indent, withNewline);
-}
-
-/**
- * Builds a YAML snippet for a `chart`. This can be used in any section that supports charts,
- * e.g. chartsCards, entitiesListCards, etc.
- * @param metricKey metric key to use in the metric selector
- * @param entityType entity type for this chart (used in metric selector)
- * @param indent level of indentation required
- * @param withNewline if true, a newline is added at the end of the snippet
- * @returns the formatted and indented snippet
- */
-export function buildGraphChartSnippet(
-  metricKey: string,
-  entityType: string,
-  indent: number,
-  withNewline: boolean = true,
-): string {
-  let snippet = graphChartSnippet;
-
-  snippet = snippet.replace(/<metric-key>/g, metricKey);
-  snippet = snippet.replace("<entity-type>", entityType);
 
   return indentSnippet(snippet, indent, withNewline);
 }
@@ -344,7 +380,7 @@ export function getAllEntitiesListsSnippet(entityType: string, extension: Extens
       false,
     ),
     ...relationships.map(rel => {
-      var relEntityName = getEntityName(rel.entity, extension) || rel.entity;
+      const relEntityName = getEntityName(rel.entity, extension) || rel.entity;
       return buildEntitiesListCardSnippet(
         `${entityType}-list-${rel.entity}`,
         5,
@@ -367,12 +403,16 @@ export function getAllEntitiesListsSnippet(entityType: string, extension: Extens
  * @returns yaml snippet
  */
 export function getAllChartCardsSnippet(entityType: string, extension: ExtensionStub): string {
-  const typeIdx = extension.topology.types.findIndex(type => type.name === entityType);
+  const types = extension.topology?.types;
+  if (!types) {
+    return "";
+  }
+  const typeIdx = types.findIndex(type => type.name === entityType);
   const entityMetrics = getEntityMetrics(typeIdx, extension);
   const cards: { key: string; featureSet: string; metrics: string[] }[] = [];
 
   getAllMetricsByFeatureSet(extension).forEach(fs => {
-    let metrics = fs.metrics.filter(m => entityMetrics.includes(m));
+    const metrics = fs.metrics.filter(m => entityMetrics.includes(m));
     if (metrics.length > 0) {
       cards.push({
         key: `${entityType}-charts-${fs.name}`,
@@ -397,8 +437,12 @@ export function getAllChartCardsSnippet(entityType: string, extension: Extension
  * @returns yaml snippet
  */
 export function getAllCardKeysSnippet(entityType: string, extension: ExtensionStub): string {
+  const types = extension.topology?.types;
+  if (!types) {
+    return "";
+  }
   const relationships = getRelationships(entityType, extension);
-  const typeIdx = extension.topology.types.findIndex(type => type.name === entityType);
+  const typeIdx = types.findIndex(type => type.name === entityType);
   const entityMetrics = getEntityMetrics(typeIdx, extension);
 
   return [
@@ -409,40 +453,4 @@ export function getAllCardKeysSnippet(entityType: string, extension: ExtensionSt
       rel => `- key: ${slugify(`${entityType}-list-${rel.entity}`)}\n  type: ENTITIES_LIST`,
     ),
   ].join("\n");
-}
-
-/**
- * Indents a snippet by a given indentation level (indent is of two characters).
- * @param snippet snippet to indent
- * @param indent level of indentation required
- * @param withNewline if true, a newline is added at the end of the snippet
- * @returns the indentend snippet
- */
-export function indentSnippet(
-  snippet: string,
-  indent: number,
-  withNewline: boolean = true,
-): string {
-  snippet = snippet
-    .split("\n")
-    .map(line => `${" ".repeat(indent + 2)}${line}`)
-    .join("\n");
-  if (withNewline) {
-    snippet += "\n";
-  }
-  return snippet;
-}
-
-/**
- * Turns text into a "slug" representation.
- * @param text
- * @returns slug
- */
-export function slugify(text: string): string {
-  return text
-    .toLowerCase()
-    .trim()
-    .replace(/[^a-z0-9\s_-]/g, "")
-    .replace(/[\s-]+/g, "_")
-    .replace(/^-+|-+$/g, "");
 }

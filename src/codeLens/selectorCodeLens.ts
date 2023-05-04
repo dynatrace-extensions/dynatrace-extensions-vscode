@@ -15,7 +15,6 @@
  */
 
 import * as vscode from "vscode";
-import * as yaml from "yaml";
 import { ExtensionStub } from "../interfaces/extensionMeta";
 import { CachedDataProvider } from "../utils/dataCaching";
 import { resolveSelectorTemplate, ValidationStatus } from "./utils/selectorUtils";
@@ -55,8 +54,8 @@ class ValidationStatusLens extends vscode.CodeLens {
         };
       case "invalid":
         return {
-          title: `❌ (${status.error?.code})`,
-          tooltip: `Selector is invalid. ${status.error?.message}`,
+          title: `❌ (${status.error?.code ?? ""})`,
+          tooltip: `Selector is invalid. ${status.error?.message ?? ""}`,
           command: "",
           arguments: [],
         };
@@ -144,20 +143,16 @@ export class SelectorCodeLensProvider implements vscode.CodeLensProvider {
   /**
    * Provides the actual code lenses relevant to each valid section of the extension yaml.
    * @param document VSCode Text Document - this should be the extension.yaml
-   * @param token Cancellation Token
    * @returns list of code lenses
    */
-  public async provideCodeLenses(
-    document: vscode.TextDocument,
-    token: vscode.CancellationToken,
-  ): Promise<vscode.CodeLens[]> {
+  public async provideCodeLenses(document: vscode.TextDocument): Promise<vscode.CodeLens[]> {
     this.codeLenses = [];
     const regex = new RegExp(this.regex);
     const text = document.getText();
-    var extension: ExtensionStub;
+    let extension: ExtensionStub;
 
     // Honor the user's settings
-    if (!vscode.workspace.getConfiguration("dynatrace", null).get(this.controlSetting) as boolean) {
+    if (!vscode.workspace.getConfiguration("dynatrace", null).get(this.controlSetting)) {
       return [];
     }
     // Load yaml only for entity selectors
@@ -193,9 +188,9 @@ export class SelectorCodeLensProvider implements vscode.CodeLensProvider {
       const position = new vscode.Position(line.lineNumber, indexOf);
       const range = document.getWordRangeAtPosition(position, new RegExp(this.regex));
       if (range) {
-        var selector = line.text.split(`${this.matchString} `)[1];
+        let selector = line.text.split(`${this.matchString} `)[1];
         if (selector.includes("$(entityConditions)")) {
-          selector = resolveSelectorTemplate(selector, extension!, document, position);
+          selector = resolveSelectorTemplate(selector, extension, document, position);
         }
         return [
           new SelectorRunnerLens(range, selector, this.selectorType),

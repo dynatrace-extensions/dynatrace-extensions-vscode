@@ -14,25 +14,15 @@
   limitations under the License.
  */
 
-import { DynatraceAPIErrorParams } from "./interfaces/dynatrace";
-
-/**
- * Custom error implementation to facilitate passing the Dynatrace error
- * envelope as a parameter.
- */
-export class DynatraceAPIError extends Error {
-  _errorParams: DynatraceAPIErrorParams;
-
-  /**
-   * @param message error message
-   * @param errorParams any optional parameters
-   */
-  constructor(message: string, errorParams: DynatraceAPIErrorParams) {
-    super(message);
-    this._errorParams = errorParams;
-  }
-
-  get errorParams() {
-    return this._errorParams;
-  }
+export interface CredentialsResponseElement {
+  name: string;
+  id: string;
+  description: string;
+  owner: string;
+  ownerAccessOnly: boolean;
+  scope?: "ALL" | "EXTENSION" | "SYNTHETIC" | "UNKNOWN";
+  externalVault?: unknown;
+  credentialUsageSummary: unknown;
+  scopes?: "ALL" | "EXTENSION" | "SYNTHETIC" | "UNKNOWN";
+  type: "CERTIFICATE" | "PUBLIC_CERTIFICATE" | "TOKEN" | "UNKNOWN" | "USERNAME_PASSWORD";
 }

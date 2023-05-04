@@ -33,7 +33,8 @@ export class FastModeStatus {
     vscode.commands.registerCommand(this.commandId, () => this.outputChannel.show());
     this.statusBarItem.command = this.commandId;
     this.updateStatusBar(
-      vscode.workspace.getConfiguration("dynatrace", null).get("fastDevelopmentMode") as boolean,
+      vscode.workspace.getConfiguration("dynatrace", null).get<boolean>("fastDevelopmentMode") ??
+        false,
     );
   }
 
@@ -60,7 +61,7 @@ export class FastModeStatus {
         this.statusBarItem.text += ` | Version ${version}`;
       }
       if (passing !== undefined) {
-        this.statusBarItem.text += ` | ${passing ? "✅" : `$(error)`}`;
+        this.statusBarItem.text += ` | ${passing ? "✅" : "$(error)"}`;
       }
       this.statusBarItem.tooltip =
         passing === undefined

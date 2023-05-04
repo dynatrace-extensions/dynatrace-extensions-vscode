@@ -15,7 +15,6 @@
  */
 
 import * as vscode from "vscode";
-import * as yaml from "yaml";
 import { CachedDataProvider } from "../utils/dataCaching";
 import { WMIQueryResultsPanel } from "../webviews/wmiQueryResults";
 import { WmiQueryResult } from "./utils/wmiUtils";
@@ -72,22 +71,20 @@ class WmiQueryResultLens extends vscode.CodeLens {
    * Callback function to update the code lens with the results of the query
    * */
   updateResult = (result: WmiQueryResult) => {
-    switch (result.error) {
-      case true:
-        this.command = {
-          title: "❌ Query failed",
-          tooltip: `Query failed. ${result.errorMessage}`,
-          command: "",
-          arguments: [],
-        };
-        break;
-      case false:
-        this.command = {
-          title: `📊 ${result.results.length} instances found`,
-          tooltip: "",
-          command: "",
-          arguments: [result],
-        };
+    if (result.error && result.errorMessage) {
+      this.command = {
+        title: "❌ Query failed",
+        tooltip: `Query failed. ${result.errorMessage}`,
+        command: "",
+        arguments: [],
+      };
+    } else {
+      this.command = {
+        title: `📊 ${result.results.length} instances found`,
+        tooltip: "",
+        command: "",
+        arguments: [result],
+      };
     }
   };
 }
@@ -114,10 +111,7 @@ export class WmiCodeLensProvider implements vscode.CodeLensProvider {
     this.cachedData = cachedDataProvider;
   }
 
-  provideCodeLenses(
-    document: vscode.TextDocument,
-    token: vscode.CancellationToken,
-  ): vscode.ProviderResult<vscode.CodeLens[]> {
+  provideCodeLenses(document: vscode.TextDocument): vscode.ProviderResult<vscode.CodeLens[]> {
     if (!this.selfUpdateTriggered) {
       // Clear the lenses, keep a saved copy of the old ones in case lines were moved around
       // We only do this if the lenses were not updated by us
@@ -131,15 +125,13 @@ export class WmiCodeLensProvider implements vscode.CodeLensProvider {
     this.selfUpdateTriggered = false;
     const text = document.getText();
 
-    // Return early because it is cheaper than parsing the yaml
+    const extension = this.cachedData.getExtensionYaml(text);
     if (
-      !text.includes("wmi:") ||
+      !extension.wmi ||
       !vscode.workspace.getConfiguration("dynatrace", null).get("wmiCodeLens")
     ) {
       return [];
     }
-
-    const extension = this.cachedData.getExtensionYaml(text);
 
     // Find all query: definitions
     // They can be under the list of groups, or under the list subgroups
@@ -155,7 +147,7 @@ export class WmiCodeLensProvider implements vscode.CodeLensProvider {
     //     - subgroup: Queue
     //       query: SELECT Name, MessagesinQueue, BytesInQueue FROM Win32_PerfRawData_msmq_MSMQQueue
 
-    for (const group of extension.wmi!) {
+    for (const group of extension.wmi) {
       if (group.query) {
         const createdEarlier = this.previousWMIQueryLens.find(
           lens => lens.wmiQuery === group.query,
@@ -190,7 +182,7 @@ export class WmiCodeLensProvider implements vscode.CodeLensProvider {
   createLens(lineToMatch: string, document: vscode.TextDocument, createdEarlier?: WmiQueryLens) {
     // If this exact query string was already added, return
     // Needed in the rare case the user has the same query more than once
-    if (this.wmiQueryLens.find(lens => (lens as WmiQueryLens).wmiQuery === lineToMatch)) {
+    if (this.wmiQueryLens.find(lens => lens.wmiQuery === lineToMatch)) {
       return;
     }
     const text = document.getText();
@@ -207,26 +199,24 @@ export class WmiCodeLensProvider implements vscode.CodeLensProvider {
         document.positionAt(match.index + match.line.length),
       );
 
-      if (range) {
-        if (createdEarlier) {
-          // Update the range (this can change if the user moves lines around)
-          createdEarlier.range = range;
-          this.wmiQueryLens.push(createdEarlier);
+      if (createdEarlier) {
+        // Update the range (this can change if the user moves lines around)
+        createdEarlier.range = range;
+        this.wmiQueryLens.push(createdEarlier);
 
-          // Find the previous result lens and update the range
-          const previousResultLens = this.previousWMIQueryResultLens.find(
-            lens => lens.wmiQuery === lineToMatch,
-          );
-          if (previousResultLens) {
-            // This is always true
-            previousResultLens.range = range;
-            this.wmiQueryResultLens.push(previousResultLens);
-          }
-        } else {
-          // This was not created earlier, create a new lens
-          this.wmiQueryLens.push(new WmiQueryLens(range, lineToMatch));
-          this.wmiQueryResultLens.push(new WmiQueryResultLens(range, lineToMatch));
+        // Find the previous result lens and update the range
+        const previousResultLens = this.previousWMIQueryResultLens.find(
+          lens => lens.wmiQuery === lineToMatch,
+        );
+        if (previousResultLens) {
+          // This is always true
+          previousResultLens.range = range;
+          this.wmiQueryResultLens.push(previousResultLens);
         }
+      } else {
+        // This was not created earlier, create a new lens
+        this.wmiQueryLens.push(new WmiQueryLens(range, lineToMatch));
+        this.wmiQueryResultLens.push(new WmiQueryResultLens(range, lineToMatch));
       }
     }
   }

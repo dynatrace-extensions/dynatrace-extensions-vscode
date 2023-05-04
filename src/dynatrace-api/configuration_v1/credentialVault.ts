@@ -14,8 +14,9 @@
   limitations under the License.
  */
 
-import { HttpClient } from "../http_client";
 import { util } from "node-forge";
+import { HttpClient } from "../http_client";
+import { CredentialsResponseElement } from "../interfaces/credentialVault";
 
 /**
  * Implementation of the Dynatrace Credential Vault API.
@@ -37,8 +38,8 @@ export class CredentialVaultService {
    * @param description the description associated with the credential
    * @returns response data
    */
-  async postCertificate(certificate: string, name: string, description: string = ""): Promise<any> {
-    var payload = {
+  async postCertificate(certificate: string, name: string, description: string = "") {
+    const payload = {
       name: name,
       description: description,
       ownerAccessOnly: true,
@@ -48,7 +49,7 @@ export class CredentialVaultService {
       password: util.encode64("PasswordNotSupported"),
       certificateFormat: "PEM",
     };
-    return this.httpClient.makeRequest(this.endpoint, payload, "POST");
+    return this.httpClient.makeRequest<{ id: string }>(this.endpoint, payload, "POST");
   }
 
   /**
@@ -65,8 +66,8 @@ export class CredentialVaultService {
     certificate: string,
     name: string,
     description: string = "",
-  ): Promise<any> {
-    var payload = {
+  ) {
+    const payload = {
       name: name,
       description: description,
       ownerAccessOnly: true,
@@ -84,7 +85,9 @@ export class CredentialVaultService {
    * @param certificateId ID of the credential to retrieve
    * @returns response data
    */
-  async getCertificate(certificateId: string): Promise<any> {
-    return this.httpClient.makeRequest(`${this.endpoint}/${certificateId}`);
+  async getCertificate(certificateId: string) {
+    return this.httpClient.makeRequest<CredentialsResponseElement>(
+      `${this.endpoint}/${certificateId}`,
+    );
   }
 }

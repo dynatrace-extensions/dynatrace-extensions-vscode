@@ -20,12 +20,13 @@
 
 import Axios from "axios";
 import * as yaml from "yaml";
-import { EnvironmentsTreeDataProvider } from "../treeViews/environmentsTreeView";
-import { ValidationStatus } from "../codeLens/utils/selectorUtils";
 import { PromData } from "../codeLens/prometheusScraper";
+import { ValidationStatus } from "../codeLens/utils/selectorUtils";
 import { WmiQueryResult } from "../codeLens/utils/wmiUtils";
-import { fetchOID, OidInformation } from "./snmp";
+import { EntityType } from "../dynatrace-api/interfaces/monitoredEntities";
 import { ExtensionStub } from "../interfaces/extensionMeta";
+import { EnvironmentsTreeDataProvider } from "../treeViews/environmentsTreeView";
+import { fetchOID, OidInformation } from "./snmp";
 
 /**
  * A utility class for caching reusable data that other components depend on.
@@ -48,7 +49,7 @@ export class CachedDataProvider {
    */
   constructor(environments: EnvironmentsTreeDataProvider) {
     this.environments = environments;
-    this.loadBuiltinEntities();
+    this.loadBuiltinEntities().catch(() => {});
     this.loadBaristaIcons();
   }
 
@@ -74,8 +75,9 @@ export class CachedDataProvider {
    * @returns last known validation status
    */
   public getSelectorStatus(selector: string): ValidationStatus {
-    let status = this.selectorStatuses[selector];
-    return status ? status : { status: "unknown" };
+    return selector in this.selectorStatuses
+      ? this.selectorStatuses[selector]
+      : { status: "unknown" };
   }
 
   /**
@@ -91,9 +93,9 @@ export class CachedDataProvider {
    * Gets a list of Dynatrace built-in entities and their details.
    * @returns list of entities
    */
-  public getBuiltinEntities(): EntityType[] {
+  public async getBuiltinEntities(): Promise<EntityType[]> {
     if (this.builtinEntities.length === 0) {
-      this.loadBuiltinEntities();
+      await this.loadBuiltinEntities();
     }
 
     return this.builtinEntities;
@@ -116,9 +118,9 @@ export class CachedDataProvider {
    * the currently connected environment, if any.
    */
   private async loadBuiltinEntities() {
-    this.environments.getDynatraceClient().then(dt => {
+    await this.environments.getDynatraceClient().then(async dt => {
       if (dt) {
-        dt.entitiesV2.listTypes().then((types: EntityType[]) => {
+        await dt.entitiesV2.listTypes().then((types: EntityType[]) => {
           if (types.length > 0) {
             this.builtinEntities = types;
           }
@@ -134,6 +136,9 @@ export class CachedDataProvider {
   private loadBaristaIcons() {
     const publicURL = "https://barista.dynatrace.com/data/resources/icons.json";
     const internalURL = "https://barista.lab.dynatrace.org/data/resources/icons.json";
+    interface BaristaResponse {
+      icons?: BaristaMeta[];
+    }
     interface BaristaMeta {
       title: string;
       public: boolean;
@@ -141,14 +146,14 @@ export class CachedDataProvider {
       name: string;
     }
 
-    Axios.get(internalURL)
+    Axios.get<BaristaResponse>(internalURL)
       .then(res => {
         if (res.data.icons) {
           this.baristaIcons = res.data.icons.map((i: BaristaMeta) => i.name);
         }
       })
       .catch(async () => {
-        Axios.get(publicURL)
+        Axios.get<BaristaResponse>(publicURL)
           .then(res => {
             if (res.data.icons) {
               this.baristaIcons = res.data.icons.map((i: BaristaMeta) => i.name);
@@ -156,7 +161,7 @@ export class CachedDataProvider {
           })
           .catch(err => {
             console.log("Barista not accessible.");
-            console.log(err.message);
+            console.log((err as Error).message);
           });
       });
   }
@@ -170,7 +175,7 @@ export class CachedDataProvider {
   }
 
   public async getSingleOidInfo(oid: string): Promise<OidInformation> {
-    if (!this.oidInfo[oid]) {
+    if (!(oid in this.oidInfo)) {
       this.oidInfo[oid] = await fetchOID(oid);
     }
 
@@ -178,8 +183,9 @@ export class CachedDataProvider {
   }
 
   public async getBulkOidsInfo(oids: string[]): Promise<OidInformation[]> {
-    const infos = oids.map(oid => this.getSingleOidInfo(oid));
-    return await Promise.all(infos);
+    const infoPromises = oids.map(oid => this.getSingleOidInfo(oid));
+    const infos = await Promise.all(infoPromises);
+    return infos;
   }
 
   public getSnmpData(): Record<string, OidInformation> {
@@ -187,14 +193,16 @@ export class CachedDataProvider {
   }
 
   public getExtensionYaml(extension: string): ExtensionStub {
-    if (this.extensionText && this.extensionText === extension) {
-      return this.extensionYaml!;
+    if (this.extensionText && this.extensionText === extension && this.extensionYaml) {
+      return this.extensionYaml;
     }
 
     this.extensionText = extension;
     this.extensionLineCounter = new yaml.LineCounter();
-    this.extensionYaml = yaml.parse(extension, { lineCounter: this.extensionLineCounter });
-    return this.extensionYaml!;
+    this.extensionYaml = yaml.parse(extension, {
+      lineCounter: this.extensionLineCounter,
+    }) as ExtensionStub;
+    return this.extensionYaml;
   }
 
   public getStringifiedExtension(extensionYaml?: ExtensionStub): string {

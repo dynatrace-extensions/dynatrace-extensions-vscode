@@ -35,7 +35,7 @@ export class WMIQueryResultsPanel {
     const panel = vscode.window.createWebviewPanel(
       WMIQueryResultsPanel.viewType,
       "WMI Query results",
-      column || vscode.ViewColumn.Two,
+      column ?? vscode.ViewColumn.Two,
       { enableScripts: true },
     );
 
@@ -49,7 +49,7 @@ export class WMIQueryResultsPanel {
 
     // Update the content based on view changes
     this._panel.onDidChangeViewState(
-      e => {
+      () => {
         if (this._panel.visible) {
           this._update(data);
         }
@@ -195,10 +195,10 @@ export class WMIQueryResultsPanel {
     `;
 
     if (data.error) {
-      return baseHtml.replace("<!--result_error-->", `${data.errorMessage}`);
+      return baseHtml.replace("<!--result_error-->", `${String(data.errorMessage)}`);
     }
 
-    if (!data.results || data.results.length === 0) {
+    if (data.results.length === 0) {
       return baseHtml;
     }
 

@@ -18,13 +18,13 @@
  * UTILITIES FOR CHECKING CONDITIONS AND RETURNING A SIMPLE STATUS OF THE CHECK
  ********************************************************************************/
 
-import * as path from "path";
-import * as vscode from "vscode";
-import { existsSync, readdirSync, readFileSync } from "fs";
-import { EnvironmentsTreeDataProvider } from "../treeViews/environmentsTreeView";
-import axios from "axios";
-import { getExtensionFilePath, resolveRealPath } from "./fileSystem";
 import { ExecOptions } from "child_process";
+import { existsSync, readdirSync, readFileSync } from "fs";
+import * as path from "path";
+import axios from "axios";
+import * as vscode from "vscode";
+import { EnvironmentsTreeDataProvider } from "../treeViews/environmentsTreeView";
+import { getExtensionFilePath, resolveRealPath } from "./fileSystem";
 import { runCommand } from "./subprocesses";
 
 /**
@@ -33,26 +33,28 @@ import { runCommand } from "./subprocesses";
  * @param settings VSCode settings IDs
  * @returns check status
  */
-export function checkSettings(...settings: string[]): boolean {
-  let config = vscode.workspace.getConfiguration("dynatrace", null);
+export async function checkSettings(...settings: string[]): Promise<boolean> {
+  const config = vscode.workspace.getConfiguration("dynatrace", null);
   let status = true;
-  settings.forEach(setting => {
+  for (const setting of settings) {
     if (!config.get(setting)) {
       console.log(`Setting ${setting} not found. Check failed.`);
-      vscode.window
+      await vscode.window
         .showErrorMessage(
           `Missing one or more required settings. Check ${setting}`,
           "Open settings",
         )
-        .then(opt => {
+        .then(async opt => {
           if (opt === "Open settings") {
-            vscode.commands.executeCommand("workbench.action.openSettings", "Dynatrace");
+            await vscode.commands.executeCommand("workbench.action.openSettings", "Dynatrace");
           }
         });
-      status = false;
     }
-  });
-  console.log(`Check - are required settings present? > ${status}`);
+    status = false;
+    break;
+  }
+
+  console.log(`Check - are required settings present? > ${String(status)}`);
   return status;
 }
 
@@ -61,16 +63,18 @@ export function checkSettings(...settings: string[]): boolean {
  * @param environmentsTree environments tree data provider
  * @returns check status
  */
-export function checkEnvironmentConnected(environmentsTree: EnvironmentsTreeDataProvider): boolean {
-  var status = true;
-  if (!environmentsTree.getCurrentEnvironment()) {
-    vscode.window.showErrorMessage(
+export async function checkEnvironmentConnected(
+  environmentsTree: EnvironmentsTreeDataProvider,
+): Promise<boolean> {
+  let status = true;
+  if (!(await environmentsTree.getCurrentEnvironment())) {
+    await vscode.window.showErrorMessage(
       "You must be connected to a Dynatrace Environment to use this command.",
     );
     status = false;
   }
 
-  console.log(`Check - is an environment connected? > ${status}`);
+  console.log(`Check - is an environment connected? > ${String(status)}`);
   return status;
 }
 
@@ -79,21 +83,21 @@ export function checkEnvironmentConnected(environmentsTree: EnvironmentsTreeData
  * @param suppressMessaging if false, a message notification will be displayed to the user
  * @returns check status
  */
-export function checkWorkspaceOpen(suppressMessaging: boolean = false): boolean {
-  var status = true;
+export async function checkWorkspaceOpen(suppressMessaging: boolean = false): Promise<boolean> {
+  let status = true;
   if (!vscode.workspace.workspaceFolders || vscode.workspace.workspaceFolders.length === 0) {
     if (!suppressMessaging) {
-      vscode.window
+      await vscode.window
         .showErrorMessage("You must be inside a workspace to use this command.", "Open folder")
-        .then(opt => {
+        .then(async opt => {
           if (opt === "Open folder") {
-            vscode.commands.executeCommand("vscode.openFolder");
+            await vscode.commands.executeCommand("vscode.openFolder");
           }
         });
     }
     status = false;
   }
-  console.log(`Check - is a workspace open? > ${status}`);
+  console.log(`Check - is a workspace open? > ${String(status)}`);
   return status;
 }
 
@@ -103,16 +107,16 @@ export function checkWorkspaceOpen(suppressMessaging: boolean = false): boolean 
  * @param showWarningMessage when true, displays a warning message to the user
  * @returns check status
  */
-export function isExtensionsWorkspace(
+export async function isExtensionsWorkspace(
   context: vscode.ExtensionContext,
   showWarningMessage: boolean = true,
-): boolean {
-  var status = false;
+): Promise<boolean> {
+  let status = false;
   if (context.storageUri && existsSync(context.storageUri.fsPath)) {
     const extensionYaml = getExtensionFilePath();
     if (!extensionYaml) {
       if (showWarningMessage) {
-        vscode.window.showWarningMessage(
+        await vscode.window.showWarningMessage(
           "This command must be run from an Extensions Workspace. " +
             "Ensure your `extension` folder is within the root of the workspace.",
         );
@@ -122,7 +126,7 @@ export function isExtensionsWorkspace(
     }
   }
 
-  console.log(`Check - is this an extensions workspace? > ${status}`);
+  console.log(`Check - is this an extensions workspace? > ${String(status)}`);
   return status;
 }
 
@@ -135,11 +139,15 @@ export function isExtensionsWorkspace(
 export async function checkOverwriteCertificates(
   context: vscode.ExtensionContext,
 ): Promise<boolean> {
-  var status = true;
-  var certsDir = path.join(context.storageUri!.fsPath, "certificates");
+  let status = true;
+  const storageUri = context.storageUri?.fsPath;
+  if (!storageUri) {
+    return false;
+  }
+  const certsDir = path.join(storageUri, "certificates");
   if (existsSync(certsDir)) {
     if (existsSync(path.join(certsDir, "dev.pem")) || existsSync(path.join(certsDir, "ca.pem"))) {
-      var choice = await vscode.window.showQuickPick(["Yes", "No"], {
+      const choice = await vscode.window.showQuickPick(["Yes", "No"], {
         canPickMany: false,
         title: "Workspace already has certificates.",
         placeHolder: "Would you like to generate new ones?",
@@ -150,7 +158,7 @@ export async function checkOverwriteCertificates(
       }
     }
   }
-  console.log(`Check - can continue and/or overwrite certificates? > ${status}`);
+  console.log(`Check - can continue and/or overwrite certificates? > ${String(status)}`);
   return status;
 }
 
@@ -161,45 +169,48 @@ export async function checkOverwriteCertificates(
  * @param context VSCode Extension Context
  * @returns status of check
  */
-export function checkCertificateExists(type: "ca" | "dev" | "all"): boolean {
-  var allExist = true;
-  var devCertkeyPath = vscode.workspace
+export async function checkCertificateExists(type: "ca" | "dev" | "all"): Promise<boolean> {
+  let allExist = true;
+  const devCertkeyPath = vscode.workspace
     .getConfiguration("dynatrace", null)
-    .get("developerCertkeyLocation");
-  var caCertPath = vscode.workspace
+    .get<string>("developerCertkeyLocation");
+  const caCertPath = vscode.workspace
     .getConfiguration("dynatrace", null)
-    .get("rootOrCaCertificateLocation");
+    .get<string>("rootOrCaCertificateLocation");
 
   if (type === "ca" || type === "all") {
     if (!caCertPath) {
       allExist = false;
-    } else if (!existsSync(resolveRealPath(caCertPath as string))) {
+    } else if (!existsSync(resolveRealPath(caCertPath))) {
       allExist = false;
     }
   }
   if (type === "dev" || type === "all") {
     if (!devCertkeyPath) {
       allExist = false;
-    } else if (!existsSync(resolveRealPath(devCertkeyPath as string))) {
+    } else if (!existsSync(resolveRealPath(devCertkeyPath))) {
       allExist = false;
     }
   }
-  console.log(`Check - ${type.toUpperCase()} certificates exist? > ${allExist}`);
+  console.log(`Check - ${type.toUpperCase()} certificates exist? > ${String(allExist)}`);
 
   if (!allExist) {
-    vscode.window
+    await vscode.window
       .showErrorMessage(
         "Workspace does not have the required certificates associated with it.",
         "Generate new ones",
         "Open settings",
       )
-      .then(opt => {
+      .then(async opt => {
         switch (opt) {
           case "Generate new ones":
-            vscode.commands.executeCommand("dt-ext-copilot.generateCertificates");
+            await vscode.commands.executeCommand("dt-ext-copilot.generateCertificates");
             break;
           case "Open settings":
-            vscode.commands.executeCommand("workbench.action.openSettings", "Dynatrace Location");
+            await vscode.commands.executeCommand(
+              "workbench.action.openSettings",
+              "Dynatrace Location",
+            );
             break;
         }
       });
@@ -212,11 +223,13 @@ export function checkCertificateExists(type: "ca" | "dev" | "all"): boolean {
  * whether it has any .zip archives within its contents.
  * @returns status of check
  */
-export function checkExtensionZipExists(): boolean {
+export async function checkExtensionZipExists(): Promise<boolean> {
   if (vscode.workspace.workspaceFolders) {
-    var distDir = path.join(vscode.workspace.workspaceFolders[0].uri.fsPath, "dist");
+    const distDir = path.join(vscode.workspace.workspaceFolders[0].uri.fsPath, "dist");
     if (readdirSync(distDir).filter(i => i.endsWith(".zip")).length === 0) {
-      vscode.window.showErrorMessage("No extension archive was found. Try building one first.");
+      await vscode.window.showErrorMessage(
+        "No extension archive was found. Try building one first.",
+      );
       return false;
     }
     return true;
@@ -229,11 +242,15 @@ export function checkExtensionZipExists(): boolean {
  * @param url the URL to check
  * @returns status of check
  */
-export async function checkUrlReachable(url: string): Promise<Boolean> {
-  return await axios
+export async function checkUrlReachable(url: string): Promise<boolean> {
+  const status = await axios
     .get(url)
     .then(res => res.status === 200)
     .catch(() => false);
+
+  console.log(`Check - is URL ${url} reachable? > ${String(status)}`);
+
+  return status;
 }
 
 /**
@@ -241,7 +258,7 @@ export async function checkUrlReachable(url: string): Promise<Boolean> {
  * exists and the details map back to the Dynatrace Artifactory server.
  * @returns status of check
  */
-export async function checkDtInternalProperties(): Promise<Boolean> {
+export async function checkDtInternalProperties(): Promise<boolean> {
   let status = false;
   // Must have gradle.properties file or Jenkinsfile (for python)
   let hasGradleProps = false;
@@ -287,7 +304,7 @@ export async function checkDtInternalProperties(): Promise<Boolean> {
     }
   }
 
-  console.log(`Check - is this an internal Dynatrace repo? > ${status}`);
+  console.log(`Check - is this an internal Dynatrace repo? > ${String(status)}`);
 
   return status;
 }
@@ -302,7 +319,7 @@ export function checkOneAgentInstalled(): boolean {
   const oaLinPath = "/var/lib/dynatrace/oneagent/agent/config";
   const status = process.platform === "win32" ? existsSync(oaWinPath) : existsSync(oaLinPath);
 
-  console.log(`Check - is OneAgent installed locally? > ${status}`);
+  console.log(`Check - is OneAgent installed locally? > ${String(status)}`);
   return status;
 }
 
@@ -316,7 +333,7 @@ export function checkActiveGateInstalled(): boolean {
   const agLinPath = "/var/lib/dynatrace/remotepluginmodule/agent/conf";
   const status = process.platform === "win32" ? existsSync(agWinPath) : existsSync(agLinPath);
 
-  console.log(`Check - is ActiveGate installed locally? > ${status}`);
+  console.log(`Check - is ActiveGate installed locally? > ${String(status)}`);
   return status;
 }
 
@@ -333,7 +350,11 @@ export async function checkDtSdkPresent(
   cancelToken?: vscode.CancellationToken,
   envOptions?: ExecOptions,
 ): Promise<boolean> {
-  return await runCommand("dt-sdk --help", oc, cancelToken, envOptions)
+  const status = await runCommand("dt-sdk --help", oc, cancelToken, envOptions)
     .then(() => true)
     .catch(() => false);
+
+  console.log(`Check - Is dt-sdk available? > ${String(status)}`);
+
+  return status;
 }

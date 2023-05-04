@@ -35,12 +35,10 @@ export class IconCompletionProvider implements vscode.CompletionItemProvider {
   async provideCompletionItems(
     document: vscode.TextDocument,
     position: vscode.Position,
-    token: vscode.CancellationToken,
-    context: vscode.CompletionContext,
   ): Promise<vscode.CompletionItem[]> {
-    var completionItems: vscode.CompletionItem[] = [];
-    var parentBlocks = getParentBlocks(position.line, document.getText());
-    var line = document.lineAt(position.line).text.substring(0, position.character);
+    const completionItems: vscode.CompletionItem[] = [];
+    const parentBlocks = getParentBlocks(position.line, document.getText());
+    const line = document.lineAt(position.line).text.substring(0, position.character);
 
     this.baristaIcons = this.cachedData.getBaristaIcons();
 

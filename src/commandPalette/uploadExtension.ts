@@ -16,10 +16,11 @@
 
 import { lstatSync, readdirSync, readFileSync } from "fs";
 import * as path from "path";
-import * as vscode from "vscode";
 import AdmZip = require("adm-zip");
+import * as vscode from "vscode";
 import { Dynatrace } from "../dynatrace-api/dynatrace";
 import { DynatraceAPIError } from "../dynatrace-api/errors";
+import { loopSafeWait } from "../utils/code";
 import { CachedDataProvider } from "../utils/dataCaching";
 
 /**
@@ -32,14 +33,18 @@ import { CachedDataProvider } from "../utils/dataCaching";
  */
 export async function uploadExtension(dt: Dynatrace, cachedData: CachedDataProvider) {
   // Get the most recent entry in dist folder
-  var distDir = path.join(vscode.workspace.workspaceFolders![0].uri.fsPath, "dist");
-  var extensionZip = readdirSync(distDir)
+  const rootPath = vscode.workspace.workspaceFolders?.[0].uri.fsPath;
+  if (!rootPath) {
+    return;
+  }
+  const distDir = path.join(rootPath, "dist");
+  const extensionZip = readdirSync(distDir)
     .filter(file => file.endsWith(".zip") && lstatSync(path.join(distDir, file)).isFile())
     .map(file => ({ file, mtime: lstatSync(path.join(distDir, file)).mtime }))
     .sort((a, b) => b.mtime.getTime() - a.mtime.getTime())[0].file;
 
   // Browse extension archive and extract the extension name and version
-  var zip = new AdmZip(path.join(distDir, extensionZip));
+  let zip = new AdmZip(path.join(distDir, extensionZip));
   zip = new AdmZip(
     zip
       .getEntries()
@@ -57,30 +62,30 @@ export async function uploadExtension(dt: Dynatrace, cachedData: CachedDataProvi
   const extensionName = extension.name;
 
   // Check for maximum number of allowed versions and prompt for deletion
-  var existingVersions = await dt.extensionsV2.listVersions(extensionName).catch(err => {
+  const existingVersions = await dt.extensionsV2.listVersions(extensionName).catch(() => {
     return [];
   });
   if (existingVersions.length >= 10) {
-    var choice = await vscode.window.showWarningMessage(
+    const choice = await vscode.window.showWarningMessage(
       "Maximum number of extensions detected. Would you like to remove the last one?",
       "Yes",
       "No",
     );
     if (choice !== "Yes") {
-      vscode.window.showErrorMessage("Operation cancelled.");
+      await vscode.window.showErrorMessage("Operation cancelled.");
       return;
     }
 
     // Delete the oldest version
     const success = await dt.extensionsV2
       .deleteVersion(extensionName, existingVersions[0].version)
-      .then(() => {
-        vscode.window.showInformationMessage("Oldest version removed successfully");
+      .then(async () => {
+        await vscode.window.showInformationMessage("Oldest version removed successfully");
         return true;
       })
-      .catch(err => {
+      .catch(async () => {
         // Could not delete oldest version, prompt user to select another one
-        vscode.window
+        await vscode.window
           .showQuickPick(
             dt.extensionsV2
               .listVersions(extensionName)
@@ -97,12 +102,14 @@ export async function uploadExtension(dt: Dynatrace, cachedData: CachedDataProvi
             if (version) {
               dt.extensionsV2
                 .deleteVersion(extensionName, version)
-                .then(() => {
-                  vscode.window.showInformationMessage(`Version ${version} removed successfully`);
+                .then(async () => {
+                  await vscode.window.showInformationMessage(
+                    `Version ${version} removed successfully`,
+                  );
                   return true;
                 })
-                .catch(err => {
-                  vscode.window.showErrorMessage(err.message);
+                .catch(async err => {
+                  await vscode.window.showErrorMessage((err as Error).message);
                   return false;
                 });
             }
@@ -115,43 +122,46 @@ export async function uploadExtension(dt: Dynatrace, cachedData: CachedDataProvi
   }
 
   // Upload extension
-  const status = await vscode.window.withProgress(
+  const status: string = await vscode.window.withProgress(
     {
       location: vscode.ProgressLocation.Notification,
       title: "Uploading extension",
       cancellable: true,
     },
     async progress => {
+      let uploadStatus;
       const file = readFileSync(path.join(distDir, extensionZip));
       progress.report({ message: "Waiting to complete" });
       do {
-        var status: string = await dt.extensionsV2
+        uploadStatus = await dt.extensionsV2
           .upload(file)
           .then(() => "success")
           .catch((err: DynatraceAPIError) => err.errorParams.message);
+
         // Previous version deletion may not be complete yet, loop until done.
-        if (status.startsWith("Extension versions quantity limit")) {
-          await new Promise(resolve => setTimeout(resolve, 1000));
+        if (uploadStatus.startsWith("Extension versions quantity limit")) {
+          await loopSafeWait(1000);
         }
-      } while (status.startsWith("Extension versions quantity limit"));
-      return status;
+      } while (uploadStatus.startsWith("Extension versions quantity limit"));
+
+      return uploadStatus;
     },
   );
 
   // Prompt for version activation
   if (status === "success") {
-    var choice = await vscode.window.showInformationMessage(
+    const choice = await vscode.window.showInformationMessage(
       "Extension uploaded successfully. Do you want to activate this version?",
       "Yes",
       "No",
     );
     if (choice !== "Yes") {
-      vscode.window.showInformationMessage("Operation completed.");
+      await vscode.window.showInformationMessage("Operation completed.");
       return;
     }
-    vscode.commands.executeCommand("dt-ext-copilot.activateExtension", extensionVersion);
+    await vscode.commands.executeCommand("dt-ext-copilot.activateExtension", extensionVersion);
   } else {
-    vscode.window.showErrorMessage(status);
-    vscode.window.showErrorMessage("Extension upload failed.");
+    await vscode.window.showErrorMessage(status);
+    await vscode.window.showErrorMessage("Extension upload failed.");
   }
 }

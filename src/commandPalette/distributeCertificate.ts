@@ -31,16 +31,18 @@ import { resolveRealPath, uploadComponentCert } from "../utils/fileSystem";
  * @returns boolean - the success of the command
  */
 export async function distributeCertificate(context: vscode.ExtensionContext, dt: Dynatrace) {
-  const certPath = resolveRealPath(
-    vscode.workspace
-      .getConfiguration("dynatrace", null)
-      .get("rootOrCaCertificateLocation") as string,
-  );
-  const certContent = readFileSync(certPath as string).toString();
+  const certSettingValue = vscode.workspace
+    .getConfiguration("dynatrace", null)
+    .get<string>("rootOrCaCertificateLocation");
+  if (!certSettingValue) {
+    return;
+  }
+  const certPath = resolveRealPath(certSettingValue);
+  const certContent = readFileSync(certPath).toString();
 
   // TODO: This is not enough. What if ID is stale? Needs GET to confirm existence
   // Check certificate exists and prompt for overwrite
-  const caCertId = context.workspaceState.get("caCertId") as string;
+  const caCertId = context.workspaceState.get<string>("caCertId");
   let update = false;
   if (caCertId) {
     const choice = await vscode.window.showQuickPick(["Yes", "No"], {
@@ -53,17 +55,17 @@ export async function distributeCertificate(context: vscode.ExtensionContext, dt
   }
 
   // Update existing certificate by replacing the content
-  if (update) {
+  if (update && caCertId) {
     const oldCert = await dt.credentialVault.getCertificate(caCertId);
     await dt.credentialVault
       .putCertificate(caCertId, certContent, oldCert.name, oldCert.description)
-      .then(() => {
-        vscode.window.showInformationMessage(
+      .then(async () => {
+        await vscode.window.showInformationMessage(
           "Certificate successfully updated in the Credential Vault.",
         );
       })
-      .catch((err: DynatraceAPIError) => {
-        vscode.window.showErrorMessage(`Certificate update failed: ${err.message}`);
+      .catch(async (err: DynatraceAPIError) => {
+        await vscode.window.showErrorMessage(`Certificate update failed: ${err.message}`);
       });
   } else {
     // Prompt user for Certificate Name
@@ -74,7 +76,7 @@ export async function distributeCertificate(context: vscode.ExtensionContext, dt
       ignoreFocusOut: true,
     });
     if (!certName || certName === "") {
-      vscode.window.showErrorMessage(
+      await vscode.window.showErrorMessage(
         "Certificate name is mandatory. Skipping upload to Credentials Vault.",
       );
     } else {
@@ -88,14 +90,14 @@ export async function distributeCertificate(context: vscode.ExtensionContext, dt
       // Upload the new certificate to the Vault
       await dt.credentialVault
         .postCertificate(certContent, certName, certDescr ?? "")
-        .then(res => {
-          context.workspaceState.update("caCertId", res.id);
-          vscode.window.showInformationMessage(
+        .then(async res => {
+          await context.workspaceState.update("caCertId", res.id);
+          await vscode.window.showInformationMessage(
             "Certificate successfully uploaded to Credentials Vault.",
           );
         })
-        .catch((err: DynatraceAPIError) => {
-          vscode.window.showErrorMessage(`Certificate upload failed: ${err.message}`);
+        .catch(async (err: DynatraceAPIError) => {
+          await vscode.window.showErrorMessage(`Certificate upload failed: ${err.message}`);
         });
     }
   }
@@ -113,23 +115,23 @@ export async function distributeCertificate(context: vscode.ExtensionContext, dt
     if (choice === "Yes") {
       try {
         if (oaPresent) {
-          uploadComponentCert(certPath as string, "OneAgent");
-          vscode.window.showInformationMessage(
+          uploadComponentCert(certPath, "OneAgent");
+          await vscode.window.showInformationMessage(
             "Certificate successfully uploaded to local OneAgent.",
           );
         }
         if (agPresent) {
-          uploadComponentCert(certPath as string, "ActiveGate");
-          vscode.window.showInformationMessage(
+          uploadComponentCert(certPath, "ActiveGate");
+          await vscode.window.showInformationMessage(
             "Certificate successfully uploaded to local ActiveGate.",
           );
         }
-      } catch (err: any) {
-        vscode.window.showErrorMessage(
-          err.code === "EPERM"
+      } catch (err) {
+        await vscode.window.showErrorMessage(
+          (err as Error).name === "EPERM"
             ? "Writing certificate locally failed due to access permissions. " +
                 "Try again after running VS Code as Administrator."
-            : `Writing certificate locally failed: ${err.message}`,
+            : `Writing certificate locally failed: ${(err as Error).message}`,
         );
       }
     }

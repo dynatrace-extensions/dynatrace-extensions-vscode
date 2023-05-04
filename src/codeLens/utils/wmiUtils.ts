@@ -14,8 +14,8 @@
   limitations under the License.
  */
 
-import * as vscode from "vscode";
 import { exec } from "child_process";
+import * as vscode from "vscode";
 
 const ignoreProperties =
   'Select-Object -Property * -ExcludeProperty @("Scope", "Path", "Options", "Properties", ' +
@@ -76,7 +76,7 @@ export async function runWMIQuery(
         return;
       }
 
-      const jsonResponse = JSON.parse(stdout);
+      const jsonResponse = JSON.parse(stdout) as Record<string, string | number>[];
 
       const responseTime = ((new Date().getTime() - startTime.getTime()) / 1000).toString();
       callback(query, {

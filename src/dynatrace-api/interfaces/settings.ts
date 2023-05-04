@@ -29,7 +29,7 @@ interface SettingsObject {
   updateToken: string;
   objectId: string;
   scope: string;
-  value: any;
+  value: unknown;
   summary: string;
   created: number;
 }
@@ -39,7 +39,7 @@ interface SettingsObjectUpdate {
   updateToken?: string;
   insertAfter?: string;
   insertBefore?: string;
-  value: any;
+  value: unknown;
 }
 
 interface SettingsObjectCreate {
@@ -48,5 +48,7 @@ interface SettingsObjectCreate {
   schemaVersion?: string;
   insertAfter?: string;
   scope?: string;
-  value?: any;
+  value?: unknown;
 }
+
+export { SettingsObject, SettingsObjectUpdate, SettingsObjectCreate, SchemaStub };

@@ -15,8 +15,8 @@
  */
 
 interface TopologyStub {
-  types: TopologyType[];
-  relationships: RelationshipStub[];
+  types?: TopologyType[];
+  relationships?: RelationshipStub[];
 }
 
 export interface TopologyType {
@@ -25,7 +25,7 @@ export interface TopologyType {
   rules: {
     requiredDimensions?: {
       key: string;
-      valuePattern?: any;
+      valuePattern?: string;
     }[];
     sources: {
       sourceType: string;
@@ -43,7 +43,10 @@ interface RelationshipStub {
   fromType: string;
   toType: string;
   typeOfRelation: string;
-  sources: any[];
+  sources: {
+    sourceType: string;
+    condition: string;
+  }[];
 }
 
 interface DimensionStub {
@@ -145,7 +148,7 @@ interface DetailsSettings {
 
 interface ScreenStub {
   entityType: string;
-  propertiesCard?: any;
+  propertiesCard?: PropertiesCard;
   listSettings?: ListSettings;
   listInjections?: ListScreenCard[];
   detailsSettings?: DetailsSettings;
@@ -153,10 +156,24 @@ interface ScreenStub {
   entitiesListCards?: EntitiesListCardStub[];
   metricTableCards?: MetricTableCardStub[];
   chartsCards?: ChartsCardStub[];
-  messageCards?: any[];
-  logsCards?: any[];
-  eventsCards?: any[];
+  messageCards?: MinimalCardStub[];
+  logsCards?: MinimalCardStub[];
+  eventsCards?: MinimalCardStub[];
   actions?: Action[];
+}
+
+interface PropertiesCard {
+  displayOnlyConfigured: boolean;
+  properties: Property[];
+}
+
+export type Property = AttributeProperty | RelationProperty;
+
+type Column = AttributeProperty | RelationProperty | CustomColumn;
+
+interface MinimalCardStub {
+  key: string;
+  displayName?: string;
 }
 
 interface Filtering {
@@ -190,8 +207,35 @@ interface EntitiesListCardStub {
   displayName?: string;
   entitySelectorTemplate?: string;
   filtering?: Filtering;
-  columns?: any[];
+  columns?: Column[];
   charts?: ChartStub[];
+}
+
+export interface AttributeProperty {
+  type: "ATTRIBUTE";
+  conditions?: string[];
+  attribute: {
+    key: string;
+    displayName: string;
+  };
+}
+
+export interface RelationProperty {
+  type: "RELATION";
+  conditions?: string[];
+  relation: {
+    entitySelectorTemplate: string;
+    displayName: string;
+  };
+}
+
+interface CustomColumn {
+  type: "CUSTOM";
+  conditions?: string[];
+  custom: {
+    key: string;
+    displayName: string;
+  };
 }
 
 interface MetricTableCardStub {
@@ -211,11 +255,6 @@ interface ChartStub {
   singleValueConfig?: SingleMetricConfig;
 }
 
-interface ChartConfigStub {
-  metrics: { metricSelector: string }[];
-  visualization: any;
-}
-
 interface GraphConfigStub {
   metrics: { metricSelector: string }[];
 }
@@ -228,8 +267,8 @@ export interface ExtensionStub {
   name: string;
   version: string;
   minDynatraceVersion: string;
-  alerts: { path: string }[];
-  dashboards: { path: string }[];
+  alerts?: { path: string }[];
+  dashboards?: { path: string }[];
   snmp?: SnmpGroup[];
   wmi?: WmiGroup[];
   prometheus?: DatasourceGroup[];
@@ -241,8 +280,8 @@ export interface ExtensionStub {
   sqlServer?: DatasourceGroup[];
   sqlSnowflake?: DatasourceGroup[];
   python?: PythonDatasource;
-  metrics: MetricMetadata[];
-  topology: TopologyStub;
+  metrics?: MetricMetadata[];
+  topology?: TopologyStub;
   vars?: VarStub[];
   screens?: ScreenStub[];
 }
@@ -312,8 +351,8 @@ export interface TimeseriesDto {
 }
 
 export interface SourceDto {
-  domain: string;
-  keyProperties: { [key: string]: string };
+  domain?: string;
+  keyProperties: Record<string, string>;
   allowAdditionalKeys: boolean;
   attribute: string;
   calculateRate: boolean;

@@ -67,18 +67,28 @@ export class SettingsService {
    * @returns
    */
   async putObject(objectId: string, payload: SettingsObjectUpdate) {
-    return this.httpClient.makeRequest(`${this.objectsEndpoint}/${objectId}`, payload, "PUT");
+    return this.httpClient.makeRequest(
+      `${this.objectsEndpoint}/${objectId}`,
+      payload as unknown as Record<string, unknown>,
+      "PUT",
+    );
   }
 
   /**
    * Creates a new settings object.
    * You can upload several objects at once. In that case each object returns its own response code.
+   * @param payload Contains the settings objects to be created.
    * @param validateOnly If true, the request runs only validation of the submitted settings objects
    * without saving them.
-   * @param payload Contains the settings objects to be created.
    * @returns
    */
-  async postObject(validateOnly: boolean = false, payload: SettingsObjectCreate[]) {
-    return this.httpClient.makeRequest(`${this.objectsEndpoint}`, payload, "POST");
+  async postObject(payload: SettingsObjectCreate[], validateOnly: boolean = false) {
+    return this.httpClient.makeRequest(
+      `${this.objectsEndpoint}`,
+      payload as unknown as Record<string, unknown>,
+      "POST",
+      {},
+      { validateOnly: validateOnly },
+    );
   }
 }

@@ -14,14 +14,58 @@
   limitations under the License.
  */
 
-import * as path from "path";
-import * as vscode from "vscode";
-import * as glob from "glob";
 import { readFileSync } from "fs";
-import { getAllWorkspaces } from "../utils/fileSystem";
+import * as path from "path";
+import * as glob from "glob";
+import * as vscode from "vscode";
 import { ExtensionWorkspace } from "../interfaces/treeViewData";
-import { deleteWorkspace } from "./commands/workspaces";
 import { CachedDataProvider } from "../utils/dataCaching";
+import { getAllWorkspaces } from "../utils/fileSystem";
+import { deleteWorkspace } from "./commands/workspaces";
+
+/**
+ * Represents an item within the Extensions Tree View. Can be used to represent
+ * either an extensions workspace or an actual extension within the workspace.
+ */
+export class ExtensionProjectItem extends vscode.TreeItem {
+  id: string;
+  path: vscode.Uri;
+  version?: string;
+
+  /**
+   * @param label the label to be shown in the tree view (as node)
+   * @param collapsibleState whether the item supports and is either collapsed or expanded
+   * @param path the path to the workspace or extension (depending on item type)
+   * @param icon the icon to display next to the label
+   * @param contextValue a keyword that can be referenced in package.json to single out this
+   * item type
+   * @param version if item represents an extension, what version is it
+   */
+  constructor(
+    label: string,
+    collapsibleState: vscode.TreeItemCollapsibleState,
+    workspacePath: vscode.Uri,
+    icon:
+      | string
+      | vscode.Uri
+      | { light: string | vscode.Uri; dark: string | vscode.Uri }
+      | vscode.ThemeIcon,
+    contextValue: string,
+    id: string,
+    version?: string,
+  ) {
+    super(label, collapsibleState);
+
+    this.id = id;
+    this.version = version;
+    this.tooltip = version ? `${label}-${version}` : label;
+    this.description = this.version;
+    this.path = workspacePath;
+    this.iconPath = icon;
+
+    this.contextValue = contextValue;
+  }
+}
 
 /**
  * A tree data provider that renders all Extensions 2.0 project workspaces that have been
@@ -31,9 +75,10 @@ import { CachedDataProvider } from "../utils/dataCaching";
 export class ExtensionsTreeDataProvider implements vscode.TreeDataProvider<ExtensionProjectItem> {
   context: vscode.ExtensionContext;
   private readonly cachedData: CachedDataProvider;
-  private _onDidChangeTreeData: vscode.EventEmitter<ExtensionProjectItem | undefined | void> =
-    new vscode.EventEmitter<ExtensionProjectItem | undefined | void>();
-  readonly onDidChangeTreeData: vscode.Event<ExtensionProjectItem | undefined | void> =
+  private _onDidChangeTreeData: vscode.EventEmitter<ExtensionProjectItem | undefined> =
+    new vscode.EventEmitter<ExtensionProjectItem | undefined>();
+
+  readonly onDidChangeTreeData: vscode.Event<ExtensionProjectItem | undefined> =
     this._onDidChangeTreeData.event;
 
   /**
@@ -53,27 +98,27 @@ export class ExtensionsTreeDataProvider implements vscode.TreeDataProvider<Exten
    * @param context {@link vscode.ExtensionContext}
    */
   private registerCommands(context: vscode.ExtensionContext) {
-    vscode.commands.registerCommand("dt-ext-copilot-workspaces.refresh", () => this.refresh()),
-      vscode.commands.registerCommand("dt-ext-copilot-workspaces.addWorkspace", () => {
-        context.globalState.update("dt-ext-copilot.initPending", true);
-        vscode.commands.executeCommand("vscode.openFolder");
-      });
+    vscode.commands.registerCommand("dt-ext-copilot-workspaces.refresh", () => this.refresh());
+    vscode.commands.registerCommand("dt-ext-copilot-workspaces.addWorkspace", async () => {
+      await context.globalState.update("dt-ext-copilot.initPending", true);
+      await vscode.commands.executeCommand("vscode.openFolder");
+    });
     vscode.commands.registerCommand(
       "dt-ext-copilot-workspaces.openWorkspace",
-      (workspace: ExtensionProjectItem) => {
-        vscode.commands.executeCommand("vscode.openFolder", workspace.path);
+      async (workspace: ExtensionProjectItem) => {
+        await vscode.commands.executeCommand("vscode.openFolder", workspace.path);
       },
     );
     vscode.commands.registerCommand(
       "dt-ext-copilot-workspaces.deleteWorkspace",
-      (workspace: ExtensionProjectItem) => {
-        deleteWorkspace(context, workspace).then(() => this.refresh());
+      async (workspace: ExtensionProjectItem) => {
+        await deleteWorkspace(context, workspace).then(() => this.refresh());
       },
     );
     vscode.commands.registerCommand(
       "dt-ext-copilot-workspaces.editExtension",
-      (extension: ExtensionProjectItem) => {
-        vscode.commands.executeCommand("vscode.open", extension.path);
+      async (extension: ExtensionProjectItem) => {
+        await vscode.commands.executeCommand("vscode.open", extension.path);
       },
     );
   }
@@ -82,7 +127,7 @@ export class ExtensionsTreeDataProvider implements vscode.TreeDataProvider<Exten
    * Refresh this view.
    */
   refresh(): void {
-    this._onDidChangeTreeData.fire();
+    this._onDidChangeTreeData.fire(undefined);
   }
 
   /**
@@ -103,8 +148,8 @@ export class ExtensionsTreeDataProvider implements vscode.TreeDataProvider<Exten
   getChildren(element?: ExtensionProjectItem | undefined): ExtensionProjectItem[] {
     if (element) {
       // Workspaces have Extensions as children items
-      var extensions: ExtensionProjectItem[] = [];
-      var workspacePath = element.path.fsPath;
+      const extensions: ExtensionProjectItem[] = [];
+      const workspacePath = element.path.fsPath;
       const extensionFiles = [
         ...glob.sync("extension/extension.yaml", { cwd: workspacePath }),
         ...glob.sync("*/extension/extension.yaml", { cwd: workspacePath }),
@@ -154,49 +199,5 @@ export class ExtensionsTreeDataProvider implements vscode.TreeDataProvider<Exten
           workspace.id,
         ),
     );
-  }
-}
-
-/**
- * Represents an item within the Extensions Tree View. Can be used to represent
- * either an extensions workspace or an actual extension within the workspace.
- */
-export class ExtensionProjectItem extends vscode.TreeItem {
-  id: string;
-  path: vscode.Uri;
-  version?: string;
-
-  /**
-   * @param label the label to be shown in the tree view (as node)
-   * @param collapsibleState whether the item supports and is either collapsed or expanded
-   * @param path the path to the workspace or extension (depending on item type)
-   * @param icon the icon to display next to the label
-   * @param contextValue a keyword that can be referenced in package.json to single out this
-   * item type
-   * @param version if item represents an extension, what version is it
-   */
-  constructor(
-    label: string,
-    collapsibleState: vscode.TreeItemCollapsibleState,
-    path: vscode.Uri,
-    icon:
-      | string
-      | vscode.Uri
-      | { light: string | vscode.Uri; dark: string | vscode.Uri }
-      | vscode.ThemeIcon,
-    contextValue: string,
-    id: string,
-    version?: string,
-  ) {
-    super(label, collapsibleState);
-
-    this.id = id;
-    this.version = version;
-    this.tooltip = version ? `${label}-${version}` : label;
-    this.description = this.version;
-    this.path = path;
-    this.iconPath = icon;
-
-    this.contextValue = contextValue;
   }
 }

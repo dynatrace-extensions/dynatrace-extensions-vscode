@@ -31,231 +31,6 @@ import {
   addMonitoringConfiguration,
 } from "./commands/environments";
 
-/**
- * A tree data provider that renders all Dynatrace Environments that have been registered
- * with the VSCode Extension. Extensions available in the environment, as well as their
- * monitoring configurations are rendered as children.
- * Any environment in the list may be used for API-based operations.
- */
-export class EnvironmentsTreeDataProvider implements vscode.TreeDataProvider<EnvironmentsTreeItem> {
-  context: vscode.ExtensionContext;
-  connectionStatus: ConnectionStatusManager;
-  oc: vscode.OutputChannel;
-  private _onDidChangeTreeData: vscode.EventEmitter<EnvironmentsTreeItem | undefined | void> =
-    new vscode.EventEmitter<EnvironmentsTreeItem | undefined | void>();
-  readonly onDidChangeTreeData: vscode.Event<EnvironmentsTreeItem | undefined | void> =
-    this._onDidChangeTreeData.event;
-
-  /**
-   * @param context VSCode Extension Context
-   * @param connectionStatus a connection status manager, to update the status bar
-   */
-  constructor(
-    context: vscode.ExtensionContext,
-    connectionStatus: ConnectionStatusManager,
-    errorChannel: vscode.OutputChannel,
-  ) {
-    this.context = context;
-    this.connectionStatus = connectionStatus;
-    this.oc = errorChannel;
-    this.getCurrentEnvironment().then(environment =>
-      this.connectionStatus.updateStatusBar(Boolean(environment), environment?.label?.toString()),
-    );
-    this.registerCommands(context);
-  }
-
-  /**
-   * Registers the commands that the Items in this Tree View needs to work with.
-   * @param context {@link vscode.ExtensionContext}
-   */
-  private registerCommands(context: vscode.ExtensionContext) {
-    // Commands for Environments
-    vscode.commands.registerCommand("dt-ext-copilot-environments.refresh", () => this.refresh());
-    vscode.commands.registerCommand("dt-ext-copilot-environments.addEnvironment", () =>
-      addEnvironment(context).then(() => this.refresh()),
-    );
-    vscode.commands.registerCommand(
-      "dt-ext-copilot-environments.useEnvironment",
-      (environment: DynatraceEnvironment) => {
-        registerEnvironment(
-          context,
-          environment.url,
-          encryptToken(environment.token),
-          environment.label?.toString(),
-          true,
-        );
-        this.refresh();
-      },
-    );
-    vscode.commands.registerCommand(
-      "dt-ext-copilot-environments.editEnvironment",
-      (environment: DynatraceEnvironment) => {
-        editEnvironment(context, environment).then(() => this.refresh());
-      },
-    );
-    vscode.commands.registerCommand(
-      "dt-ext-copilot-environments.deleteEnvironment",
-      (environment: DynatraceEnvironment) => {
-        deleteEnvironment(context, environment).then(() => this.refresh());
-      },
-    );
-    vscode.commands.registerCommand("dt-ext-copilot-environments.changeConnection", () => {
-      changeConnection(context).then(([connected, environment]) => {
-        this.connectionStatus.updateStatusBar(connected, environment);
-        this.refresh();
-      });
-    });
-    // Commands for monitoring configurations
-    vscode.commands.registerCommand(
-      "dt-ext-copilot-environments.addConfig",
-      (extension: DeployedExtension) => {
-        addMonitoringConfiguration(extension, context, this.oc).then(success => {
-          if (success) {
-            this.refresh();
-          }
-        });
-      },
-    );
-    vscode.commands.registerCommand(
-      "dt-ext-copilot-environments.editConfig",
-      (config: MonitoringConfiguration) => {
-        editMonitoringConfiguration(config, context, this.oc).then(success => {
-          if (success) {
-            this.refresh();
-          }
-        });
-      },
-    );
-    vscode.commands.registerCommand(
-      "dt-ext-copilot-environments.deleteConfig",
-      (config: MonitoringConfiguration) => {
-        deleteMonitoringConfiguration(config).then(success => {
-          if (success) {
-            this.refresh();
-          }
-        });
-      },
-    );
-  }
-
-  /**
-   * Refresh this view.
-   */
-  refresh(): void {
-    this._onDidChangeTreeData.fire();
-  }
-
-  /**
-   * Retrieve a tree view item from an element within the view.
-   * @param element the element to retrieve
-   * @returns the tree item
-   */
-  getTreeItem(element: EnvironmentsTreeItem): vscode.TreeItem {
-    return element;
-  }
-
-  /**
-   * Retrieves the tree view items that represent children of an element, or all items
-   * if no parent element has been provided.
-   * @param element parent element, if any
-   * @returns list of tree items
-   */
-  async getChildren(element?: EnvironmentsTreeItem): Promise<EnvironmentsTreeItem[]> {
-    if (element) {
-      switch (element.contextValue) {
-        // For Dynatrace Environments, Extensions are the children items
-        case "dynatraceEnvironment":
-        case "currentDynatraceEnvironment":
-          return await element.dt.extensionsV2
-            .list()
-            .then(list =>
-              list.map(
-                extension =>
-                  new DeployedExtension(
-                    vscode.TreeItemCollapsibleState.Collapsed,
-                    extension.extensionName,
-                    extension.version,
-                    element.dt,
-                  ),
-              ),
-            );
-        // For Extensions, configurations are the children items
-        case "deployedExtension":
-          return await element.dt.extensionsV2.listMonitoringConfigurations(element.id).then(
-            async configs =>
-              await Promise.all(
-                configs.map(async config => {
-                  const status = await element.dt.extensionsV2.getMonitoringConfigurationStatus(
-                    element.id,
-                    config.objectId,
-                  );
-                  return new MonitoringConfiguration(
-                    config.objectId,
-                    config.value.version,
-                    config.value.description,
-                    element.id,
-                    status.status,
-                    element.dt,
-                  );
-                }),
-              ),
-          );
-        default:
-          return [];
-      }
-    }
-
-    // If no item specified, grab all environments from global storage
-    return getAllEnvironments(this.context).map((environment: DynatraceEnvironmentData) => {
-      if (environment.current) {
-        this.connectionStatus.updateStatusBar(true, environment.name ?? environment.id);
-      }
-      return new DynatraceEnvironment(
-        vscode.TreeItemCollapsibleState.Collapsed,
-        environment.url,
-        decryptToken(environment.token),
-        environment.id,
-        environment.name,
-        environment.current,
-      );
-    });
-  }
-
-  /**
-   * Gets the currently conneted environment (if any).
-   * @return environment or undefined if none is connected
-   */
-  async getCurrentEnvironment(): Promise<DynatraceEnvironment | undefined> {
-    return await this.getChildren()
-      .then(children =>
-        (children as DynatraceEnvironment[]).filter(
-          c => c.contextValue === "currentDynatraceEnvironment",
-        ),
-      )
-      .then(children => children.pop());
-  }
-
-  /**
-   * Gets an instance of a Dynatrace API Client.
-   * If no environment is specified, the currently connected environment is used.
-   * @param environment specific environment to get the client for
-   * @return API Client instance or undefined if none could be created
-   */
-  async getDynatraceClient(environment?: EnvironmentsTreeItem): Promise<Dynatrace | undefined> {
-    return environment ? environment.dt : await this.getCurrentEnvironment().then(e => e?.dt);
-  }
-}
-
-/**
- * Represents a Tree Item for the Environments tree view of the Copilot.
- * These are the minimum details every other object should include.
- */
-export interface EnvironmentsTreeItem extends vscode.TreeItem {
-  id: string;
-  contextValue: string;
-  dt: Dynatrace;
-}
-
 interface IDynatraceEnvironment extends EnvironmentsTreeItem {
   url: string;
   token: string;
@@ -393,4 +168,247 @@ export class MonitoringConfiguration extends vscode.TreeItem implements IMonitor
     this.iconPath = new vscode.ThemeIcon("gear");
     this.dt = dt;
   }
+}
+
+/**
+ * A tree data provider that renders all Dynatrace Environments that have been registered
+ * with the VSCode Extension. Extensions available in the environment, as well as their
+ * monitoring configurations are rendered as children.
+ * Any environment in the list may be used for API-based operations.
+ */
+export class EnvironmentsTreeDataProvider implements vscode.TreeDataProvider<EnvironmentsTreeItem> {
+  context: vscode.ExtensionContext;
+  connectionStatus: ConnectionStatusManager;
+  oc: vscode.OutputChannel;
+  private _onDidChangeTreeData: vscode.EventEmitter<EnvironmentsTreeItem | undefined> =
+    new vscode.EventEmitter<EnvironmentsTreeItem | undefined>();
+
+  readonly onDidChangeTreeData: vscode.Event<EnvironmentsTreeItem | undefined> =
+    this._onDidChangeTreeData.event;
+
+  /**
+   * @param context VSCode Extension Context
+   * @param connectionStatus a connection status manager, to update the status bar
+   */
+  constructor(
+    context: vscode.ExtensionContext,
+    connectionStatus: ConnectionStatusManager,
+    errorChannel: vscode.OutputChannel,
+  ) {
+    this.context = context;
+    this.connectionStatus = connectionStatus;
+    this.oc = errorChannel;
+    this.getCurrentEnvironment()
+      .then(environment => {
+        this.connectionStatus.updateStatusBar(Boolean(environment), environment?.label?.toString());
+      })
+      .catch(err => {
+        console.log((err as Error).message);
+      });
+    this.registerCommands(context);
+  }
+
+  /**
+   * Registers the commands that the Items in this Tree View needs to work with.
+   * @param context {@link vscode.ExtensionContext}
+   */
+  private registerCommands(context: vscode.ExtensionContext) {
+    // Commands for Environments
+    vscode.commands.registerCommand("dt-ext-copilot-environments.refresh", () => this.refresh());
+    vscode.commands.registerCommand("dt-ext-copilot-environments.addEnvironment", () =>
+      addEnvironment(context).then(() => this.refresh()),
+    );
+    vscode.commands.registerCommand(
+      "dt-ext-copilot-environments.useEnvironment",
+      async (environment: DynatraceEnvironment) => {
+        await registerEnvironment(
+          context,
+          environment.url,
+          encryptToken(environment.token),
+          environment.label?.toString(),
+          true,
+        );
+        this.refresh();
+      },
+    );
+    vscode.commands.registerCommand(
+      "dt-ext-copilot-environments.editEnvironment",
+      async (environment: DynatraceEnvironment) => {
+        await editEnvironment(context, environment).then(() => this.refresh());
+      },
+    );
+    vscode.commands.registerCommand(
+      "dt-ext-copilot-environments.deleteEnvironment",
+      async (environment: DynatraceEnvironment) => {
+        await deleteEnvironment(context, environment).then(() => this.refresh());
+      },
+    );
+    vscode.commands.registerCommand("dt-ext-copilot-environments.changeConnection", async () => {
+      await changeConnection(context).then(([connected, environment]) => {
+        this.connectionStatus.updateStatusBar(connected, environment);
+        this.refresh();
+      });
+    });
+    // Commands for monitoring configurations
+    vscode.commands.registerCommand(
+      "dt-ext-copilot-environments.addConfig",
+      async (extension: DeployedExtension) => {
+        await addMonitoringConfiguration(extension, context, this.oc).then(success => {
+          if (success) {
+            this.refresh();
+          }
+        });
+      },
+    );
+    vscode.commands.registerCommand(
+      "dt-ext-copilot-environments.editConfig",
+      async (config: MonitoringConfiguration) => {
+        await editMonitoringConfiguration(config, context, this.oc).then(success => {
+          if (success) {
+            this.refresh();
+          }
+        });
+      },
+    );
+    vscode.commands.registerCommand(
+      "dt-ext-copilot-environments.deleteConfig",
+      async (config: MonitoringConfiguration) => {
+        await deleteMonitoringConfiguration(config).then(success => {
+          if (success) {
+            this.refresh();
+          }
+        });
+      },
+    );
+  }
+
+  /**
+   * Refresh this view.
+   */
+  refresh(): void {
+    this._onDidChangeTreeData.fire(undefined);
+  }
+
+  /**
+   * Retrieve a tree view item from an element within the view.
+   * @param element the element to retrieve
+   * @returns the tree item
+   */
+  getTreeItem(element: EnvironmentsTreeItem): vscode.TreeItem {
+    return element;
+  }
+
+  /**
+   * Retrieves the tree view items that represent children of an element, or all items
+   * if no parent element has been provided.
+   * @param element parent element, if any
+   * @returns list of tree items
+   */
+  async getChildren(element?: EnvironmentsTreeItem): Promise<EnvironmentsTreeItem[]> {
+    const children: EnvironmentsTreeItem[] = [];
+    if (element) {
+      switch (element.contextValue) {
+        // For Dynatrace Environments, Extensions are the children items
+        case "dynatraceEnvironment":
+        case "currentDynatraceEnvironment":
+          await element.dt.extensionsV2
+            .list()
+            .then(list =>
+              children.push(
+                ...list.map(
+                  extension =>
+                    new DeployedExtension(
+                      vscode.TreeItemCollapsibleState.Collapsed,
+                      extension.extensionName,
+                      extension.version,
+                      element.dt,
+                    ),
+                ),
+              ),
+            );
+          break;
+        // For Extensions, configurations are the children items
+        case "deployedExtension":
+          await element.dt.extensionsV2
+            .listMonitoringConfigurations(element.id)
+            .then(async configs => {
+              const configObjects = await Promise.all(
+                configs.map(async config => {
+                  const status = await element.dt.extensionsV2.getMonitoringConfigurationStatus(
+                    element.id,
+                    config.objectId ?? "",
+                  );
+                  return new MonitoringConfiguration(
+                    config.objectId ?? "",
+                    config.value.version,
+                    config.value.description,
+                    element.id,
+                    status.status,
+                    element.dt,
+                  );
+                }),
+              );
+              return configObjects;
+            })
+            .then(configObjects => {
+              children.push(...configObjects);
+            });
+          break;
+      }
+      return children;
+    }
+
+    // If no item specified, grab all environments from global storage
+    return getAllEnvironments(this.context).map((environment: DynatraceEnvironmentData) => {
+      if (environment.current) {
+        this.connectionStatus.updateStatusBar(true, environment.name ?? environment.id);
+      }
+      return new DynatraceEnvironment(
+        vscode.TreeItemCollapsibleState.Collapsed,
+        environment.url,
+        decryptToken(environment.token),
+        environment.id,
+        environment.name,
+        environment.current,
+      );
+    });
+  }
+
+  /**
+   * Gets the currently conneted environment (if any).
+   * @return environment or undefined if none is connected
+   */
+  async getCurrentEnvironment(): Promise<DynatraceEnvironment | undefined> {
+    const environment = await this.getChildren()
+      .then(children =>
+        (children as DynatraceEnvironment[]).filter(
+          c => c.contextValue === "currentDynatraceEnvironment",
+        ),
+      )
+      .then(children => children.pop());
+    return environment;
+  }
+
+  /**
+   * Gets an instance of a Dynatrace API Client.
+   * If no environment is specified, the currently connected environment is used.
+   * @param environment specific environment to get the client for
+   * @return API Client instance or undefined if none could be created
+   */
+  async getDynatraceClient(environment?: EnvironmentsTreeItem): Promise<Dynatrace | undefined> {
+    const client = environment
+      ? environment.dt
+      : await this.getCurrentEnvironment().then(e => e?.dt);
+    return client;
+  }
+}
+
+/**
+ * Represents a Tree Item for the Environments tree view of the Copilot.
+ * These are the minimum details every other object should include.
+ */
+export interface EnvironmentsTreeItem extends vscode.TreeItem {
+  id: string;
+  contextValue: string;
+  dt: Dynatrace;
 }

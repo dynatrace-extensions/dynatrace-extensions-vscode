@@ -34,8 +34,6 @@ export class WmiCompletionProvider implements vscode.CompletionItemProvider {
   provideCompletionItems(
     document: vscode.TextDocument,
     position: vscode.Position,
-    token: vscode.CancellationToken,
-    context: vscode.CompletionContext,
   ): vscode.CompletionItem[] {
     const extension = this.cachedData.getExtensionYaml(document.getText());
 
@@ -54,6 +52,7 @@ export class WmiCompletionProvider implements vscode.CompletionItemProvider {
 
       // Check that we found a query definition before proceeding
       if (closestQueryLine) {
+        /* eslint-disable-next-line no-secrets/no-secrets */
         // The line would look something like 'query: SELECT Name FROM Win32_OperatingSystem
         // So we grab the portion after 'query:'
         const queryString = closestQueryLine.split("query:")[1].trim();
@@ -81,7 +80,7 @@ export class WmiCompletionProvider implements vscode.CompletionItemProvider {
             vscode.CompletionItemKind.Field,
           );
           completionItem.insertText = suggestion;
-          completionItem.detail = `WMI result suggestion`;
+          completionItem.detail = "WMI result suggestion";
           completionItem.documentation = new vscode.MarkdownString(
             `Suggestion: **${suggestion}**\n\nValue: **${value}**\n\nType: **${typeof value}**`,
           );

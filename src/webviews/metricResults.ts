@@ -15,6 +15,25 @@
  */
 
 import * as vscode from "vscode";
+import { MetricSeriesCollection } from "../dynatrace-api/interfaces/metrics";
+
+function timestampToStr(timeMillis: number) {
+  const date = new Date(timeMillis);
+  const hours = date.getHours() < 10 ? `0${date.getHours()}` : date.getHours();
+  const minutes = date.getMinutes() < 10 ? `0${date.getMinutes()}` : date.getMinutes();
+
+  return `${hours}:${minutes}`;
+}
+
+// function getNonce() {
+//   let text = "";
+// eslint-disable-next-line no-secrets/no-secrets
+//   const possible = "ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789";
+//   for (let i = 0; i < 32; i++) {
+//     text += possible.charAt(Math.floor(Math.random() * possible.length));
+//   }
+//   return text;
+// }
 
 /**
  * WebView Panel implementation for displaying metric query results.
@@ -25,7 +44,7 @@ export class MetricResultsPanel {
   public static currentPanel: MetricResultsPanel | undefined;
 
   public static readonly viewType = "metricResults";
-  private readonly _panel: vscode.WebviewPanel;
+  private readonly panel: vscode.WebviewPanel;
   private _disposables: vscode.Disposable[] = [];
 
   public static createOrShow(data?: MetricSeriesCollection[] | string) {
@@ -36,7 +55,7 @@ export class MetricResultsPanel {
 
     // If we already have a panel, show it.
     if (MetricResultsPanel.currentPanel) {
-      MetricResultsPanel.currentPanel._panel.reveal(column);
+      MetricResultsPanel.currentPanel.panel.reveal(column);
       return;
     }
 
@@ -44,7 +63,7 @@ export class MetricResultsPanel {
     const panel = vscode.window.createWebviewPanel(
       MetricResultsPanel.viewType,
       "Query results",
-      column || vscode.ViewColumn.Two,
+      column ?? vscode.ViewColumn.Two,
       { enableScripts: true },
     );
 
@@ -60,19 +79,19 @@ export class MetricResultsPanel {
    * @param data the data to provide the panel with
    */
   private constructor(panel: vscode.WebviewPanel, data: MetricSeriesCollection[] | string) {
-    this._panel = panel;
+    this.panel = panel;
 
     // Set the webview's initial html content
     this._update(data);
 
     // Listen for when the panel is disposed
     // This happens when the user closes the panel or when the panel is closed programmatically
-    this._panel.onDidDispose(() => this.dispose(), null, this._disposables);
+    this.panel.onDidDispose(() => this.dispose(), null, this._disposables);
 
     // Update the content based on view changes
-    this._panel.onDidChangeViewState(
-      e => {
-        if (this._panel.visible) {
+    this.panel.onDidChangeViewState(
+      () => {
+        if (this.panel.visible) {
           this._update(data);
         }
       },
@@ -81,11 +100,11 @@ export class MetricResultsPanel {
     );
 
     // Handle messages from the webview
-    this._panel.webview.onDidReceiveMessage(
-      message => {
+    this.panel.webview.onDidReceiveMessage(
+      async (message: { command: string; text: string }) => {
         switch (message.command) {
           case "alert":
-            vscode.window.showErrorMessage(message.text);
+            await vscode.window.showErrorMessage(message.text);
             return;
         }
       },
@@ -94,10 +113,10 @@ export class MetricResultsPanel {
     );
   }
 
-  public doRefactor() {
+  public async doRefactor() {
     // Send a message to the webview webview.
     // You can send any JSON serializable data.
-    this._panel.webview.postMessage({ command: "refactor" });
+    await this.panel.webview.postMessage({ command: "refactor" });
   }
 
   /**
@@ -106,7 +125,7 @@ export class MetricResultsPanel {
   public dispose() {
     MetricResultsPanel.currentPanel = undefined;
 
-    this._panel.dispose();
+    this.panel.dispose();
     while (this._disposables.length) {
       const x = this._disposables.pop();
       if (x) {
@@ -116,16 +135,15 @@ export class MetricResultsPanel {
   }
 
   private _update(data: MetricSeriesCollection[] | string) {
-    const webview = this._panel.webview;
-    this._panel.title = "Metric query results";
-    this._panel.webview.html = this._getHTMLForGraphData(webview, data);
+    const webview = this.panel.webview;
+    this.panel.title = "Metric query results";
+    this.panel.webview.html = this._getHTMLForGraphData(webview, data);
   }
 
   private _getHTMLForGraphData(webview: vscode.Webview, data: MetricSeriesCollection[] | string) {
-    const nonce = getNonce();
     if (Array.isArray(data)) {
-      var timestamps: string[] = [];
-      var values: any[] = [];
+      const timestamps: string[] = [];
+      const values: unknown[] = [];
       data.forEach(metricCollection => {
         metricCollection.data.map(metricData => {
           timestamps.push(...metricData.timestamps.map(timestamp => timestampToStr(timestamp)));
@@ -141,7 +159,7 @@ export class MetricResultsPanel {
            <head>
              <meta charset="UTF-8">
              <meta name="viewport" content="width=device-width, initial-scale=1.0">
-        
+
              <title>Metric results</title>
            </head>
            <script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/2.9.4/Chart.js"></script>
@@ -161,7 +179,7 @@ export class MetricResultsPanel {
              var xValues = ${JSON.stringify(timestamps)};
              var yValues = ${JSON.stringify(values)};
              const dash = (ctx, value) => ctx.p0.skip || ctx.p1.skip ? value : undefined;
-            
+
              new Chart("myChart", {
                type: "line",
                data: {
@@ -210,21 +228,4 @@ export class MetricResultsPanel {
             </body>
           </html>`;
   }
-}
-
-function timestampToStr(timeMillis: number) {
-  const date = new Date(timeMillis);
-  const hours = date.getHours() < 10 ? `0${date.getHours()}` : date.getHours();
-  const minutes = date.getMinutes() < 10 ? `0${date.getMinutes()}` : date.getMinutes();
-
-  return `${hours}:${minutes}`;
-}
-
-function getNonce() {
-  let text = "";
-  const possible = "ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789";
-  for (let i = 0; i < 32; i++) {
-    text += possible.charAt(Math.floor(Math.random() * possible.length));
-  }
-  return text;
 }

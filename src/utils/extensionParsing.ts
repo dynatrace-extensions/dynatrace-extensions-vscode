@@ -18,6 +18,7 @@
  * UTILITIES FOR PARSING CONTENT OF AN ALREADY SERIALIZED EXTENSION
  ********************************************************************************/
 
+import { FeatureSetDoc } from "../interfaces/extensionDocs";
 import { DatasourceGroup, ExtensionStub } from "../interfaces/extensionMeta";
 
 /**
@@ -27,7 +28,7 @@ import { DatasourceGroup, ExtensionStub } from "../interfaces/extensionMeta";
  * @returns version normalized
  */
 export function normalizeExtensionVersion(version: string): string {
-  let versionParts = version.split(".");
+  const versionParts = version.split(".");
   while (versionParts.length < 3) {
     versionParts.push("0");
   }
@@ -41,7 +42,7 @@ export function normalizeExtensionVersion(version: string): string {
  */
 export function incrementExtensionVersion(currentVersion: string) {
   currentVersion = normalizeExtensionVersion(currentVersion);
-  let versionParts = currentVersion.split(".");
+  const versionParts = currentVersion.split(".");
   return [
     ...versionParts.slice(0, versionParts.length - 1),
     Number(versionParts[versionParts.length - 1]) + 1,
@@ -58,14 +59,14 @@ export function getAttributesKeysFromTopology(
   entityType: string,
   extension: ExtensionStub,
 ): string[] {
-  var attributes: string[] = [];
-  if (extension.topology && extension.topology.types) {
+  const attributes: string[] = [];
+  if (extension.topology?.types) {
     extension.topology.types
       .filter(type => (type.name ? type.name.toLowerCase() === entityType : false))
       .forEach(type => {
-        if (type.rules) {
+        if (type.rules.length > 0) {
           type.rules.forEach(rule => {
-            if (rule.attributes) {
+            if (rule.attributes.length > 0) {
               rule.attributes.forEach(attribute => {
                 if (attribute.key) {
                   attributes.push(attribute.key);
@@ -93,14 +94,14 @@ export function getAttributesFromTopology(
   extension: ExtensionStub,
   excludeKeys?: string[],
 ): { key: string; displayName: string }[] {
-  var attributes: { key: string; displayName: string }[] = [];
-  if (extension.topology && extension.topology.types) {
+  const attributes: { key: string; displayName: string }[] = [];
+  if (extension.topology?.types) {
     extension.topology.types
       .filter(type => (type.name ? type.name.toLowerCase() === entityType : false))
       .forEach(type => {
-        if (type.rules) {
+        if (type.rules.length > 0) {
           type.rules.forEach(rule => {
-            if (rule.attributes) {
+            if (rule.attributes.length > 0) {
               rule.attributes
                 .filter(property =>
                   property.key ? (excludeKeys ? !excludeKeys.includes(property.key) : true) : false,
@@ -125,116 +126,6 @@ export function getAttributesFromTopology(
       });
   }
   return attributes;
-}
-
-/**
- * Extracts all metric keys from metric selectors found in the charts of a given chart card.
- * The card and screen definition must be referenced by index.
- * @param screenIdx index of the screen definition
- * @param cardIdx index of the chart card definition
- * @param extension extension.yaml serialized as object
- * @returns list of metric keys
- */
-export function getMetricKeysFromChartCard(
-  screenIdx: number,
-  cardIdx: number,
-  extension: ExtensionStub,
-): string[] {
-  var metrics: string[] = [];
-  if (
-    extension.screens &&
-    extension.screens[screenIdx].chartsCards &&
-    extension.screens[screenIdx].chartsCards![cardIdx].charts
-  ) {
-    extension.screens[screenIdx].chartsCards![cardIdx].charts.forEach(c => {
-      if (c.graphChartConfig) {
-        c.graphChartConfig.metrics.forEach(ms => {
-          metrics.push(ms.metricSelector.split(":")[0]);
-        });
-      }
-      if (c.pieChartConfig) {
-        metrics.push(c.pieChartConfig.metric.metricSelector.split(":")[0]);
-      }
-      if (c.singleValueConfig) {
-        metrics.push(c.singleValueConfig.metric.metricSelector.split(":")[0]);
-      }
-    });
-  }
-  return metrics;
-}
-
-/**
- * Extracts all metric keys from metric selectors found in the charts of a given entities list card.
- * The card and screen definition must be referenced by index.
- * @param screenIdx index of the screen definition
- * @param cardIdx index of the entities list card definition
- * @param extension extension.yaml serialized as object
- * @returns list of metric keys
- */
-export function getMetricKeysFromEntitiesListCard(
-  screenIdx: number,
-  cardIdx: number,
-  extension: ExtensionStub,
-): string[] {
-  var metrics: string[] = [];
-  if (
-    extension.screens &&
-    extension.screens[screenIdx].entitiesListCards &&
-    extension.screens[screenIdx].entitiesListCards![cardIdx].charts
-  ) {
-    extension.screens![screenIdx].entitiesListCards![cardIdx].charts!.forEach(c => {
-      if (c.graphChartConfig) {
-        c.graphChartConfig.metrics.forEach(ms => {
-          metrics.push(ms.metricSelector.split(":")[0]);
-        });
-      }
-      if (c.pieChartConfig) {
-        metrics.push(c.pieChartConfig.metric.metricSelector.split(":")[0]);
-      }
-      if (c.singleValueConfig) {
-        metrics.push(c.singleValueConfig.metric.metricSelector.split(":")[0]);
-      }
-    });
-  }
-  return metrics;
-}
-
-/**
- * Extracts all the metric keys of a given entity. Metrics are extracted from the datasource
- * section, then cross-referenced with topology rules to form associations with the entity.
- * Exclusions can be provided as a list of keys.
- * @param typeIdx index of entity type within the topology section
- * @param extension extension.yaml serialized as object
- * @param excludeKeys keys to exclude from the response
- */
-export function getEntityMetrics(
-  typeIdx: number,
-  extension: ExtensionStub,
-  excludeKeys: string[] = [],
-) {
-  var matchingMetrics: string[] = [];
-  var allMetrics = getAllMetricKeysFromDataSource(extension);
-  var patterns = getEntityMetricPatterns(typeIdx, extension);
-  if (allMetrics) {
-    patterns.forEach(pattern => {
-      let matcher = pattern.split("(")[0];
-      let value = pattern.split("(")[1].split(")")[0];
-      matchingMetrics.push(
-        ...allMetrics.filter(metric => {
-          switch (matcher) {
-            case "$eq":
-              return metric === value && !matchingMetrics.includes(metric);
-            case "$prefix":
-              return metric.startsWith(value) && !matchingMetrics.includes(metric);
-            default:
-              return false;
-          }
-        }),
-      );
-    });
-    return matchingMetrics.filter(metric => !excludeKeys.includes(metric));
-  }
-  return [];
 }
 
 /**
@@ -324,6 +215,164 @@ export function getDatasourceName(extension: ExtensionStub): string {
 }
 
 /**
+ * Extracts all metric keys from metric selectors found in the charts of a given chart card.
+ * The card and screen definition must be referenced by index.
+ * @param screenIdx index of the screen definition
+ * @param cardIdx index of the chart card definition
+ * @param extension extension.yaml serialized as object
+ * @returns list of metric keys
+ */
+export function getMetricKeysFromChartCard(
+  screenIdx: number,
+  cardIdx: number,
+  extension: ExtensionStub,
+): string[] {
+  const metrics: string[] = [];
+  const card = extension.screens?.[screenIdx].chartsCards?.[cardIdx];
+  if (card?.charts) {
+    card.charts.forEach(c => {
+      if (c.graphChartConfig) {
+        c.graphChartConfig.metrics.forEach(ms => {
+          metrics.push(ms.metricSelector.split(":")[0]);
+        });
+      }
+      if (c.pieChartConfig) {
+        metrics.push(c.pieChartConfig.metric.metricSelector.split(":")[0]);
+      }
+      if (c.singleValueConfig) {
+        metrics.push(c.singleValueConfig.metric.metricSelector.split(":")[0]);
+      }
+    });
+  }
+  return metrics;
+}
+
+/**
+ * Extracts all metric keys from metric selectors found in the charts of a given entities list card.
+ * The card and screen definition must be referenced by index.
+ * @param screenIdx index of the screen definition
+ * @param cardIdx index of the entities list card definition
+ * @param extension extension.yaml serialized as object
+ * @returns list of metric keys
+ */
+export function getMetricKeysFromEntitiesListCard(
+  screenIdx: number,
+  cardIdx: number,
+  extension: ExtensionStub,
+): string[] {
+  const metrics: string[] = [];
+  const card = extension.screens?.[screenIdx].chartsCards?.[cardIdx];
+  if (card?.charts) {
+    card.charts.forEach(c => {
+      if (c.graphChartConfig) {
+        c.graphChartConfig.metrics.forEach(ms => {
+          metrics.push(ms.metricSelector.split(":")[0]);
+        });
+      }
+      if (c.pieChartConfig) {
+        metrics.push(c.pieChartConfig.metric.metricSelector.split(":")[0]);
+      }
+      if (c.singleValueConfig) {
+        metrics.push(c.singleValueConfig.metric.metricSelector.split(":")[0]);
+      }
+    });
+  }
+  return metrics;
+}
+
+/**
+ * Extracts all metrics keys detected within the datasource section of the extension.yaml
+ * @param extension extension.yaml serialized as object
+ * @returns list of metric keys
+ */
+export function getAllMetricKeysFromDataSource(extension: ExtensionStub): string[] {
+  const metrics: string[] = [];
+  const datasource = getExtensionDatasource(extension);
+  datasource.forEach(group => {
+    if (group.metrics) {
+      group.metrics.forEach(metric => {
+        if (!metrics.includes(metric.key)) {
+          metrics.push(metric.key);
+        }
+      });
+    }
+    if (group.subgroups) {
+      group.subgroups.forEach(subgroup => {
+        if (subgroup.metrics.length > 0) {
+          subgroup.metrics.forEach(metric => {
+            if (!metrics.includes(metric.key)) {
+              metrics.push(metric.key);
+            }
+          });
+        }
+      });
+    }
+  });
+  return metrics;
+}
+
+/**
+ * Extracts all the conditions (patterns) for Metrics sourceType across all rules of a given
+ * topology type. The topology type must be referenced by index.
+ * @param typeIdx index of the topology type
+ * @param extension extension.yaml serialized as object
+ * @returns list of condition patterns
+ */
+export function getEntityMetricPatterns(typeIdx: number, extension: ExtensionStub) {
+  const patterns: string[] = [];
+  if (extension.topology?.types?.[typeIdx].rules) {
+    extension.topology.types[typeIdx].rules.forEach(rule => {
+      if (rule.sources.length > 0) {
+        rule.sources.forEach(source => {
+          if (source.sourceType === "Metrics" && !patterns.includes(source.condition)) {
+            patterns.push(source.condition);
+          }
+        });
+      }
+    });
+  }
+  return patterns;
+}
+
+/**
+ * Extracts all the metric keys of a given entity. Metrics are extracted from the datasource
+ * section, then cross-referenced with topology rules to form associations with the entity.
+ * Exclusions can be provided as a list of keys.
+ * @param typeIdx index of entity type within the topology section
+ * @param extension extension.yaml serialized as object
+ * @param excludeKeys keys to exclude from the response
+ */
+export function getEntityMetrics(
+  typeIdx: number,
+  extension: ExtensionStub,
+  excludeKeys: string[] = [],
+) {
+  const matchingMetrics: string[] = [];
+  const allMetrics = getAllMetricKeysFromDataSource(extension);
+  const patterns = getEntityMetricPatterns(typeIdx, extension);
+  if (allMetrics.length > 0) {
+    patterns.forEach(pattern => {
+      const matcher = pattern.split("(")[0];
+      const value = pattern.split("(")[1].split(")")[0];
+      matchingMetrics.push(
+        ...allMetrics.filter(metric => {
+          switch (matcher) {
+            case "$eq":
+              return metric === value && !matchingMetrics.includes(metric);
+            case "$prefix":
+              return metric.startsWith(value) && !matchingMetrics.includes(metric);
+            default:
+              return false;
+          }
+        }),
+      );
+    });
+    return matchingMetrics.filter(metric => !excludeKeys.includes(metric));
+  }
+  return [];
+}
+
+/**
  * Gets all the Prometheus metric keys that have been already inserted in the datasource section
  * of the YAML in a given group/subgroup location. Specify the group and subgroup by index.
  * The group index is mandatory if subgroup metrics should be returned as one includes the other.
@@ -337,26 +386,24 @@ export function getPrometheusMetricKeys(
   groupIdx: number = -2,
   subgroupIdx: number = -2,
 ): string[] {
-  var metricKeys: string[] = [];
+  const metricKeys: string[] = [];
   if (groupIdx !== -2) {
     // Metrics at group level
-    if (extension.prometheus![groupIdx].metrics) {
+    const group = extension.prometheus?.[groupIdx];
+    if (group?.metrics && group.metrics.length > 0) {
       metricKeys.push(
-        ...extension
-          .prometheus![groupIdx].metrics!.filter(
-            metric => metric.value && metric.value.startsWith("metric:"),
-          )
+        ...group.metrics
+          .filter(metric => metric.value.startsWith("metric:"))
           .map(metric => metric.value.split("metric:")[1]),
       );
     }
     if (subgroupIdx !== -2) {
       // Metrics at subgroup level
-      if (extension.prometheus![groupIdx].subgroups![subgroupIdx].metrics) {
+      const subgroup = group?.subgroups?.[subgroupIdx];
+      if (subgroup?.metrics && subgroup.metrics.length > 0) {
         metricKeys.push(
-          ...extension
-            .prometheus![groupIdx].subgroups![subgroupIdx].metrics!.filter(
-              metric => metric.value && metric.value.startsWith("metric:"),
-            )
+          ...subgroup.metrics
+            .filter(metric => metric.value.startsWith("metric:"))
             .map(metric => metric.value.split("metric:")[1]),
         );
       }
@@ -379,26 +426,24 @@ export function getPrometheusLabelKeys(
   groupIdx: number = -2,
   subgroupIdx: number = -2,
 ): string[] {
-  var labelKeys: string[] = [];
+  const labelKeys: string[] = [];
   if (groupIdx !== -2) {
     // Dimensions at group level
-    if (extension.prometheus![groupIdx].dimensions) {
+    const group = extension.prometheus?.[groupIdx];
+    if (group?.dimensions && group.dimensions.length > 0) {
       labelKeys.push(
-        ...extension
-          .prometheus![groupIdx].dimensions!.filter(
-            dimension => dimension.value && dimension.value.startsWith("label:"),
-          )
+        ...group.dimensions
+          .filter(dimension => dimension.value.startsWith("label:"))
           .map(dimension => dimension.value.split("label:")[1]),
       );
     }
     if (subgroupIdx !== -2) {
       // Dimensions at subgroup level
-      if (extension.prometheus![groupIdx].subgroups![subgroupIdx].dimensions) {
+      const subgroup = group?.subgroups?.[subgroupIdx];
+      if (subgroup?.dimensions && subgroup.dimensions.length > 0) {
         labelKeys.push(
-          ...extension
-            .prometheus![groupIdx].subgroups![subgroupIdx].dimensions!.filter(
-              dimension => dimension.value && dimension.value.startsWith("label:"),
-            )
+          ...subgroup.dimensions
+            .filter(dimension => dimension.value.startsWith("label:"))
             .map(dimension => dimension.value.split("label:")[1]),
         );
       }
@@ -416,18 +461,18 @@ export function getPrometheusLabelKeys(
  */
 export function getMetricValue(metricKey: string, extension: ExtensionStub): string {
   const datasource = getExtensionDatasource(extension);
-  for (let group of datasource) {
+  for (const group of datasource) {
     if (group.metrics) {
-      for (let metric of group.metrics) {
+      for (const metric of group.metrics) {
         if (metric.key === metricKey) {
           return metric.value;
         }
       }
     }
     if (group.subgroups) {
-      for (let subgroup of group.subgroups) {
-        if (subgroup.metrics) {
-          for (let metric of subgroup.metrics) {
+      for (const subgroup of group.subgroups) {
+        if (subgroup.metrics.length > 0) {
+          for (const metric of subgroup.metrics) {
             if (metric.key === metricKey) {
               return metric.value;
             }
@@ -448,7 +493,7 @@ export function getMetricValue(metricKey: string, extension: ExtensionStub): str
  */
 export function getMetricDisplayName(metricKey: string, extension: ExtensionStub): string {
   if (extension.metrics) {
-    let idx = extension.metrics.findIndex(m => m.key === metricKey && m.metadata !== undefined);
+    const idx = extension.metrics.findIndex(m => m.key === metricKey && m.metadata);
     if (idx >= 0) {
       return extension.metrics[idx].metadata.displayName;
     }
@@ -462,8 +507,8 @@ export function getMetricDisplayName(metricKey: string, extension: ExtensionStub
  * @returns list of feature sets and metrics
  */
 export function getAllMetricsByFeatureSet(extension: ExtensionStub): FeatureSetDoc[] {
-  var featureSets: FeatureSetDoc[] = [{ name: "default", metrics: [] }];
-  var datasource = getExtensionDatasource(extension);
+  const featureSets: FeatureSetDoc[] = [{ name: "default", metrics: [] }];
+  const datasource = getExtensionDatasource(extension);
 
   // Loop through groups, subgroups, and metrics to extract feature sets
   datasource.forEach(group => {
@@ -485,14 +530,14 @@ export function getAllMetricsByFeatureSet(extension: ExtensionStub): FeatureSetD
               metrics: [m.key],
             });
           } else {
-            let fsIdx = featureSets.findIndex(fs => fs.name === m.featureSet);
+            const fsIdx = featureSets.findIndex(fs => fs.name === m.featureSet);
             if (!featureSets[fsIdx].metrics.includes(m.key)) {
               featureSets[fsIdx].metrics.push(m.key);
             }
           }
           // Otherwise, metrics will belong to the group's feature set or the default one
         } else {
-          let fsIdx = featureSets.findIndex(fs => fs.name === (group.featureSet || "default"));
+          const fsIdx = featureSets.findIndex(fs => fs.name === (group.featureSet ?? "default"));
           featureSets[fsIdx].metrics.push(m.key);
         }
       });
@@ -508,7 +553,7 @@ export function getAllMetricsByFeatureSet(extension: ExtensionStub): FeatureSetD
           });
         }
         // Each subgroup may have metrics
-        if (sg.metrics) {
+        if (sg.metrics.length > 0) {
           sg.metrics.forEach(m => {
             // Each metric may be individually assigned a feature set
             if (m.featureSet) {
@@ -518,26 +563,26 @@ export function getAllMetricsByFeatureSet(extension: ExtensionStub): FeatureSetD
                   metrics: [m.key],
                 });
               } else {
-                let fsIdx = featureSets.findIndex(fs => fs.name === m.featureSet);
+                const fsIdx = featureSets.findIndex(fs => fs.name === m.featureSet);
                 if (!featureSets[fsIdx].metrics.includes(m.key)) {
                   featureSets[fsIdx].metrics.push(m.key);
                 }
               }
               // Otherwise it will fall back onto the subgroup feature set
             } else if (sg.featureSet) {
-              let fsIdx = featureSets.findIndex(fs => fs.name === sg.featureSet);
+              const fsIdx = featureSets.findIndex(fs => fs.name === sg.featureSet);
               if (!featureSets[fsIdx].metrics.includes(m.key)) {
                 featureSets[fsIdx].metrics.push(m.key);
               }
               // Otherwise it will fall back onto the group feature set
             } else if (group.featureSet) {
-              let fsIdx = featureSets.findIndex(fs => fs.name === group.featureSet);
+              const fsIdx = featureSets.findIndex(fs => fs.name === group.featureSet);
               if (!featureSets[fsIdx].metrics.includes(m.key)) {
                 featureSets[fsIdx].metrics.push(m.key);
               }
               // Otherwise it will belong to the default feature set
             } else {
-              let fsIdx = featureSets.findIndex(fs => fs.name === "default");
+              const fsIdx = featureSets.findIndex(fs => fs.name === "default");
               if (!featureSets[fsIdx].metrics.includes(m.key)) {
                 featureSets[fsIdx].metrics.push(m.key);
               }
@@ -552,68 +597,14 @@ export function getAllMetricsByFeatureSet(extension: ExtensionStub): FeatureSetD
 }
 
 /**
- * Extracts all the conditions (patterns) for Metrics sourceType across all rules of a given
- * topology type. The topology type must be referenced by index.
- * @param typeIdx index of the topology type
- * @param extension extension.yaml serialized as object
- * @returns list of condition patterns
- */
-export function getEntityMetricPatterns(typeIdx: number, extension: ExtensionStub) {
-  var patterns: string[] = [];
-  if (extension.topology.types[typeIdx].rules) {
-    extension.topology.types[typeIdx].rules.forEach(rule => {
-      if (rule.sources) {
-        rule.sources.forEach(source => {
-          if (source.sourceType === "Metrics" && !patterns.includes(source.condition)) {
-            patterns.push(source.condition);
-          }
-        });
-      }
-    });
-  }
-  return patterns;
-}
-
-/**
- * Extracts all metrics keys detected within the datasource section of the extension.yaml
- * @param extension extension.yaml serialized as object
- * @returns list of metric keys
- */
-export function getAllMetricKeysFromDataSource(extension: ExtensionStub): string[] {
-  var metrics: string[] = [];
-  var datasource = getExtensionDatasource(extension);
-  datasource.forEach(group => {
-    if (group.metrics) {
-      group.metrics.forEach(metric => {
-        if (!metrics.includes(metric.key)) {
-          metrics.push(metric.key);
-        }
-      });
-    }
-    if (group.subgroups) {
-      group.subgroups.forEach(subgroup => {
-        if (subgroup.metrics) {
-          subgroup.metrics.forEach(metric => {
-            if (!metrics.includes(metric.key)) {
-              metrics.push(metric.key);
-            }
-          });
-        }
-      });
-    }
-  });
-  return metrics;
-}
-
-/**
  * Extracts all metric keys and types detected within the datasource section of the extension.yaml.
  * Can optionally include values of metrics too.
  * @param extension extension.yaml serialized as object
  * @returns list of metric keys and their types
  */
 export function getMetricsFromDataSource(extension: ExtensionStub, includeValues: boolean = false) {
-  var metrics: { key: string; type: string; value?: string }[] = [];
-  var datasource = getExtensionDatasource(extension);
+  const metrics: { key: string; type: string; value?: string }[] = [];
+  const datasource = getExtensionDatasource(extension);
   datasource.forEach(group => {
     if (group.metrics) {
       group.metrics.forEach(metric => {
@@ -628,7 +619,7 @@ export function getMetricsFromDataSource(extension: ExtensionStub, includeValues
     }
     if (group.subgroups) {
       group.subgroups.forEach(subgroup => {
-        if (subgroup.metrics) {
+        if (subgroup.metrics.length > 0) {
           subgroup.metrics.forEach(metric => {
             if (!metrics.map(m => m.key).includes(metric.key)) {
               metrics.push({
@@ -656,8 +647,8 @@ export function getDimensionsFromDataSource(
   extension: ExtensionStub,
   includeValues: boolean = false,
 ) {
-  var dimensions: { key: string; value?: string }[] = [];
-  var datasource = getExtensionDatasource(extension);
+  const dimensions: { key: string; value?: string }[] = [];
+  const datasource = getExtensionDatasource(extension);
   datasource.forEach(group => {
     if (group.dimensions) {
       group.dimensions.forEach(dimension => {
@@ -696,8 +687,8 @@ export function getDimensionsFromDataSource(
 export function getAllMetricKeysAndValuesFromDataSource(
   extension: ExtensionStub,
 ): { key: string; value: string }[] {
-  var data: { key: string; value: string }[] = [];
-  var datasource = getExtensionDatasource(extension);
+  const data: { key: string; value: string }[] = [];
+  const datasource = getExtensionDatasource(extension);
   datasource.forEach(group => {
     if (group.metrics) {
       group.metrics.forEach(metric => {
@@ -708,7 +699,7 @@ export function getAllMetricKeysAndValuesFromDataSource(
     }
     if (group.subgroups) {
       group.subgroups.forEach(subgroup => {
-        if (subgroup.metrics) {
+        if (subgroup.metrics.length > 0) {
           subgroup.metrics.forEach(metric => {
             if (!data.map(d => d.key).includes(metric.key)) {
               data.push({ key: metric.key, value: metric.value });
@@ -731,10 +722,10 @@ export function getDimensionsFromMatchingMetrics(
   conditionPattern: string,
   extension: ExtensionStub,
 ): string[] {
-  var dimensions: string[] = [];
-  var matcher = conditionPattern.split("(")[0];
-  var pattern = conditionPattern.split("(")[1].split(")")[0];
-  var datasource = getExtensionDatasource(extension);
+  const dimensions: string[] = [];
+  const matcher = conditionPattern.split("(")[0];
+  const pattern = conditionPattern.split("(")[1].split(")")[0];
+  const datasource = getExtensionDatasource(extension);
   datasource.forEach(group => {
     // If the group has metrics, group dimensions should be added if
     // any of the metrics match the pattern
@@ -809,82 +800,12 @@ export function getRequiredDimensions(
   ruleIdx: number,
   extension: ExtensionStub,
 ): string[] {
-  var requiredDimensions = extension.topology.types[typeIdx].rules[ruleIdx].requiredDimensions;
-  if (!requiredDimensions) {
+  const rule = extension.topology?.types?.[typeIdx].rules[ruleIdx];
+  if (!rule || !rule.requiredDimensions) {
     return [];
   }
 
-  return requiredDimensions.map(dimension => dimension.key);
-}
-
-/**
- * Extracts all the types of relations of a given entity type in a particular direction.
- * The relationship types are converted to camel case to match the format required
- * for entity selectors.
- * @param entityType entity type to extract for
- * @param direction to or from relationships
- * @param extension extension.yaml serialized as object
- * @returns list of relationships
- */
-export function getRelationshipTypes(
-  entityType: string,
-  direction: "to" | "from",
-  extension: ExtensionStub,
-): string[] {
-  return extension.topology.relationships
-    .filter(rel => (direction === "to" ? rel.toType === entityType : rel.fromType === entityType))
-    .map(rel => relationToCamelCase(rel.typeOfRelation));
-}
-
-/**
- * Extracts all the topology relationships (to and from) for a given entity.
- * @param entityType entity type to exract the rules for
- * @param extension extension.yaml serialized as object
- * @returns
- */
-export function getRelationships(
-  entityType: string,
-  extension: ExtensionStub,
-): { entity: string; relation: string; direction: "to" | "from" }[] {
-  if (extension.topology && extension.topology.relationships) {
-    return extension.topology.relationships
-      .filter(rel => rel.toType === entityType || rel.fromType === entityType)
-      .map(rel => ({
-        entity: rel.toType === entityType ? rel.fromType : rel.toType,
-        relation: relationToCamelCase(rel.typeOfRelation),
-        direction: rel.toType === entityType ? "to" : "from",
-      }));
-  }
-  return [];
-}
-
-/**
- * Extracts the display name of a given entity type.
- * @param entityType type of entity
- * @param extension extension.yaml serialized as object
- * @returns displayName of type if found in topology
- */
-export function getEntityName(entityType: string, extension: ExtensionStub) {
-  let foundType = extension.topology.types.filter(t => t.name === entityType).pop();
-  if (foundType) {
-    return foundType.displayName;
-  }
-
-  return "";
-}
-
-/**
- * Extracts the keys of entities list cards of a given entity type.
- * The entity type is referenced by the index of its screen definition.
- * @param screenIdx index of the entity's screen definition
- * @param extension extension.yaml serialized as object
- * @returns list of card keys
- */
-export function getEntitiesListCardKeys(screenIdx: number, extension: ExtensionStub) {
-  if (extension.screens && extension.screens[screenIdx].entitiesListCards) {
-    return extension.screens[screenIdx].entitiesListCards!.map(elc => elc.key);
-  }
-  return [];
+  return rule.requiredDimensions.map(dimension => dimension.key);
 }
 
 /**
@@ -913,6 +834,80 @@ function relationToCamelCase(typeOfRelation: string) {
 }
 
 /**
+ * Extracts all the types of relations of a given entity type in a particular direction.
+ * The relationship types are converted to camel case to match the format required
+ * for entity selectors.
+ * @param entityType entity type to extract for
+ * @param direction to or from relationships
+ * @param extension extension.yaml serialized as object
+ * @returns list of relationships
+ */
+export function getRelationshipTypes(
+  entityType: string,
+  direction: "to" | "from",
+  extension: ExtensionStub,
+): string[] {
+  if (!extension.topology?.relationships) {
+    return [];
+  }
+  return extension.topology.relationships
+    .filter(rel => (direction === "to" ? rel.toType === entityType : rel.fromType === entityType))
+    .map(rel => relationToCamelCase(rel.typeOfRelation));
+}
+
+/**
+ * Extracts all the topology relationships (to and from) for a given entity.
+ * @param entityType entity type to exract the rules for
+ * @param extension extension.yaml serialized as object
+ * @returns
+ */
+export function getRelationships(
+  entityType: string,
+  extension: ExtensionStub,
+): { entity: string; relation: string; direction: "to" | "from" }[] {
+  if (extension.topology?.relationships) {
+    return extension.topology.relationships
+      .filter(rel => rel.toType === entityType || rel.fromType === entityType)
+      .map(rel => ({
+        entity: rel.toType === entityType ? rel.fromType : rel.toType,
+        relation: relationToCamelCase(rel.typeOfRelation),
+        direction: rel.toType === entityType ? "to" : "from",
+      }));
+  }
+  return [];
+}
+
+/**
+ * Extracts the display name of a given entity type.
+ * @param entityType type of entity
+ * @param extension extension.yaml serialized as object
+ * @returns displayName of type if found in topology
+ */
+export function getEntityName(entityType: string, extension: ExtensionStub) {
+  const foundType = extension.topology?.types?.filter(t => t.name === entityType).pop();
+  if (foundType) {
+    return foundType.displayName;
+  }
+
+  return "";
+}
+
+/**
+ * Extracts the keys of entities list cards of a given entity type.
+ * The entity type is referenced by the index of its screen definition.
+ * @param screenIdx index of the entity's screen definition
+ * @param extension extension.yaml serialized as object
+ * @returns list of card keys
+ */
+export function getEntitiesListCardKeys(screenIdx: number, extension: ExtensionStub) {
+  const cards = extension.screens?.[screenIdx].entitiesListCards;
+  if (cards) {
+    return cards.map(card => card.key);
+  }
+  return [];
+}
+
+/**
  * Extracts all the keys of charts cards belonging to a given entity type.
  * The entity type is specified using its index within the screens section of the yaml.
  * @param screenIdx index of the entity's screen definition
@@ -920,11 +915,12 @@ function relationToCamelCase(typeOfRelation: string) {
  * @returns list of chart card keys
  */
 export function getEntityChartCardKeys(screenIdx: number, extension: ExtensionStub): string[] {
-  if (!extension.screens || !extension.screens![screenIdx].chartsCards) {
-    return [];
+  const cards = extension.screens?.[screenIdx].chartsCards;
+  if (cards) {
+    return cards.map(card => card.key);
   }
 
-  return extension.screens![screenIdx].chartsCards!.map(cc => cc.key);
+  return [];
 }
 
 type CardMeta = {
@@ -943,33 +939,30 @@ export function getReferencedCardsMeta(screenIdx: number, extension: ExtensionSt
   const unparsedCards = [];
   const parsedCards: CardMeta[] = [];
 
-  if (
-    extension.screens![screenIdx].listSettings &&
-    extension.screens![screenIdx].listSettings!.layout &&
-    extension.screens![screenIdx].listSettings!.layout!.cards
-  ) {
-    unparsedCards.push(...extension.screens![screenIdx].listSettings!.layout!.cards!);
+  const listSettingsCards = extension.screens?.[screenIdx].listSettings?.layout?.cards;
+  if (listSettingsCards) {
+    unparsedCards.push(...listSettingsCards);
   }
 
-  if (
-    extension.screens![screenIdx].detailsSettings &&
-    extension.screens![screenIdx].detailsSettings!.layout &&
-    extension.screens![screenIdx].detailsSettings!.layout!.cards
-  ) {
-    unparsedCards.push(...extension.screens![screenIdx].detailsSettings!.layout!.cards!);
+  const detailsSettingsCards = extension.screens?.[screenIdx].detailsSettings?.layout?.cards;
+  if (detailsSettingsCards) {
+    unparsedCards.push(...detailsSettingsCards);
   }
 
-  if (extension.screens![screenIdx].detailsInjections) {
-    unparsedCards.push(...extension.screens![screenIdx].detailsInjections!);
+  const detailsInjectionsCards = extension.screens?.[screenIdx].detailsInjections;
+  if (detailsInjectionsCards) {
+    unparsedCards.push(...detailsInjectionsCards);
   }
-  if (extension.screens![screenIdx].listInjections) {
-    unparsedCards.push(...extension.screens![screenIdx].listInjections!);
+
+  const listInjectionCards = extension.screens?.[screenIdx].listInjections;
+  if (listInjectionCards) {
+    unparsedCards.push(...listInjectionCards);
   }
 
   unparsedCards.forEach(card => {
     if (parsedCards.findIndex(c => c.key === card.key) === -1) {
       // Only add valid cards. User may have mis-typed keys.
-      if (card.key && card.type && !card.entitySelectorTemplate) {
+      if (!card.entitySelectorTemplate) {
         parsedCards.push({ key: card.key, type: card.type });
       }
     }
@@ -997,11 +990,11 @@ export function getDefinedCardsMeta(
     | "messageCards"
     | "metricTableCards",
 ): CardMeta[] {
-  var cards: CardMeta[] = [];
+  const cards: CardMeta[] = [];
 
   if (!cardType || cardType === "entitiesListCards") {
-    if (extension.screens![screenIdx].entitiesListCards) {
-      extension.screens![screenIdx].entitiesListCards?.forEach(card => {
+    if (extension.screens?.[screenIdx].entitiesListCards) {
+      extension.screens[screenIdx].entitiesListCards?.forEach(card => {
         if (cards.findIndex(c => c.key === card.key) === -1) {
           cards.push({ key: card.key, type: "ENTITIES_LIST" });
         }
@@ -1009,8 +1002,8 @@ export function getDefinedCardsMeta(
     }
   }
   if (!cardType || cardType === "chartsCards") {
-    if (extension.screens![screenIdx].chartsCards) {
-      extension.screens![screenIdx].chartsCards?.forEach(card => {
+    if (extension.screens?.[screenIdx].chartsCards) {
+      extension.screens[screenIdx].chartsCards?.forEach(card => {
         if (cards.findIndex(c => c.key === card.key) === -1) {
           cards.push({ key: card.key, type: "CHART_GROUP" });
         }
@@ -1018,8 +1011,8 @@ export function getDefinedCardsMeta(
     }
   }
   if (!cardType || cardType === "messageCards") {
-    if (extension.screens![screenIdx].messageCards) {
-      extension.screens![screenIdx].messageCards?.forEach(card => {
+    if (extension.screens?.[screenIdx].messageCards) {
+      extension.screens[screenIdx].messageCards?.forEach(card => {
         if (cards.findIndex(c => c.key === card.key) === -1) {
           cards.push({ key: card.key, type: "MESSAGE" });
         }
@@ -1027,8 +1020,8 @@ export function getDefinedCardsMeta(
     }
   }
   if (!cardType || cardType === "logsCards") {
-    if (extension.screens![screenIdx].logsCards) {
-      extension.screens![screenIdx].logsCards?.forEach(card => {
+    if (extension.screens?.[screenIdx].logsCards) {
+      extension.screens[screenIdx].logsCards?.forEach(card => {
         if (cards.findIndex(c => c.key === card.key) === -1) {
           cards.push({ key: card.key, type: "LOGS" });
         }
@@ -1036,8 +1029,8 @@ export function getDefinedCardsMeta(
     }
   }
   if (!cardType || cardType === "eventsCards") {
-    if (extension.screens![screenIdx].eventsCards) {
-      extension.screens![screenIdx].eventsCards?.forEach(card => {
+    if (extension.screens?.[screenIdx].eventsCards) {
+      extension.screens[screenIdx].eventsCards?.forEach(card => {
         if (cards.findIndex(c => c.key === card.key) === -1) {
           cards.push({ key: card.key, type: "EVENTS" });
         }
@@ -1045,8 +1038,8 @@ export function getDefinedCardsMeta(
     }
   }
   if (!cardType || cardType === "metricTableCards") {
-    if (extension.screens![screenIdx].metricTableCards) {
-      extension.screens![screenIdx].metricTableCards?.forEach(card => {
+    if (extension.screens?.[screenIdx].metricTableCards) {
+      extension.screens[screenIdx].metricTableCards?.forEach(card => {
         if (cards.findIndex(c => c.key === card.key) === -1) {
           cards.push({ key: card.key, type: "METRIC_TABLE" });
         }

@@ -15,6 +15,7 @@
  */
 
 import { HttpClient } from "../http_client";
+import { ExtensionV1DTO, ExtensionV1ListDto } from "../interfaces/extensions";
 
 /**
  * Implementation of the Extensions V2 API
@@ -32,12 +33,15 @@ export class ExtensionsServiceV1 {
    * @returns list of extensions
    */
   async getExtensions(): Promise<ExtensionV1DTO[]> {
-    const extensions = [];
-    let nextPageKey = null;
+    const extensions: ExtensionV1DTO[] = [];
+    let nextPageKey;
     do {
-      const res: ExtensionV1ListDto = await this.httpClient.makeRequest(this.endpoint, {
-        nextPageKey,
-      });
+      const res: ExtensionV1ListDto = await this.httpClient.makeRequest<ExtensionV1ListDto>(
+        this.endpoint,
+        {
+          nextPageKey: nextPageKey,
+        },
+      );
       extensions.push(...res.extensions);
       nextPageKey = res.nextPageKey;
     } while (nextPageKey);
@@ -52,11 +56,11 @@ export class ExtensionsServiceV1 {
   async getExtensionBinary(extensionId: string): Promise<Uint8Array> {
     return this.httpClient.makeRequest(
       `${this.endpoint}/${extensionId}/binary`,
-      null,
+      undefined,
       "GET",
       {},
-      null,
-      null,
+      undefined,
+      undefined,
       "arraybuffer",
     );
   }

@@ -14,18 +14,18 @@
   limitations under the License.
  */
 
-import * as vscode from "vscode";
+import { readFileSync, rmSync, writeFileSync } from "fs";
 import * as path from "path";
+import * as vscode from "vscode";
 import { DynatraceAPIError } from "../../dynatrace-api/errors";
 import { encryptToken } from "../../utils/cryptography";
 import { getAllEnvironments, registerEnvironment, removeEnvironment } from "../../utils/fileSystem";
+import { createObjectFromSchema } from "../../utils/schemaParsing";
 import {
   DeployedExtension,
   DynatraceEnvironment,
   MonitoringConfiguration,
 } from "../environmentsTreeView";
-import { readFileSync, rmSync, writeFileSync } from "fs";
-import { createObjectFromSchema } from "../../utils/schemaParsing";
 
 /**
  * A workflow for registering a new Dynatrace Environment within the VSCode extension.
@@ -35,7 +35,7 @@ import { createObjectFromSchema } from "../../utils/schemaParsing";
  * @returns
  */
 export async function addEnvironment(context: vscode.ExtensionContext) {
-  var url = await vscode.window.showInputBox({
+  let url = await vscode.window.showInputBox({
     title: "Add a Dynatrace environment (1/3)",
     placeHolder: "The URL at which this environment is accessible...",
     prompt: "Mandatory",
@@ -60,7 +60,7 @@ export async function addEnvironment(context: vscode.ExtensionContext) {
     },
   });
   if (!url || url === "") {
-    vscode.window.showErrorMessage("URL cannot be blank. Operation was cancelled.");
+    await vscode.window.showErrorMessage("URL cannot be blank. Operation was cancelled.");
     return;
   }
   if (url.endsWith("/")) {
@@ -75,7 +75,7 @@ export async function addEnvironment(context: vscode.ExtensionContext) {
     password: true,
   });
   if (!token || token === "") {
-    vscode.window.showErrorMessage("Token cannot be blank. Operation was cancelled");
+    await vscode.window.showErrorMessage("Token cannot be blank. Operation was cancelled");
     return;
   }
 
@@ -92,7 +92,7 @@ export async function addEnvironment(context: vscode.ExtensionContext) {
     ignoreFocusOut: true,
   });
 
-  registerEnvironment(context, url, encryptToken(token), name, current === "Yes");
+  await registerEnvironment(context, url, encryptToken(token), name, current === "Yes");
 }
 
 /**
@@ -108,7 +108,7 @@ export async function editEnvironment(
   context: vscode.ExtensionContext,
   environment: DynatraceEnvironment,
 ) {
-  var url = await vscode.window.showInputBox({
+  let url = await vscode.window.showInputBox({
     title: "The new URL for this environment",
     placeHolder: "The URL at which this environment is accessible...",
     value: environment.url,
@@ -116,7 +116,7 @@ export async function editEnvironment(
     ignoreFocusOut: true,
   });
   if (!url || url === "") {
-    vscode.window.showErrorMessage("URL cannot be blank. Operation was cancelled.");
+    await vscode.window.showErrorMessage("URL cannot be blank. Operation was cancelled.");
     return;
   }
   if (url.endsWith("/")) {
@@ -132,7 +132,7 @@ export async function editEnvironment(
     ignoreFocusOut: true,
   });
   if (!token || token === "") {
-    vscode.window.showErrorMessage("Token cannot be blank. Operation was cancelled");
+    await vscode.window.showErrorMessage("Token cannot be blank. Operation was cancelled");
     return;
   }
 
@@ -150,7 +150,7 @@ export async function editEnvironment(
     ignoreFocusOut: true,
   });
 
-  registerEnvironment(context, url, encryptToken(token), name, current === "Yes");
+  await registerEnvironment(context, url, encryptToken(token), name, current === "Yes");
 }
 
 /**
@@ -165,17 +165,17 @@ export async function deleteEnvironment(
   environment: DynatraceEnvironment,
 ) {
   const confirm = await vscode.window.showQuickPick(["Yes", "No"], {
-    title: `Delete environment ${environment.label}?`,
+    title: `Delete environment ${environment.label?.toString() ?? environment.id}?`,
     canPickMany: false,
     ignoreFocusOut: true,
   });
 
   if (confirm !== "Yes") {
-    vscode.window.showInformationMessage("Operation cancelled.");
+    await vscode.window.showInformationMessage("Operation cancelled.");
     return;
   }
 
-  removeEnvironment(context, environment.id);
+  await removeEnvironment(context, environment.id);
 }
 
 /**
@@ -193,7 +193,7 @@ export async function changeConnection(
   const environments = getAllEnvironments(context);
   const currentEnv = environments.find(e => e.current);
   const choice = await vscode.window.showQuickPick(
-    environments.map(e => (e.current ? `⭐ ${e.name}` : (e.name as string))),
+    environments.map(e => (e.current ? `⭐ ${e.name ?? e.id}` : e.name ?? e.id)),
     {
       canPickMany: false,
       ignoreFocusOut: true,
@@ -204,18 +204,75 @@ export async function changeConnection(
 
   // Use the newly selected environment
   if (choice) {
-    var environment = environments.find(e => e.name === choice);
+    const environment = environments.find(e => e.name === choice);
     if (environment) {
-      registerEnvironment(context, environment.url, environment.token, environment.name, true);
-      return [true, environment.name as string];
+      await registerEnvironment(
+        context,
+        environment.url,
+        environment.token,
+        environment.name,
+        true,
+      );
+      return [true, environment.name ?? environment.id];
     }
   }
 
   // If no choice made, persist the current connection if any
   if (currentEnv) {
-    return [true, currentEnv.name as string];
+    return [true, currentEnv.name ?? currentEnv.id];
   }
   return [false, ""];
+}
+
+/**
+ * Create a temporary file and serve it to the user as an interface for collecting changes.
+ * The file is removed once the user closes it.
+ * @param headerContent informational content (comments) to inform the user about usage
+ * @param defaultDetails existing details as stringified JSON
+ * @param rejectNoChanges if true, the promise is rejected if the file content is unchanged
+ * @param context vscode.ExtensionContext
+ * @returns a Promise that will either resolve with the stringified content of the configuration
+ * or will reject with the message "No changes.".
+ */
+async function getConfigurationDetailsViaFile(
+  headerContent: string,
+  defaultDetails: string,
+  context: vscode.ExtensionContext,
+  rejectNoChanges: boolean = true,
+): Promise<string> {
+  // Create a file to act as an interface for making changes
+  const tempConfigFile = path.resolve(context.globalStorageUri.fsPath, "tempConfigFile.jsonc");
+  const configFileContent = headerContent + "\n" + defaultDetails;
+  writeFileSync(tempConfigFile, configFileContent);
+
+  // Open the file for the user to edit
+  await vscode.workspace.openTextDocument(vscode.Uri.file(tempConfigFile)).then(async doc => {
+    await vscode.window.showTextDocument(doc);
+  });
+
+  // Create a promise based on the file
+  return new Promise<string>((resolve, reject) => {
+    const disposable = vscode.window.onDidChangeVisibleTextEditors(editors => {
+      // When the file closes, extract the content
+      if (!editors.map(editor => editor.document.fileName).includes(tempConfigFile)) {
+        disposable.dispose();
+        // Grab all lines that don't start with '//'
+        const newDetails = readFileSync(tempConfigFile)
+          .toString()
+          .split("\n")
+          .filter(line => !line.startsWith("//") && line !== "")
+          .join("\n");
+        // Remove the file since no longer needed
+        rmSync(tempConfigFile);
+        // Resolve or reject the promise
+        if (newDetails === defaultDetails && rejectNoChanges) {
+          reject("No changes.");
+        } else {
+          resolve(newDetails);
+        }
+      }
+    });
+  });
 }
 
 /**
@@ -247,80 +304,35 @@ export async function editMonitoringConfiguration(
     "once you save and close this tab.";
 
   // Allow the user to make changes
-  return await getConfigurationDetailsViaFile(headerContent, existingConfig, true, context).then(
+  const status = await getConfigurationDetailsViaFile(headerContent, existingConfig, context).then(
     // Push the changes
     response =>
       config.dt.extensionsV2
-        .putMonitoringConfiguration(config.extensionName, config.id, JSON.parse(response))
-        .then(() => {
-          vscode.window.showInformationMessage("Configuration updated successfully.");
+        .putMonitoringConfiguration(
+          config.extensionName,
+          config.id,
+          JSON.parse(response) as Record<string, unknown>,
+        )
+        .then(async () => {
+          await vscode.window.showInformationMessage("Configuration updated successfully.");
           return true;
         })
-        .catch((err: DynatraceAPIError) => {
-          vscode.window.showErrorMessage(`Update operation failed: ${err.message}`);
+        .catch(async (err: DynatraceAPIError) => {
+          await vscode.window.showErrorMessage(`Update operation failed: ${err.message}`);
           oc.replace(JSON.stringify(err.errorParams.data, undefined, 2));
           oc.show();
           return false;
         }),
     // Otherwise cancel operation
-    response => {
+    async response => {
       if (response === "No changes.") {
-        vscode.window.showInformationMessage("No changes were made. Operation cancelled.");
+        await vscode.window.showInformationMessage("No changes were made. Operation cancelled.");
       }
       return false;
     },
   );
-}
 
-/**
- * Create a temporary file and serve it to the user as an interface for collecting changes.
- * The file is removed once the user closes it.
- * @param headerContent informational content (comments) to inform the user about usage
- * @param defaultDetails existing details as stringified JSON
- * @param rejectNoChanges if true, the promise is rejected if the file content is unchanged
- * @param context vscode.ExtensionContext
- * @returns a Promise that will either resolve with the stringified content of the configuration
- * or will reject with the message "No changes.".
- */
-async function getConfigurationDetailsViaFile(
-  headerContent: string,
-  defaultDetails: string,
-  rejectNoChanges: boolean = true,
-  context: vscode.ExtensionContext,
-): Promise<string> {
-  // Create a file to act as an interface for making changes
-  const tempConfigFile = path.resolve(context.globalStorageUri.fsPath, "tempConfigFile.jsonc");
-  const configFileContent = headerContent + "\n" + defaultDetails;
-  writeFileSync(tempConfigFile, configFileContent);
-
-  // Open the file for the user to edit
-  await vscode.workspace
-    .openTextDocument(vscode.Uri.file(tempConfigFile))
-    .then(doc => vscode.window.showTextDocument(doc));
-
-  // Create a promise based on the file
-  return new Promise<string>((resolve, reject) => {
-    const disposable = vscode.window.onDidChangeVisibleTextEditors(editors => {
-      // When the file closes, extract the content
-      if (!editors.map(editor => editor.document.fileName).includes(tempConfigFile)) {
-        disposable.dispose();
-        // Grab all lines that don't start with '//'
-        const newDetails = readFileSync(tempConfigFile)
-          .toString()
-          .split("\n")
-          .filter(line => !line.startsWith("//") && line !== "")
-          .join("\n");
-        // Remove the file since no longer needed
-        rmSync(tempConfigFile);
-        // Resolve or reject the promise
-        if (newDetails === defaultDetails && rejectNoChanges) {
-          reject("No changes.");
-        } else {
-          resolve(newDetails);
-        }
-      }
-    });
-  });
+  return status;
 }
 
 /**
@@ -333,24 +345,24 @@ export async function deleteMonitoringConfiguration(
   config: MonitoringConfiguration,
 ): Promise<boolean> {
   const confirm = await vscode.window.showQuickPick(["Yes", "No"], {
-    title: `Delete configuration ${config.label}?`,
+    title: `Delete configuration ${config.label?.toString() ?? config.id}?`,
     canPickMany: false,
     ignoreFocusOut: true,
   });
 
   if (confirm !== "Yes") {
-    vscode.window.showInformationMessage("Operation cancelled.");
+    await vscode.window.showInformationMessage("Operation cancelled.");
     return false;
   }
 
   return config.dt.extensionsV2
     .deleteMonitoringConfiguration(config.extensionName, config.id)
-    .then(() => {
-      vscode.window.showInformationMessage("Configuration deleted successfully.");
+    .then(async () => {
+      await vscode.window.showInformationMessage("Configuration deleted successfully.");
       return true;
     })
-    .catch((err: DynatraceAPIError) => {
-      vscode.window.showErrorMessage(`Delete operation failed: ${err.message}`);
+    .catch(async (err: DynatraceAPIError) => {
+      await vscode.window.showErrorMessage(`Delete operation failed: ${err.message}`);
       return false;
     });
 }
@@ -385,19 +397,21 @@ export async function addMonitoringConfiguration(
   const response = await getConfigurationDetailsViaFile(
     headerContent,
     JSON.stringify(configObject, undefined, 4),
-    false,
     context,
+    false,
   );
-  return await extension.dt.extensionsV2
-    .postMonitoringConfiguration(extension.id, JSON.parse(response))
-    .then(() => {
-      vscode.window.showInformationMessage("Configuration successfully created.");
+  const status = await extension.dt.extensionsV2
+    .postMonitoringConfiguration(extension.id, JSON.parse(response) as Record<string, unknown>)
+    .then(async () => {
+      await vscode.window.showInformationMessage("Configuration successfully created.");
       return true;
     })
-    .catch((err: DynatraceAPIError) => {
-      vscode.window.showErrorMessage("Create operation failed.");
+    .catch(async (err: DynatraceAPIError) => {
+      await vscode.window.showErrorMessage("Create operation failed.");
       oc.replace(JSON.stringify(err.errorParams.data, undefined, 2));
       oc.show();
       return false;
     });
+
+  return status;
 }

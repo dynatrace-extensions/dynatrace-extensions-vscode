@@ -31,15 +31,15 @@ export async function deleteWorkspace(
   workspace: ExtensionProjectItem,
 ) {
   const confirm = await vscode.window.showQuickPick(["Yes", "No"], {
-    title: `Delete workspace ${workspace.label}?`,
+    title: `Delete workspace ${workspace.label?.toString() ?? workspace.id}?`,
     canPickMany: false,
     ignoreFocusOut: true,
   });
 
   if (confirm !== "Yes") {
-    vscode.window.showInformationMessage("Operation cancelled.");
+    await vscode.window.showInformationMessage("Operation cancelled.");
     return;
   }
 
-  removeWorkspace(context, workspace.id);
+  await removeWorkspace(context, workspace.id);
 }

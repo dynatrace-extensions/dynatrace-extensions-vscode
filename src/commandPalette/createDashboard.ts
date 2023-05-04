@@ -14,265 +14,14 @@
   limitations under the License.
  */
 
-import * as vscode from "vscode";
-import * as path from "path";
-import { getEntityMetrics, getMetricDisplayName } from "../utils/extensionParsing";
 import { existsSync, mkdirSync, readFileSync, writeFileSync } from "fs";
-import { EnvironmentsTreeDataProvider } from "../treeViews/environmentsTreeView";
-import { getExtensionFilePath } from "../utils/fileSystem";
-import { CachedDataProvider } from "../utils/dataCaching";
+import * as path from "path";
+import * as vscode from "vscode";
 import { ExtensionStub } from "../interfaces/extensionMeta";
-
-/**
- * Workflow for creating an overview dashboard based on the content of the extension.yaml.
- * The extension should have topology defined otherwise the dashboard doesn't have much
- * data to render and is pointless. The extension yaml is adapted to include the newly
- * created dashboard. At the end, the user is prompted to upload the dashboard to Dynatrace
- * @param tenantsProvider environments details proivder
- * @param cachedData provider for cacheable data
- * @param outputChannel JSON output channel for communicating errors
- * @returns
- */
-export async function createOverviewDashboard(
-  tenantsProvider: EnvironmentsTreeDataProvider,
-  cachedData: CachedDataProvider,
-  outputChannel: vscode.OutputChannel,
-) {
-  const DASHBOARD_PATH = "dashboards/overview_dashboard.json";
-  // Read extension.yaml
-  const extensionFile = getExtensionFilePath()!;
-  const extensionText = readFileSync(extensionFile).toString();
-  const extension = cachedData.getExtensionYaml(extensionText);
-  // Check topology. No topology = pointless dashboard
-  if (!extension.topology) {
-    vscode.window.showWarningMessage("Please define your topology before running this command.");
-    return;
-  }
-
-  // Create dashboard
-  const dashboardJson = buildDashboard(extension);
-  // Create directories for dashboard
-  const extensionDir = path.resolve(extensionFile, "..");
-  const dashboardsDir = path.resolve(extensionDir, "dashboards");
-  if (!existsSync(dashboardsDir)) {
-    mkdirSync(dashboardsDir);
-  }
-  // Write dashboard to file
-  const dashboardFile = path.resolve(dashboardsDir, "overview_dashboard.json");
-  writeFileSync(dashboardFile, dashboardJson);
-  // Edit extension.yaml to include it
-  const dashboardsMatch = extensionText.search(/^dashboards:$/gm);
-  let updatedExtensionText;
-  if (dashboardsMatch > -1) {
-    if (!extensionText.includes(`path: ${DASHBOARD_PATH}`)) {
-      const indent = extensionText.slice(dashboardsMatch).indexOf("-") - 12;
-      const beforeText = extensionText.slice(0, dashboardsMatch);
-      const afterText = extensionText.slice(dashboardsMatch + 12);
-      updatedExtensionText = `${beforeText}dashboards:\n${" ".repeat(
-        indent,
-      )}- path: ${DASHBOARD_PATH}\n${afterText}`;
-    } else {
-      // Nothing to do, dashboard is already present
-      updatedExtensionText = extensionText;
-    }
-  } else {
-    updatedExtensionText = `${extensionText}\ndashboards:\n  - path: ${DASHBOARD_PATH}\n`;
-  }
-
-  writeFileSync(extensionFile, updatedExtensionText);
-
-  vscode.window.showInformationMessage("Dashboard created successfully");
-
-  // If we're connected to the API, prompt for upload.
-  tenantsProvider.getDynatraceClient().then(dt => {
-    if (dt) {
-      vscode.window
-        .showInformationMessage("Would you like to upload it to Dynatrace?", "Yes", "No")
-        .then(choice => {
-          if (choice === "Yes") {
-            dt.dashboards
-              .post(JSON.parse(dashboardJson))
-              .then(() => vscode.window.showInformationMessage("Upload successful."))
-              .catch(err => {
-                outputChannel.replace(JSON.stringify(err, null, 2));
-                outputChannel.show();
-              });
-          }
-        });
-    }
-  });
-}
-
-/**
- * Parses the extension yaml, collects relevant data, and populates a series of JSON templates
- * that together form an overview dashboard.
- * @param extension extension.yaml serialized as object
- * @param short optional prefix/technology for the extension/dashboard
- * @returns JSON string representing the dashboard
- */
-function buildDashboard(extension: ExtensionStub, short: string = "Extension"): string {
-  var navigationLinks: string[] = [];
-  var customTiles: string[] = [];
-
-  // Gather dynamic content
-  const currentlyMonitoringWidth = Math.max(extension.topology.types.length * 152, 304);
-  extension.topology.types.forEach((type, idx) => {
-    var tableQueries: string[] = [];
-    navigationLinks.push(`[${type.displayName}](ui/entity/list/${type.name})`);
-    customTiles.push(buildEntityTitleTile(type.displayName, 76 + (idx + 1) * 304));
-    const entityMetrics = getEntityMetrics(idx, extension)
-      .map(m => ({
-        key: m,
-        name: getMetricDisplayName(m, extension),
-      }))
-      .filter(m => m.name !== "");
-    // First found metric used for entity table, graph chart, and single value tile
-    if (entityMetrics.length > 0) {
-      customTiles.push(
-        buildCurrentlyMonitoringTile(type.displayName, type.name, entityMetrics[0].key, idx * 152),
-      );
-      tableQueries.push(buildTableQuery("A", entityMetrics[0].key, type.name));
-      customTiles.push(
-        buildGraphChartTile(
-          entityMetrics[0].key,
-          entityMetrics[0].name,
-          type.name,
-          114 + (idx + 1) * 304,
-          570,
-        ),
-      );
-    }
-    // Second found metric used for entity table and graph chart
-    if (entityMetrics.length > 1) {
-      tableQueries.push(buildTableQuery("B", entityMetrics[1].key, type.name));
-      customTiles.push(
-        buildGraphChartTile(
-          entityMetrics[1].key,
-          entityMetrics[1].name,
-          type.name,
-          114 + (idx + 1) * 304,
-          988,
-        ),
-      );
-    }
-    customTiles.push(
-      buildEntityTableTile(type.displayName, 114 + (idx + 1) * 304, tableQueries.join(",\n")),
-    );
-  });
-  // Put together the details
-  var dashboard = dashboardTemplate;
-  dashboard = dashboard.replace("<extension-id>", extension.name);
-  dashboard = dashboard.replace(
-    "<dashboard-title>",
-    `Extension Overview (${extension.name}:${extension.version})`,
-  );
-  dashboard = dashboard.replace(/<extension-short>/g, short);
-  dashboard = dashboard.replace(
-    "<currently-monitoring-width>",
-    currentlyMonitoringWidth.toString(),
-  );
-  dashboard = dashboard.replace("<navigation-links>", navigationLinks.join(" | "));
-  dashboard = dashboard.replace("<custom-tiles>", [...customTiles].join(",\n"));
-  return dashboard;
-}
-
-/**
- * Populates the dynamic details of a template which creates a Markdown tile with
- * an entity's human readable type name.
- * @param entityName the name of the entity type
- * @param topBound upper boundary of the tile
- * @returns JSON string representing the tile
- */
-function buildEntityTitleTile(entityName: string, topBound: number): string {
-  let tile = entityTitleTile;
-  tile = tile.replace(/<entity-name>/g, entityName);
-  tile = tile.replace("<top-bound>", topBound.toString());
-  return tile;
-}
-
-/**
- * Populates the dynamic details of a template which creates a Single Value tile
- * with the count of entities of a given type.
- * @param entityName the name of the entity type
- * @param entityType the entity type (internal name)
- * @param metricKey key of the metric to use in the tile
- * @param leftBound left boundary of the tile
- * @returns JSON string representing the tile
- */
-function buildCurrentlyMonitoringTile(
-  entityName: string,
-  entityType: string,
-  metricKey: string,
-  leftBound: number,
-): string {
-  let tile = currentlyMonitoringTile;
-  tile = tile.replace("<entity-name>", entityName);
-  tile = tile.replace("<entity-type>", entityType);
-  tile = tile.replace("<metric-key>", metricKey);
-  tile = tile.replace("<left-bound>", leftBound.toString());
-  return tile;
-}
-
-/**
- * Populates the dynamic details of a template which creates a Table tile with one or
- * two metrics for a given entity type.
- * @param entityName name of the entity type
- * @param topBound upper boundary of the tile
- * @param tableQueries table queries to use within the table (see {@link buildTableQuery})
- * @returns JSON string representing the tile
- */
-function buildEntityTableTile(
-  entityName: string,
-  topBound: number,
-  tableQueries: string = "",
-): string {
-  let tile = entityTableTile;
-  tile = tile.replace("<entity-name>", entityName);
-  tile = tile.replace("<top-bound>", topBound.toString());
-  tile = tile.replace("<table-queries>", tableQueries);
-  return tile;
-}
-
-/**
- * Populates the dynamic details of a template which creates a Table Query object. Table
- * queries are used within Table (data explorer) tiles (see {@link buildEntityTableTile}).
- * @param letter index letter of this query
- * @param metricKey key of the metric to use in the query
- * @param entityType name of the entity type queried
- * @returns JSON string representing a Table Query object
- */
-function buildTableQuery(letter: string, metricKey: string, entityType: string): string {
-  let query = tableQuery;
-  query = query.replace("<letter>", letter);
-  query = query.replace("<metric-key>", metricKey);
-  query = query.replace("<entity-type>", entityType);
-  return query;
-}
-
-/**
- * Populates the dynamic details of a template which creates a Graph Chart tile.
- * @param metricKey key of the metric to use in the chart
- * @param metricName the display name of the metric to use in the chart
- * @param entityType entity type (internal name) who's metric is queried
- * @param topBound upper boundary of the tile
- * @param leftBound left boundary of the tile
- * @returns
- */
-function buildGraphChartTile(
-  metricKey: string,
-  metricName: string,
-  entityType: string,
-  topBound: number,
-  leftBound: number,
-): string {
-  let tile = graphChartTile;
-  tile = tile.replace("<metric-name>", metricName);
-  tile = tile.replace("<metric-key>", metricKey);
-  tile = tile.replace("<entity-type>", entityType);
-  tile = tile.replace("<top-bound>", topBound.toString());
-  tile = tile.replace("<left-bound>", leftBound.toString());
-  return tile;
-}
+import { EnvironmentsTreeDataProvider } from "../treeViews/environmentsTreeView";
+import { CachedDataProvider } from "../utils/dataCaching";
+import { getEntityMetrics, getMetricDisplayName } from "../utils/extensionParsing";
+import { getExtensionFilePath } from "../utils/fileSystem";
 
 /*======================================================*
  * TEMPLATES THAT CREATE VARIOUS PARTS OF THE DASHBOARD *
@@ -344,7 +93,7 @@ const tableQuery = `\
         }`;
 
 const entityTableTile = `\
-    { 
+    {
       "name": "<entity-name>",
       "tileType": "DATA_EXPLORER",
       "configured": true,
@@ -392,17 +141,17 @@ const entityTableTile = `\
     }`;
 
 const currentlyMonitoringTile = `\
-    { 
-      "name": "<entity-name>", 
-      "tileType": "DATA_EXPLORER", 
-      "configured": true, 
-      "bounds": { 
+    {
+      "name": "<entity-name>",
+      "tileType": "DATA_EXPLORER",
+      "configured": true,
+      "bounds": {
         "top": 190,
         "left": <left-bound>,
         "width": 152,
         "height": 152
-      }, 
-      "tileFilter": {}, 
+      },
+      "tileFilter": {},
       "customName": "Single value",
       "queries": [
         {
@@ -552,3 +301,261 @@ const dashboardTemplate = `\
 <custom-tiles>
   ]
 }`;
+
+/**
+ * Populates the dynamic details of a template which creates a Markdown tile with
+ * an entity's human readable type name.
+ * @param entityName the name of the entity type
+ * @param topBound upper boundary of the tile
+ * @returns JSON string representing the tile
+ */
+function buildEntityTitleTile(entityName: string, topBound: number): string {
+  let tile = entityTitleTile;
+  tile = tile.replace(/<entity-name>/g, entityName);
+  tile = tile.replace("<top-bound>", topBound.toString());
+  return tile;
+}
+
+/**
+ * Populates the dynamic details of a template which creates a Single Value tile
+ * with the count of entities of a given type.
+ * @param entityName the name of the entity type
+ * @param entityType the entity type (internal name)
+ * @param metricKey key of the metric to use in the tile
+ * @param leftBound left boundary of the tile
+ * @returns JSON string representing the tile
+ */
+function buildCurrentlyMonitoringTile(
+  entityName: string,
+  entityType: string,
+  metricKey: string,
+  leftBound: number,
+): string {
+  let tile = currentlyMonitoringTile;
+  tile = tile.replace("<entity-name>", entityName);
+  tile = tile.replace("<entity-type>", entityType);
+  tile = tile.replace("<metric-key>", metricKey);
+  tile = tile.replace("<left-bound>", leftBound.toString());
+  return tile;
+}
+
+/**
+ * Populates the dynamic details of a template which creates a Table tile with one or
+ * two metrics for a given entity type.
+ * @param entityName name of the entity type
+ * @param topBound upper boundary of the tile
+ * @param tableQueries table queries to use within the table (see {@link buildTableQuery})
+ * @returns JSON string representing the tile
+ */
+function buildEntityTableTile(
+  entityName: string,
+  topBound: number,
+  tableQueries: string = "",
+): string {
+  let tile = entityTableTile;
+  tile = tile.replace("<entity-name>", entityName);
+  tile = tile.replace("<top-bound>", topBound.toString());
+  tile = tile.replace("<table-queries>", tableQueries);
+  return tile;
+}
+
+/**
+ * Populates the dynamic details of a template which creates a Table Query object. Table
+ * queries are used within Table (data explorer) tiles (see {@link buildEntityTableTile}).
+ * @param letter index letter of this query
+ * @param metricKey key of the metric to use in the query
+ * @param entityType name of the entity type queried
+ * @returns JSON string representing a Table Query object
+ */
+function buildTableQuery(letter: string, metricKey: string, entityType: string): string {
+  let query = tableQuery;
+  query = query.replace("<letter>", letter);
+  query = query.replace("<metric-key>", metricKey);
+  query = query.replace("<entity-type>", entityType);
+  return query;
+}
+
+/**
+ * Populates the dynamic details of a template which creates a Graph Chart tile.
+ * @param metricKey key of the metric to use in the chart
+ * @param metricName the display name of the metric to use in the chart
+ * @param entityType entity type (internal name) who's metric is queried
+ * @param topBound upper boundary of the tile
+ * @param leftBound left boundary of the tile
+ * @returns
+ */
+function buildGraphChartTile(
+  metricKey: string,
+  metricName: string,
+  entityType: string,
+  topBound: number,
+  leftBound: number,
+): string {
+  let tile = graphChartTile;
+  tile = tile.replace("<metric-name>", metricName);
+  tile = tile.replace("<metric-key>", metricKey);
+  tile = tile.replace("<entity-type>", entityType);
+  tile = tile.replace("<top-bound>", topBound.toString());
+  tile = tile.replace("<left-bound>", leftBound.toString());
+  return tile;
+}
+
+/**
+ * Parses the extension yaml, collects relevant data, and populates a series of JSON templates
+ * that together form an overview dashboard.
+ * @param extension extension.yaml serialized as object
+ * @param short optional prefix/technology for the extension/dashboard
+ * @returns JSON string representing the dashboard
+ */
+function buildDashboard(extension: ExtensionStub, short: string = "Extension"): string {
+  const navigationLinks: string[] = [];
+  const customTiles: string[] = [];
+
+  // Gather dynamic content
+  const currentlyMonitoringWidth = Math.max(extension.topology?.types?.length ?? 0 * 152, 304);
+  extension.topology?.types?.forEach((type, idx) => {
+    const tableQueries: string[] = [];
+    navigationLinks.push(`[${type.displayName}](ui/entity/list/${type.name})`);
+    customTiles.push(buildEntityTitleTile(type.displayName, 76 + (idx + 1) * 304));
+    const entityMetrics = getEntityMetrics(idx, extension)
+      .map(m => ({
+        key: m,
+        name: getMetricDisplayName(m, extension),
+      }))
+      .filter(m => m.name !== "");
+    // First found metric used for entity table, graph chart, and single value tile
+    if (entityMetrics.length > 0) {
+      customTiles.push(
+        buildCurrentlyMonitoringTile(type.displayName, type.name, entityMetrics[0].key, idx * 152),
+      );
+      tableQueries.push(buildTableQuery("A", entityMetrics[0].key, type.name));
+      customTiles.push(
+        buildGraphChartTile(
+          entityMetrics[0].key,
+          entityMetrics[0].name,
+          type.name,
+          114 + (idx + 1) * 304,
+          570,
+        ),
+      );
+    }
+    // Second found metric used for entity table and graph chart
+    if (entityMetrics.length > 1) {
+      tableQueries.push(buildTableQuery("B", entityMetrics[1].key, type.name));
+      customTiles.push(
+        buildGraphChartTile(
+          entityMetrics[1].key,
+          entityMetrics[1].name,
+          type.name,
+          114 + (idx + 1) * 304,
+          988,
+        ),
+      );
+    }
+    customTiles.push(
+      buildEntityTableTile(type.displayName, 114 + (idx + 1) * 304, tableQueries.join(",\n")),
+    );
+  });
+  // Put together the details
+  let dashboard = dashboardTemplate;
+  dashboard = dashboard.replace("<extension-id>", extension.name);
+  dashboard = dashboard.replace(
+    "<dashboard-title>",
+    `Extension Overview (${extension.name}:${extension.version})`,
+  );
+  dashboard = dashboard.replace(/<extension-short>/g, short);
+  dashboard = dashboard.replace(
+    "<currently-monitoring-width>",
+    currentlyMonitoringWidth.toString(),
+  );
+  dashboard = dashboard.replace("<navigation-links>", navigationLinks.join(" | "));
+  dashboard = dashboard.replace("<custom-tiles>", [...customTiles].join(",\n"));
+  return dashboard;
+}
+
+/**
+ * Workflow for creating an overview dashboard based on the content of the extension.yaml.
+ * The extension should have topology defined otherwise the dashboard doesn't have much
+ * data to render and is pointless. The extension yaml is adapted to include the newly
+ * created dashboard. At the end, the user is prompted to upload the dashboard to Dynatrace
+ * @param tenantsProvider environments details proivder
+ * @param cachedData provider for cacheable data
+ * @param outputChannel JSON output channel for communicating errors
+ * @returns
+ */
+export async function createOverviewDashboard(
+  tenantsProvider: EnvironmentsTreeDataProvider,
+  cachedData: CachedDataProvider,
+  outputChannel: vscode.OutputChannel,
+) {
+  const DASHBOARD_PATH = "dashboards/overview_dashboard.json";
+  // Read extension.yaml
+  const extensionFile = getExtensionFilePath();
+  if (!extensionFile) {
+    return;
+  }
+  const extensionText = readFileSync(extensionFile).toString();
+  const extension = cachedData.getExtensionYaml(extensionText);
+  // Check topology. No topology = pointless dashboard
+  if (!extension.topology) {
+    await vscode.window.showWarningMessage(
+      "Please define your topology before running this command.",
+    );
+    return;
+  }
+
+  // Create dashboard
+  const dashboardJson = buildDashboard(extension);
+  // Create directories for dashboard
+  const extensionDir = path.resolve(extensionFile, "..");
+  const dashboardsDir = path.resolve(extensionDir, "dashboards");
+  if (!existsSync(dashboardsDir)) {
+    mkdirSync(dashboardsDir);
+  }
+  // Write dashboard to file
+  const dashboardFile = path.resolve(dashboardsDir, "overview_dashboard.json");
+  writeFileSync(dashboardFile, dashboardJson);
+  // Edit extension.yaml to include it
+  const dashboardsMatch = extensionText.search(/^dashboards:$/gm);
+  let updatedExtensionText;
+  if (dashboardsMatch > -1) {
+    if (!extensionText.includes(`path: ${DASHBOARD_PATH}`)) {
+      const indent = extensionText.slice(dashboardsMatch).indexOf("-") - 12;
+      const beforeText = extensionText.slice(0, dashboardsMatch);
+      const afterText = extensionText.slice(dashboardsMatch + 12);
+      updatedExtensionText = `${beforeText}dashboards:\n${" ".repeat(
+        indent,
+      )}- path: ${DASHBOARD_PATH}\n${afterText}`;
+    } else {
+      // Nothing to do, dashboard is already present
+      updatedExtensionText = extensionText;
+    }
+  } else {
+    updatedExtensionText = `${extensionText}\ndashboards:\n  - path: ${DASHBOARD_PATH}\n`;
+  }
+
+  writeFileSync(extensionFile, updatedExtensionText);
+
+  await vscode.window.showInformationMessage("Dashboard created successfully");
+
+  // If we're connected to the API, prompt for upload.
+  await tenantsProvider.getDynatraceClient().then(async dt => {
+    if (dt) {
+      await vscode.window
+        .showInformationMessage("Would you like to upload it to Dynatrace?", "Yes", "No")
+        .then(choice => {
+          if (choice === "Yes") {
+            dt.dashboards
+              .post(JSON.parse(dashboardJson) as Dashboard)
+              .then(async () => {
+                await vscode.window.showInformationMessage("Upload successful.");
+              })
+              .catch(err => {
+                outputChannel.replace(JSON.stringify(err, null, 2));
+                outputChannel.show();
+              });
+          }
+        });
+    }
+  });
+}

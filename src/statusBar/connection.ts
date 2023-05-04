@@ -45,12 +45,14 @@ export class ConnectionStatusManager {
    */
   updateStatusBar(connected: boolean, environment?: string) {
     if (connected) {
-      this.statusBarItem.text = `$(dt-signet) Connected to ${environment}`;
+      if (environment) {
+        this.statusBarItem.text = `$(dt-signet) Connected to ${environment}`;
+      }
       this.statusBarItem.tooltip = "Using this environment for API calls";
       this.statusBarItem.backgroundColor = undefined;
       this.statusBarItem.color = undefined;
     } else {
-      this.statusBarItem.text = `$(dt-signet) Not connected`;
+      this.statusBarItem.text = "$(dt-signet) Not connected";
       this.statusBarItem.tooltip = "No API calls are currently possible";
       this.statusBarItem.backgroundColor = new vscode.ThemeColor("statusBarItem.warningBackground");
       this.statusBarItem.color = undefined;

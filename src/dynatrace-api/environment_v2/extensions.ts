@@ -15,6 +15,13 @@
  */
 
 import { HttpClient } from "../http_client";
+import {
+  ExtensionMonitoringConfiguration,
+  ExtensionStatusDto,
+  MinimalExtension,
+  SchemaFiles,
+  SchemaList,
+} from "../interfaces/extensions";
 
 /**
  * Implementation of the Extensions V2 API
@@ -34,8 +41,8 @@ export class ExtensionsServiceV2 {
    */
   async listSchemaVersions(): Promise<string[]> {
     return this.httpClient
-      .makeRequest(this.schemaEndpoint)
-      .then((res: SchemaList) => res.versions.reverse());
+      .makeRequest<SchemaList>(this.schemaEndpoint)
+      .then(res => res.versions.reverse());
   }
 
   /**
@@ -45,10 +52,10 @@ export class ExtensionsServiceV2 {
    */
   async listSchemaFiles(version: string): Promise<string[]> {
     return this.httpClient
-      .makeRequest(`${this.schemaEndpoint}/${version}`, null, "GET", {
+      .makeRequest<SchemaFiles>(`${this.schemaEndpoint}/${version}`, undefined, "GET", {
         accept: "application/json; charset=utf-8",
       })
-      .then((res: SchemaFiles) => res.files);
+      .then(res => res.files);
   }
 
   /**
@@ -57,7 +64,7 @@ export class ExtensionsServiceV2 {
    * @param fileName the name of the schema file
    * @returns response data
    */
-  async getSchemaFile(version: string, fileName: string): Promise<any> {
+  async getSchemaFile(version: string, fileName: string): Promise<Record<string, unknown>> {
     return this.httpClient.makeRequest(`${this.schemaEndpoint}/${version}/${fileName}`);
   }
 
@@ -67,7 +74,10 @@ export class ExtensionsServiceV2 {
    * @returns list of versions
    */
   async listVersions(extensionName: string): Promise<MinimalExtension[]> {
-    return this.httpClient.paginatedCall(`${this.endpoint}/${extensionName}`, "extensions");
+    return this.httpClient.paginatedCall<MinimalExtension>(
+      `${this.endpoint}/${extensionName}`,
+      "extensions",
+    );
   }
 
   /**
@@ -137,7 +147,7 @@ export class ExtensionsServiceV2 {
     version?: string,
     activeOnly?: boolean,
   ): Promise<ExtensionMonitoringConfiguration[]> {
-    return this.httpClient.paginatedCall(
+    return this.httpClient.paginatedCall<ExtensionMonitoringConfiguration>(
       `${this.endpoint}/${extensionName}/monitoringConfigurations`,
       "items",
       {
@@ -157,7 +167,7 @@ export class ExtensionsServiceV2 {
     extensionName: string,
     configurationId: string,
   ): Promise<ExtensionStatusDto> {
-    return this.httpClient.makeRequest(
+    return this.httpClient.makeRequest<ExtensionStatusDto>(
       `${this.endpoint}/${extensionName}/monitoringConfigurations/${configurationId}/status`,
     );
   }
@@ -182,8 +192,11 @@ export class ExtensionsServiceV2 {
    * @param configurationId The ID of the requested monitoring configuration
    * @returns details of the monitoring configuration object
    */
-  async getMonitoringConfiguration(extensionName: string, configurationId: string) {
-    return this.httpClient.makeRequest(
+  async getMonitoringConfiguration(
+    extensionName: string,
+    configurationId: string,
+  ): Promise<ExtensionMonitoringConfiguration> {
+    return this.httpClient.makeRequest<ExtensionMonitoringConfiguration>(
       `${this.endpoint}/${extensionName}/monitoringConfigurations/${configurationId}`,
     );
   }
@@ -198,7 +211,7 @@ export class ExtensionsServiceV2 {
   async putMonitoringConfiguration(
     extensionName: string,
     configurationId: string,
-    configurationDetails: any,
+    configurationDetails: Record<string, unknown>,
   ) {
     return this.httpClient.makeRequest(
       `${this.endpoint}/${extensionName}/monitoringConfigurations/${configurationId}`,
@@ -214,7 +227,10 @@ export class ExtensionsServiceV2 {
    * @param configurationDetails details of the monitoring configuration
    * @returns response data
    */
-  async postMonitoringConfiguration(extensionName: string, configurationDetails: any) {
+  async postMonitoringConfiguration(
+    extensionName: string,
+    configurationDetails: Record<string, unknown>,
+  ) {
     return this.httpClient.makeRequest(
       `${this.endpoint}/${extensionName}/monitoringConfigurations`,
       configurationDetails,
@@ -246,8 +262,8 @@ export class ExtensionsServiceV2 {
     extensionVersion: string,
     downloadPackage: boolean = false,
   ) {
-    const headers: any = {};
-    headers["Accept"] = downloadPackage
+    const headers: Record<string, string> = {};
+    headers.Accept = downloadPackage
       ? "application/octet-stream"
       : "application/json; charset=utf-8";
 

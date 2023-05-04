@@ -17,14 +17,14 @@
 import * as vscode from "vscode";
 import { Dynatrace } from "../../dynatrace-api/dynatrace";
 import { DynatraceAPIError } from "../../dynatrace-api/errors";
-import { MetricResultsPanel } from "../../webviews/metricResults";
-import { getBlockItemIndexAtLine, getParentBlocks } from "../../utils/yamlParsing";
 import { ExtensionStub } from "../../interfaces/extensionMeta";
+import { getBlockItemIndexAtLine, getParentBlocks } from "../../utils/yamlParsing";
+import { MetricResultsPanel } from "../../webviews/metricResults";
 
 export interface ValidationStatus {
   status: "valid" | "invalid" | "unknown";
   error?: {
-    code: number;
+    code: number | string;
     message: string;
   };
 }
@@ -43,33 +43,34 @@ export async function validateSelector(
   selectorType: "metric" | "entity",
   dt: Dynatrace,
 ): Promise<ValidationStatus> {
-  return selectorType === "metric"
-    ? dt.metrics
-        .query(selector)
-        .then(() => ({ status: "valid" } as ValidationStatus))
-        .catch(
-          (err: DynatraceAPIError) =>
-            ({
-              status: "invalid",
-              error: {
-                code: err.errorParams.code,
-                message: err.errorParams.message,
-              },
-            } as ValidationStatus),
-        )
-    : dt.entitiesV2
-        .list(selector)
-        .then(() => ({ status: "valid" } as ValidationStatus))
-        .catch(
-          (err: DynatraceAPIError) =>
-            ({
-              status: "invalid",
-              error: {
-                code: err.errorParams.code,
-                message: err.errorParams.message,
-              },
-            } as ValidationStatus),
-        );
+  if (selectorType === "metric") {
+    return dt.metrics
+      .query(selector)
+      .then(() => ({ status: "valid" } as ValidationStatus))
+      .catch(
+        (err: DynatraceAPIError) =>
+          ({
+            status: "invalid",
+            error: {
+              code: err.errorParams.code,
+              message: err.errorParams.message,
+            },
+          } as ValidationStatus),
+      );
+  }
+  return dt.entitiesV2
+    .list(selector)
+    .then(() => ({ status: "valid" } as ValidationStatus))
+    .catch(
+      (err: DynatraceAPIError) =>
+        ({
+          status: "invalid",
+          error: {
+            code: err.errorParams.code,
+            message: err.errorParams.message,
+          },
+        } as ValidationStatus),
+    );
 }
 
 /**
@@ -110,7 +111,7 @@ export async function runSelector(
         );
         oc.show();
       });
-  } else if (selectorType === "entity") {
+  } else {
     dt.entitiesV2
       .list(selector, "now-2h", undefined, "properties,toRelationships,fromRelationships")
       .then((res: Entity[]) => {
@@ -154,17 +155,24 @@ export function resolveSelectorTemplate(
 ): string {
   const screenIdx = getBlockItemIndexAtLine("screens", position.line, document.getText());
   const parentBlocks = getParentBlocks(position.line, document.getText());
+  const screen = extension.screens?.[screenIdx];
 
-  var entityType = extension.screens![screenIdx].entityType;
+  if (!screen) {
+    return "";
+  }
+
+  let entityType = screen.entityType;
   if (
     parentBlocks[parentBlocks.length - 1] === "relation" &&
     parentBlocks[parentBlocks.length - 3] === "entitiesListCards"
   ) {
     const cardIdx = getBlockItemIndexAtLine("entitiesListCards", position.line, document.getText());
-    const selector =
-      extension.screens![screenIdx].entitiesListCards![cardIdx].entitySelectorTemplate;
-    if (selector) {
-      entityType = selector.split("type(")[1].split(")")[0].replace('"', "");
+    const card = screen.entitiesListCards?.[cardIdx];
+    if (card) {
+      const selector = card.entitySelectorTemplate;
+      if (selector) {
+        entityType = selector.split("type(")[1].split(")")[0].replace('"', "");
+      }
     }
   }
 

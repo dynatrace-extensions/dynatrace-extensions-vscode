@@ -14,25 +14,13 @@
   limitations under the License.
  */
 
-import { DynatraceAPIErrorParams } from "./interfaces/dynatrace";
+/********************************************************************************
+ * UTILITIES FOR CODE PATTERNS REUSABLE ANY FUNCTIONS
+ ********************************************************************************/
 
 /**
- * Custom error implementation to facilitate passing the Dynatrace error
- * envelope as a parameter.
+ * Loop-safe function to make use of setTimeout
  */
-export class DynatraceAPIError extends Error {
-  _errorParams: DynatraceAPIErrorParams;
-
-  /**
-   * @param message error message
-   * @param errorParams any optional parameters
-   */
-  constructor(message: string, errorParams: DynatraceAPIErrorParams) {
-    super(message);
-    this._errorParams = errorParams;
-  }
-
-  get errorParams() {
-    return this._errorParams;
-  }
+export async function loopSafeWait(duration: number) {
+  await new Promise(resolve => setTimeout(resolve, duration));
 }

@@ -18,7 +18,7 @@ interface Dashboard {
   metadata?: ConfigurationMetadata;
   id?: string;
   dashboardMetadata: DashboardMetadata;
-  tiles: any[];
+  tiles: unknown[];
 }
 
 interface ConfigurationMetadata {
@@ -54,3 +54,5 @@ interface DynamicFilters {
   filters: string[];
   tagSuggestionTypes?: string[];
 }
+
+export { Dashboard };

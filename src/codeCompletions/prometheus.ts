@@ -52,8 +52,6 @@ export class PrometheusCompletionProvider implements vscode.CompletionItemProvid
   provideCompletionItems(
     document: vscode.TextDocument,
     position: vscode.Position,
-    token: vscode.CancellationToken,
-    context: vscode.CompletionContext,
   ): vscode.CompletionItem[] {
     const completionItems: vscode.CompletionItem[] = [];
     const extension = this.cachedData.getExtensionYaml(document.getText());
@@ -63,7 +61,10 @@ export class PrometheusCompletionProvider implements vscode.CompletionItemProvid
     this.prometheusData = this.cachedData.getPrometheusData();
 
     // Bail early if different datasource or no scraped data
-    if (getDatasourceName(extension) !== "prometheus" || !this.prometheusData) {
+    if (
+      getDatasourceName(extension) !== "prometheus" ||
+      Object.keys(this.prometheusData).length === 0
+    ) {
       return [];
     }
 
@@ -88,9 +89,10 @@ export class PrometheusCompletionProvider implements vscode.CompletionItemProvid
     // Metric metadata
     if (line.endsWith("description: ") && parentBlocks[parentBlocks.length - 1] === "metadata") {
       const metricIdx = getBlockItemIndexAtLine("metrics", position.line, document.getText());
-      completionItems.push(
-        ...this.createDescriptionCompletion(extension.metrics[metricIdx].key, extension),
-      );
+      const metric = extension.metrics?.[metricIdx];
+      if (metric) {
+        completionItems.push(...this.createDescriptionCompletion(metric.key, extension));
+      }
     }
 
     return completionItems;
@@ -103,7 +105,7 @@ export class PrometheusCompletionProvider implements vscode.CompletionItemProvid
    * @returns list of completion items
    */
   private createMetricCompletion(existingKeys: string[]): vscode.CompletionItem[] {
-    var completions: vscode.CompletionItem[] = [];
+    const completions: vscode.CompletionItem[] = [];
     const availableKeys = Object.keys(this.prometheusData).filter(
       key => !existingKeys.includes(key),
     );
@@ -138,11 +140,12 @@ export class PrometheusCompletionProvider implements vscode.CompletionItemProvid
     metricKeys: string[],
     existingKeys: string[],
   ): vscode.CompletionItem[] {
-    var completions: vscode.CompletionItem[] = [];
-    var dimensions: string[] = [];
+    const completions: vscode.CompletionItem[] = [];
+    const dimensions: string[] = [];
     Object.keys(this.prometheusData).forEach(key => {
-      if (this.prometheusData[key].dimensions) {
-        this.prometheusData[key].dimensions!.forEach(dimension => {
+      const keyDimensions = this.prometheusData[key].dimensions;
+      if (keyDimensions && keyDimensions.length > 0) {
+        keyDimensions.forEach(dimension => {
           if (
             (metricKeys.length === 0 || metricKeys.includes(key)) &&
             !existingKeys.includes(dimension) &&
@@ -183,10 +186,10 @@ export class PrometheusCompletionProvider implements vscode.CompletionItemProvid
     metricKey: string,
     extension: ExtensionStub,
   ): vscode.CompletionItem[] {
-    var completions: vscode.CompletionItem[] = [];
+    const completions: vscode.CompletionItem[] = [];
     const metricValue = getMetricValue(metricKey, extension);
 
-    if (metricValue && metricValue.startsWith("metric:")) {
+    if (metricValue.startsWith("metric:")) {
       const promKey = metricValue.split("metric:")[1];
       if (Object.keys(this.prometheusData).includes(promKey)) {
         const descriptionCompletion = new vscode.CompletionItem(

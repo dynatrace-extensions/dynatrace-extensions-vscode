@@ -105,7 +105,7 @@ export class DiagnosticsProvider {
    * @returns list of diagnostic items
    */
   public getDiagnostics(uri: vscode.Uri): vscode.Diagnostic[] {
-    return [...(this.collection.get(uri) || [])];
+    return [...(this.collection.get(uri) ?? [])];
   }
 
   /**
@@ -115,19 +115,22 @@ export class DiagnosticsProvider {
    */
   public async isValidForBuilding(): Promise<boolean> {
     let status = true;
-    const extensionYamlFile = getExtensionFilePath()!;
+    const extensionYamlFile = getExtensionFilePath();
+    if (!extensionYamlFile) {
+      return false;
+    }
     const diagnostics = this.collection.get(vscode.Uri.file(extensionYamlFile));
 
     if (
       diagnostics &&
       diagnostics.findIndex(diag => diag.severity === vscode.DiagnosticSeverity.Error) > -1
     ) {
-      vscode.window.showErrorMessage("Extension cannot be built. Fix problems first.");
-      vscode.commands.executeCommand("workbench.action.problems.focus");
+      await vscode.window.showErrorMessage("Extension cannot be built. Fix problems first.");
+      await vscode.commands.executeCommand("workbench.action.problems.focus");
       status = false;
     }
 
-    console.log(`Check - diagnostics collection clear? > ${status}`);
+    console.log(`Check - diagnostics collection clear? > ${String(status)}`);
     return status;
   }
 
@@ -137,7 +140,7 @@ export class DiagnosticsProvider {
    * @returns list of diagnostic items
    */
   private async diagnoseExtensionName(document: vscode.TextDocument): Promise<vscode.Diagnostic[]> {
-    var diagnostics: vscode.Diagnostic[] = [];
+    const diagnostics: vscode.Diagnostic[] = [];
     const content = document.getText();
     const contentLines = content.split("\n");
     const lineNo = contentLines.findIndex(line => line.startsWith("name:"));
@@ -160,7 +163,7 @@ export class DiagnosticsProvider {
         ),
       );
     } else {
-      const nameRegex = /^(custom:)*(?!\.)(?!.*\.\.)(?!.*\.$)[a-z0-9-_\.]+$/;
+      const nameRegex = /^(custom:)*(?!\.)(?!.*\.\.)(?!.*\.$)[a-z0-9-_.]+$/;
       const extensionName = contentLines[lineNo].split("name:")[1].trim();
       const nameStart = new vscode.Position(lineNo, contentLines[lineNo].indexOf(extensionName));
       const nameEnd = new vscode.Position(lineNo, contentLines[lineNo].length);
@@ -195,7 +198,7 @@ export class DiagnosticsProvider {
     extension: ExtensionStub,
   ): Promise<vscode.Diagnostic[]> {
     const content = document.getText();
-    var diagnostics: vscode.Diagnostic[] = [];
+    const diagnostics: vscode.Diagnostic[] = [];
 
     // Honor the user's settings
     if (
@@ -243,7 +246,7 @@ export class DiagnosticsProvider {
     extension: ExtensionStub,
   ): Promise<vscode.Diagnostic[]> {
     const content = document.getText();
-    let diagnostics: vscode.Diagnostic[] = [];
+    const diagnostics: vscode.Diagnostic[] = [];
 
     // Honor the user's settings and bail early if no screens
     if (
@@ -256,7 +259,7 @@ export class DiagnosticsProvider {
     }
 
     const screenBounds = getListItemIndexes("screens", content);
-    extension.screens?.forEach((_, idx) => {
+    extension.screens.forEach((_, idx) => {
       const refCards = getReferencedCardsMeta(idx, extension);
       const defCards = getDefinedCardsMeta(idx, extension);
       refCards
@@ -310,13 +313,17 @@ export class DiagnosticsProvider {
     }
 
     // Get metrics and keep the OID-based ones
-    const metrics = getMetricsFromDataSource(extension, true).filter(
-      m => m.value && m.value.startsWith("oid:"),
-    );
+    const metrics = (
+      getMetricsFromDataSource(extension, true) as {
+        type: string;
+        key: string;
+        value: string;
+      }[]
+    ).filter(m => m.value.startsWith("oid:"));
     // Reduce the time by bulk fetching all required OIDs
     const oidInfos = await this.cachedData.getBulkOidsInfo(
       metrics.map(m =>
-        m.value!.endsWith(".0") ? m.value!.slice(4, m.value!.length - 2) : m.value!.slice(4),
+        m.value.endsWith(".0") ? m.value.slice(4, m.value.length - 2) : m.value.slice(4),
       ),
     );
     const metricInfos = metrics.map((m, i) => ({
@@ -327,7 +334,7 @@ export class DiagnosticsProvider {
     }));
 
     for (const metric of metricInfos) {
-      const oid = metric.value!.slice(4);
+      const oid = metric.value.slice(4);
       const oidRegex = new RegExp(
         `value: "?oid:${oid.replace(/\./g, "\\.")}"?(?:$|(?: .*$))`,
         "gm",
@@ -339,7 +346,7 @@ export class DiagnosticsProvider {
         const endPos = document.positionAt(match.index + match[0].indexOf(oid) + oid.length);
 
         // Check if valid
-        if (!/^\d[\.\d]+\d$/.test(oid)) {
+        if (!/^\d[.\d]+\d$/.test(oid)) {
           diagnostics.push(copilotDiagnostic(startPos, endPos, OID_SYNTAX_INVALID));
 
           // Check we have online data
@@ -351,7 +358,7 @@ export class DiagnosticsProvider {
           if (!isOidReadable(metric.info)) {
             diagnostics.push(copilotDiagnostic(startPos, endPos, OID_NOT_READABLE));
           }
-          if (metric.info.syntax && metric.info.syntax.toLowerCase().includes("string")) {
+          if (metric.info.syntax?.toLowerCase().includes("string")) {
             diagnostics.push(copilotDiagnostic(startPos, endPos, OID_STRING_AS_METRIC));
           }
           if (metric.info.syntax) {
@@ -426,15 +433,17 @@ export class DiagnosticsProvider {
     }
 
     // Get dimensions and tidy up OIDs (.0 ending is not valid for lookups)
-    const dimensions = getDimensionsFromDataSource(extension, true)
-      .filter(d => d.value && d.value.startsWith("oid:"))
+    const dimensions = (
+      getDimensionsFromDataSource(extension, true) as { key: string; value: string }[]
+    )
+      .filter(d => d.value.startsWith("oid:"))
       .map(d => ({
         key: d.key,
-        value: d.value?.endsWith(".0") ? d.value.slice(0, d.value.length - 2) : d.value,
+        value: d.value.endsWith(".0") ? d.value.slice(0, d.value.length - 2) : d.value,
       }));
     // Reduce the time by bulk fetching all required OIDs
     const dimensionOidInfos = await this.cachedData.getBulkOidsInfo(
-      dimensions.map(d => d.value!.split("oid:")[1]),
+      dimensions.map(d => d.value.split("oid:")[1]),
     );
     const dimensionInfos = dimensions.map((d, i) => ({
       key: d.key,
@@ -443,7 +452,7 @@ export class DiagnosticsProvider {
     }));
 
     for (const dimension of dimensionInfos) {
-      const oid = dimension.value!.slice(4);
+      const oid = dimension.value.slice(4);
       const oidRegex = new RegExp(
         `value: "?oid:${oid.replace(/\./g, "\\.")}"?(?:$|(?: .*$))`,
         "gm",
@@ -455,7 +464,7 @@ export class DiagnosticsProvider {
         const endPos = document.positionAt(match.index + match[0].indexOf(oid) + oid.length);
 
         // Check if valid
-        if (!/^\d[\.\d]+\d$/.test(oid)) {
+        if (!/^\d[.\d]+\d$/.test(oid)) {
           diagnostics.push(copilotDiagnostic(startPos, endPos, OID_SYNTAX_INVALID));
 
           // Check if there is online data
@@ -520,35 +529,34 @@ export class DiagnosticsProvider {
     }
 
     if (groupIdx !== -1 && subgroupIdx !== -1) {
-      if (extension.snmp![groupIdx].subgroups && subgroupIdx !== -1) {
-        if (extension.snmp![groupIdx].subgroups![subgroupIdx].table) {
-          if (usageInfo.value?.endsWith(".0")) {
-            diagnostics.push(copilotDiagnostic(startPos, endPos, OID_DOT_ZERO_IN_TABLE));
-          } else {
-            // Get data for grandparent OID, then check for signs of table
-            const grandparentInfo = await this.cachedData.getSingleOidInfo(
-              // Get the second last index of '.' and slice oid from start
-              oid.slice(0, oid.slice(0, oid.lastIndexOf(".")).lastIndexOf(".")),
-            );
-            if (!isTable(grandparentInfo)) {
-              diagnostics.push(copilotDiagnostic(startPos, endPos, OID_STATIC_OBJ_IN_TABLE));
-            }
-          }
+      const subgroup = extension.snmp[groupIdx].subgroups?.[subgroupIdx];
+      if (subgroup?.table) {
+        if (usageInfo.value?.endsWith(".0")) {
+          diagnostics.push(copilotDiagnostic(startPos, endPos, OID_DOT_ZERO_IN_TABLE));
         } else {
-          if (!usageInfo.value?.endsWith(".0")) {
-            diagnostics.push(copilotDiagnostic(startPos, endPos, OID_DOT_ZERO_MISSING));
-          } else {
-            // Get data for grandparent OID, then check for signs of table
-            const grandparentInfo = await this.cachedData.getSingleOidInfo(
-              // Remove '.0', get the second last index of '.' and slice oid from start
-              oid.slice(
-                0,
-                oid.slice(0, oid.slice(0, oid.length - 2).lastIndexOf(".")).lastIndexOf("."),
-              ),
-            );
-            if (isTable(grandparentInfo)) {
-              diagnostics.push(copilotDiagnostic(startPos, endPos, OID_TABLE_OBJ_AS_STATIC));
-            }
+          // Get data for grandparent OID, then check for signs of table
+          const grandparentInfo = await this.cachedData.getSingleOidInfo(
+            // Get the second last index of '.' and slice oid from start
+            oid.slice(0, oid.slice(0, oid.lastIndexOf(".")).lastIndexOf(".")),
+          );
+          if (!isTable(grandparentInfo)) {
+            diagnostics.push(copilotDiagnostic(startPos, endPos, OID_STATIC_OBJ_IN_TABLE));
+          }
+        }
+      } else {
+        if (!usageInfo.value?.endsWith(".0")) {
+          diagnostics.push(copilotDiagnostic(startPos, endPos, OID_DOT_ZERO_MISSING));
+        } else {
+          // Get data for grandparent OID, then check for signs of table
+          const grandparentInfo = await this.cachedData.getSingleOidInfo(
+            // Remove '.0', get the second last index of '.' and slice oid from start
+            oid.slice(
+              0,
+              oid.slice(0, oid.slice(0, oid.length - 2).lastIndexOf(".")).lastIndexOf("."),
+            ),
+          );
+          if (isTable(grandparentInfo)) {
+            diagnostics.push(copilotDiagnostic(startPos, endPos, OID_TABLE_OBJ_AS_STATIC));
           }
         }
       }

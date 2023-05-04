@@ -14,21 +14,56 @@
   limitations under the License.
  */
 
-import * as vscode from "vscode";
 import * as crypto from "crypto";
-import { getExtensionFilePath } from "../utils/fileSystem";
 import { existsSync, mkdirSync, readdirSync, readFileSync, writeFileSync } from "fs";
 import path = require("path");
-import { getAllMetricKeysFromDataSource } from "../utils/extensionParsing";
-import { CachedDataProvider } from "../utils/dataCaching";
+import * as vscode from "vscode";
 import { MetricMetadata } from "../interfaces/extensionMeta";
+import { CachedDataProvider } from "../utils/dataCaching";
+import { getAllMetricKeysFromDataSource } from "../utils/extensionParsing";
+import { getExtensionFilePath } from "../utils/fileSystem";
+
+export function createValidFileName(name: string) {
+  // Convert name to lowerCase, only allow \w and - characters
+  // It must follow the pattern [a-zA-Z0-9]+([-_./][a-zA-Z0-9]+)*
+  const nameForFile = name
+    .toLowerCase()
+    .replace(/[^a-z0-9-]/g, "-") // Only allow a-z, 0-9 and -
+    .replace(/-+/g, "-") // Replace multiple '-' with a single '-'
+    .replace(/^-+|-+$/g, ""); // Remove leading and trailing '-'
+
+  return nameForFile;
+}
+
+function createUniqueAlertFileName(alertsDir: string, alertName: string): string {
+  // Count how many files we have inside the alerts directory with readDirSync
+  const currentAlertFiles = readdirSync(alertsDir);
+  let currentFileNumber = currentAlertFiles.length;
+  let fileName;
+
+  do {
+    currentFileNumber++;
+    const alertNameForFile = createValidFileName(alertName);
+
+    // Pad the number with zeros so the lenght is always 3
+    const paddedFileNumber = currentFileNumber.toString().padStart(3, "0");
+    fileName = `alert-${paddedFileNumber}-${alertNameForFile}.json`;
+
+    // Check if the file name is unique, otherwise we increment the counter and try again
+  } while (currentAlertFiles.includes(fileName));
+
+  return fileName;
+}
 
 export async function createAlert(cachedData: CachedDataProvider) {
-  const extensionFile = getExtensionFilePath()!;
+  const extensionFile = getExtensionFilePath();
+  if (!extensionFile) {
+    return;
+  }
   const extensionText = readFileSync(extensionFile).toString();
   const extension = cachedData.getExtensionYaml(extensionText);
 
-  // TODO, we could ask the user if they want to create a new alert or edit an existing one?
+  // TODO: we could ask the user if they want to create a new alert or edit an existing one?
 
   // Ask the user to select a metric
   let metricKeys = getAllMetricKeysFromDataSource(extension);
@@ -37,7 +72,7 @@ export async function createAlert(cachedData: CachedDataProvider) {
   }
 
   if (metricKeys.length === 0) {
-    vscode.window.showWarningMessage(
+    await vscode.window.showWarningMessage(
       "No metrics defined in extension.yaml, please define them before creating alerts",
     );
     return;
@@ -48,7 +83,7 @@ export async function createAlert(cachedData: CachedDataProvider) {
     title: "Extension workspace: Create Alert",
   });
   if (!metricToUse) {
-    vscode.window.showErrorMessage("No metric was selected. Operation cancelled.");
+    await vscode.window.showErrorMessage("No metric was selected. Operation cancelled.");
     return;
   }
 
@@ -58,7 +93,7 @@ export async function createAlert(cachedData: CachedDataProvider) {
     title: "Extension workspace: Create Alert",
   });
   if (!alertName) {
-    vscode.window.showErrorMessage("No alert name was entered. Operation cancelled.");
+    await vscode.window.showErrorMessage("No alert name was entered. Operation cancelled.");
     return;
   }
 
@@ -68,7 +103,7 @@ export async function createAlert(cachedData: CachedDataProvider) {
     title: "Extension workspace: Create Alert",
   });
   if (!alertCondition) {
-    vscode.window.showErrorMessage("No alert condition was selected. Operation cancelled.");
+    await vscode.window.showErrorMessage("No alert condition was selected. Operation cancelled.");
     return;
   }
 
@@ -79,7 +114,7 @@ export async function createAlert(cachedData: CachedDataProvider) {
   });
 
   if (!threshold || isNaN(Number(threshold))) {
-    vscode.window.showErrorMessage("No valid threshold was entered. Operation cancelled.");
+    await vscode.window.showErrorMessage("No valid threshold was entered. Operation cancelled.");
     return;
   }
 
@@ -144,37 +179,5 @@ export async function createAlert(cachedData: CachedDataProvider) {
 
   writeFileSync(extensionFile, updatedExtensionText);
 
-  vscode.window.showInformationMessage(`Alert '${alertName}' created on alerts/${fileName}`);
-}
-
-function createUniqueAlertFileName(alertsDir: string, alertName: string): string {
-  // Count how many files we have inside the alerts directory with readDirSync
-  let currentAlertFiles = readdirSync(alertsDir);
-  let currentFileNumber = currentAlertFiles.length;
-
-  while (true) {
-    currentFileNumber++;
-    const alertNameForFile = createValidFileName(alertName);
-
-    // Pad the number with zeros so the lenght is always 3
-    const paddedFileNumber = currentFileNumber.toString().padStart(3, "0");
-    const fileName = `alert-${paddedFileNumber}-${alertNameForFile}.json`;
-
-    // Check if the file name is unique, otherwise we increment the counter and try again
-    if (!currentAlertFiles.includes(fileName)) {
-      return fileName;
-    }
-  }
-}
-
-export function createValidFileName(name: string) {
-  // Convert name to lowerCase, only allow \w and - characters
-  // It must follow the pattern [a-zA-Z0-9]+([-_./][a-zA-Z0-9]+)*
-  const nameForFile = name
-    .toLowerCase()
-    .replace(/[^a-z0-9-]/g, "-") // Only allow a-z, 0-9 and -
-    .replace(/-+/g, "-") // Replace multiple '-' with a single '-'
-    .replace(/^-+|-+$/g, ""); // Remove leading and trailing '-'
-
-  return nameForFile;
+  await vscode.window.showInformationMessage(`Alert '${alertName}' created on alerts/${fileName}`);
 }

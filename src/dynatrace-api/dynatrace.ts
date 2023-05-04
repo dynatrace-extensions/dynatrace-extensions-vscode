@@ -16,8 +16,8 @@
 
 import { CredentialVaultService } from "./configuration_v1/credentialVault";
 import { DashboardService } from "./configuration_v1/dashboards";
-import { ExtensionsServiceV2 } from "./environment_v2/extensions";
 import { ExtensionsServiceV1 } from "./configuration_v1/extensions";
+import { ExtensionsServiceV2 } from "./environment_v2/extensions";
 import { MetricService } from "./environment_v2/metrics";
 import { EntityServiceV2 } from "./environment_v2/monitoredEntities";
 import { SettingsService } from "./environment_v2/settings";

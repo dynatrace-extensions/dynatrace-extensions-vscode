@@ -75,13 +75,15 @@ interface EntityIcon {
 interface Entity {
   firstSeenTms: number;
   lastSeenTms: number;
-  fromRelationships?: { [key: string]: EntityId[] };
-  toRelationships?: { [key: string]: EntityId[] };
+  fromRelationships?: Record<string, EntityId[]>;
+  toRelationships?: Record<string, EntityId[]>;
   tags?: METag[];
   managementZones?: ManagementZone[];
   entityId: string;
   icon?: EntityIcon;
-  properties?: { [key: string]: string }[];
+  properties?: Record<string, string>[];
   type: string;
   displayName: string;
 }
+
+export { Entity, EntityTypeList, EntityType };

@@ -59,10 +59,8 @@ export class DiagnosticFixProvider implements vscode.CodeActionProvider {
   provideCodeActions(
     document: vscode.TextDocument,
     range: vscode.Range | vscode.Selection,
-    context: vscode.CodeActionContext,
-    token: vscode.CancellationToken,
   ): vscode.CodeAction[] {
-    var fixActions: vscode.CodeAction[] = [];
+    const fixActions: vscode.CodeAction[] = [];
 
     // We should only attempt to fix our own diagnostics
     const diagnostics = this.diagnosticProvider.getDiagnostics(document.uri);
@@ -128,13 +126,13 @@ export class DiagnosticFixProvider implements vscode.CodeActionProvider {
     range: vscode.Range,
     document: vscode.TextDocument,
   ): vscode.CodeAction[] {
-    var fixActions: vscode.CodeAction[] = [];
+    const fixActions: vscode.CodeAction[] = [];
 
     // Fix Actions for individual metric keys
     diagnostics
       .filter(diagnostic => diagnostic.range.start.line === range.start.line)
       .forEach(diagnostic => {
-        switch (diagnostic.code!.toString()) {
+        switch (diagnostic.code?.toString()) {
           case COUNT_METRIC_KEY_SUFFIX.code:
             fixActions.push(
               this.createFixAction(
@@ -186,10 +184,10 @@ export class DiagnosticFixProvider implements vscode.CodeActionProvider {
       diagnostics.forEach(diagnostic => {
         switch (diagnostic.code) {
           case COUNT_METRIC_KEY_SUFFIX.code:
-            fixAllKeysAction.edit!.insert(document.uri, diagnostic.range.end, ".count");
+            fixAllKeysAction.edit?.insert(document.uri, diagnostic.range.end, ".count");
             break;
           case GAUGE_METRIC_KEY_SUFFIX.code:
-            fixAllKeysAction.edit!.delete(
+            fixAllKeysAction.edit?.delete(
               document.uri,
               new vscode.Range(
                 new vscode.Position(diagnostic.range.end.line, diagnostic.range.end.character - 6),

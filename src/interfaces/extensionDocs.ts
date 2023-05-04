@@ -49,3 +49,56 @@ interface EntityDoc {
   sources: string[];
   metrics: string[];
 }
+
+interface DynatraceDashboard {
+  id: string;
+  dashboardMetadata: {
+    name: string;
+    shared?: boolean;
+    owner: string;
+    dashboardFilter?: unknown;
+    tags?: unknown[];
+    preset?: boolean;
+    dynamicFilters?: unknown;
+    tilesNameSize?: unknown;
+    hasConsistentColors?: unknown;
+  };
+  tiles: unknown[];
+}
+
+interface AlertDefinition extends AlertStrategy {
+  id: string;
+  metricSelector: string;
+  severity?: string;
+  primaryDimensionKey?: string;
+  name: string;
+  description: string;
+  enabled: boolean;
+  monitoringStrategy: AlertMonitoringStrategy;
+  eventType: string;
+}
+
+interface AlertMonitoringStrategy extends AlertStrategy {
+  type: string;
+  unit?: string;
+  alertingOnMissingData: boolean;
+}
+
+interface AlertStrategy {
+  threshold: number;
+  violatingSamples: number;
+  samples: number;
+  dealertingSamples: number;
+  alertCondition: string;
+}
+
+export {
+  AlertDoc,
+  DashboardDoc,
+  FeatureSetDoc,
+  MetricDoc,
+  MetricEntityMap,
+  EntityDoc,
+  AlertDefinition,
+  DynatraceDashboard,
+};

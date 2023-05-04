@@ -33,8 +33,6 @@ export class ScreensMetaCompletionProvider implements vscode.CompletionItemProvi
   provideCompletionItems(
     document: vscode.TextDocument,
     position: vscode.Position,
-    token: vscode.CancellationToken,
-    context: vscode.CompletionContext,
   ): vscode.CompletionItem[] {
     const completions: vscode.CompletionItem[] = [];
     const extension = this.cachedData.getExtensionYaml(document.getText());
@@ -96,15 +94,15 @@ export class ScreensMetaCompletionProvider implements vscode.CompletionItemProvi
     extension: ExtensionStub,
     cardType?: "entitiesListCards" | "chartsCards" | "eventsCards" | "logsCards" | "messageCards",
   ): vscode.CompletionItem[] {
-    var completions: vscode.CompletionItem[] = [];
+    const completions: vscode.CompletionItem[] = [];
 
     if (location === "definition") {
-      var cardsInserted = getDefinedCardsMeta(screenIdx, extension, cardType).map(c => c.key);
+      const cardsInserted = getDefinedCardsMeta(screenIdx, extension, cardType).map(c => c.key);
       getReferencedCardsMeta(screenIdx, extension)
         .filter(
           // Stupid way of matching card types between yaml key and yaml value
           card =>
-            card.type.substring(0, 4).toLowerCase() === cardType!.substring(0, 4) &&
+            card.type.substring(0, 4).toLowerCase() === cardType?.substring(0, 4) &&
             !cardsInserted.includes(card.key),
         )
         .forEach(card => {
@@ -118,8 +116,8 @@ export class ScreensMetaCompletionProvider implements vscode.CompletionItemProvi
             "but you don't have a defintion for it yet.";
           completions.push(cardCompletion);
         });
-    } else if (location === "layout") {
-      var cardsInserted = getReferencedCardsMeta(screenIdx, extension).map(c => c.key);
+    } else {
+      const cardsInserted = getReferencedCardsMeta(screenIdx, extension).map(c => c.key);
       getDefinedCardsMeta(screenIdx, extension)
         .filter(card => !cardsInserted.includes(card.key))
         .forEach(card => {
