@@ -15,6 +15,7 @@
  */
 
 import { HttpClient } from "../http_client";
+import { Dashboard } from "../interfaces/dashboards";
 
 /**
  * Implementation of the Dashboards API.

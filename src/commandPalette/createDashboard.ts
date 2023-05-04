@@ -17,6 +17,7 @@
 import { existsSync, mkdirSync, readFileSync, writeFileSync } from "fs";
 import * as path from "path";
 import * as vscode from "vscode";
+import { Dashboard } from "../dynatrace-api/interfaces/dashboards";
 import { ExtensionStub } from "../interfaces/extensionMeta";
 import { EnvironmentsTreeDataProvider } from "../treeViews/environmentsTreeView";
 import { CachedDataProvider } from "../utils/dataCaching";

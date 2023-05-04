@@ -17,6 +17,8 @@
 import * as vscode from "vscode";
 import { Dynatrace } from "../../dynatrace-api/dynatrace";
 import { DynatraceAPIError } from "../../dynatrace-api/errors";
+import { MetricSeriesCollection } from "../../dynatrace-api/interfaces/metrics";
+import { Entity } from "../../dynatrace-api/interfaces/monitoredEntities";
 import { ExtensionStub } from "../../interfaces/extensionMeta";
 import { getBlockItemIndexAtLine, getParentBlocks } from "../../utils/yamlParsing";
 import { MetricResultsPanel } from "../../webviews/metricResults";

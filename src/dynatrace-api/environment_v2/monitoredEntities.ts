@@ -15,6 +15,7 @@
  */
 
 import { HttpClient } from "../http_client";
+import { Entity, EntityType } from "../interfaces/monitoredEntities";
 
 /**
  * Implementation of the Monitored Entities V2 API

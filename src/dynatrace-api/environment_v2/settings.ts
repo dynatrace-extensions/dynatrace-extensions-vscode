@@ -15,6 +15,12 @@
  */
 
 import { HttpClient } from "../http_client";
+import {
+  SchemaStub,
+  SettingsObject,
+  SettingsObjectCreate,
+  SettingsObjectUpdate,
+} from "../interfaces/settings";
 
 /**
  * Implementation of the Settings 2.0 API
