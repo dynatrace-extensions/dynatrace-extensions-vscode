@@ -336,3 +336,111 @@ export function resolveRealPath(pathToResolve: string): string {
       return pathToResolve;
   }
 }
+
+/**
+ * Writes a .gitignore file for the workspace which applies to Copilot, VSCode, and optionally
+ * Python. If the workspace already has a .gitignore, only the lines missing would get added.
+ * @param includePython whether the .gitignore needs the Python content or not
+ */
+export async function writeGititnore(includePython: boolean = false) {
+  const VSCODE_IGNORES = [
+    ".vscode/*",
+    "!.vscode/settings.json",
+    "!.vscode/tasks.json",
+    "!.vscode/launch.json",
+    "!.vscode/extensions.json",
+    "!.vscode/*.code-snippets",
+    ".history/",
+    "*.vsix",
+  ];
+  const PYTHON_IGNORES = [
+    "*.log",
+    "*.py[cod]",
+    "*.egg-info",
+    "__pycache__",
+    "build",
+    ".env",
+    ".venv",
+    "env/",
+    "venv/",
+  ];
+  const COPILOT_IGNORES = ["dist", "config"];
+  const BASE_GITIGNORE = `\
+# VS Code
+.vscode/*
+!.vscode/settings.json
+!.vscode/tasks.json
+!.vscode/launch.json
+!.vscode/extensions.json
+!.vscode/*.code-snippets
+
+# Local History for Visual Studio Code
+.history/
+
+# Built Visual Studio Code Extensions
+*.vsix
+
+# Copilot builds & configs
+config
+dist
+`;
+
+  const PYTHON_GITIGNORE = `\
+# Log files
+*.log
+
+# Python
+*.py[cod]
+*.egg-info
+__pycache__
+
+# Environments
+.env
+.venv
+env/
+venv/
+`;
+
+  const gitignore = await vscode.workspace.findFiles(".gitignore", undefined, 1);
+
+  if (gitignore.length > 0) {
+    const existingLines = readFileSync(gitignore[0].fsPath)
+      .toString()
+      .split("\n")
+      .map(l => l.trim());
+    const gitignoreLines = [];
+
+    // VS Code ignores
+    const vscodeIgnores = VSCODE_IGNORES.filter(line => !existingLines.includes(line));
+    if (vscodeIgnores.length > 0) {
+      gitignoreLines.push("# VS Code");
+      gitignoreLines.push(...vscodeIgnores, "");
+    }
+
+    // Copilot ignores
+    const copilotIgnores = COPILOT_IGNORES.filter(line => !existingLines.includes(line));
+    if (copilotIgnores.length > 0) {
+      gitignoreLines.push("# Copilot builds & configs");
+      gitignoreLines.push(...copilotIgnores, "");
+    }
+
+    // Python ignores
+    if (includePython) {
+      const pythonIgnores = PYTHON_IGNORES.filter(line => !existingLines.includes(line));
+      if (pythonIgnores.length > 0) {
+        gitignoreLines.push("# Python");
+        gitignoreLines.push(...pythonIgnores, "");
+      }
+    }
+
+    // Update the content if we added anything
+    if (gitignoreLines.length > 0) {
+      writeFileSync(gitignore[0].fsPath, [...existingLines, ...gitignoreLines].join("\n"));
+    }
+  } else {
+    writeFileSync(
+      path.join(vscode.workspace.workspaceFolders?.[0].uri.fsPath, ".gitignore"),
+      BASE_GITIGNORE + (includePython ? PYTHON_GITIGNORE : ""),
+    );
+  }
+}

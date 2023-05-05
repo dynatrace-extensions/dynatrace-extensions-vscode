@@ -22,7 +22,12 @@ import * as vscode from "vscode";
 import { Dynatrace } from "../dynatrace-api/dynatrace";
 import { showMessage } from "../utils/code";
 import { checkDtSdkPresent, checkSettings, checkUrlReachable } from "../utils/conditionCheckers";
-import { getExtensionFilePath, initWorkspaceStorage, registerWorkspace } from "../utils/fileSystem";
+import {
+  getExtensionFilePath,
+  initWorkspaceStorage,
+  registerWorkspace,
+  writeGititnore,
+} from "../utils/fileSystem";
 import { runCommand } from "../utils/subprocesses";
 import { loadSchemas } from "./loadSchemas";
 
@@ -156,6 +161,7 @@ async function existingExtensionSetup(dt: Dynatrace, rootPath: string) {
             moduleZip.extractAllTo(rootPath);
           });
       }
+      await writeGititnore(true);
     }
   } catch (err) {
     console.log(err);
@@ -174,7 +180,8 @@ async function existingExtensionSetup(dt: Dynatrace, rootPath: string) {
  */
 async function defaultExtensionSetup(schemaVersion: string, rootPath: string) {
   // Only modify artefacts if extension.yaml not already present in workspace
-  if (!getExtensionFilePath()) {
+  const extensionFilePath = getExtensionFilePath();
+  if (!extensionFilePath) {
     // Create extension directory
     const extensionDir = vscode.Uri.file(path.resolve(path.join(rootPath, "extension")));
     await vscode.workspace.fs.createDirectory(extensionDir);
@@ -186,6 +193,10 @@ async function defaultExtensionSetup(schemaVersion: string, rootPath: string) {
       vscode.Uri.file(path.join(extensionDir.fsPath, "extension.yaml")),
       new TextEncoder().encode(extensionStub),
     );
+  } else {
+    if (/^python:/gm.test(readFileSync(extensionFilePath).toString())) {
+      await writeGititnore(true);
+    }
   }
 }
 
@@ -361,6 +372,9 @@ export async function initWorkspace(
             await defaultExtensionSetup(schemaVersion, rootPath);
           }
       }
+
+      // Create or update the .gitignore
+      await writeGititnore(projectType === PROJECT_TYPES.pythonExtension);
     },
   );
 
