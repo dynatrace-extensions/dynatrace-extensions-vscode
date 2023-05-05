@@ -19,6 +19,7 @@ import * as path from "path";
 import axios from "axios";
 import * as vscode from "vscode";
 import { Dynatrace } from "../dynatrace-api/dynatrace";
+import { showMessage } from "../utils/code";
 import { getExtensionFilePath } from "../utils/fileSystem";
 
 /**
@@ -41,7 +42,7 @@ function downloadSchemaFiles(location: string, version: string, dt: Dynatrace) {
         return "cancelled";
       }
       const schemaFiles = await dt.extensionsV2.listSchemaFiles(version).catch(async err => {
-        await vscode.window.showErrorMessage((err as Error).message);
+        showMessage("error", (err as Error).message);
         return [];
       });
 
@@ -76,7 +77,7 @@ function downloadSchemaFiles(location: string, version: string, dt: Dynatrace) {
           }),
         )
         .catch(async err => {
-          await vscode.window.showErrorMessage((err as Error).message);
+          showMessage("error", (err as Error).message);
         });
     },
   );
@@ -96,11 +97,11 @@ export async function loadSchemas(
 ): Promise<boolean> {
   // Fetch available schema versions from cluster
   const availableVersions = await dt.extensionsV2.listSchemaVersions().catch(async err => {
-    await vscode.window.showErrorMessage((err as Error).message);
+    showMessage("error", (err as Error).message);
     return [];
   });
   if (availableVersions.length === 0) {
-    await vscode.window.showErrorMessage("No schemas available. Operation cancelled.");
+    showMessage("error", "No schemas available. Operation cancelled.");
     return false;
   }
 
@@ -110,13 +111,13 @@ export async function loadSchemas(
     title: "Extension workspace: Load Schemas",
   });
   if (!version) {
-    await vscode.window.showErrorMessage("No schema was selected. Operation cancelled.");
+    showMessage("error", "No schema was selected. Operation cancelled.");
     return false;
   }
   const location = path.join(context.globalStorageUri.fsPath, version);
 
   // If directory exists, assume schemas already present
-  let cancelled;
+  let cancelled = "";
   if (!existsSync(location)) {
     cancelled = await downloadSchemaFiles(location, version, dt);
   } else {
@@ -129,7 +130,7 @@ export async function loadSchemas(
     }
   }
   if (cancelled === "cancelled") {
-    await vscode.window.showWarningMessage("Operation cancelled by user");
+    showMessage("warn", "Operation cancelled by user");
     return false;
   }
 
@@ -159,13 +160,11 @@ export async function loadSchemas(
       );
     }
   } catch (err) {
-    await vscode.window.showErrorMessage(
-      "Extension YAML was not updated. Schema loading only partially complete.",
-    );
-    await vscode.window.showErrorMessage((err as Error).message);
+    showMessage("error", "Extension YAML was not updated. Schema loading only partially complete.");
+    showMessage("error", (err as Error).message);
     return false;
   }
 
-  await vscode.window.showInformationMessage("Schema loading complete.");
+  showMessage("info", "Schema loading complete.");
   return true;
 }

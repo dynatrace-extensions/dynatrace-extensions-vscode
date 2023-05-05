@@ -24,6 +24,7 @@ import * as path from "path";
 import axios from "axios";
 import * as vscode from "vscode";
 import { EnvironmentsTreeDataProvider } from "../treeViews/environmentsTreeView";
+import { showMessage } from "./code";
 import { getExtensionFilePath, resolveRealPath } from "./fileSystem";
 import { runCommand } from "./subprocesses";
 
@@ -49,9 +50,9 @@ export async function checkSettings(...settings: string[]): Promise<boolean> {
             await vscode.commands.executeCommand("workbench.action.openSettings", "Dynatrace");
           }
         });
+      status = false;
+      break;
     }
-    status = false;
-    break;
   }
 
   console.log(`Check - are required settings present? > ${String(status)}`);
@@ -68,9 +69,7 @@ export async function checkEnvironmentConnected(
 ): Promise<boolean> {
   let status = true;
   if (!(await environmentsTree.getCurrentEnvironment())) {
-    await vscode.window.showErrorMessage(
-      "You must be connected to a Dynatrace Environment to use this command.",
-    );
+    showMessage("error", "You must be connected to a Dynatrace Environment to use this command.");
     status = false;
   }
 
@@ -116,7 +115,8 @@ export async function isExtensionsWorkspace(
     const extensionYaml = getExtensionFilePath();
     if (!extensionYaml) {
       if (showWarningMessage) {
-        await vscode.window.showWarningMessage(
+        showMessage(
+          "warn",
           "This command must be run from an Extensions Workspace. " +
             "Ensure your `extension` folder is within the root of the workspace.",
         );
@@ -227,9 +227,7 @@ export async function checkExtensionZipExists(): Promise<boolean> {
   if (vscode.workspace.workspaceFolders) {
     const distDir = path.join(vscode.workspace.workspaceFolders[0].uri.fsPath, "dist");
     if (readdirSync(distDir).filter(i => i.endsWith(".zip")).length === 0) {
-      await vscode.window.showErrorMessage(
-        "No extension archive was found. Try building one first.",
-      );
+      showMessage("error", "No extension archive was found. Try building one first.");
       return false;
     }
     return true;

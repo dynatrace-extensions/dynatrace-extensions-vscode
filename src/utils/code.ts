@@ -18,9 +18,51 @@
  * UTILITIES FOR CODE PATTERNS REUSABLE ANY FUNCTIONS
  ********************************************************************************/
 
+import * as vscode from "vscode";
+
 /**
  * Loop-safe function to make use of setTimeout
  */
 export async function loopSafeWait(duration: number) {
   await new Promise(resolve => setTimeout(resolve, duration));
+}
+
+/**
+ * A generalized way of sending simple messages while having a fulfilled/rejected handler.
+ * Helps comply with @typescript-eslint/no-floating-promises
+ * @param severity info, warn, error
+ * @param message message to send in notification
+ */
+export function showMessage(severity: "info" | "warn" | "error", message: string) {
+  switch (severity) {
+    case "info":
+      vscode.window.showInformationMessage(message).then(
+        () => {
+          console.log(message);
+        },
+        () => {
+          console.log(`Could not create UI notification about "${message}"`);
+        },
+      );
+      break;
+    case "warn":
+      vscode.window.showWarningMessage(message).then(
+        () => {
+          console.log(message);
+        },
+        () => {
+          console.log(`Could not create UI notification about "${message}"`);
+        },
+      );
+      break;
+    case "error":
+      vscode.window.showErrorMessage(message).then(
+        () => {
+          console.log(message);
+        },
+        () => {
+          console.log(`Could not create UI notification about "${message}"`);
+        },
+      );
+  }
 }

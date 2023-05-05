@@ -22,7 +22,7 @@ import * as vscode from "vscode";
 import { Dynatrace } from "../dynatrace-api/dynatrace";
 import { DynatraceAPIError } from "../dynatrace-api/errors";
 import { FastModeStatus } from "../statusBar/fastMode";
-import { loopSafeWait } from "../utils/code";
+import { loopSafeWait, showMessage } from "../utils/code";
 import { checkDtSdkPresent } from "../utils/conditionCheckers";
 import { sign } from "../utils/cryptography";
 import { normalizeExtensionVersion, incrementExtensionVersion } from "../utils/extensionParsing";
@@ -67,7 +67,7 @@ async function preBuildTasks(
   if (forceIncrement) {
     // Always increment the version
     writeFileSync(extensionFile, extensionContent.replace(versionRegex, `version: ${nextVersion}`));
-    await vscode.window.showInformationMessage("Extension version automatically increased.");
+    showMessage("info", "Extension version automatically increased.");
     return nextVersion;
   } else if (dt) {
     // Increment the version if there is clash on the tenant
@@ -80,7 +80,7 @@ async function preBuildTasks(
         extensionFile,
         extensionContent.replace(versionRegex, `version: ${nextVersion}`),
       );
-      await vscode.window.showInformationMessage("Extension version automatically increased.");
+      showMessage("info", "Extension version automatically increased.");
       return nextVersion;
     }
   }
@@ -183,7 +183,7 @@ async function validateExtension(
       .upload(readFileSync(outerZipPath), true)
       .then(() => true)
       .catch(async (err: DynatraceAPIError) => {
-        await vscode.window.showErrorMessage("Extension validation failed.");
+        showMessage("error", "Extension validation failed.");
         oc.replace(JSON.stringify(err.errorParams.data, null, 2));
         oc.show();
         return false;
@@ -359,7 +359,7 @@ export async function buildExtension(
     },
     async (progress, cancelToken) => {
       cancelToken.onCancellationRequested(async () => {
-        await vscode.window.showWarningMessage("Operation cancelled by user.");
+        showMessage("warn", "Operation cancelled by user.");
       });
 
       // Handle unsaved changes
@@ -369,11 +369,9 @@ export async function buildExtension(
       if (extensionDocument?.isDirty) {
         const saved = await extensionDocument.save();
         if (saved) {
-          await vscode.window.showInformationMessage("Document saved automatically.");
+          showMessage("info", "Document saved automatically.");
         } else {
-          await vscode.window.showErrorMessage(
-            "Failed to save extension manifest. Build command cancelled.",
-          );
+          showMessage("error", "Failed to save extension manifest. Build command cancelled.");
           return;
         }
       }
@@ -405,9 +403,7 @@ export async function buildExtension(
               dt,
             );
       } catch (err: unknown) {
-        await vscode.window.showErrorMessage(
-          `Error during pre-build phase: ${(err as Error).message}`,
-        );
+        showMessage("error", `Error during pre-build phase: ${(err as Error).message}`);
         return;
       }
 
@@ -433,18 +429,14 @@ export async function buildExtension(
               cancelToken,
             );
           } else {
-            await vscode.window.showErrorMessage(
-              "Cannot build Python extension - dt-sdk package not available",
-            );
+            showMessage("error", "Cannot build Python extension - dt-sdk package not available");
             return;
           }
         } else {
           assembleStandard(workspaceStorage, extensionDir, zipFilename, devCertKey);
         }
       } catch (err: unknown) {
-        await vscode.window.showErrorMessage(
-          `Error during archiving & signing: ${(err as Error).message}`,
-        );
+        showMessage("error", `Error during archiving & signing: ${(err as Error).message}`);
         return;
       }
 

@@ -16,6 +16,7 @@
 
 import * as vscode from "vscode";
 import { ExtensionStub } from "../interfaces/extensionMeta";
+import { showMessage } from "../utils/code";
 import { checkDtInternalProperties } from "../utils/conditionCheckers";
 import { CachedDataProvider } from "../utils/dataCaching";
 import {
@@ -125,7 +126,7 @@ export class DiagnosticsProvider {
       diagnostics &&
       diagnostics.findIndex(diag => diag.severity === vscode.DiagnosticSeverity.Error) > -1
     ) {
-      await vscode.window.showErrorMessage("Extension cannot be built. Fix problems first.");
+      showMessage("error", "Extension cannot be built. Fix problems first.");
       await vscode.commands.executeCommand("workbench.action.problems.focus");
       status = false;
     }

@@ -20,6 +20,7 @@ import * as vscode from "vscode";
 import { Dashboard } from "../dynatrace-api/interfaces/dashboards";
 import { ExtensionStub } from "../interfaces/extensionMeta";
 import { EnvironmentsTreeDataProvider } from "../treeViews/environmentsTreeView";
+import { showMessage } from "../utils/code";
 import { CachedDataProvider } from "../utils/dataCaching";
 import { getEntityMetrics, getMetricDisplayName } from "../utils/extensionParsing";
 import { getExtensionFilePath } from "../utils/fileSystem";
@@ -499,9 +500,7 @@ export async function createOverviewDashboard(
   const extension = cachedData.getExtensionYaml(extensionText);
   // Check topology. No topology = pointless dashboard
   if (!extension.topology) {
-    await vscode.window.showWarningMessage(
-      "Please define your topology before running this command.",
-    );
+    showMessage("warn", "Please define your topology before running this command.");
     return;
   }
 
@@ -537,7 +536,7 @@ export async function createOverviewDashboard(
 
   writeFileSync(extensionFile, updatedExtensionText);
 
-  await vscode.window.showInformationMessage("Dashboard created successfully");
+  showMessage("info", "Dashboard created successfully");
 
   // If we're connected to the API, prompt for upload.
   await tenantsProvider.getDynatraceClient().then(async dt => {
@@ -548,8 +547,8 @@ export async function createOverviewDashboard(
           if (choice === "Yes") {
             dt.dashboards
               .post(JSON.parse(dashboardJson) as Dashboard)
-              .then(async () => {
-                await vscode.window.showInformationMessage("Upload successful.");
+              .then(() => {
+                showMessage("info", "Upload successful.");
               })
               .catch(err => {
                 outputChannel.replace(JSON.stringify(err, null, 2));

@@ -18,6 +18,7 @@ import { readFileSync } from "fs";
 import * as vscode from "vscode";
 import { Dynatrace } from "../dynatrace-api/dynatrace";
 import { DynatraceAPIError } from "../dynatrace-api/errors";
+import { showMessage } from "../utils/code";
 import { CachedDataProvider } from "../utils/dataCaching";
 import { getExtensionFilePath } from "../utils/fileSystem";
 
@@ -56,13 +57,13 @@ export async function activateExtension(
   if (version) {
     dt.extensionsV2
       .putEnvironmentConfiguration(extension.name, version)
-      .then(async () => {
-        await vscode.window.showInformationMessage("Extension activated successfully");
+      .then(() => {
+        showMessage("info", "Extension activated successfully");
       })
-      .catch(async (err: DynatraceAPIError) => {
-        await vscode.window.showErrorMessage(err.message);
+      .catch((err: DynatraceAPIError) => {
+        showMessage("error", err.message);
       });
   } else {
-    await vscode.window.showErrorMessage("Version not selected. Cancelling operation.");
+    showMessage("error", "Version not selected. Cancelling operation.");
   }
 }

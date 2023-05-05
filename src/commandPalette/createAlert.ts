@@ -19,6 +19,7 @@ import { existsSync, mkdirSync, readdirSync, readFileSync, writeFileSync } from 
 import path = require("path");
 import * as vscode from "vscode";
 import { MetricMetadata } from "../interfaces/extensionMeta";
+import { showMessage } from "../utils/code";
 import { CachedDataProvider } from "../utils/dataCaching";
 import { getAllMetricKeysFromDataSource } from "../utils/extensionParsing";
 import { getExtensionFilePath } from "../utils/fileSystem";
@@ -72,7 +73,8 @@ export async function createAlert(cachedData: CachedDataProvider) {
   }
 
   if (metricKeys.length === 0) {
-    await vscode.window.showWarningMessage(
+    showMessage(
+      "warn",
       "No metrics defined in extension.yaml, please define them before creating alerts",
     );
     return;
@@ -83,7 +85,7 @@ export async function createAlert(cachedData: CachedDataProvider) {
     title: "Extension workspace: Create Alert",
   });
   if (!metricToUse) {
-    await vscode.window.showErrorMessage("No metric was selected. Operation cancelled.");
+    showMessage("error", "No metric was selected. Operation cancelled.");
     return;
   }
 
@@ -93,7 +95,7 @@ export async function createAlert(cachedData: CachedDataProvider) {
     title: "Extension workspace: Create Alert",
   });
   if (!alertName) {
-    await vscode.window.showErrorMessage("No alert name was entered. Operation cancelled.");
+    showMessage("error", "No alert name was entered. Operation cancelled.");
     return;
   }
 
@@ -103,7 +105,7 @@ export async function createAlert(cachedData: CachedDataProvider) {
     title: "Extension workspace: Create Alert",
   });
   if (!alertCondition) {
-    await vscode.window.showErrorMessage("No alert condition was selected. Operation cancelled.");
+    showMessage("error", "No alert condition was selected. Operation cancelled.");
     return;
   }
 
@@ -114,7 +116,7 @@ export async function createAlert(cachedData: CachedDataProvider) {
   });
 
   if (!threshold || isNaN(Number(threshold))) {
-    await vscode.window.showErrorMessage("No valid threshold was entered. Operation cancelled.");
+    showMessage("error", "No valid threshold was entered. Operation cancelled.");
     return;
   }
 
@@ -179,5 +181,5 @@ export async function createAlert(cachedData: CachedDataProvider) {
 
   writeFileSync(extensionFile, updatedExtensionText);
 
-  await vscode.window.showInformationMessage(`Alert '${alertName}' created on alerts/${fileName}`);
+  showMessage("info", `Alert '${alertName}' created on alerts/${fileName}`);
 }

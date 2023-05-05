@@ -71,20 +71,22 @@ class WmiQueryResultLens extends vscode.CodeLens {
    * Callback function to update the code lens with the results of the query
    * */
   updateResult = (result: WmiQueryResult) => {
-    if (result.error && result.errorMessage) {
-      this.command = {
-        title: "❌ Query failed",
-        tooltip: `Query failed. ${result.errorMessage}`,
-        command: "",
-        arguments: [],
-      };
-    } else {
-      this.command = {
-        title: `📊 ${result.results.length} instances found`,
-        tooltip: "",
-        command: "",
-        arguments: [result],
-      };
+    switch (result.error) {
+      case true:
+        this.command = {
+          title: "❌ Query failed",
+          tooltip: `Query failed. ${result.errorMessage ?? ""}`,
+          command: "",
+          arguments: [],
+        };
+        break;
+      case false:
+        this.command = {
+          title: `📊 ${result.results.length} instances found`,
+          tooltip: "",
+          command: "",
+          arguments: [result],
+        };
     }
   };
 }
@@ -125,13 +127,15 @@ export class WmiCodeLensProvider implements vscode.CodeLensProvider {
     this.selfUpdateTriggered = false;
     const text = document.getText();
 
-    const extension = this.cachedData.getExtensionYaml(text);
+    // Return early because it is cheaper than parsing the yaml
     if (
-      !extension.wmi ||
+      !text.includes("wmi:") ||
       !vscode.workspace.getConfiguration("dynatrace", null).get("wmiCodeLens")
     ) {
       return [];
     }
+
+    const extension = this.cachedData.getExtensionYaml(text);
 
     // Find all query: definitions
     // They can be under the list of groups, or under the list subgroups
@@ -171,10 +175,10 @@ export class WmiCodeLensProvider implements vscode.CodeLensProvider {
   }
 
   /**
-   * This receives a WMI query like 'SELECT Name, MessagesinQueue, BytesInQueue FROM
-   * Win32_PerfRawData_msmq_MSMQQueue'. It finds all the ocurrences of this text on the document and
-   * creates a code lens for each one. If there was a code lens created earlier, it will reuse it
-   * and move it to the new position.   *
+   * This receives a WMI query like 'SELECT Name, MessagesinQueue, BytesInQueue FROM Win32_PerfRawData_msmq_MSMQQueue'
+   * It finds all the ocurrences of this text on the document and creates a code lens for each one
+   * If there was a code lens created earlier, it will reuse it and move it to the new position
+   *
    * @param lineToMatch The line that we want to match
    * @param document the document to search for the query
    * @param createdEarlier a code lens that was created earlier, if it exists

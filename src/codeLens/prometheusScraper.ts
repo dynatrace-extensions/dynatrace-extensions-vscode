@@ -16,6 +16,7 @@
 
 import axios from "axios";
 import * as vscode from "vscode";
+import { showMessage } from "../utils/code";
 import { CachedDataProvider } from "../utils/dataCaching";
 
 export type PromData = Record<string, PromDetails>;
@@ -210,7 +211,7 @@ export class PrometheusCodeLensProvider implements vscode.CodeLensProvider {
         return true;
       case "AWS key":
         // TODO: Figure out how to implement AWS authentication
-        await vscode.window.showErrorMessage("AWS authentication not support yet, sorry.");
+        showMessage("error", "AWS authentication not support yet, sorry.");
         return false;
         this.promAccessKey = await vscode.window.showInputBox({
           title: "Scrape Prometheus Data (2/2)",

@@ -18,6 +18,7 @@ import { readFileSync, rmSync, writeFileSync } from "fs";
 import * as path from "path";
 import * as vscode from "vscode";
 import { DynatraceAPIError } from "../../dynatrace-api/errors";
+import { showMessage } from "../../utils/code";
 import { encryptToken } from "../../utils/cryptography";
 import { getAllEnvironments, registerEnvironment, removeEnvironment } from "../../utils/fileSystem";
 import { createObjectFromSchema } from "../../utils/schemaParsing";
@@ -60,7 +61,7 @@ export async function addEnvironment(context: vscode.ExtensionContext) {
     },
   });
   if (!url || url === "") {
-    await vscode.window.showErrorMessage("URL cannot be blank. Operation was cancelled.");
+    showMessage("error", "URL cannot be blank. Operation was cancelled.");
     return;
   }
   if (url.endsWith("/")) {
@@ -75,7 +76,7 @@ export async function addEnvironment(context: vscode.ExtensionContext) {
     password: true,
   });
   if (!token || token === "") {
-    await vscode.window.showErrorMessage("Token cannot be blank. Operation was cancelled");
+    showMessage("error", "Token cannot be blank. Operation was cancelled");
     return;
   }
 
@@ -116,7 +117,7 @@ export async function editEnvironment(
     ignoreFocusOut: true,
   });
   if (!url || url === "") {
-    await vscode.window.showErrorMessage("URL cannot be blank. Operation was cancelled.");
+    showMessage("error", "URL cannot be blank. Operation was cancelled.");
     return;
   }
   if (url.endsWith("/")) {
@@ -132,7 +133,7 @@ export async function editEnvironment(
     ignoreFocusOut: true,
   });
   if (!token || token === "") {
-    await vscode.window.showErrorMessage("Token cannot be blank. Operation was cancelled");
+    showMessage("error", "Token cannot be blank. Operation was cancelled");
     return;
   }
 
@@ -171,7 +172,7 @@ export async function deleteEnvironment(
   });
 
   if (confirm !== "Yes") {
-    await vscode.window.showInformationMessage("Operation cancelled.");
+    showMessage("info", "Operation cancelled.");
     return;
   }
 
@@ -313,20 +314,20 @@ export async function editMonitoringConfiguration(
           config.id,
           JSON.parse(response) as Record<string, unknown>,
         )
-        .then(async () => {
-          await vscode.window.showInformationMessage("Configuration updated successfully.");
+        .then(() => {
+          showMessage("info", "Configuration updated successfully.");
           return true;
         })
-        .catch(async (err: DynatraceAPIError) => {
-          await vscode.window.showErrorMessage(`Update operation failed: ${err.message}`);
+        .catch((err: DynatraceAPIError) => {
+          showMessage("error", `Update operation failed: ${err.message}`);
           oc.replace(JSON.stringify(err.errorParams.data, undefined, 2));
           oc.show();
           return false;
         }),
     // Otherwise cancel operation
-    async response => {
+    response => {
       if (response === "No changes.") {
-        await vscode.window.showInformationMessage("No changes were made. Operation cancelled.");
+        showMessage("info", "No changes were made. Operation cancelled.");
       }
       return false;
     },
@@ -351,18 +352,18 @@ export async function deleteMonitoringConfiguration(
   });
 
   if (confirm !== "Yes") {
-    await vscode.window.showInformationMessage("Operation cancelled.");
+    showMessage("info", "Operation cancelled.");
     return false;
   }
 
   return config.dt.extensionsV2
     .deleteMonitoringConfiguration(config.extensionName, config.id)
-    .then(async () => {
-      await vscode.window.showInformationMessage("Configuration deleted successfully.");
+    .then(() => {
+      showMessage("info", "Configuration deleted successfully.");
       return true;
     })
-    .catch(async (err: DynatraceAPIError) => {
-      await vscode.window.showErrorMessage(`Delete operation failed: ${err.message}`);
+    .catch((err: DynatraceAPIError) => {
+      showMessage("error", `Delete operation failed: ${err.message}`);
       return false;
     });
 }
@@ -402,12 +403,12 @@ export async function addMonitoringConfiguration(
   );
   const status = await extension.dt.extensionsV2
     .postMonitoringConfiguration(extension.id, JSON.parse(response) as Record<string, unknown>)
-    .then(async () => {
-      await vscode.window.showInformationMessage("Configuration successfully created.");
+    .then(() => {
+      showMessage("info", "Configuration successfully created.");
       return true;
     })
-    .catch(async (err: DynatraceAPIError) => {
-      await vscode.window.showErrorMessage("Create operation failed.");
+    .catch((err: DynatraceAPIError) => {
+      showMessage("error", "Create operation failed.");
       oc.replace(JSON.stringify(err.errorParams.data, undefined, 2));
       oc.show();
       return false;

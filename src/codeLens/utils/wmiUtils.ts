@@ -76,7 +76,11 @@ export async function runWMIQuery(
         return;
       }
 
-      const jsonResponse = JSON.parse(stdout) as Record<string, string | number>[];
+      // Wrap single objects in an array for type safety
+      const jsonResponse = JSON.parse(stdout.startsWith("[") ? stdout : `[${stdout}]`) as Record<
+        string,
+        string | number
+      >[];
 
       const responseTime = ((new Date().getTime() - startTime.getTime()) / 1000).toString();
       callback(query, {

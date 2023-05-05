@@ -20,7 +20,7 @@ import AdmZip = require("adm-zip");
 import * as vscode from "vscode";
 import { Dynatrace } from "../dynatrace-api/dynatrace";
 import { DynatraceAPIError } from "../dynatrace-api/errors";
-import { loopSafeWait } from "../utils/code";
+import { loopSafeWait, showMessage } from "../utils/code";
 import { CachedDataProvider } from "../utils/dataCaching";
 
 /**
@@ -72,15 +72,15 @@ export async function uploadExtension(dt: Dynatrace, cachedData: CachedDataProvi
       "No",
     );
     if (choice !== "Yes") {
-      await vscode.window.showErrorMessage("Operation cancelled.");
+      showMessage("error", "Operation cancelled.");
       return;
     }
 
     // Delete the oldest version
     const success = await dt.extensionsV2
       .deleteVersion(extensionName, existingVersions[0].version)
-      .then(async () => {
-        await vscode.window.showInformationMessage("Oldest version removed successfully");
+      .then(() => {
+        showMessage("info", "Oldest version removed successfully");
         return true;
       })
       .catch(async () => {
@@ -102,14 +102,12 @@ export async function uploadExtension(dt: Dynatrace, cachedData: CachedDataProvi
             if (version) {
               dt.extensionsV2
                 .deleteVersion(extensionName, version)
-                .then(async () => {
-                  await vscode.window.showInformationMessage(
-                    `Version ${version} removed successfully`,
-                  );
+                .then(() => {
+                  showMessage("info", `Version ${version} removed successfully`);
                   return true;
                 })
-                .catch(async err => {
-                  await vscode.window.showErrorMessage((err as Error).message);
+                .catch(err => {
+                  showMessage("error", (err as Error).message);
                   return false;
                 });
             }
@@ -129,7 +127,7 @@ export async function uploadExtension(dt: Dynatrace, cachedData: CachedDataProvi
       cancellable: true,
     },
     async progress => {
-      let uploadStatus;
+      let uploadStatus = "";
       const file = readFileSync(path.join(distDir, extensionZip));
       progress.report({ message: "Waiting to complete" });
       do {
@@ -156,12 +154,12 @@ export async function uploadExtension(dt: Dynatrace, cachedData: CachedDataProvi
       "No",
     );
     if (choice !== "Yes") {
-      await vscode.window.showInformationMessage("Operation completed.");
+      showMessage("info", "Operation completed.");
       return;
     }
     await vscode.commands.executeCommand("dt-ext-copilot.activateExtension", extensionVersion);
   } else {
-    await vscode.window.showErrorMessage(status);
-    await vscode.window.showErrorMessage("Extension upload failed.");
+    showMessage("error", status);
+    showMessage("error", "Extension upload failed.");
   }
 }

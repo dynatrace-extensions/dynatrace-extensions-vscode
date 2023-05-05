@@ -16,6 +16,7 @@
 
 import * as vscode from "vscode";
 import { MetricSeriesCollection } from "../dynatrace-api/interfaces/metrics";
+import { showMessage } from "../utils/code";
 
 function timestampToStr(timeMillis: number) {
   const date = new Date(timeMillis);
@@ -101,10 +102,10 @@ export class MetricResultsPanel {
 
     // Handle messages from the webview
     this.panel.webview.onDidReceiveMessage(
-      async (message: { command: string; text: string }) => {
+      (message: { command: string; text: string }) => {
         switch (message.command) {
           case "alert":
-            await vscode.window.showErrorMessage(message.text);
+            showMessage("error", message.text);
             return;
         }
       },

@@ -27,6 +27,7 @@ import {
   MetricDto,
   SourceDto,
 } from "../interfaces/extensionMeta";
+import { showMessage } from "../utils/code";
 
 const OPTION_LOCAL_FILE = "Local (filesystem)";
 const OPTION_DYNATRACE_ENVIRONMENT = "Remote (dynatrace environment)";
@@ -220,7 +221,7 @@ export async function convertJMXExtension(dt?: Dynatrace, outputPath?: string) {
     };
     const pluginJSONFile = await vscode.window.showOpenDialog(options);
     if (!pluginJSONFile) {
-      await vscode.window.showErrorMessage("No file was selected. Operation cancelled.");
+      showMessage("error", "No file was selected. Operation cancelled.");
       return;
     }
 
@@ -239,9 +240,7 @@ export async function convertJMXExtension(dt?: Dynatrace, outputPath?: string) {
   // use the API to list the current extensions
   if (pluginJSONOrigin === OPTION_DYNATRACE_ENVIRONMENT) {
     if (!dt) {
-      await vscode.window.showErrorMessage(
-        "This option requires a Dynatrace environment connection.",
-      );
+      showMessage("error", "This option requires a Dynatrace environment connection.");
       return;
     }
     const currentExtensions = await dt.extensionsV1.getExtensions();
@@ -260,7 +259,7 @@ export async function convertJMXExtension(dt?: Dynatrace, outputPath?: string) {
       title: "Dynatrace: Convert JMX extension",
     });
     if (!jmxExtensionName) {
-      await vscode.window.showErrorMessage("No extension was selected. Operation cancelled.");
+      showMessage("error", "No extension was selected. Operation cancelled.");
       return;
     }
 
@@ -273,7 +272,7 @@ export async function convertJMXExtension(dt?: Dynatrace, outputPath?: string) {
   }
 
   if (!jmxV1Extension) {
-    await vscode.window.showErrorMessage("Unexpected error. No JMX V1 extension was extracted.");
+    showMessage("error", "Unexpected error. No JMX V1 extension was extracted.");
     return;
   }
 
@@ -294,7 +293,7 @@ export async function convertJMXExtension(dt?: Dynatrace, outputPath?: string) {
   const extensionYAMLFile =
     outputPath ?? (await vscode.window.showSaveDialog(options).then(p => p?.fsPath));
   if (!extensionYAMLFile) {
-    await vscode.window.showErrorMessage("No file was selected. Operation cancelled.");
+    showMessage("error", "No file was selected. Operation cancelled.");
     return;
   }
   // Save the file as yaml

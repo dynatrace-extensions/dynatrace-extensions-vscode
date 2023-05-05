@@ -20,6 +20,7 @@ import { TextEncoder } from "util";
 import AdmZip = require("adm-zip");
 import * as vscode from "vscode";
 import { Dynatrace } from "../dynatrace-api/dynatrace";
+import { showMessage } from "../utils/code";
 import { checkDtSdkPresent, checkSettings, checkUrlReachable } from "../utils/conditionCheckers";
 import { getExtensionFilePath, initWorkspaceStorage, registerWorkspace } from "../utils/fileSystem";
 import { runCommand } from "../utils/subprocesses";
@@ -63,7 +64,8 @@ async function pythonExtensionSetup(rootPath: string, tempPath: string) {
         `pip install --upgrade dynatrace-extensions-python-sdk --extra-index-url ${artifactoryUrl}`,
       );
     } else {
-      await vscode.window.showErrorMessage(
+      showMessage(
+        "error",
         "The dt-sdk module is not installed and you are not on VPN. " +
           "Python extension setup is not possible.",
       );
@@ -118,7 +120,7 @@ async function existingExtensionSetup(dt: Dynatrace, rootPath: string) {
     },
   );
   if (!download) {
-    await vscode.window.showErrorMessage("No selection made. Operation aborted.");
+    showMessage("error", "No selection made. Operation aborted.");
     return;
   }
 
@@ -157,7 +159,8 @@ async function existingExtensionSetup(dt: Dynatrace, rootPath: string) {
     }
   } catch (err) {
     console.log(err);
-    await vscode.window.showWarningMessage(
+    showMessage(
+      "warn",
       "Not all files were extracted successfully. Manual edits are still needed.",
     );
   }
@@ -219,18 +222,16 @@ export async function initWorkspace(
         if (cmdSuccess) {
           schemaVersion = context.workspaceState.get<string>("schemaVersion");
           if (!schemaVersion) {
-            await vscode.window.showErrorMessage(
-              "Error loading schemas. Cannot continue initialization.",
-            );
+            showMessage("error", "Error loading schemas. Cannot continue initialization.");
             return false;
           }
-          await vscode.window.showInformationMessage(`Loaded schemas version ${schemaVersion}`);
+          showMessage("info", `Loaded schemas version ${schemaVersion}`);
         } else {
-          await vscode.window.showErrorMessage("Cannot initialize workspace without schemas.");
+          showMessage("error", "Cannot initialize workspace without schemas.");
           return false;
         }
       } else {
-        await vscode.window.showInformationMessage(`Using cached schema version ${schemaVersion}`);
+        showMessage("info", `Using cached schema version ${schemaVersion}`);
         const mainSchema = path.join(
           path.join(context.globalStorageUri.fsPath, schemaVersion),
           "extension.schema.json",
@@ -248,24 +249,18 @@ export async function initWorkspace(
 
       // Which certificates to use?
       progress.report({ message: "Setting up workspace certificates" });
-      const certChoice = await vscode.window.showQuickPick(
-        ["Use your own certificates", "Generate new ones"],
-        {
-          canPickMany: false,
-          ignoreFocusOut: true,
-          title: "Initialize Workspace: Certificates",
-          placeHolder:
-            "What certificates would you like to use for signing extensions in this workspace?",
-        },
-      );
+      const certChoice = await vscode.window.showQuickPick(["Use existing", "Generate new ones"], {
+        canPickMany: false,
+        ignoreFocusOut: true,
+        title: "Initialize Workspace: Certificates",
+        placeHolder:
+          "What certificates would you like to use for signing extensions in this workspace?",
+      });
       switch (certChoice) {
-        case "Use your own certificates": {
-          const hasCertificates = await checkSettings("developerCertKeyLocation");
-          console.log(hasCertificates);
+        case "Use existing": {
+          const hasCertificates = await checkSettings("developerCertkeyLocation");
           if (!hasCertificates) {
-            await vscode.window.showErrorMessage(
-              "Personal certificates not found. Workspace not initialized.",
-            );
+            showMessage("error", "Personal certificates not found. Workspace not initialized.");
             return false;
           }
           break;
@@ -275,17 +270,13 @@ export async function initWorkspace(
             "dt-ext-copilot.generateCertificates",
           );
           if (!cmdSuccess) {
-            await vscode.window.showErrorMessage(
-              "Cannot initialize workspace without certificates.",
-            );
+            showMessage("error", "Cannot initialize workspace without certificates.");
             return false;
           }
           break;
         }
         default:
-          await vscode.window.showErrorMessage(
-            "No certificate choice made. Workspace not initialized.",
-          );
+          showMessage("error", "No certificate choice made. Workspace not initialized.");
           return false;
       }
 
@@ -337,7 +328,7 @@ export async function initWorkspace(
         });
       }
       if (!projectType) {
-        await vscode.window.showErrorMessage("No selection made. Operation cancelled.");
+        showMessage("error", "No selection made. Operation cancelled.");
         return;
       }
       // This was done earlier in the flow already.
@@ -373,5 +364,5 @@ export async function initWorkspace(
     },
   );
 
-  await vscode.window.showInformationMessage("Workspace initialization completed successfully.");
+  showMessage("info", "Workspace initialization completed successfully.");
 }

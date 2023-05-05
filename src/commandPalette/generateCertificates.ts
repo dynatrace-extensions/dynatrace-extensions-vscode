@@ -18,6 +18,7 @@ import { existsSync, mkdirSync, writeFileSync } from "fs";
 import path = require("path");
 import { md, pki, random, util } from "node-forge";
 import * as vscode from "vscode";
+import { showMessage } from "../utils/code";
 
 /**
  * Generates a random serial number, valid for X.509 Certificates.
@@ -92,9 +93,7 @@ export async function generateCerts(context: vscode.ExtensionContext): Promise<b
       try {
         caKey = pki.rsa.generateKeyPair({ bits: 4096, e: 0x10001 });
       } catch (err) {
-        await vscode.window.showErrorMessage(
-          "Error generating the RSA key pair for the CA certificate",
-        );
+        showMessage("error", "Error generating the RSA key pair for the CA certificate");
         console.log((err as Error).message);
         return false;
       }
@@ -139,7 +138,7 @@ export async function generateCerts(context: vscode.ExtensionContext): Promise<b
         caCert.sign(caKey.privateKey, md.sha256.create());
         console.log("CA Cert created successfully");
       } catch (err) {
-        await vscode.window.showErrorMessage("Error generating the CA certificate");
+        showMessage("error", "Error generating the CA certificate");
         console.log((err as Error).message);
         return false;
       }
@@ -150,9 +149,7 @@ export async function generateCerts(context: vscode.ExtensionContext): Promise<b
       try {
         devKey = pki.rsa.generateKeyPair({ bits: 4096, e: 0x10001 });
       } catch (err) {
-        await vscode.window.showErrorMessage(
-          "Error generating the RSA key pair for the Developer certificate",
-        );
+        showMessage("error", "Error generating the RSA key pair for the Developer certificate");
         console.log((err as Error).message);
         return false;
       }
@@ -196,7 +193,7 @@ export async function generateCerts(context: vscode.ExtensionContext): Promise<b
         devCert.sign(caKey.privateKey, md.sha256.create());
         console.log("DEV Cert created successfully");
       } catch (err) {
-        await vscode.window.showErrorMessage("Error generating the Developer certificate");
+        showMessage("error", "Error generating the Developer certificate");
         console.log((err as Error).message);
         return false;
       }

@@ -74,7 +74,7 @@ export class PrometheusActionProvider implements vscode.CodeActionProvider {
     this.prometheusData = this.cachedData.getPrometheusData();
     if (
       !/^prometheus:/gm.test(document.getText()) ||
-      Object.keys(this.prometheusData).length == 0
+      Object.keys(this.prometheusData).length === 0
     ) {
       return [];
     }
@@ -174,7 +174,7 @@ export class PrometheusActionProvider implements vscode.CodeActionProvider {
         range,
       );
       if (action) {
-        codeActions.push();
+        codeActions.push(action);
       }
     }
 

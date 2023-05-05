@@ -84,7 +84,7 @@ export async function registerWorkspace(context: vscode.ExtensionContext) {
   const workspace: ExtensionWorkspace = {
     name: vscode.workspace.name ?? "",
     id: path.basename(path.dirname(context.storageUri.fsPath)),
-    folder: vscode.workspace.workspaceFolders[0].uri.fsPath,
+    folder: vscode.workspace.workspaceFolders[0].uri.toString(),
   };
 
   const currentIndex = workspaces.findIndex(ws => ws.id === workspace.id);

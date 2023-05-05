@@ -14,9 +14,11 @@
   limitations under the License.
  */
 
-import * as open from "open";
+// @ts-expect-error
+import open from "open";
 import * as vscode from "vscode";
 import { EnvironmentsTreeDataProvider } from "../treeViews/environmentsTreeView";
+import { showMessage } from "../utils/code";
 import { CachedDataProvider } from "../utils/dataCaching";
 import { getBlockItemIndexAtLine, getParentBlocks } from "../utils/yamlParsing";
 
@@ -126,15 +128,14 @@ export class ScreenLensProvider implements vscode.CodeLensProvider {
             const entityId = entities[0].entityId;
             await open(`${tenant.url}/ui/entity/${entityId}`);
           } else {
-            await vscode.window.showErrorMessage(
-              "No entities of this type were found in your tenant.",
-            );
+            showMessage("error", "No entities of this type were found in your tenant.");
           }
         }
       }
       // Things can fail. We don't care.
-    } catch {
-      console.log("Couldn't open screen.");
+    } catch (err) {
+      console.log(err);
+      showMessage("warn", "Could not open screen.");
     }
   }
 }
