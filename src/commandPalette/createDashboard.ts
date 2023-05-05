@@ -406,10 +406,15 @@ function buildGraphChartTile(
  * Parses the extension yaml, collects relevant data, and populates a series of JSON templates
  * that together form an overview dashboard.
  * @param extension extension.yaml serialized as object
+ * @param title dashboard title
  * @param short optional prefix/technology for the extension/dashboard
  * @returns JSON string representing the dashboard
  */
-function buildDashboard(extension: ExtensionStub, short: string = "Extension"): string {
+function buildDashboard(
+  extension: ExtensionStub,
+  title: string,
+  short: string = "Extension",
+): string {
   const navigationLinks: string[] = [];
   const customTiles: string[] = [];
 
@@ -461,10 +466,7 @@ function buildDashboard(extension: ExtensionStub, short: string = "Extension"): 
   // Put together the details
   let dashboard = dashboardTemplate;
   dashboard = dashboard.replace("<extension-id>", extension.name);
-  dashboard = dashboard.replace(
-    "<dashboard-title>",
-    `Extension Overview (${extension.name}:${extension.version})`,
-  );
+  dashboard = dashboard.replace("<dashboard-title>", title);
   dashboard = dashboard.replace(/<extension-short>/g, short);
   dashboard = dashboard.replace(
     "<currently-monitoring-width>",
@@ -504,8 +506,14 @@ export async function createOverviewDashboard(
     return;
   }
 
+  const dashboardTitle = await vscode.window.showInputBox({
+    title: "Dashboard title",
+    value: `Extension Overview (${extension.name}:${extension.version})`,
+    ignoreFocusOut: true,
+  });
+
   // Create dashboard
-  const dashboardJson = buildDashboard(extension);
+  const dashboardJson = buildDashboard(extension, dashboardTitle);
   // Create directories for dashboard
   const extensionDir = path.resolve(extensionFile, "..");
   const dashboardsDir = path.resolve(extensionDir, "dashboards");
