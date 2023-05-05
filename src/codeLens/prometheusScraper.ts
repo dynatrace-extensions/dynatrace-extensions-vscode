@@ -14,18 +14,18 @@
   limitations under the License.
  */
 
-import * as vscode from "vscode";
 import axios from "axios";
+import * as vscode from "vscode";
+import { showMessage } from "../utils/code";
 import { CachedDataProvider } from "../utils/dataCaching";
 
+export type PromData = Record<string, PromDetails>;
+type PromDetails = {
+  type?: string;
+  dimensions?: string[];
+  description?: string;
+};
 type PromAuth = "No authentication" | "Bearer token" | "Username & password" | "AWS key";
-export interface PromData {
-  [key: string]: {
-    type?: string;
-    dimensions?: string[];
-    description?: string;
-  };
-}
 
 /**
  * Code Lens Provider implementation to facilitate loading Prometheus metrics and data
@@ -52,9 +52,12 @@ export class PrometheusCodeLensProvider implements vscode.CodeLensProvider {
   constructor(cachedDataProvider: CachedDataProvider) {
     this.codeLenses = [];
     this.regex = /^(prometheus:)/gm;
-    vscode.commands.registerCommand("dt-ext-copilot.codelens.scrapeMetrics", (changeConfig: boolean) => {
-      this.scrapeMetrics(changeConfig);
-    });
+    vscode.commands.registerCommand(
+      "dt-ext-copilot.codelens.scrapeMetrics",
+      async (changeConfig: boolean) => {
+        await this.scrapeMetrics(changeConfig);
+      },
+    );
     this.cachedData = cachedDataProvider;
   }
 
@@ -68,7 +71,6 @@ export class PrometheusCodeLensProvider implements vscode.CodeLensProvider {
    */
   public provideCodeLenses(
     document: vscode.TextDocument,
-    token: vscode.CancellationToken
   ): vscode.ProviderResult<vscode.CodeLens[]> {
     this.codeLenses = [];
     const regex = new RegExp(this.regex);
@@ -89,7 +91,7 @@ export class PrometheusCodeLensProvider implements vscode.CodeLensProvider {
             tooltip: "Connect to an exporter and scrape metrics, then use them in the Extension.",
             command: "dt-ext-copilot.codelens.scrapeMetrics",
             arguments: [],
-          })
+          }),
         );
         // Edit config lens
         if (this.lastScrape !== "N/A") {
@@ -99,7 +101,7 @@ export class PrometheusCodeLensProvider implements vscode.CodeLensProvider {
               tooltip: "Make changes to the endpoint connection details",
               command: "dt-ext-copilot.codelens.scrapeMetrics",
               arguments: [true],
-            })
+            }),
           );
         }
         // Status lens
@@ -116,7 +118,7 @@ export class PrometheusCodeLensProvider implements vscode.CodeLensProvider {
                 : `${this.lastScrape}. Found ${scrapedMetrics} metrics.`,
             command: "",
             arguments: [],
-          })
+          }),
         );
       }
     }
@@ -127,7 +129,7 @@ export class PrometheusCodeLensProvider implements vscode.CodeLensProvider {
   /**
    * Metric scraping workflow. If no previous details are known, these are collected.
    * Upon successful scraping and processing, timestamp is updated.
-   * @param changeConfig force collecting the details required for scraping, even if they exist already
+   * @param changeConfig collect the details required for scraping, even if they exist already
    * @returns void
    */
   private async scrapeMetrics(changeConfig: boolean = false) {
@@ -140,7 +142,7 @@ export class PrometheusCodeLensProvider implements vscode.CodeLensProvider {
       // Clear cached data since we're now scraping a different endpoint
       this.cachedData.addPrometheusData({});
     }
-    const scrapeSuccess = this.scrape();
+    const scrapeSuccess = await this.scrape();
     if (scrapeSuccess) {
       this.lastScrape = `Last scraped at: ${new Date().toLocaleTimeString()}`;
       this._onDidChangeCodeLenses.fire();
@@ -172,7 +174,7 @@ export class PrometheusCodeLensProvider implements vscode.CodeLensProvider {
         placeHolder: "Select your endpoint's authentication scheme",
         canPickMany: false,
         ignoreFocusOut: true,
-      }
+      },
     )) as PromAuth;
     // Endpoint authentication details
     switch (this.promAuth) {
@@ -209,7 +211,7 @@ export class PrometheusCodeLensProvider implements vscode.CodeLensProvider {
         return true;
       case "AWS key":
         // TODO: Figure out how to implement AWS authentication
-        vscode.window.showErrorMessage("AWS authentication not support yet, sorry.");
+        showMessage("error", "AWS authentication not support yet, sorry.");
         return false;
         this.promAccessKey = await vscode.window.showInputBox({
           title: "Scrape Prometheus Data (2/2)",
@@ -237,26 +239,38 @@ export class PrometheusCodeLensProvider implements vscode.CodeLensProvider {
    * This involves connecting to the endpoint, reading the data, and processing it.
    * @returns whether scraping was successful (any errors) or not
    */
-  private scrape() {
+  private async scrape() {
+    if (!this.promUrl) {
+      return false;
+    }
     try {
       switch (this.promAuth) {
         case "No authentication":
-          axios.get(this.promUrl!).then(res => {
-            this.processPrometheusData(res.data);
+          await axios.get(this.promUrl).then(res => {
+            this.processPrometheusData(res.data as string);
           });
           return true;
         case "Username & password":
-          axios
-            .get(this.promUrl!, { auth: { username: this.promUsername!, password: this.promPassword! } })
+          if (!this.promUsername || !this.promPassword) {
+            return false;
+          }
+          await axios
+            .get(this.promUrl, {
+              auth: { username: this.promUsername, password: this.promPassword },
+            })
             .then(res => {
-              this.processPrometheusData(res.data);
+              this.processPrometheusData(res.data as string);
             });
           return true;
         case "Bearer token":
-          // eslint-disable-next-line
-          axios.get(this.promUrl!, { headers: { Authorization: `Bearer ${this.promToken}` } }).then(res => {
-            this.processPrometheusData(res.data);
-          });
+          if (!this.promToken) {
+            return false;
+          }
+          await axios
+            .get(this.promUrl, { headers: { Authorization: `Bearer ${this.promToken}` } })
+            .then(res => {
+              this.processPrometheusData(res.data as string);
+            });
           return true;
         default:
           return false;
@@ -274,52 +288,48 @@ export class PrometheusCodeLensProvider implements vscode.CodeLensProvider {
    * @param data raw data from a Prometheus Endpoint
    */
   private processPrometheusData(data: string) {
-    var scrapedMetrics: PromData = {};
+    const scrapedMetrics: PromData = {};
     data
       .trim()
       .split("\n")
       .forEach(line => {
         // # HELP defines description of a metric
         if (line.startsWith("# HELP")) {
-          var key = line.split("# HELP ")[1].split(" ")[0];
-          var description = line.split(`${key} `)[1];
-          if (!scrapedMetrics[key]) {
-            scrapedMetrics[key] = {};
+          const key = line.split("# HELP ")[1].split(" ")[0];
+          const description = line.split(`${key} `)[1];
+          if (!(key in scrapedMetrics)) {
+            scrapedMetrics[key] = {} as PromDetails;
           }
-          scrapedMetrics[key]["description"] = description;
+          scrapedMetrics[key].description = description;
           // # TYPE defines type of a metric
         } else if (line.startsWith("# TYPE")) {
-          var key = line.split("# TYPE ")[1].split(" ")[0];
-          var type = line.split(`${key} `)[1];
+          const key = line.split("# TYPE ")[1].split(" ")[0];
+          let type = line.split(`${key} `)[1];
           if (type === "counter") {
             type = "count";
           }
-          if (!scrapedMetrics[key]) {
-            scrapedMetrics[key] = {};
+          if (!(key in scrapedMetrics)) {
+            scrapedMetrics[key] = {} as PromDetails;
           }
-          scrapedMetrics[key]["type"] = type;
+          scrapedMetrics[key].type = type;
           // Any other line contains dimensions and the value
         } else {
-          if (line.includes("{")) {
-            var [key, dimensions] = line.split("{");
-            if (!scrapedMetrics[key]) {
-              scrapedMetrics[key] = {};
-            }
-            // make sure lines without dimenions have the correct keys
-          } else {
-            var [key, dimensions] = line.split(" ");
+          const [key, dimensionsStr] = line.split(line.includes("{") ? "{" : " ");
+          if (!(key in scrapedMetrics)) {
+            scrapedMetrics[key] = {} as PromDetails;
           }
+          // make sure lines without dimensions have the correct keys
           // if line includes dimensions, find them
-          if (dimensions && dimensions.includes("}")) {
-            dimensions = dimensions.slice(0, dimensions.length - 1);
+          if (dimensionsStr.includes("}")) {
+            const dimensions = dimensionsStr.slice(0, dimensionsStr.length - 1);
             dimensions.split(",").forEach(dimension => {
               if (dimension.includes("=")) {
-                if (!scrapedMetrics[key]["dimensions"]) {
-                  scrapedMetrics[key]["dimensions"] = [];
+                if (!("dimensions" in scrapedMetrics[key])) {
+                  scrapedMetrics[key].dimensions = [];
                 }
-                var dKey = dimension.split("=")[0];
-                if (!scrapedMetrics[key]["dimensions"]!.includes(dKey)) {
-                  scrapedMetrics[key]["dimensions"]!.push(dKey);
+                const dKey = dimension.split("=")[0];
+                if (!scrapedMetrics[key].dimensions?.includes(dKey)) {
+                  scrapedMetrics[key].dimensions?.push(dKey);
                 }
               }
             });

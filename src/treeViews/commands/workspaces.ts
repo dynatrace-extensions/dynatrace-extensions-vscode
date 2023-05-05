@@ -15,6 +15,7 @@
  */
 
 import * as vscode from "vscode";
+import { showMessage } from "../../utils/code";
 import { removeWorkspace } from "../../utils/fileSystem";
 import { ExtensionProjectItem } from "../extensionsTreeView";
 
@@ -28,18 +29,18 @@ import { ExtensionProjectItem } from "../extensionsTreeView";
  */
 export async function deleteWorkspace(
   context: vscode.ExtensionContext,
-  workspace: ExtensionProjectItem
+  workspace: ExtensionProjectItem,
 ) {
   const confirm = await vscode.window.showQuickPick(["Yes", "No"], {
-    title: `Delete workspace ${workspace.label}?`,
+    title: `Delete workspace ${workspace.label?.toString() ?? workspace.id}?`,
     canPickMany: false,
     ignoreFocusOut: true,
   });
 
   if (confirm !== "Yes") {
-    vscode.window.showInformationMessage("Operation cancelled.");
+    showMessage("info", "Operation cancelled.");
     return;
   }
 
-  removeWorkspace(context, workspace.id);
+  await removeWorkspace(context, workspace.id);
 }

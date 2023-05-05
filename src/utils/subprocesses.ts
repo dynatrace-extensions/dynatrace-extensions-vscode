@@ -34,24 +34,24 @@ export function runCommand(
   command: string,
   oc?: vscode.OutputChannel,
   cancelToken?: vscode.CancellationToken,
-  envOptions?: ExecOptions
+  envOptions?: ExecOptions,
 ): Promise<number | null> {
-  let p = exec(command, envOptions);
+  const p = exec(command, envOptions);
   let [stdout, stderr] = ["", ""];
 
   return new Promise((resolve, reject) => {
-    if (cancelToken && cancelToken.isCancellationRequested) {
+    if (cancelToken?.isCancellationRequested) {
       p.kill("SIGINT");
     }
-    p.stdout?.on("data", data => {
+    p.stdout?.on("data", (data: Buffer) => {
       stdout += data.toString();
-      if (cancelToken && cancelToken.isCancellationRequested) {
+      if (cancelToken?.isCancellationRequested) {
         p.kill("SIGINT");
       }
     });
-    p.stderr?.on("data", data => (stderr += data.toString()));
+    p.stderr?.on("data", (data: Buffer) => (stderr += data.toString()));
     p.on("exit", code => {
-      if (cancelToken && cancelToken.isCancellationRequested) {
+      if (cancelToken?.isCancellationRequested) {
         return resolve(1);
       }
       if (code !== 0) {
@@ -62,10 +62,13 @@ export function runCommand(
         if (oc) {
           oc.replace(
             JSON.stringify(
-              { error: shortMessage.split("\r\n"), detailedOutput: `+${details.join("+")}`.split("\r\n") },
+              {
+                error: shortMessage.split("\r\n"),
+                detailedOutput: `+${details.join("+")}`.split("\r\n"),
+              },
               null,
-              2
-            )
+              2,
+            ),
           );
           oc.show();
         }

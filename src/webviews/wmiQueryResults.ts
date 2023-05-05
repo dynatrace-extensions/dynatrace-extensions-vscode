@@ -28,15 +28,15 @@ export class WMIQueryResultsPanel {
 
     // If we already have a panel, show it.
     if (WMIQueryResultsPanel.currentPanel) {
-        WMIQueryResultsPanel.currentPanel.refresh(data);
-        return;
-      }
+      WMIQueryResultsPanel.currentPanel.refresh(data);
+      return;
+    }
 
     const panel = vscode.window.createWebviewPanel(
       WMIQueryResultsPanel.viewType,
       "WMI Query results",
-      column || vscode.ViewColumn.Two,
-      { enableScripts: true }
+      column ?? vscode.ViewColumn.Two,
+      { enableScripts: true },
     );
 
     WMIQueryResultsPanel.currentPanel = new WMIQueryResultsPanel(panel, data);
@@ -49,13 +49,13 @@ export class WMIQueryResultsPanel {
 
     // Update the content based on view changes
     this._panel.onDidChangeViewState(
-      (e) => {
+      () => {
         if (this._panel.visible) {
           this._update(data);
         }
       },
       null,
-      this._disposables
+      this._disposables,
     );
   }
 
@@ -88,10 +88,7 @@ export class WMIQueryResultsPanel {
     this._panel.webview.html = this._getHTMLForWmiData(webview, data);
   }
 
-  private _getHTMLForWmiData(
-    webview: vscode.Webview,
-    data: WmiQueryResult
-  ): string {
+  private _getHTMLForWmiData(webview: vscode.Webview, data: WmiQueryResult): string {
     const baseHtml = `
     <!DOCTYPE html>
     <html lang="en">
@@ -197,26 +194,21 @@ export class WMIQueryResultsPanel {
     </html>
     `;
 
-    
     if (data.error) {
-        return baseHtml.replace(
-            "<!--result_error-->",
-            `${data.errorMessage}`
-        );
+      return baseHtml.replace("<!--result_error-->", `${String(data.errorMessage)}`);
     }
 
-    if (!data.results || data.results.length === 0) {
+    if (data.results.length === 0) {
       return baseHtml;
     }
 
-
     const tableHeader = Object.keys(data.results[0])
-      .map((key) => `<th>${key}</th>`)
+      .map(key => `<th>${key}</th>`)
       .join("");
     const tableRows = data.results
-      .map((row) => {
+      .map(row => {
         const rowValues = Object.values(row)
-          .map((value) => `<td>${value}</td>`)
+          .map(value => `<td>${value}</td>`)
           .join("");
         return `<tr>${rowValues}</tr>`;
       })

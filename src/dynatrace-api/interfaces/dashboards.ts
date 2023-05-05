@@ -15,42 +15,44 @@
  */
 
 interface Dashboard {
-    metadata?: ConfigurationMetadata;
-    id?: string;
-    dashboardMetadata: DashboardMetadata;
-    tiles: any[];
+  metadata?: ConfigurationMetadata;
+  id?: string;
+  dashboardMetadata: DashboardMetadata;
+  tiles: unknown[];
 }
 
-interface ConfigurationMetadata{
-    configurationVersions?: number[];
-    currentConfigurationVersions?: string[];
-    clusterVersion?: string;
+interface ConfigurationMetadata {
+  configurationVersions?: number[];
+  currentConfigurationVersions?: string[];
+  clusterVersion?: string;
 }
 
-interface DashboardMetadata{
-    name: string;
-    shared?: boolean;
-    owner: string;
-    dashboardFilter?: DashboardFilter;
-    tags?: string[];
-    preset?: boolean;
-    dynamicFilters?: DynamicFilters;
-    tilesNameSize?: "small" | "medium" | "large";
-    hasConsistentColors?: boolean;
+interface DashboardMetadata {
+  name: string;
+  shared?: boolean;
+  owner: string;
+  dashboardFilter?: DashboardFilter;
+  tags?: string[];
+  preset?: boolean;
+  dynamicFilters?: DynamicFilters;
+  tilesNameSize?: "small" | "medium" | "large";
+  hasConsistentColors?: boolean;
 }
 
 interface DashboardFilter {
-    timeframe?: string;
-    managementZone?: EntityShortRepresentation;
+  timeframe?: string;
+  managementZone?: EntityShortRepresentation;
 }
 
 interface EntityShortRepresentation {
-    id: string,
-    name?: string,
-    description?: string;
+  id: string;
+  name?: string;
+  description?: string;
 }
 
 interface DynamicFilters {
-    filters: string[];
-    tagSuggestionTypes?: string[];
+  filters: string[];
+  tagSuggestionTypes?: string[];
 }
+
+export { Dashboard };

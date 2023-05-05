@@ -17,6 +17,8 @@
 import { readFileSync } from "fs";
 import * as vscode from "vscode";
 import { Dynatrace } from "../dynatrace-api/dynatrace";
+import { DynatraceAPIError } from "../dynatrace-api/errors";
+import { showMessage } from "../utils/code";
 import { CachedDataProvider } from "../utils/dataCaching";
 import { getExtensionFilePath } from "../utils/fileSystem";
 
@@ -27,20 +29,27 @@ import { getExtensionFilePath } from "../utils/fileSystem";
  * @param cachedData provider for cacheable data
  * @param version optional version to activate
  */
-export async function activateExtension(dt: Dynatrace, cachedData: CachedDataProvider, version?: string) {
-  const extensionFile = getExtensionFilePath()!;
-  const extension =  cachedData.getExtensionYaml(readFileSync(extensionFile).toString());
+export async function activateExtension(
+  dt: Dynatrace,
+  cachedData: CachedDataProvider,
+  version?: string,
+) {
+  const extensionFile = getExtensionFilePath();
+  if (!extensionFile) {
+    return;
+  }
+  const extension = cachedData.getExtensionYaml(readFileSync(extensionFile).toString());
 
   // If version was not provided, prompt user for selection
   if (!version) {
     version = await vscode.window.showQuickPick(
-      dt.extensionsV2.listVersions(extension.name).then((res) => res.map((me) => me.version)),
+      dt.extensionsV2.listVersions(extension.name).then(res => res.map(me => me.version)),
       {
         canPickMany: false,
         ignoreFocusOut: true,
         title: "Activate extension",
         placeHolder: "Choose a version to activate",
-      }
+      },
     );
   }
 
@@ -49,12 +58,12 @@ export async function activateExtension(dt: Dynatrace, cachedData: CachedDataPro
     dt.extensionsV2
       .putEnvironmentConfiguration(extension.name, version)
       .then(() => {
-        vscode.window.showInformationMessage("Extension activated successfully");
+        showMessage("info", "Extension activated successfully");
       })
-      .catch((err) => {
-        vscode.window.showErrorMessage(err.message);
+      .catch((err: DynatraceAPIError) => {
+        showMessage("error", err.message);
       });
   } else {
-    vscode.window.showErrorMessage("Version not selected. Cancelling operation.");
+    showMessage("error", "Version not selected. Cancelling operation.");
   }
 }

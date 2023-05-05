@@ -14,9 +14,10 @@
   limitations under the License.
  */
 
-import axios from "axios";
+import axios, { AxiosError, ResponseType } from "axios";
 import FormData = require("form-data");
 import { DynatraceAPIError } from "./errors";
+import { ErrorEnvelope, PaginatedResponse } from "./interfaces/dynatrace";
 
 /**
  * Implementation of a HTTP Client specialised for accessing Dynatrace APIs
@@ -40,16 +41,16 @@ export class HttpClient {
    * @param queryParams query parameters; to be used for POST and PUT requests
    * @returns response data
    */
-  async makeRequest(
+  async makeRequest<T = never>(
     path: string,
-    params?: any,
+    params?: Record<string, unknown>,
     method: string = "GET",
-    headers: any = {},
-    queryParams?: any,
-    files?: any,
-    responseType?: any
-  ): Promise<any> {
-    let url = `${this.baseUrl}${path}`;
+    headers: Record<string, string> = {},
+    queryParams?: Record<string, unknown>,
+    files?: { file: Buffer; name: string },
+    responseType?: ResponseType,
+  ): Promise<T> {
+    const url = `${this.baseUrl}${path}`;
 
     let body = null;
     if (method === "POST" || method === "PUT") {
@@ -57,21 +58,20 @@ export class HttpClient {
       params = queryParams;
     }
 
-    if (!headers["Content-Type"]) {
+    if (!("Content-Type" in headers)) {
       headers["Content-type"] = "application/json";
     }
-    var form: FormData;
+    const form = new FormData();
     if (files) {
       headers["Content-type"] = "multipart/form-data";
-      form = new FormData();
       form.append("file", files.file, files.name);
     }
-    headers["Authorization"] = `Api-Token ${this.apiToken}`;
+    headers.Authorization = `Api-Token ${this.apiToken}`;
 
     console.debug(
-      `Making ${method} request to ${url} ${params ? "with params " + JSON.stringify(params) : ""} ${
-        body ? " and body " + JSON.stringify(body) : ""
-      }`
+      `Making ${method} request to ${url} ${
+        params ? "with params " + JSON.stringify(params) : ""
+      } ${body ? " and body " + JSON.stringify(body) : ""}`,
     );
 
     return axios
@@ -80,30 +80,30 @@ export class HttpClient {
         headers: headers,
         params: params,
         method: method,
-        data: files ? form! : body,
-        responseType
+        data: files ? form : body,
+        responseType,
       })
-      .then((res) => {
+      .then(res => {
         if (res.status >= 400) {
-          let message = `Error making request to ${url}: ${res.status}. Response: ${res.data}`;
-          console.log("DYNATRACE ERROR");
+          const errorData = res.data as ErrorEnvelope;
+          const message = `Error making request to ${url}: ${
+            res.status
+          }. Response: ${JSON.stringify(errorData, undefined, 2)}`;
           console.log(message);
           throw new DynatraceAPIError(message, {
-            code: res.data.error.code,
-            message: res.data.error.message,
-            data: res.data.error
+            code: `${errorData.error.code}`,
+            message: errorData.error.message,
+            data: errorData.error,
           });
         }
-        return res.data;
+        return res.data as T;
       })
-      .catch((err) => {
-        let message = `Error making request to ${url}: ${err.message}.`;
-        console.log(message);
-        console.log(err.response.data);
+      .catch((err: Error | AxiosError) => {
+        const message = `Error making request to ${url}: ${err.message}.`;
         throw new DynatraceAPIError(message, {
-          code: err.response.data.error ? err.response.data.error.code : err.status,
-          message: err.response.data.error ? err.response.data.error.message : err.message,
-          data: err.response.data.error || err.response.data
+          code: axios.isAxiosError(err) && err.code ? err.code : err.name,
+          message: err.message,
+          data: {},
         });
       });
   }
@@ -116,21 +116,27 @@ export class HttpClient {
    * @param headers additional request headers
    * @returns list of items
    */
-  async paginatedCall(path: string, item: string, params?: any, headers: any = {}): Promise<any[]> {
-    var items: any[] = [];
-    var nextPageKey: string | undefined = "firstCall";
+  async paginatedCall<T = never, R = T[]>(
+    path: string,
+    item: string,
+    params?: Record<string, unknown>,
+    headers: Record<string, string> = {},
+  ): Promise<R> {
+    const items: T[] = [];
+    let nextPageKey: string | undefined = "firstCall";
 
     while (nextPageKey) {
       if (nextPageKey !== "firstCall") {
         params = { nextPageKey: nextPageKey };
       }
 
-      await this.makeRequest(path, params, "GET", headers).then((res) => {
-        nextPageKey = res.nextPageKey;
-        items.push(...res[item]);
-      });
+      const response: PaginatedResponse<T> = await this.makeRequest(path, params, "GET", headers);
+      nextPageKey = response.nextPageKey;
+      if (item in response) {
+        items.push(...response[item]);
+      }
     }
 
-    return items;
+    return items as R;
   }
 }

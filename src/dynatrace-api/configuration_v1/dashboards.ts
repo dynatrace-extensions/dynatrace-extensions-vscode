@@ -15,6 +15,7 @@
  */
 
 import { HttpClient } from "../http_client";
+import { Dashboard } from "../interfaces/dashboards";
 
 /**
  * Implementation of the Dashboards API.
@@ -30,9 +31,13 @@ export class DashboardService {
   /**
    * Create a dashboard
    * @param dashboard dashboard definition
-   * @returns 
+   * @returns
    */
   async post(dashboard: Dashboard) {
-    return this.httpClient.makeRequest(this.endpoint, dashboard, "POST");
+    return this.httpClient.makeRequest(
+      this.endpoint,
+      dashboard as unknown as Record<string, unknown>,
+      "POST",
+    );
   }
 }

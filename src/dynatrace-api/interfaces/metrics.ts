@@ -20,8 +20,8 @@ interface Rollup {
 }
 
 interface Invocation {
-  function?: string,
-  args?: string,
+  function?: string;
+  args?: string;
 }
 
 interface Filter {
@@ -49,7 +49,7 @@ interface Filter {
     | "le"
     | "lt"
     | "otherwise";
-  operands?: any[];
+  operands?: unknown[];
 }
 
 interface AppliedFilter {
@@ -58,7 +58,7 @@ interface AppliedFilter {
 }
 
 interface MetricSeries {
-  dimensionMap: { [key: string]: string};
+  dimensionMap: Record<string, string>;
   timestamps: number[];
   dimensions: string[];
   values: number[];
@@ -72,3 +72,5 @@ interface MetricSeriesCollection {
   data: MetricSeries[];
   warnings?: string;
 }
+
+export { MetricSeriesCollection };

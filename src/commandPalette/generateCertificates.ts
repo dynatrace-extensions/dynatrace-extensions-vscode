@@ -14,10 +14,58 @@
   limitations under the License.
  */
 
-import * as vscode from "vscode";
-import { md, pki, random, util } from "node-forge";
-import path = require("path");
 import { existsSync, mkdirSync, writeFileSync } from "fs";
+import path = require("path");
+import { md, pki, random, util } from "node-forge";
+import * as vscode from "vscode";
+import { showMessage } from "../utils/code";
+
+/**
+ * Generates a random serial number, valid for X.509 Certificates.
+ * @returns hex encoded number
+ */
+function generateSerialNo(): string {
+  const number = util.bytesToHex(random.getBytesSync(20));
+  let mostSignificantHexDigit = parseInt(number[0], 16);
+
+  if (mostSignificantHexDigit < 8) {
+    return number;
+  }
+
+  mostSignificantHexDigit -= 8;
+  return mostSignificantHexDigit.toString() + number.substring(1);
+}
+
+/**
+ * Generates an X.509 Certificate Subject based on known supported attributes.
+ * Attributes are fetched from vscode settings.
+ * @param type "ca" or "dev" so that subjects can be minimally distinguished from each other
+ * @returns Array of certificate subject attributes
+ */
+function getCertAttributes(type: "ca" | "dev"): pki.CertificateField[] {
+  const config = vscode.workspace.getConfiguration("dynatrace", null);
+  const certCN = config.get<string>("certificateCommonName");
+  const certO = config.get<string>("certificateOrganization");
+  const certOU = config.get<string>("certificateOrganizationUnit");
+  const certST = config.get<string>("certificateStateOrProvince");
+  const certC = config.get<string>("certificateCountryCode");
+
+  const attrs = [{ shortName: "CN", value: `${certCN ?? ""} ${type === "ca" ? "Root" : "Dev"}` }];
+  if (certO) {
+    attrs.push({ shortName: "O", value: certO });
+  }
+  if (certOU) {
+    attrs.push({ shortName: "OU", value: certOU });
+  }
+  if (certST) {
+    attrs.push({ shortName: "ST", value: certST });
+  }
+  if (certC) {
+    attrs.push({ shortName: "C", value: certC });
+  }
+
+  return attrs;
+}
 
 /**
  * Delivers the "Generate certificates" command functionality.
@@ -28,7 +76,11 @@ import { existsSync, mkdirSync, writeFileSync } from "fs";
  * @returns boolean - success of the command
  */
 export async function generateCerts(context: vscode.ExtensionContext): Promise<boolean> {
-  const certsDir = path.join(context.storageUri!.fsPath, "certificates");
+  const storagePath = context.storageUri?.fsPath;
+  if (!storagePath) {
+    return false;
+  }
+  const certsDir = path.join(storagePath, "certificates");
   const success = await vscode.window.withProgress(
     {
       location: vscode.ProgressLocation.Notification,
@@ -37,19 +89,21 @@ export async function generateCerts(context: vscode.ExtensionContext): Promise<b
     async progress => {
       // Generate CA RSA key pair
       progress.report({ message: "Generating RSA key pair for CA certificate" });
+      let caKey;
       try {
-        var caKey = pki.rsa.generateKeyPair({ bits: 4096, e: 0x10001 });
-      } catch (err: any) {
-        vscode.window.showErrorMessage("Error generating the RSA key pair for the CA certificate");
-        console.log(err.message);
+        caKey = pki.rsa.generateKeyPair({ bits: 4096, e: 0x10001 });
+      } catch (err) {
+        showMessage("error", "Error generating the RSA key pair for the CA certificate");
+        console.log((err as Error).message);
         return false;
       }
 
       // Generate CA certificate
       progress.report({ message: "Generating the CA certificate" });
+      let caCert;
       try {
-        var caAttrs = getCertAttributes("ca");
-        var caCert = pki.createCertificate();
+        caCert = pki.createCertificate();
+        const caAttrs = getCertAttributes("ca");
         caCert.serialNumber = generateSerialNo();
         caCert.setSubject(caAttrs);
         caCert.setIssuer(caAttrs);
@@ -83,28 +137,30 @@ export async function generateCerts(context: vscode.ExtensionContext): Promise<b
         ]);
         caCert.sign(caKey.privateKey, md.sha256.create());
         console.log("CA Cert created successfully");
-      } catch (err: any) {
-        vscode.window.showErrorMessage("Error generating the CA certificate");
-        console.log(err.message);
+      } catch (err) {
+        showMessage("error", "Error generating the CA certificate");
+        console.log((err as Error).message);
         return false;
       }
 
       // Generate DEV RSA key pair
       progress.report({ message: "Generating RSA key pair for Developer certificate" });
+      let devKey;
       try {
-        var devKey = pki.rsa.generateKeyPair({ bits: 4096, e: 0x10001 });
-      } catch (err: any) {
-        vscode.window.showErrorMessage("Error generating the RSA key pair for the Developer certificate");
-        console.log(err.message);
+        devKey = pki.rsa.generateKeyPair({ bits: 4096, e: 0x10001 });
+      } catch (err) {
+        showMessage("error", "Error generating the RSA key pair for the Developer certificate");
+        console.log((err as Error).message);
         return false;
       }
 
       // Generate DEV certificate
       progress.report({ message: "Generating the Developer certificate" });
+      let devCert;
       try {
-        var devCert = pki.createCertificate();
+        devCert = pki.createCertificate();
         devCert.serialNumber = generateSerialNo();
-        var devAttrs = getCertAttributes("dev");
+        const devAttrs = getCertAttributes("dev");
         devCert.setSubject(devAttrs);
         devCert.setIssuer(caCert.subject.attributes);
         devCert.publicKey = devKey.publicKey;
@@ -136,9 +192,9 @@ export async function generateCerts(context: vscode.ExtensionContext): Promise<b
         ]);
         devCert.sign(caKey.privateKey, md.sha256.create());
         console.log("DEV Cert created successfully");
-      } catch (err: any) {
-        vscode.window.showErrorMessage("Error generating the Developer certificate");
-        console.log(err.message);
+      } catch (err) {
+        showMessage("error", "Error generating the Developer certificate");
+        console.log((err as Error).message);
         return false;
       }
 
@@ -156,12 +212,12 @@ export async function generateCerts(context: vscode.ExtensionContext): Promise<b
       writeFileSync(path.join(certsDir, "ca.pem"), pki.certificateToPem(caCert));
       writeFileSync(
         path.join(certsDir, "developer.pem"),
-        pki.certificateToPem(devCert) + pki.privateKeyToPem(devKey.privateKey)
+        pki.certificateToPem(devCert) + pki.privateKeyToPem(devKey.privateKey),
       );
       console.log(`Wrote all certificates at location ${certsDir}`);
 
       return true;
-    }
+    },
   );
 
   if (success) {
@@ -169,20 +225,34 @@ export async function generateCerts(context: vscode.ExtensionContext): Promise<b
     const useGlobal = await vscode.window.showInformationMessage(
       "Certificates generated. Do you want to use these for all workspaces by default?",
       "Yes",
-      "No"
+      "No",
     );
     vscode.workspace
       .getConfiguration("dynatrace", null)
-      .update("developerCertkeyLocation", path.join(certsDir, "developer.pem"), useGlobal === "Yes" ? true : undefined);
+      .update(
+        "developerCertkeyLocation",
+        path.join(certsDir, "developer.pem"),
+        useGlobal === "Yes" ? true : undefined,
+      )
+      .then(undefined, () => {
+        console.log("Could not update setting developerCertkeyLocation");
+      });
     vscode.workspace
       .getConfiguration("dynatrace", null)
-      .update("rootOrCaCertificateLocation", path.join(certsDir, "ca.pem"), useGlobal === "Yes" ? true : undefined);
+      .update(
+        "rootOrCaCertificateLocation",
+        path.join(certsDir, "ca.pem"),
+        useGlobal === "Yes" ? true : undefined,
+      )
+      .then(undefined, () => {
+        console.log("Could not update setting rootOrCaCertificateLocation");
+      });
 
     // Link command - Upload Certificates
     const choice = await vscode.window.showInformationMessage(
       "Settings updated. Would you like to upload the CA certificate to Dynatrace?",
       "Yes",
-      "No"
+      "No",
     );
     if (choice === "Yes") {
       await vscode.commands.executeCommand("dt-ext-copilot.distributeCertificate");
@@ -191,62 +261,4 @@ export async function generateCerts(context: vscode.ExtensionContext): Promise<b
     return true;
   }
   return false;
-}
-
-/**
- * Generates a random serial number, valid for X.509 Certificates.
- * @returns hex encoded number
- */
-function generateSerialNo(): string {
-  var number = util.bytesToHex(random.getBytesSync(20));
-  let mostSignificantHexDigit = parseInt(number[0], 16);
-
-  if (mostSignificantHexDigit < 8) {
-    return number;
-  }
-
-  mostSignificantHexDigit -= 8;
-  return mostSignificantHexDigit.toString() + number.substring(1);
-}
-
-/**
- * Generates an X.509 Certificate Subject based on known supported attributes.
- * Attributes are fetched from vscode settings.
- * @param type "ca" or "dev" so that subjects can be minimally distinguished from each other
- * @returns Array of certificate subject attributes
- */
-function getCertAttributes(type: "ca" | "dev"): pki.CertificateField[] {
-  var config = vscode.workspace.getConfiguration("dynatrace", null);
-  var attrs = [
-    {
-      shortName: "CN",
-      value: `${config.get("certificateCommonName")} ${type === "ca" ? "Root" : "Dev"}`,
-    },
-  ];
-  if (config.get("certificateOrganization")) {
-    attrs.push({
-      shortName: "O",
-      value: config.get("certificateOrganization") as string,
-    });
-  }
-  if (config.get("certificateOrganizationUnit")) {
-    attrs.push({
-      shortName: "OU",
-      value: config.get("certificateOrganizationUnit") as string,
-    });
-  }
-  if (config.get("certificateStateOrProvince")) {
-    attrs.push({
-      shortName: "ST",
-      value: config.get("certificateStateOrProvince") as string,
-    });
-  }
-  if (config.get("certificateCountryCode")) {
-    attrs.push({
-      shortName: "C",
-      value: config.get("certificateCountryCode") as string,
-    });
-  }
-
-  return attrs;
 }

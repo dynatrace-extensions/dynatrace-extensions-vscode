@@ -14,125 +14,26 @@
   limitations under the License.
  */
 
-import * as vscode from "vscode";
-import * as path from "path";
 import { readFileSync, writeFileSync } from "fs";
+import * as path from "path";
+import * as vscode from "vscode";
+import {
+  AlertDefinition,
+  AlertDoc,
+  DashboardDoc,
+  DynatraceDashboard,
+  EntityDoc,
+  MetricDoc,
+  MetricEntityMap,
+} from "../interfaces/extensionDocs";
+import { ExtensionStub } from "../interfaces/extensionMeta";
+import { CachedDataProvider } from "../utils/dataCaching";
 import { getAllMetricsByFeatureSet } from "../utils/extensionParsing";
 import { getExtensionFilePath } from "../utils/fileSystem";
-import { CachedDataProvider } from "../utils/dataCaching";
-import { ExtensionStub } from "../interfaces/extensionMeta";
 
 /**
- * Delivers the "Create documentation" command functionality.
- * Reads through the extension.yaml file and any associated alerts/dashboards JSONs and produces content for
- * a README.md file which is written in the workspace at the same level as the extension folder.
- * @param cachedData provider for cacheable data
- * @returns void
- */
-export async function createDocumentation(cachedData: CachedDataProvider) {
-  await vscode.window.withProgress(
-    { location: vscode.ProgressLocation.Notification, title: "Creating documentation" },
-    async progress => {
-      progress.report({ message: "Parsing metadata" });
-      const extensionFile = getExtensionFilePath()!;
-      const extensionDir = path.dirname(extensionFile);
-      const extension = cachedData.getExtensionYaml(readFileSync(extensionFile).toString());
-
-      progress.report({ message: "Writing README.md" });
-      writeDocumentation(extension, extensionDir);
-    }
-  );
-}
-
-/**
- * Invokes all other data collection functions and puts together the documentation style content.
- * Writes the content to README.md in the workspace. If README.md exists already it will be overwritten.
- * @param extension extension.yaml content parsed into an object
- * @param extensionDir path to the extension folder
- */
-function writeDocumentation(extension: ExtensionStub, extensionDir: string) {
-  // Extract required data
-  var entities = extractTopology(extension);
-  var metrics = extractMetrics(extension);
-  var dashboards = extractDashboards(extension, extensionDir);
-  var alerts = extractAlerts(extension, extensionDir);
-  var featureSets = getAllMetricsByFeatureSet(extension);
-  var metricsMap = mapEntitiesToMetrics(entities, metrics);
-
-  // Translate data to readable content
-  var docPath = path.join(extensionDir, "..", "README.md");
-  var docContent = `# ${extension.name}\n\n`;
-  docContent += `**Latest version:** ${extension.version}\n`;
-  docContent +=
-    "This extension is built using the Dynatrace Extension 2.0 Framework.\nThis means it will benefit of additional assets that can help you browse through the data.\n\n";
-  if (entities.length > 0) {
-    docContent += "## Topology\n\nThis extension will create the following types of entities:\n";
-    entities.forEach(entity => {
-      docContent += `* ${entity.name} (${entity.type})\n`;
-    });
-    docContent += "\n";
-  }
-  if (metrics.length > 0) {
-    docContent += "## Metrics\n\nThis extension will collect the following metrics:\n";
-    metricsMap.forEach(mm => {
-      docContent += `* Split by ${mm.metricEntityString}:\n`;
-      mm.metrics.forEach(m => {
-        docContent += `  * ${m.name} (\`${m.key}\`)\n`;
-        docContent += `    ${m.description} (as ${m.unit})\n`;
-      });
-    });
-    docContent += "\n";
-  }
-  if (alerts.length > 0) {
-    docContent +=
-      "## Alerts\n\nCustom events for alerting are packaged along with the extension. These should be reviewed and ajusted as needed before enabling from the Settings page.\nAlerts:\n";
-    alerts.forEach(alert => {
-      docContent += `* ${alert.name}`;
-      if (alert.entity) {
-        const eIdx = entities.findIndex(e => e.type === alert.entity);
-        docContent += eIdx === -1 ? "" : ` (applies to ${entities[eIdx].name})\n`;
-      }
-      docContent += `  ${alert.description}\n`;
-    });
-    docContent += "\n";
-  }
-  if (dashboards.length > 0) {
-    docContent += `## Dashboards\n\nThis extension is packaged with ${dashboards.length} dashboards which should serve as a starting point for data analysis.`;
-    docContent += "\nYou can find these by opening the Dashboards menu and searching for:\n\n";
-    dashboards.forEach(dashboard => {
-      docContent += `* ${dashboard.name}\n`;
-    });
-    docContent += "\n";
-  }
-  docContent += "# Configuration\n\n";
-  if (featureSets) {
-    docContent += "## Feature sets\n\n";
-    docContent +=
-      "Feature sets can be used to opt in and out of metric data collection.\nThis extension groups together metrics within the following feature sets:\n\n";
-    featureSets.forEach(featureSet => {
-      docContent += `* ${featureSet.name}\n`;
-      featureSet.metrics.forEach(metric => {
-        docContent += `  * ${metric}\n`;
-      });
-    });
-    docContent += "\n";
-  }
-  if (extension.vars) {
-    docContent +=
-      "## Variables\n\nVariables are used in monitoring configurations for filtering and adding additional dimensions.\n";
-    docContent += "This extension exposes the following variables:\n\n";
-    extension.vars.forEach(v => {
-      docContent += `* \`${v.id}\` (${v.type}) - ${v.displayName}\n`;
-    });
-    docContent += "\n";
-  }
-
-  // Write the README.md file
-  writeFileSync(docPath, docContent, { encoding: "utf-8" });
-}
-
-/**
- * Reads extension.yaml data and extracts relevant details for documenting custom events for alerting.
+ * Reads extension.yaml data and extracts relevant details for documenting custom events for
+ * alerting.
  * @param extension extension.yaml content parsed into an object
  * @param extensionDir path to the extension folder
  * @returns processed alerts metadata
@@ -142,18 +43,17 @@ function extractAlerts(extension: ExtensionStub, extensionDir: string): AlertDoc
     return [];
   }
   return extension.alerts.map(pathEntry => {
-    var alert = JSON.parse(readFileSync(path.join(extensionDir, pathEntry.path)).toString());
+    const alert = JSON.parse(
+      readFileSync(path.join(extensionDir, pathEntry.path)).toString(),
+    ) as AlertDefinition;
 
-    let alertCondition = alert.monitoringStrategy.alertCondition.toLowerCase();
-    let violatingSamples = alert.monitoringStrategy.violatingSamples;
-    let samples = alert.monitoringStrategy.samples;
-    let threshold = alert.monitoringStrategy.threshold;
-    let unit;
-    if (alert.monitoringStrategy.unit) {
-      unit = alert.monitoringStrategy.unit.toLowerCase();
-    }
+    const alertCondition = alert.monitoringStrategy.alertCondition.toLowerCase();
+    const violatingSamples = alert.monitoringStrategy.violatingSamples;
+    const samples = alert.monitoringStrategy.samples;
+    let threshold = `${alert.monitoringStrategy.threshold}`;
+    const unit = alert.monitoringStrategy.unit;
     if (unit) {
-      threshold += ` ${unit}`;
+      threshold += ` ${unit.toLowerCase()}`;
     }
     let alertSeverity = "an alert";
     if (alert.severity) {
@@ -171,7 +71,9 @@ function extractAlerts(extension: ExtensionStub, extensionDir: string): AlertDoc
 
     return {
       name: alert.name,
-      description: `Will raise ${alertSeverity} when the metric is ${alertCondition} ${threshold} for ${violatingSamples} out of ${samples} monitoring intervals`,
+      description:
+        `Will raise ${alertSeverity} when the metric is ${alertCondition} ${threshold} ` +
+        `for ${violatingSamples} out of ${samples} monitoring intervals`,
       entity: entity,
     };
   });
@@ -188,7 +90,9 @@ function extractDashboards(extension: ExtensionStub, extensionDir: string): Dash
     return [];
   }
   return extension.dashboards.map(pathEntry => {
-    var dashboard = JSON.parse(readFileSync(path.join(extensionDir, pathEntry.path)).toString());
+    const dashboard = JSON.parse(
+      readFileSync(path.join(extensionDir, pathEntry.path)).toString(),
+    ) as DynatraceDashboard;
 
     return {
       name: dashboard.dashboardMetadata.name,
@@ -206,7 +110,7 @@ function extractTopology(extension: ExtensionStub): EntityDoc[] {
     return [];
   }
   return extension.topology.types.map((topologyType): EntityDoc => {
-    var entitySources: string[] = [];
+    const entitySources: string[] = [];
     topologyType.rules.forEach(rule => {
       rule.sources
         .filter(source => source.sourceType === "Metrics")
@@ -255,11 +159,11 @@ function extractMetrics(extension: ExtensionStub): MetricDoc[] {
  */
 function mapEntitiesToMetrics(entities: EntityDoc[], metrics: MetricDoc[]): MetricEntityMap[] {
   entities = entities.map(entity => {
-    let entityMetrics: string[] = [];
+    const entityMetrics: string[] = [];
 
     entity.sources.forEach(pattern => {
-      let operator = pattern.split("(")[0];
-      let keyPattern = pattern.split("(")[1].split(")")[0];
+      const operator = pattern.split("(")[0];
+      const keyPattern = pattern.split("(")[1].split(")")[0];
       entityMetrics.push(
         ...metrics
           .filter(m => {
@@ -270,7 +174,7 @@ function mapEntitiesToMetrics(entities: EntityDoc[], metrics: MetricDoc[]): Metr
             }
             return false;
           })
-          .map(m => m.key)
+          .map(m => m.key),
       );
     });
     entity.metrics = entityMetrics;
@@ -282,10 +186,10 @@ function mapEntitiesToMetrics(entities: EntityDoc[], metrics: MetricDoc[]): Metr
     return m;
   });
 
-  let metricEntityMap: MetricEntityMap[] = [];
+  const metricEntityMap: MetricEntityMap[] = [];
   metrics.forEach(m => {
-    let metricStr = m.entities.join(", ");
-    let idx = metricEntityMap.findIndex(mm => mm.metricEntityString === metricStr);
+    const metricStr = m.entities.join(", ");
+    const idx = metricEntityMap.findIndex(mm => mm.metricEntityString === metricStr);
     if (idx === -1) {
       metricEntityMap.push({ metricEntityString: metricStr, metrics: [m] });
     } else {
@@ -294,4 +198,126 @@ function mapEntitiesToMetrics(entities: EntityDoc[], metrics: MetricDoc[]): Metr
   });
 
   return metricEntityMap;
+}
+
+/**
+ * Invokes all other data collection functions and puts together the documentation style content.
+ * Writes the content to README.md in the workspace. If README.md exists already it will be
+ * overwritten.
+ * @param extension extension.yaml content parsed into an object
+ * @param extensionDir path to the extension folder
+ */
+function writeDocumentation(extension: ExtensionStub, extensionDir: string) {
+  // Extract required data
+  const entities = extractTopology(extension);
+  const metrics = extractMetrics(extension);
+  const dashboards = extractDashboards(extension, extensionDir);
+  const alerts = extractAlerts(extension, extensionDir);
+  const featureSets = getAllMetricsByFeatureSet(extension);
+  const metricsMap = mapEntitiesToMetrics(entities, metrics);
+
+  // Translate data to readable content
+  const docPath = path.join(extensionDir, "..", "README.md");
+  let docContent = `# ${extension.name}\n\n`;
+  docContent += `**Latest version:** ${extension.version}\n`;
+  docContent +=
+    "This extension is built using the Dynatrace Extension 2.0 Framework.\nThis means it will " +
+    "benefit of additional assets that can help you browse through the data.\n\n";
+  if (entities.length > 0) {
+    docContent += "## Topology\n\nThis extension will create the following types of entities:\n";
+    entities.forEach(entity => {
+      docContent += `* ${entity.name} (${entity.type})\n`;
+    });
+    docContent += "\n";
+  }
+  if (metrics.length > 0) {
+    docContent += "## Metrics\n\nThis extension will collect the following metrics:\n";
+    metricsMap.forEach(mm => {
+      docContent += `* Split by ${mm.metricEntityString}:\n`;
+      mm.metrics.forEach(m => {
+        docContent += `  * ${m.name} (\`${m.key}\`)\n`;
+        if (m.description && m.unit) {
+          docContent += `    ${m.description} (as ${m.unit})\n`;
+        }
+      });
+    });
+    docContent += "\n";
+  }
+  if (alerts.length > 0) {
+    docContent +=
+      "## Alerts\n\nCustom events for alerting are packaged along with the extension. These " +
+      "should be reviewed and ajusted as needed before enabling from the Settings page.\nAlerts:\n";
+    alerts.forEach(alert => {
+      docContent += `* ${alert.name}`;
+      if (alert.entity) {
+        const eIdx = entities.findIndex(e => e.type === alert.entity);
+        docContent += eIdx === -1 ? "" : ` (applies to ${entities[eIdx].name})\n`;
+      }
+      docContent += `  ${alert.description}\n`;
+    });
+    docContent += "\n";
+  }
+  if (dashboards.length > 0) {
+    docContent +=
+      `## Dashboards\n\nThis extension is packaged with ${dashboards.length} ` +
+      "dashboards which should serve as a starting point for data analysis.";
+    docContent += "\nYou can find these by opening the Dashboards menu and searching for:\n\n";
+    dashboards.forEach(dashboard => {
+      docContent += `* ${dashboard.name}\n`;
+    });
+    docContent += "\n";
+  }
+  docContent += "# Configuration\n\n";
+  if (featureSets.length > 0) {
+    docContent += "## Feature sets\n\n";
+    docContent +=
+      "Feature sets can be used to opt in and out of metric data collection.\nThis extension " +
+      "groups together metrics within the following feature sets:\n\n";
+    featureSets.forEach(featureSet => {
+      docContent += `* ${featureSet.name}\n`;
+      featureSet.metrics.forEach(metric => {
+        docContent += `  * ${metric}\n`;
+      });
+    });
+    docContent += "\n";
+  }
+  if (extension.vars) {
+    docContent +=
+      "## Variables\n\nVariables are used in monitoring configurations for filtering and adding " +
+      "additional dimensions.\n";
+    docContent += "This extension exposes the following variables:\n\n";
+    extension.vars.forEach(v => {
+      docContent += `* \`${v.id}\` (${v.type}) - ${v.displayName}\n`;
+    });
+    docContent += "\n";
+  }
+
+  // Write the README.md file
+  writeFileSync(docPath, docContent, { encoding: "utf-8" });
+}
+
+/**
+ * Delivers the "Create documentation" command functionality.
+ * Reads through the extension.yaml file and any associated alerts/dashboards JSONs and produces
+ * content for a README.md file which is written in the workspace at the same level as the extension
+ * folder.
+ * @param cachedData provider for cacheable data
+ * @returns void
+ */
+export async function createDocumentation(cachedData: CachedDataProvider) {
+  await vscode.window.withProgress(
+    { location: vscode.ProgressLocation.Notification, title: "Creating documentation" },
+    async progress => {
+      progress.report({ message: "Parsing metadata" });
+      const extensionFile = getExtensionFilePath();
+      if (!extensionFile) {
+        return;
+      }
+      const extensionDir = path.dirname(extensionFile);
+      const extension = cachedData.getExtensionYaml(readFileSync(extensionFile).toString());
+
+      progress.report({ message: "Writing README.md" });
+      writeDocumentation(extension, extensionDir);
+    },
+  );
 }

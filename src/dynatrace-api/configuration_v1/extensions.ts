@@ -14,42 +14,54 @@
   limitations under the License.
  */
 
-  import { HttpClient } from "../http_client";
+import { HttpClient } from "../http_client";
+import { ExtensionV1DTO, ExtensionV1ListDto } from "../interfaces/extensions";
+
+/**
+ * Implementation of the Extensions V2 API
+ */
+export class ExtensionsServiceV1 {
+  private readonly endpoint = "/api/config/v1/extensions";
+  private readonly httpClient: HttpClient;
+
+  constructor(httpClient: HttpClient) {
+    this.httpClient = httpClient;
+  }
 
   /**
-   * Implementation of the Extensions V2 API
+   * Gets the list of uploaded v1 extensions.
+   * @returns list of extensions
    */
-  export class ExtensionsServiceV1 {
-    private readonly endpoint = "/api/config/v1/extensions";
-    private readonly httpClient: HttpClient;
-  
-    constructor(httpClient: HttpClient) {
-      this.httpClient = httpClient;
-    }
-  
-    /**
-     * Gets the list of uploaded v1 extensions.
-     * @returns list of extensions
-     */
-    async getExtensions(): Promise<ExtensionV1DTO[]> {
-      const extensions = [];
-      let nextPageKey = null;
-      do {
-        const res: ExtensionV1ListDto = await this.httpClient.makeRequest(this.endpoint, { nextPageKey });
-        extensions.push(...res.extensions);
-        nextPageKey = res.nextPageKey;
-      } while (nextPageKey);
-      return extensions;
-    }
-
-    /**
-     * Get the binary of a v1 extension
-     * @param extensionId the id of the extension
-     * @returns the binary of the extension
-     */
-    async getExtensionBinary(extensionId: string): Promise<Uint8Array> {
-      return this.httpClient.makeRequest(`${this.endpoint}/${extensionId}/binary`, null, "GET", {}, null, null, "arraybuffer");
-    }
-  
+  async getExtensions(): Promise<ExtensionV1DTO[]> {
+    const extensions: ExtensionV1DTO[] = [];
+    let nextPageKey;
+    do {
+      const res: ExtensionV1ListDto = await this.httpClient.makeRequest<ExtensionV1ListDto>(
+        this.endpoint,
+        {
+          nextPageKey: nextPageKey,
+        },
+      );
+      extensions.push(...res.extensions);
+      nextPageKey = res.nextPageKey;
+    } while (nextPageKey);
+    return extensions;
   }
-  
+
+  /**
+   * Get the binary of a v1 extension
+   * @param extensionId the id of the extension
+   * @returns the binary of the extension
+   */
+  async getExtensionBinary(extensionId: string): Promise<Uint8Array> {
+    return this.httpClient.makeRequest(
+      `${this.endpoint}/${extensionId}/binary`,
+      undefined,
+      "GET",
+      {},
+      undefined,
+      undefined,
+      "arraybuffer",
+    );
+  }
+}

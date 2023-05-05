@@ -16,8 +16,8 @@
 
 import * as vscode from "vscode";
 import { PromData } from "../codeLens/prometheusScraper";
-import { CachedDataProvider } from "../utils/dataCaching";
 import { ExtensionStub } from "../interfaces/extensionMeta";
+import { CachedDataProvider } from "../utils/dataCaching";
 
 import {
   getAllMetricKeysAndValuesFromDataSource,
@@ -26,6 +26,20 @@ import {
 } from "../utils/extensionParsing";
 import { getBlockItemIndexAtLine, getParentBlocks } from "../utils/yamlParsing";
 import { buildMetricMetadataSnippet, indentSnippet } from "./utils/snippetBuildingUtils";
+
+/**
+ * Splits a metric key on underscore ("_") and puts together all parts with first
+ * character in upper case, providing a sort of title.
+ * @param metricKey metric key
+ * @returns metric key as title case
+ */
+function titleCase(metricKey: string): string {
+  return metricKey
+    .toLowerCase()
+    .split("_")
+    .map(part => `${part.charAt(0).toUpperCase()}${part.substring(1)}`)
+    .join(" ");
+}
 
 /**
  * Provider for Code Actions that work with scraped Prometheus data to automatically
@@ -53,14 +67,15 @@ export class PrometheusActionProvider implements vscode.CodeActionProvider {
   provideCodeActions(
     document: vscode.TextDocument,
     range: vscode.Range | vscode.Selection,
-    context: vscode.CodeActionContext,
-    token: vscode.CancellationToken
   ): vscode.CodeAction[] {
-    var codeActions: vscode.CodeAction[] = [];
+    const codeActions: vscode.CodeAction[] = [];
 
     // Bail early if different datasource or no scraped data
     this.prometheusData = this.cachedData.getPrometheusData();
-    if (!/^prometheus:/gm.test(document.getText()) || !this.prometheusData) {
+    if (
+      !/^prometheus:/gm.test(document.getText()) ||
+      Object.keys(this.prometheusData).length === 0
+    ) {
       return [];
     }
 
@@ -75,7 +90,11 @@ export class PrometheusActionProvider implements vscode.CodeActionProvider {
     ) {
       // Existing datasource yaml details
       const groupIdx = getBlockItemIndexAtLine("prometheus", range.start.line, document.getText());
-      const subgroupIdx = getBlockItemIndexAtLine("subgroups", range.start.line, document.getText());
+      const subgroupIdx = getBlockItemIndexAtLine(
+        "subgroups",
+        range.start.line,
+        document.getText(),
+      );
       const metricKeys = getPrometheusMetricKeys(extension, groupIdx, subgroupIdx);
       const labelKeys = getPrometheusLabelKeys(extension, groupIdx, subgroupIdx);
       if (lineText.includes("metrics:")) {
@@ -105,17 +124,20 @@ export class PrometheusActionProvider implements vscode.CodeActionProvider {
     actionName: string,
     textToInsert: string,
     document: vscode.TextDocument,
-    range: vscode.Range
-  ): vscode.CodeAction {
+    range: vscode.Range,
+  ): vscode.CodeAction | undefined {
     if (document.lineCount === range.start.line + 1) {
       textToInsert = "\n" + textToInsert;
     }
-    var indent = /[a-z]/i.exec(document.lineAt(range.start.line).text)!.index;
-    var insertPosition = new vscode.Position(range.start.line + 1, 0);
-    const action = new vscode.CodeAction(actionName, vscode.CodeActionKind.QuickFix);
-    action.edit = new vscode.WorkspaceEdit();
-    action.edit.insert(document.uri, insertPosition, indentSnippet(textToInsert, indent));
-    return action;
+    const firstLineMatch = /[a-z]/i.exec(document.lineAt(range.start.line).text);
+    if (firstLineMatch) {
+      const indent = firstLineMatch.index;
+      const insertPosition = new vscode.Position(range.start.line + 1, 0);
+      const action = new vscode.CodeAction(actionName, vscode.CodeActionKind.QuickFix);
+      action.edit = new vscode.WorkspaceEdit();
+      action.edit.insert(document.uri, insertPosition, indentSnippet(textToInsert, indent));
+      return action;
+    }
   }
 
   /**
@@ -129,35 +151,45 @@ export class PrometheusActionProvider implements vscode.CodeActionProvider {
   private createMetricInsertions(
     document: vscode.TextDocument,
     range: vscode.Range,
-    existingKeys: string[]
+    existingKeys: string[],
   ): vscode.CodeAction[] {
-    var codeActions: vscode.CodeAction[] = [];
-    const availableKeys = Object.keys(this.prometheusData).filter(key => !existingKeys.includes(key));
+    const codeActions: vscode.CodeAction[] = [];
+    const availableKeys = Object.keys(this.prometheusData).filter(
+      key => !existingKeys.includes(key),
+    );
 
     // Insert all metrics in one go
     if (availableKeys.length > 1) {
-      codeActions.push(
-        this.createInsertAction(
-          "Insert all scraped metrics",
-          availableKeys
-            .map(key => `- key: ${key}\n  value: metric:${key}\n  type: ${this.prometheusData[key].type}`)
-            .join("\n"),
-          document,
-          range
-        )
+      const action = this.createInsertAction(
+        "Insert all scraped metrics",
+        availableKeys
+          .map(
+            key =>
+              `- key: ${key}\n  value: metric:${key}\n  type: ${String(
+                this.prometheusData[key].type,
+              )}`,
+          )
+          .join("\n"),
+        document,
+        range,
       );
+      if (action) {
+        codeActions.push(action);
+      }
     }
 
     // Insert individual metrics
     availableKeys.forEach(key => {
-      codeActions.push(
-        this.createInsertAction(
-          `Insert ${key} metric`,
-          `- key: ${key}\n  value: metric:${key}\n  type: ${this.prometheusData[key].type}`,
-          document,
-          range
-        )
+      const action = this.createInsertAction(
+        `Insert ${key} metric`,
+        `- key: ${key}\n  value: metric:${key}\n  type: ${String(this.prometheusData[key].type)}`,
+        document,
+        range,
       );
+
+      if (action) {
+        codeActions.push(action);
+      }
     });
 
     return codeActions;
@@ -166,7 +198,7 @@ export class PrometheusActionProvider implements vscode.CodeActionProvider {
   /**
    * Creates Code Actions for inserting dimensions from scraped Prometheus data.
    * Dimensions are filtered by metric keys, so that suggestions apply only to the metrics already
-   * inserted in the YAML. Existing keys should be provided to not duplicated labels already in YAML.
+   * inserted in the YAML. Existing keys should be provided to not duplicate labels already in YAML.
    * @param document the document that triggered the action provider
    * @param range the range that triggered the action
    * @param metricKeys metric keys to use in filtering Prometheus labels
@@ -177,13 +209,14 @@ export class PrometheusActionProvider implements vscode.CodeActionProvider {
     document: vscode.TextDocument,
     range: vscode.Range,
     metricKeys: string[],
-    existingKeys: string[]
+    existingKeys: string[],
   ): vscode.CodeAction[] {
-    var codeActions: vscode.CodeAction[] = [];
-    var availableKeys: string[] = [];
+    const codeActions: vscode.CodeAction[] = [];
+    const availableKeys: string[] = [];
     Object.keys(this.prometheusData).forEach(key => {
-      if (this.prometheusData[key].dimensions) {
-        this.prometheusData[key].dimensions!.forEach(dimension => {
+      const dimensions = this.prometheusData[key].dimensions;
+      if (dimensions && dimensions.length > 0) {
+        dimensions.forEach(dimension => {
           if (
             (metricKeys.length === 0 || metricKeys.includes(key)) &&
             !existingKeys.includes(dimension) &&
@@ -195,9 +228,15 @@ export class PrometheusActionProvider implements vscode.CodeActionProvider {
       }
     });
     availableKeys.forEach(key => {
-      codeActions.push(
-        this.createInsertAction(`Insert ${key} dimension`, `- key: ${key}\n  value: label:${key}`, document, range)
+      const action = this.createInsertAction(
+        `Insert ${key} dimension`,
+        `- key: ${key}\n  value: label:${key}`,
+        document,
+        range,
       );
+      if (action) {
+        codeActions.push(action);
+      }
     });
     return codeActions;
   }
@@ -214,9 +253,9 @@ export class PrometheusActionProvider implements vscode.CodeActionProvider {
   private createMetadataInsertions(
     document: vscode.TextDocument,
     range: vscode.Range,
-    extension: ExtensionStub
+    extension: ExtensionStub,
   ): vscode.CodeAction[] {
-    var codeActions: vscode.CodeAction[] = [];
+    const codeActions: vscode.CodeAction[] = [];
     const datasourceMetrics = getAllMetricKeysAndValuesFromDataSource(extension);
     const metadataMetrics = extension.metrics ? extension.metrics.map(m => m.key) : [];
 
@@ -224,73 +263,62 @@ export class PrometheusActionProvider implements vscode.CodeActionProvider {
       // Metrics that don't have metadata defined yet...
       .filter(dsMetric => !metadataMetrics.includes(dsMetric.key))
       // ... and have prometheus-based values...
-      .filter(dsMetric => dsMetric.value && dsMetric.value.startsWith("metric:"))
+      .filter(dsMetric => dsMetric.value.startsWith("metric:"))
       // ... and have Prometheus descriptions ...
       .filter(dsMetric => {
-        let promKey = dsMetric.value.split("metric:")[1];
-        return Object.keys(this.prometheusData).includes(promKey) && this.prometheusData[promKey].description;
+        const promKey = dsMetric.value.split("metric:")[1];
+        return (
+          Object.keys(this.prometheusData).includes(promKey) &&
+          this.prometheusData[promKey].description
+        );
       });
 
     // Action for all metrics in one go
     if (metricsToInsert.length > 1) {
-      codeActions.push(
-        this.createInsertAction(
-          "Add metadata for all metrics",
-          metricsToInsert
-            .map(metric => {
-              let promKey = metric.value.split("metric:")[1];
-              return buildMetricMetadataSnippet(
-                metric.key,
-                titleCase(promKey),
-                this.prometheusData[promKey].description!,
-                undefined,
-                -2,
-                false
-              );
-            })
-            .join("\n"),
-          document,
-          range
-        )
+      const action = this.createInsertAction(
+        "Add metadata for all metrics",
+        metricsToInsert
+          .map(metric => {
+            const promKey = metric.value.split("metric:")[1];
+            return buildMetricMetadataSnippet(
+              metric.key,
+              titleCase(promKey),
+              String(this.prometheusData[promKey].description),
+              -2,
+              false,
+            );
+          })
+          .join("\n"),
+        document,
+        range,
       );
+      if (action) {
+        codeActions.push(action);
+      }
     }
 
     // Actions for individual metric metadatas
     if (metricsToInsert.length > 0) {
       metricsToInsert.forEach(metric => {
-        let promKey = metric.value.split("metric:")[1];
-        codeActions.push(
-          this.createInsertAction(
-            `Add metadata for ${metric.key}`,
-            buildMetricMetadataSnippet(
-              metric.key,
-              titleCase(promKey),
-              this.prometheusData[promKey].description!,
-              undefined,
-              -2,
-              false
-            ),
-            document,
-            range
-          )
+        const promKey = metric.value.split("metric:")[1];
+        const action = this.createInsertAction(
+          `Add metadata for ${metric.key}`,
+          buildMetricMetadataSnippet(
+            metric.key,
+            titleCase(promKey),
+            String(this.prometheusData[promKey].description),
+            -2,
+            false,
+          ),
+          document,
+          range,
         );
+        if (action) {
+          codeActions.push(action);
+        }
       });
     }
 
     return codeActions;
   }
-}
-
-/**
- * Splits a metric key on underscore ("_") and puts together all parts with first
- * character in upper case, providing a sort of title.
- * @param metricKey metric key
- * @returns metric key as title case
- */
-function titleCase(metricKey: string): string {
-  return metricKey
-    .toLowerCase()
-    .split("_")
-    .map(part => `${part.charAt(0).toUpperCase()}${part.substring(1)}`)
-    .join(" ");
 }

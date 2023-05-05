@@ -15,111 +15,40 @@
  */
 
 /********************************************************************************
- * UTILITIES FOR AGNOSTICALLY/GNERICALLY PARSING SCHEMAS 
+ * UTILITIES FOR AGNOSTICALLY/GNERICALLY PARSING SCHEMAS
  ********************************************************************************/
 
-/**
- * Creates an Object from a given JSON schema definition by attempting to parse its
- * properties and structure to come up with the mandatory properties and some value.
- * The goal is to produce a valid object for the schema, but not necessarily functional.
- * @param schema JSON schema to browse (or Settings 2.0 schema)
- * @returns object
- */
-export function createObjectFromSchema(schema: any) {
-  const configObject: Record<string, any> = {};
-
-  if (!schema.properties) {
-    return {};
-  }
-
-  Object.keys(schema.properties).forEach(propertyKey => {
-    // If the object instance already has this property it was probably set to meet
-    // a precondition so we should not attempt to process it again.
-    if (Object.keys(configObject).includes(propertyKey)) {
-      return;
-    }
-    if (schema.properties[propertyKey].type && schema.properties[propertyKey].nullable === false) {
-      if (schema.properties[propertyKey].precondition) {
-        // First, check preconditions for this property
-        const [meets, changesNeeded] = meetsPreconditions(schema.properties[propertyKey].precondition, configObject);
-        // If we don't meet preconditions due to other missing properties
-        if (!meets) {
-          if (changesNeeded.length > 0) {
-            // Set the properties such that we meet the preconditions
-            changesNeeded.forEach((change: Record<string, any>) => {
-              Object.keys(change).forEach(key => {
-                configObject[key] = change[key];
-              });
-            });
-            // Otherwise, skip the current property (it doesn't apply)
-          } else {
-            return;
-          }
-        }
-      }
-      // Then, attempt to assign a value to it
-      const defaultValue = schema.properties[propertyKey].default;
-      // Process primitives
-      if (typeof schema.properties[propertyKey].type === "string") {
-        configObject[propertyKey] = defaultValue ?? getValueForPrimitive(schema, propertyKey);
-        // Process complex types
-      } else if (schema.properties[propertyKey].type["$ref"]) {
-        if (defaultValue) {
-          // If we're lucky enough to have a default value, use it
-          configObject[propertyKey] = defaultValue;
-        } else {
-          const ref = schema.properties[propertyKey].type["$ref"] as string;
-          const [available, value] = handleRef(schema, ref);
-          if (available) {
-            configObject[propertyKey] = value;
-          }
-        }
-      }
-    }
-  });
-
-  return configObject;
+type UnknownSchemaProperties = Record<string, Record<string, unknown>>;
+interface SubPrecondition {
+  type: "EQUALS" | "NULL" | "IN";
+  property: string;
+  expectedValue?: string;
+  expectedValues?: string[];
+}
+interface Precondition {
+  type: "EQUALS" | "IN" | "NULL" | "NOT" | "AND" | "OR" | string;
+  property?: string;
+  expectedValue?: string;
+  expectedValues?: string[];
+  precondition?: SubPrecondition;
+  preconditions?: {
+    type: "EQUALS" | "NULL" | "NOT" | "IN";
+    property: string;
+    expectedValue?: string;
+    expectedValues?: string[];
+  }[];
 }
 
-/**
- * Gives a "primitive" type of property some value according to its type.
- * The only primitives with more logic are "set" and "list" for which we attempt to extract
- * either an enum value or an instance of a referenced complex type.
- * @param schema the schema this property is part of
- * @param propertyKey the key of the property it defines
- * @returns value or null in case the primitive is not implemented
- */
-function getValueForPrimitive(schema: any, propertyKey: string) {
-  switch (schema.properties[propertyKey].type) {
-    case "local_time":
-      return "00:00";
-    case "boolean":
-      return false;
-    case "secret":
-    case "text":
-      return "";
-    case "integer":
-      return handleNumber(schema.properties[propertyKey]);
-    case "set":
-    case "list":
-      // Attempt to populate the list
-      const listValue = [];
-      if (
-        schema.properties[propertyKey].items &&
-        schema.properties[propertyKey].items.type &&
-        schema.properties[propertyKey].items.type["$ref"]
-      ) {
-        const ref = schema.properties[propertyKey].items.type["$ref"] as string;
-        const [available, value] = handleRef(schema, ref);
-        if (available) {
-          listValue.push(value);
-        }
-      }
-      return listValue;
-    default:
-      console.log(`Cannot process property of type "${schema.properties[propertyKey].type}". Unkown primitive.`);
-      return null;
-  }
+interface ListItem {
+  items: { type: { $ref: string } };
+}
+interface SchemaEnum {
+  items?: { value: unknown }[];
+}
+interface MinimalSchema {
+  properties: UnknownSchemaProperties;
+  enums?: Record<string, SchemaEnum>;
+  types?: Record<string, MinimalSchema>;
 }
 
 /**
@@ -133,27 +62,40 @@ function getValueForPrimitive(schema: any, propertyKey: string) {
  * @returns tuple of assessment result and changes needed to meet the precondition
  */
 function meetsPreconditions(
-  precondition: any,
-  configObject: any,
-  negate: boolean = false
-): [boolean, Record<string, any>[]] {
+  precondition: Precondition | SubPrecondition,
+  configObject: Record<string, unknown>,
+  negate: boolean = false,
+): [boolean, Record<string, unknown>[]] {
+  const property = precondition.property;
   switch (precondition.type) {
     case "EQUALS":
-      return !negate && configObject[precondition.property]
-        ? [configObject[precondition.property] === precondition.expectedValue, []]
-        : [false, [{ [precondition.property]: precondition.expectedValue }]];
+      return !negate && property && configObject[property]
+        ? [configObject[property] === precondition.expectedValue, []]
+        : [false, [{ [String(property)]: precondition.expectedValue }]];
     case "IN":
-      return !negate && configObject[precondition.property]
-        ? [Array.from(precondition.expectedValues).includes(configObject[precondition.property]), []]
-        : [false, [{ [precondition.property]: precondition.expectedValues[0] }]];
+      return !negate && property && configObject[property] && precondition.expectedValues
+        ? [Array.from(precondition.expectedValues).includes(configObject[property] as string), []]
+        : [false, [{ [String(property)]: precondition.expectedValues?.[0] }]];
     case "NULL":
-      return !negate && configObject[precondition.property] ? [false, [{ [precondition.property]: null }]] : [true, []];
+      return !negate && property && configObject[property]
+        ? [false, [{ [property]: null }]]
+        : [true, []];
     case "NOT":
+      if (!precondition.precondition) {
+        console.log("Precondition is expected but not found. This is an error.");
+        return [true, []];
+      }
       return meetsPreconditions(precondition.precondition, configObject, true);
-    case "AND":
+    case "AND": {
       const andPreconditions = precondition.preconditions;
-      const andMeetsArray: [boolean, Record<string, any>[]][] = Array.from(
-        andPreconditions.map((andPrecondition: any) => meetsPreconditions(andPrecondition, configObject))
+      if (!andPreconditions) {
+        console.log("Preconditions is expected but not found. This is an error");
+        return [true, []];
+      }
+      const andMeetsArray: [boolean, Record<string, unknown>[]][] = Array.from(
+        andPreconditions.map((andPrecondition: Precondition) =>
+          meetsPreconditions(andPrecondition, configObject),
+        ),
       );
       if (
         andMeetsArray.some(result => {
@@ -182,10 +124,17 @@ function meetsPreconditions(
             return changes[0];
           }),
       ];
-    case "OR":
+    }
+    case "OR": {
       const orPreconditions = precondition.preconditions;
-      const orMeetsArray: [boolean, Record<string, any>[]][] = Array.from(
-        orPreconditions.map((orPrecondition: any) => meetsPreconditions(orPrecondition, configObject))
+      if (!orPreconditions) {
+        console.log("Preconditions is expected but not found. This is an error");
+        return [true, []];
+      }
+      const orMeetsArray: [boolean, Record<string, unknown>[]][] = Array.from(
+        orPreconditions.map((orPrecondition: Precondition) =>
+          meetsPreconditions(orPrecondition, configObject),
+        ),
       );
       if (
         orMeetsArray.every(result => {
@@ -209,6 +158,7 @@ function meetsPreconditions(
           return !meets && changes.length > 0;
         })[0][1], // Just pick up the first change, it's an OR
       ];
+    }
     default:
       console.log(`Cannot process precondition of type "${precondition.type}". Unknown type.`);
       return [true, []];
@@ -216,20 +166,41 @@ function meetsPreconditions(
 }
 
 /**
- * Handles generating a number for the given property. Attempts to parse any constraints
- * and provide a valid number, otherwise defaults to 0.
- * @param definition property definition for this number
- * @returns number or zero
+ * Extracts the first available value of an enum.
+ * @param schema schema that the referenced enum is part of
+ * @param enumName the name of the enum
+ * @returns tuple of value extraction success and the extracted value
  */
-function handleNumber(definition: any): number {
-  if (definition.constraints && Array.isArray(definition.constraints)) {
-    const rangeConstraints = Array.from(definition.constraints).filter((c: any) => c.type && c.type === "RANGE");
-    if (rangeConstraints.length > 0) {
-      return (rangeConstraints[0] as { minimum: number }).minimum;
-    }
-  }
+function extractEnum(schema: MinimalSchema, enumName: string): [boolean, unknown] {
+  const enumItemValue = schema.enums?.[enumName].items?.[0].value;
 
-  return 0;
+  if (enumItemValue) {
+    return [true, enumItemValue];
+  }
+  return [false, undefined];
+}
+
+/**
+ * Parses the schema of a custom type returning some instance of the object.
+ * Object contains minimum viable details based on the type schema.
+ * @param schema schema that the refernced type is part of
+ * @param typeName the name of the object type to process
+ * @returns object instance
+ */
+function extractTypeObj(schema: MinimalSchema, typeName: string): unknown {
+  // Extract a sub schema
+  const subSchema = schema.types?.[typeName];
+  if (subSchema) {
+    // Persist the original types & enums as they may be used downstream
+    subSchema.types = schema.types;
+    subSchema.enums = schema.enums;
+    // Remove circular references
+    delete subSchema.types?.[typeName];
+    // Parse as if new schema
+    // eslint-disable-next-line @typescript-eslint/no-use-before-define
+    return createObjectFromSchema(subSchema);
+  }
+  return null;
 }
 
 /**
@@ -239,7 +210,7 @@ function handleNumber(definition: any): number {
  * @param ref the string value of $ref
  * @returns tuple of value extraction success and the extracted value
  */
-function handleRef(schema: any, ref: string): [boolean, any] {
+function handleRef(schema: MinimalSchema, ref: string): [boolean, unknown] {
   if (ref.startsWith("#/enums")) {
     const enumName = ref.split("#/enums/")[1];
     return extractEnum(schema, enumName);
@@ -252,39 +223,127 @@ function handleRef(schema: any, ref: string): [boolean, any] {
 }
 
 /**
- * Extracts the first available value of an enum.
- * @param schema schema that the referenced enum is part of
- * @param enumName the name of the enum
- * @returns tuple of value extraction success and the extracted value
+ * Handles generating a number for the given property. Attempts to parse any constraints
+ * and provide a valid number, otherwise defaults to 0.
+ * @param definition property definition for this number
+ * @returns number or zero
  */
-function extractEnum(schema: any, enumName: string): [boolean, any] {
-  if (
-    schema.enums &&
-    schema.enums[enumName] &&
-    schema.enums[enumName].items &&
-    schema.enums[enumName].items[0] &&
-    schema.enums[enumName].items[0].value
-  ) {
-    return [true, schema.enums[enumName].items[0].value];
+function handleNumber(definition: Record<string, unknown>): number {
+  if (definition.constraints && Array.isArray(definition.constraints)) {
+    const rangeConstraints = Array.from(definition.constraints).filter(
+      (c: Record<string, unknown>) => c.type && c.type === "RANGE",
+    );
+    if (rangeConstraints.length > 0) {
+      return (rangeConstraints[0] as { minimum: number }).minimum;
+    }
   }
-  return [false, undefined];
+
+  return 0;
 }
 
 /**
- * Parses the schema of a custom type returning some instance of the object.
- * Object contains minimum viable details based on the type schema.
- * @param schema schema that the refernced type is part of
- * @param typeName the name of the object type to process
- * @returns object instance
+ * Gives a "primitive" type of property some value according to its type.
+ * The only primitives with more logic are "set" and "list" for which we attempt to extract
+ * either an enum value or an instance of a referenced complex type.
+ * @param schema the schema this property is part of
+ * @param propertyKey the key of the property it defines
+ * @returns value or null in case the primitive is not implemented
  */
-function extractTypeObj(schema: any, typeName: string): any {
-  // Extract a sub schema
-  const subSchema = schema.types[typeName];
-  // Persist the original types & enums as they may be used downstream
-  subSchema.types = schema.types;
-  subSchema.enums = schema.enums;
-  // Remove circular references
-  delete subSchema.types[typeName];
-  // Parse as if new schema
-  return createObjectFromSchema(subSchema);
+function getValueForPrimitive(schema: MinimalSchema, propertyKey: string) {
+  const property = schema.properties[propertyKey];
+  switch (property.type) {
+    case "local_time":
+      return "00:00";
+    case "boolean":
+      return false;
+    case "secret":
+    case "text":
+      return "";
+    case "integer":
+      return handleNumber(property);
+    case "set":
+    case "list": {
+      // Attempt to populate the list
+      const listValue = [];
+      if ((property as unknown as ListItem).items.type.$ref) {
+        const ref = (property as unknown as ListItem).items.type.$ref;
+        const [available, value] = handleRef(schema, ref);
+        if (available) {
+          listValue.push(value);
+        }
+      }
+      return listValue;
+    }
+    default:
+      console.log(`Cannot process property of type "${String(property.type)}". Unkown primitive.`);
+      return null;
+  }
+}
+
+/**
+ * Creates an Object from a given JSON schema definition by attempting to parse its
+ * properties and structure to come up with the mandatory properties and some value.
+ * The goal is to produce a valid object for the schema, but not necessarily functional.
+ * @param schema JSON schema to browse (or Settings 2.0 schema)
+ * @returns object
+ */
+export function createObjectFromSchema(schema: unknown) {
+  const configObject: Record<string, unknown> = {};
+
+  if (!Object.prototype.hasOwnProperty.call(schema, "properties")) {
+    return {};
+  }
+
+  Object.keys((schema as MinimalSchema).properties).forEach(propertyKey => {
+    // If the object instance already has this property it was probably set to meet
+    // a precondition so we should not attempt to process it again.
+    if (Object.keys(configObject).includes(propertyKey)) {
+      return;
+    }
+    const property = (schema as MinimalSchema).properties[propertyKey];
+    if (property.type && property.nullable === false) {
+      if (property.precondition) {
+        // First, check preconditions for this property
+        const [meets, changesNeeded] = meetsPreconditions(
+          property.precondition as Precondition,
+          configObject,
+        );
+        // If we don't meet preconditions due to other missing properties
+        if (!meets) {
+          if (changesNeeded.length > 0) {
+            // Set the properties such that we meet the preconditions
+            changesNeeded.forEach((change: Record<string, unknown>) => {
+              Object.keys(change).forEach(key => {
+                configObject[key] = change[key];
+              });
+            });
+            // Otherwise, skip the current property (it doesn't apply)
+          } else {
+            return;
+          }
+        }
+      }
+      // Then, attempt to assign a value to it
+      const defaultValue = property.default;
+      // Process primitives
+      if (typeof property.type === "string") {
+        configObject[propertyKey] =
+          defaultValue ?? getValueForPrimitive(schema as MinimalSchema, propertyKey);
+        // Process complex types
+      } else if (Object.prototype.hasOwnProperty.call(property.type, "$ref")) {
+        if (defaultValue) {
+          // If we're lucky enough to have a default value, use it
+          configObject[propertyKey] = defaultValue;
+        } else {
+          const ref = (property.type as { $ref: string }).$ref;
+          const [available, value] = handleRef(schema as MinimalSchema, ref);
+          if (available) {
+            configObject[propertyKey] = value;
+          }
+        }
+      }
+    }
+  });
+
+  return configObject;
 }

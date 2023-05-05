@@ -33,32 +33,6 @@ export interface OidInformation {
 }
 
 /**
- * Given an OID, pulls metadata information available online.
- * @param oid OID in standard dot notation
- * @returns metadata info or empty object if not available
- */
-export async function fetchOID(oid: string) {
-  console.log(`Fetching OID ${oid}`);
-  return axios
-    .get(`${BASE_URL}/${oid}`)
-    .then(res => {
-      if (res.data) {
-        const rawData = String(res.data)
-          .slice(String(res.data).lastIndexOf("<code>") + 6)
-          .split("</code>")[0]
-          .replace(/"/g, "")
-          .replace(/\n/g, " ");
-        return processOidData(rawData);
-      }
-      return {};
-    })
-    .catch((err) => {
-      console.log(err);
-      return {};
-    });
-}
-
-/**
  * Checks whether an OID is readable from known access information.
  * @param info OID Info as prepared by {@link fetchOID}
  * @returns status
@@ -73,7 +47,23 @@ export function isOidReadable(info: OidInformation): boolean {
  * @returns status
  */
 export function isTable(info: OidInformation): boolean {
-  return Boolean(info.syntax && info.syntax.toLowerCase().includes("sequence"));
+  return Boolean(info.syntax?.toLowerCase().includes("sequence"));
+}
+
+/**
+ * Cleans a metadata key as given by the online OID repository and translates it to
+ * camelCase for better readability.
+ * @param key metadata attribute key from OID repository
+ * @returns key in camelCase
+ */
+function cleanKeyName(key: string): string {
+  const dashIdx = key.indexOf("-");
+  const cleanKey = key.toLowerCase();
+  return dashIdx !== -1
+    ? cleanKey.slice(0, dashIdx) +
+        cleanKey.charAt(dashIdx + 1).toUpperCase() +
+        cleanKey.slice(dashIdx + 2)
+    : cleanKey;
 }
 
 /**
@@ -108,15 +98,27 @@ function processOidData(data: string) {
 }
 
 /**
- * Cleans a metadata key as given by the online OID repository and translates it to
- * camelCase for better readability.
- * @param key metadata attribute key from OID repository
- * @returns key in camelCase
+ * Given an OID, pulls metadata information available online.
+ * @param oid OID in standard dot notation
+ * @returns metadata info or empty object if not available
  */
-function cleanKeyName(key: string): string {
-  const dashIdx = key.indexOf("-");
-  const cleanKey = key.toLowerCase();
-  return dashIdx !== -1
-    ? cleanKey.slice(0, dashIdx) + cleanKey.charAt(dashIdx + 1).toUpperCase() + cleanKey.slice(dashIdx + 2)
-    : cleanKey;
+export async function fetchOID(oid: string) {
+  console.log(`Fetching OID ${oid}`);
+  return axios
+    .get(`${BASE_URL}/${oid}`)
+    .then(res => {
+      if (res.data) {
+        const rawData = String(res.data)
+          .slice(String(res.data).lastIndexOf("<code>") + 6)
+          .split("</code>")[0]
+          .replace(/"/g, "")
+          .replace(/\n/g, " ");
+        return processOidData(rawData);
+      }
+      return {};
+    })
+    .catch(err => {
+      console.log(err);
+      return {};
+    });
 }

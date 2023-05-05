@@ -18,7 +18,7 @@
  * UTILITIES FOR INTERACTING WITH OTHER VS CODE EXTENSIONS
  ********************************************************************************/
 
-import { CommonOptions, ExecOptions } from "child_process";
+import { ExecOptions } from "child_process";
 import * as path from "path";
 import * as vscode from "vscode";
 import { ProposedExtensionAPI } from "../interfaces/python";
@@ -36,7 +36,7 @@ export async function getPythonPath(): Promise<string> {
     await extension?.activate();
   }
   const activeEnvironment = extension?.exports.environments.getActiveEnvironmentPath();
-  pythonPath = activeEnvironment?.path || pythonPath;
+  pythonPath = activeEnvironment?.path ?? pythonPath;
 
   return pythonPath;
 }
@@ -48,13 +48,13 @@ export async function getPythonPath(): Promise<string> {
  */
 export async function getPythonVenvOpts(): Promise<ExecOptions> {
   const pythonPath = await getPythonPath();
-  let env: any = {};
+  const env: Record<string, string> = {};
 
-  if (pythonPath !== "python") {
+  if (pythonPath !== "python" && process.env.PATH) {
     // add the python bin directory to the PATH
-    env["PATH"] = `${path.resolve(pythonPath, "..")}${path.delimiter}${process.env.PATH}`;
+    env.PATH = `${path.resolve(pythonPath, "..")}${path.delimiter}${process.env.PATH}`;
     // virtual env is right above bin directory
-    env["VIRTUAL_ENV"] = path.resolve(pythonPath, "..", "..");
+    env.VIRTUAL_ENV = path.resolve(pythonPath, "..", "..");
   }
 
   return env;

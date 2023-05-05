@@ -14,36 +14,34 @@
   limitations under the License.
  */
 
-interface SchemaList {
+export interface SchemaList {
   versions: string[];
 }
 
-interface SchemaFiles {
+export interface SchemaFiles {
   files: string[];
 }
 
-interface MinimalExtension {
+export interface MinimalExtension {
   extensionName: string;
   version: string;
 }
 
-interface ExtensionV1ListDto {
+export interface ExtensionV1ListDto {
   extensions: ExtensionV1DTO[];
   totalResults: number;
   nextPageKey?: string;
 }
 
-interface ExtensionV1DTO {
+export interface ExtensionV1DTO {
   id: string;
   name: string;
   type: "ACTIVEGATE" | "CODEMODULE" | "JMX" | "ONEAGENT" | "PMI" | "UNKNOWN";
 }
 
-
-
-interface ExtensionMonitoringConfiguration {
-  objectId: string;
-  scope: string;
+export interface ExtensionMonitoringConfiguration {
+  objectId?: string;
+  scope?: string;
   value: MonitoringConfigurationValue;
 }
 
@@ -52,12 +50,12 @@ interface MonitoringConfigurationValue {
   description: string;
   version: string;
   featuresets?: string[];
-  vars?: any;
-  snmp?: any;
-  activationContext?: any;
+  vars?: unknown;
+  snmp?: unknown;
+  activationContext?: unknown;
 }
 
-interface ExtensionStatusDto {
+export interface ExtensionStatusDto {
   timestamp: number;
   status: "ERROR" | "OK" | "UNKNOWN";
 }

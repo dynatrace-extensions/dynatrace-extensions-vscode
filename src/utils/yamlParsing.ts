@@ -21,6 +21,22 @@
 import * as vscode from "vscode";
 
 /**
+ * Gets the indent of a text line.
+ * It's assumed that the space until the first character is the indent.
+ * @param document {@link vscode.TextDocument}
+ * @param lineNumber index of the line to check indent for
+ * @returns indentation
+ */
+export function getIndent(document: vscode.TextDocument, lineNumber: number) {
+  const lineCharMatch = /[a-z]/i.exec(document.lineAt(lineNumber).text);
+  if (lineCharMatch) {
+    return lineCharMatch.index;
+  }
+
+  return 0;
+}
+
+/**
  * Given a block label and a line within a yaml content, will calculate the item index
  * within that block that the line belongs to.
  * @param blockLabel label of the block to search within
@@ -29,8 +45,8 @@ import * as vscode from "vscode";
  * @returns the index of the item, or -2 if not found or an error happened
  */
 export function getBlockItemIndexAtLine(blockLabel: string, blockLineIdx: number, content: string) {
-  var index = -2;
-  var indent = -2;
+  let index = -2;
+  let indent = -2;
   for (const [lineIndex, line] of content.split("\n").entries()) {
     // Exit once we're past the line in the original file
     if (lineIndex > blockLineIdx) {
@@ -71,7 +87,7 @@ export function getListItemIndexes(listLabel: string, content: string) {
 
   for (const line of content.split("\n")) {
     // Exit if the line indent becomes less than what the list defined
-    const lineStartIdx = /[a-z\-]/i.exec(line);
+    const lineStartIdx = /[a-z-]/i.exec(line);
     if (lineStartIdx && lineStartIdx.index < indent) {
       break;
     }
@@ -108,18 +124,18 @@ export function getListItemIndexes(listLabel: string, content: string) {
  * @returns list parent block labels
  */
 export function getParentBlocks(lineNumber: number, content: string): string[] {
-  var blocks: [string, number][] = [];
-  var splitLines = content.split("\n");
-  var pushNext: [string, number] = ["", -1];
-  var popNext = 0;
+  const blocks: [string, number][] = [];
+  const splitLines = content.split("\n");
+  let pushNext: [string, number] = ["", -1];
+  let popNext = 0;
 
   if (!(splitLines[lineNumber].startsWith(" ") || splitLines[lineNumber].startsWith("-"))) {
     return [splitLines[lineNumber].split(":")[0]];
   }
 
   for (const [i, line] of splitLines.entries()) {
-    let line0Label = /[a-z]/i.exec(line);
-    let line1Label = /[a-z]/i.exec(splitLines[i + 1]);
+    const line0Label = /[a-z]/i.exec(line);
+    const line1Label = /[a-z]/i.exec(splitLines[i + 1]);
 
     if (i > lineNumber) {
       break;
@@ -160,18 +176,21 @@ export function getParentBlocks(lineNumber: number, content: string): string[] {
 }
 
 export function isSameList(itemIdx: number, document: vscode.TextDocument) {
-  const line = document.lineAt(document.positionAt(itemIdx));
-  const prevLine = document.lineAt(line.lineNumber - 1);
-  const indent = /[a-z]/g.exec(line.text)!.index;
-  const prevIndent = /[a-z]/g.exec(prevLine.text)!.index;
+  const lineNumber = document.lineAt(document.positionAt(itemIdx)).lineNumber;
+  const indent = getIndent(document, lineNumber);
+  const prevIndent = getIndent(document, lineNumber - 1);
   return prevIndent === indent;
 }
 
-export function getNextElementIdx(lineNumber: number, document: vscode.TextDocument, startAt: number) {
+export function getNextElementIdx(
+  lineNumber: number,
+  document: vscode.TextDocument,
+  startAt: number,
+) {
   const content = document.getText();
-  const prevIndent = /[a-z]/g.exec(document.lineAt(lineNumber).text)!.index;
+  const prevIndent = getIndent(document, lineNumber);
   let indent;
-  for (let li = lineNumber + 1; li <= document.lineCount-1; li++) {
+  for (let li = lineNumber + 1; li <= document.lineCount - 1; li++) {
     const line = document.lineAt(li).text;
     const lineRe = new RegExp("[a-z]", "g").exec(line);
     indent = lineRe ? lineRe.index : 9999;
