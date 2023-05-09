@@ -1,5 +1,29 @@
 # Change Log
 
+## Version 1.2.3 (09.05.2023)
+
+### ✨ New in this version:
+- [#81 - Monitoring Configurations part 2](https://github.com/dynatrace-extensions/dynatrace-extensions-copilot/issues/81)
+  - Copilot can now generate configuration files for Extensions that are not deployed yet
+  - When configuring deployed extensions, can select from files in the `config` folder
+  - Any configuration from the tenant can be saved to the `config` folder of the current workspace
+  - The "scope" of a monitoring configuration offers suggestions from tenant
+- [#89 - .gitignore as part of workspace initialization](https://github.com/dynatrace-extensions/dynatrace-extensions-copilot/issues/89)
+
+### 🪲 Fixed in this version:
+- The WMI Code Lens would not be able to interpret single item responses
+- Workspaces initialized since version 1.2.1 may be unaccessible afterwards
+  - For any such workspace, re-initialize it once the Copilot was updated to version 1.2.3
+
+### 🚀 Improved in this version:
+- [#108 - Prompt user for dashboard name when generating](https://github.com/dynatrace-extensions/dynatrace-extensions-copilot/issues/108)
+
+### 🧹 Housekeeping:
+- [#102 - Standardize linting setup](https://github.com/dynatrace-extensions/dynatrace-extensions-copilot/issues/102)
+- [#101 - Standardize code styling/formatting](https://github.com/dynatrace-extensions/dynatrace-extensions-copilot/issues/102)
+
+---
+
 ## Version 1.2.2 (17.04.2023)
 
 ### 🪲 Fixed in this version:
