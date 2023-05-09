@@ -1,0 +1,1054 @@
+{
+    "allowedScopes": [
+        "ag_group",
+        "HOST",
+        "HOST_GROUP",
+        "environment",
+        "management_zone"
+    ],
+    "enums": {
+        "ActivationContextEnum": {
+            "displayName": "ActivationContextEnum",
+            "description": "",
+            "documentation": "",
+            "items": [
+                {
+                    "value": "REMOTE",
+                    "displayName": "REMOTE"
+                },
+                {
+                    "value": "LOCAL",
+                    "displayName": "LOCAL"
+                }
+            ],
+            "type": "enum"
+        },
+        "dynatrace.datasource.theo:authenticationScheme": {
+            "displayName": "Authentication scheme",
+            "description": "",
+            "documentation": "",
+            "items": [
+                {
+                    "value": "none",
+                    "displayName": "No authentication"
+                },
+                {
+                    "value": "basic",
+                    "displayName": "Basic authentication"
+                },
+                {
+                    "value": "bearer",
+                    "displayName": "Bearer (token) authentication"
+                },
+                {
+                    "value": "aws",
+                    "displayName": "AWS Authentication"
+                }
+            ],
+            "type": "enum"
+        },
+        "dynatrace.datasource.theo:autoDiscoveryType": {
+            "displayName": "Auto discovery type",
+            "description": "",
+            "documentation": "",
+            "items": [
+                {
+                    "value": "dns_sd_config",
+                    "displayName": "DNS"
+                }
+            ],
+            "type": "enum"
+        },
+        "dynatrace.datasource.theo:dnsType": {
+            "displayName": "DNS type",
+            "description": "",
+            "documentation": "",
+            "items": [
+                {
+                    "value": "a",
+                    "displayName": "A"
+                }
+            ],
+            "type": "enum"
+        }
+    },
+    "types": {
+        "dynatrace.datasource.theo:authenticationRemote": {
+            "version": "0",
+            "versionInfo": "",
+            "displayName": "Authentication",
+            "summaryPattern": "",
+            "description": "",
+            "documentation": "",
+            "properties": {
+                "scheme": {
+                    "displayName": "Authentication scheme",
+                    "description": "",
+                    "documentation": "",
+                    "type": {
+                        "$ref": "#/enums/dynatrace.datasource.theo:authenticationScheme"
+                    },
+                    "nullable": false,
+                    "maxObjects": 1,
+                    "modificationPolicy": "DEFAULT",
+                    "default": "basic"
+                },
+                "useCredentialVault": {
+                    "displayName": "Use credential vault",
+                    "description": "",
+                    "documentation": "",
+                    "type": "boolean",
+                    "nullable": true,
+                    "precondition": {
+                        "type": "EQUALS",
+                        "property": "scheme",
+                        "expectedValue": "basic"
+                    },
+                    "metadata": {
+                        "featureFlag": "com.compuware.extensions-use-credential-vault.feature",
+                        "maturity": "IN_DEVELOPMENT"
+                    },
+                    "maxObjects": 1,
+                    "modificationPolicy": "DEFAULT"
+                },
+                "credentialVaultId": {
+                    "displayName": "Select Vault credentials",
+                    "description": "",
+                    "documentation": "",
+                    "type": "text",
+                    "subType": "credential",
+                    "referencedType": "USERNAME_PASSWORD",
+                    "nullable": true,
+                    "constraints": [
+                        {
+                            "type": "LENGTH",
+                            "maxLength": 500,
+                            "minLength": 1
+                        },
+                        {
+                            "type": "PATTERN",
+                            "pattern": "^CREDENTIALS_VAULT-.+$"
+                        },
+                        {
+                            "type": "PATTERN",
+                            "customMessage": "Please use a format of TYPE-ID",
+                            "pattern": "^[A-Z][A-Z0-9_]*-[0-9A-F]{16}$"
+                        }
+                    ],
+                    "precondition": {
+                        "type": "EQUALS",
+                        "property": "useCredentialVault",
+                        "expectedValue": true
+                    },
+                    "metadata": {
+                        "featureFlag": "com.compuware.extensions-use-credential-vault.feature",
+                        "maturity": "IN_DEVELOPMENT"
+                    },
+                    "maxObjects": 1,
+                    "modificationPolicy": "DEFAULT"
+                },
+                "username": {
+                    "displayName": "Username",
+                    "description": "",
+                    "documentation": "",
+                    "type": "text",
+                    "nullable": false,
+                    "constraints": [
+                        {
+                            "type": "LENGTH",
+                            "maxLength": 500,
+                            "minLength": 1
+                        }
+                    ],
+                    "precondition": {
+                        "type": "AND",
+                        "preconditions": [
+                            {
+                                "type": "EQUALS",
+                                "property": "scheme",
+                                "expectedValue": "basic"
+                            },
+                            {
+                                "type": "OR",
+                                "preconditions": [
+                                    {
+                                        "type": "NULL",
+                                        "property": "useCredentialVault"
+                                    },
+                                    {
+                                        "type": "EQUALS",
+                                        "property": "useCredentialVault",
+                                        "expectedValue": false
+                                    }
+                                ]
+                            }
+                        ]
+                    },
+                    "maxObjects": 1,
+                    "modificationPolicy": "DEFAULT",
+                    "default": ""
+                },
+                "password": {
+                    "displayName": "Password",
+                    "description": "",
+                    "documentation": "",
+                    "type": "secret",
+                    "nullable": false,
+                    "constraints": [
+                        {
+                            "type": "LENGTH",
+                            "maxLength": 500,
+                            "minLength": 1
+                        }
+                    ],
+                    "precondition": {
+                        "type": "AND",
+                        "preconditions": [
+                            {
+                                "type": "EQUALS",
+                                "property": "scheme",
+                                "expectedValue": "basic"
+                            },
+                            {
+                                "type": "OR",
+                                "preconditions": [
+                                    {
+                                        "type": "NULL",
+                                        "property": "useCredentialVault"
+                                    },
+                                    {
+                                        "type": "EQUALS",
+                                        "property": "useCredentialVault",
+                                        "expectedValue": false
+                                    }
+                                ]
+                            }
+                        ]
+                    },
+                    "maxObjects": 1,
+                    "modificationPolicy": "DEFAULT",
+                    "default": ""
+                },
+                "token": {
+                    "displayName": "Token",
+                    "description": "",
+                    "documentation": "",
+                    "type": "secret",
+                    "nullable": false,
+                    "constraints": [
+                        {
+                            "type": "LENGTH",
+                            "maxLength": 2500,
+                            "minLength": 1
+                        }
+                    ],
+                    "precondition": {
+                        "type": "EQUALS",
+                        "property": "scheme",
+                        "expectedValue": "bearer"
+                    },
+                    "maxObjects": 1,
+                    "modificationPolicy": "DEFAULT",
+                    "default": ""
+                },
+                "accessKey": {
+                    "displayName": "Access Key",
+                    "description": "",
+                    "documentation": "",
+                    "type": "secret",
+                    "nullable": false,
+                    "constraints": [
+                        {
+                            "type": "LENGTH",
+                            "maxLength": 500,
+                            "minLength": 1
+                        }
+                    ],
+                    "precondition": {
+                        "type": "EQUALS",
+                        "property": "scheme",
+                        "expectedValue": "aws"
+                    },
+                    "maxObjects": 1,
+                    "modificationPolicy": "DEFAULT",
+                    "default": ""
+                },
+                "secretKey": {
+                    "displayName": "Secret Key",
+                    "description": "",
+                    "documentation": "",
+                    "type": "secret",
+                    "nullable": false,
+                    "constraints": [
+                        {
+                            "type": "LENGTH",
+                            "maxLength": 500,
+                            "minLength": 1
+                        }
+                    ],
+                    "precondition": {
+                        "type": "EQUALS",
+                        "property": "scheme",
+                        "expectedValue": "aws"
+                    },
+                    "maxObjects": 1,
+                    "modificationPolicy": "DEFAULT",
+                    "default": ""
+                },
+                "region": {
+                    "displayName": "Region",
+                    "description": "",
+                    "documentation": "",
+                    "type": "text",
+                    "nullable": false,
+                    "constraints": [
+                        {
+                            "type": "LENGTH",
+                            "maxLength": 500,
+                            "minLength": 1
+                        }
+                    ],
+                    "precondition": {
+                        "type": "EQUALS",
+                        "property": "scheme",
+                        "expectedValue": "aws"
+                    },
+                    "maxObjects": 1,
+                    "modificationPolicy": "DEFAULT",
+                    "default": ""
+                },
+                "skipVerifyHttps": {
+                    "displayName": "Skip ssl verification",
+                    "description": "",
+                    "documentation": "",
+                    "type": "boolean",
+                    "nullable": false,
+                    "precondition": {
+                        "type": "IN",
+                        "property": "scheme",
+                        "expectedValues": [
+                            "none",
+                            "basic",
+                            "bearer",
+                            "aws"
+                        ]
+                    },
+                    "maxObjects": 1,
+                    "modificationPolicy": "DEFAULT",
+                    "default": false
+                }
+            },
+            "type": "object"
+        },
+        "dynatrace.datasource.theo:advanced": {
+            "version": "0",
+            "versionInfo": "",
+            "displayName": "Advanced",
+            "summaryPattern": "",
+            "description": "",
+            "documentation": "",
+            "properties": {
+                "timeoutSecs": {
+                    "displayName": "Timeout in seconds",
+                    "description": "",
+                    "documentation": "",
+                    "type": "integer",
+                    "nullable": false,
+                    "constraints": [
+                        {
+                            "type": "RANGE",
+                            "maximum": 50,
+                            "minimum": 0
+                        }
+                    ],
+                    "maxObjects": 1,
+                    "modificationPolicy": "DEFAULT",
+                    "default": 10
+                },
+                "retries": {
+                    "displayName": "Retries",
+                    "description": "",
+                    "documentation": "",
+                    "type": "integer",
+                    "nullable": false,
+                    "constraints": [
+                        {
+                            "type": "RANGE",
+                            "maximum": 3,
+                            "minimum": 0
+                        }
+                    ],
+                    "maxObjects": 1,
+                    "modificationPolicy": "DEFAULT",
+                    "default": 0
+                },
+                "collectHistogramBuckets": {
+                    "displayName": "Collect detailed histogram metrics",
+                    "description": "",
+                    "documentation": "",
+                    "type": "boolean",
+                    "nullable": false,
+                    "maxObjects": 1,
+                    "modificationPolicy": "DEFAULT",
+                    "default": false
+                }
+            },
+            "type": "object"
+        },
+        "dynatrace.datasource.theo:autoDiscovery": {
+            "version": "0",
+            "versionInfo": "",
+            "displayName": "DNS",
+            "summaryPattern": "",
+            "description": "",
+            "documentation": "",
+            "properties": {
+                "autoDiscoveryType": {
+                    "displayName": "Auto discovery type",
+                    "description": "",
+                    "documentation": "",
+                    "type": {
+                        "$ref": "#/enums/dynatrace.datasource.theo:autoDiscoveryType"
+                    },
+                    "nullable": false,
+                    "maxObjects": 1,
+                    "modificationPolicy": "DEFAULT",
+                    "default": "dns_sd_config"
+                },
+                "dnsType": {
+                    "displayName": "DNS type",
+                    "description": "",
+                    "documentation": "",
+                    "type": {
+                        "$ref": "#/enums/dynatrace.datasource.theo:dnsType"
+                    },
+                    "nullable": false,
+                    "precondition": {
+                        "type": "EQUALS",
+                        "property": "autoDiscoveryType",
+                        "expectedValue": "dns_sd_config"
+                    },
+                    "maxObjects": 1,
+                    "modificationPolicy": "DEFAULT",
+                    "default": "a"
+                },
+                "dnsPort": {
+                    "displayName": "DNS Port",
+                    "description": "",
+                    "documentation": "",
+                    "type": "integer",
+                    "nullable": true,
+                    "precondition": {
+                        "type": "EQUALS",
+                        "property": "autoDiscoveryType",
+                        "expectedValue": "dns_sd_config"
+                    },
+                    "maxObjects": 1,
+                    "modificationPolicy": "DEFAULT"
+                },
+                "refreshInterval": {
+                    "displayName": "DNS refresh interval (s)",
+                    "description": "",
+                    "documentation": "",
+                    "type": "integer",
+                    "nullable": true,
+                    "precondition": {
+                        "type": "EQUALS",
+                        "property": "autoDiscoveryType",
+                        "expectedValue": "dns_sd_config"
+                    },
+                    "maxObjects": 1,
+                    "modificationPolicy": "DEFAULT"
+                }
+            },
+            "type": "object"
+        },
+        "dynatrace.datasource.theo:endpointRemote": {
+            "version": "0",
+            "versionInfo": "",
+            "displayName": "Endpoint",
+            "summaryPattern": "Get metrics from {url}",
+            "description": "",
+            "documentation": "",
+            "properties": {
+                "url": {
+                    "displayName": "URL",
+                    "description": "",
+                    "documentation": "",
+                    "type": "text",
+                    "nullable": false,
+                    "constraints": [
+                        {
+                            "type": "LENGTH",
+                            "maxLength": 500,
+                            "minLength": 1
+                        }
+                    ],
+                    "maxObjects": 1,
+                    "modificationPolicy": "DEFAULT",
+                    "default": "http://localhost:9090/metrics"
+                },
+                "authentication": {
+                    "displayName": "Authentication",
+                    "description": "",
+                    "documentation": "",
+                    "type": {
+                        "$ref": "#/types/dynatrace.datasource.theo:authenticationRemote"
+                    },
+                    "nullable": false,
+                    "maxObjects": 1,
+                    "modificationPolicy": "DEFAULT"
+                },
+                "advanced": {
+                    "displayName": "Advanced",
+                    "description": "",
+                    "documentation": "",
+                    "type": {
+                        "$ref": "#/types/dynatrace.datasource.theo:advanced"
+                    },
+                    "nullable": true,
+                    "maxObjects": 1,
+                    "modificationPolicy": "DEFAULT"
+                },
+                "autoDiscovery": {
+                    "displayName": "Auto Discovery",
+                    "description": "",
+                    "documentation": "",
+                    "type": {
+                        "$ref": "#/types/dynatrace.datasource.theo:autoDiscovery"
+                    },
+                    "nullable": true,
+                    "maxObjects": 1,
+                    "modificationPolicy": "DEFAULT"
+                }
+            },
+            "type": "object"
+        },
+        "prometheusRemote": {
+            "version": "0",
+            "versionInfo": "",
+            "displayName": "Prometheus",
+            "summaryPattern": "",
+            "description": "",
+            "documentation": "",
+            "properties": {
+                "endpoints": {
+                    "displayName": "Endpoints",
+                    "description": "",
+                    "documentation": "",
+                    "type": "list",
+                    "items": {
+                        "displayName": "",
+                        "description": "",
+                        "documentation": "",
+                        "type": {
+                            "$ref": "#/types/dynatrace.datasource.theo:endpointRemote"
+                        }
+                    },
+                    "nullable": false,
+                    "metadata": {
+                        "addItemButton": "Add endpoint"
+                    },
+                    "minObjects": 1,
+                    "maxObjects": 100,
+                    "modificationPolicy": "DEFAULT"
+                }
+            },
+            "type": "object"
+        },
+        "dynatrace.datasource.theo:authenticationLocal": {
+            "version": "0",
+            "versionInfo": "",
+            "displayName": "Authentication",
+            "summaryPattern": "",
+            "description": "",
+            "documentation": "",
+            "properties": {
+                "scheme": {
+                    "displayName": "Authentication scheme",
+                    "description": "",
+                    "documentation": "",
+                    "type": {
+                        "$ref": "#/enums/dynatrace.datasource.theo:authenticationScheme"
+                    },
+                    "nullable": false,
+                    "maxObjects": 1,
+                    "modificationPolicy": "DEFAULT",
+                    "default": "none"
+                },
+                "useCredentialVault": {
+                    "displayName": "Use credential vault",
+                    "description": "",
+                    "documentation": "",
+                    "type": "boolean",
+                    "nullable": true,
+                    "precondition": {
+                        "type": "EQUALS",
+                        "property": "scheme",
+                        "expectedValue": "basic"
+                    },
+                    "metadata": {
+                        "featureFlag": "com.compuware.extensions-use-credential-vault.feature",
+                        "maturity": "IN_DEVELOPMENT"
+                    },
+                    "maxObjects": 1,
+                    "modificationPolicy": "DEFAULT"
+                },
+                "credentialVaultId": {
+                    "displayName": "Select Vault credentials",
+                    "description": "",
+                    "documentation": "",
+                    "type": "text",
+                    "subType": "credential",
+                    "referencedType": "USERNAME_PASSWORD",
+                    "nullable": true,
+                    "constraints": [
+                        {
+                            "type": "LENGTH",
+                            "maxLength": 500,
+                            "minLength": 1
+                        },
+                        {
+                            "type": "PATTERN",
+                            "pattern": "^CREDENTIALS_VAULT-.+$"
+                        },
+                        {
+                            "type": "PATTERN",
+                            "customMessage": "Please use a format of TYPE-ID",
+                            "pattern": "^[A-Z][A-Z0-9_]*-[0-9A-F]{16}$"
+                        }
+                    ],
+                    "precondition": {
+                        "type": "EQUALS",
+                        "property": "useCredentialVault",
+                        "expectedValue": true
+                    },
+                    "metadata": {
+                        "featureFlag": "com.compuware.extensions-use-credential-vault.feature",
+                        "maturity": "IN_DEVELOPMENT"
+                    },
+                    "maxObjects": 1,
+                    "modificationPolicy": "DEFAULT"
+                },
+                "username": {
+                    "displayName": "Username",
+                    "description": "",
+                    "documentation": "",
+                    "type": "text",
+                    "nullable": false,
+                    "constraints": [
+                        {
+                            "type": "LENGTH",
+                            "maxLength": 500,
+                            "minLength": 1
+                        }
+                    ],
+                    "precondition": {
+                        "type": "AND",
+                        "preconditions": [
+                            {
+                                "type": "EQUALS",
+                                "property": "scheme",
+                                "expectedValue": "basic"
+                            },
+                            {
+                                "type": "OR",
+                                "preconditions": [
+                                    {
+                                        "type": "NULL",
+                                        "property": "useCredentialVault"
+                                    },
+                                    {
+                                        "type": "EQUALS",
+                                        "property": "useCredentialVault",
+                                        "expectedValue": false
+                                    }
+                                ]
+                            }
+                        ]
+                    },
+                    "maxObjects": 1,
+                    "modificationPolicy": "DEFAULT",
+                    "default": ""
+                },
+                "password": {
+                    "displayName": "Password",
+                    "description": "",
+                    "documentation": "",
+                    "type": "secret",
+                    "nullable": false,
+                    "constraints": [
+                        {
+                            "type": "LENGTH",
+                            "maxLength": 500,
+                            "minLength": 1
+                        }
+                    ],
+                    "precondition": {
+                        "type": "AND",
+                        "preconditions": [
+                            {
+                                "type": "EQUALS",
+                                "property": "scheme",
+                                "expectedValue": "basic"
+                            },
+                            {
+                                "type": "OR",
+                                "preconditions": [
+                                    {
+                                        "type": "NULL",
+                                        "property": "useCredentialVault"
+                                    },
+                                    {
+                                        "type": "EQUALS",
+                                        "property": "useCredentialVault",
+                                        "expectedValue": false
+                                    }
+                                ]
+                            }
+                        ]
+                    },
+                    "maxObjects": 1,
+                    "modificationPolicy": "DEFAULT",
+                    "default": ""
+                },
+                "token": {
+                    "displayName": "Token",
+                    "description": "",
+                    "documentation": "",
+                    "type": "secret",
+                    "nullable": false,
+                    "constraints": [
+                        {
+                            "type": "LENGTH",
+                            "maxLength": 2500,
+                            "minLength": 1
+                        }
+                    ],
+                    "precondition": {
+                        "type": "EQUALS",
+                        "property": "scheme",
+                        "expectedValue": "bearer"
+                    },
+                    "maxObjects": 1,
+                    "modificationPolicy": "DEFAULT",
+                    "default": ""
+                },
+                "accessKey": {
+                    "displayName": "Access Key",
+                    "description": "",
+                    "documentation": "",
+                    "type": "secret",
+                    "nullable": false,
+                    "constraints": [
+                        {
+                            "type": "LENGTH",
+                            "maxLength": 500,
+                            "minLength": 1
+                        }
+                    ],
+                    "precondition": {
+                        "type": "EQUALS",
+                        "property": "scheme",
+                        "expectedValue": "aws"
+                    },
+                    "maxObjects": 1,
+                    "modificationPolicy": "DEFAULT",
+                    "default": ""
+                },
+                "secretKey": {
+                    "displayName": "Secret Key",
+                    "description": "",
+                    "documentation": "",
+                    "type": "secret",
+                    "nullable": false,
+                    "constraints": [
+                        {
+                            "type": "LENGTH",
+                            "maxLength": 500,
+                            "minLength": 1
+                        }
+                    ],
+                    "precondition": {
+                        "type": "EQUALS",
+                        "property": "scheme",
+                        "expectedValue": "aws"
+                    },
+                    "maxObjects": 1,
+                    "modificationPolicy": "DEFAULT",
+                    "default": ""
+                },
+                "region": {
+                    "displayName": "Region",
+                    "description": "",
+                    "documentation": "",
+                    "type": "text",
+                    "nullable": false,
+                    "constraints": [
+                        {
+                            "type": "LENGTH",
+                            "maxLength": 500,
+                            "minLength": 1
+                        }
+                    ],
+                    "precondition": {
+                        "type": "EQUALS",
+                        "property": "scheme",
+                        "expectedValue": "aws"
+                    },
+                    "maxObjects": 1,
+                    "modificationPolicy": "DEFAULT",
+                    "default": ""
+                },
+                "skipVerifyHttps": {
+                    "displayName": "Skip ssl verification",
+                    "description": "",
+                    "documentation": "",
+                    "type": "boolean",
+                    "nullable": false,
+                    "precondition": {
+                        "type": "IN",
+                        "property": "scheme",
+                        "expectedValues": [
+                            "none",
+                            "basic",
+                            "bearer",
+                            "aws"
+                        ]
+                    },
+                    "maxObjects": 1,
+                    "modificationPolicy": "DEFAULT",
+                    "default": false
+                }
+            },
+            "type": "object"
+        },
+        "dynatrace.datasource.theo:endpointLocal": {
+            "version": "0",
+            "versionInfo": "",
+            "displayName": "Endpoint",
+            "summaryPattern": "Get metrics from {url}",
+            "description": "",
+            "documentation": "",
+            "properties": {
+                "url": {
+                    "displayName": "URL",
+                    "description": "Only localhost endpoints are allowed (localhost / 127.x.x.x)",
+                    "documentation": "",
+                    "type": "text",
+                    "nullable": false,
+                    "constraints": [
+                        {
+                            "type": "LENGTH",
+                            "maxLength": 500,
+                            "minLength": 1
+                        }
+                    ],
+                    "maxObjects": 1,
+                    "modificationPolicy": "DEFAULT",
+                    "default": "http://localhost:9090/metrics"
+                },
+                "authentication": {
+                    "displayName": "Authentication",
+                    "description": "",
+                    "documentation": "",
+                    "type": {
+                        "$ref": "#/types/dynatrace.datasource.theo:authenticationLocal"
+                    },
+                    "nullable": false,
+                    "maxObjects": 1,
+                    "modificationPolicy": "DEFAULT"
+                },
+                "advanced": {
+                    "displayName": "Advanced",
+                    "description": "",
+                    "documentation": "",
+                    "type": {
+                        "$ref": "#/types/dynatrace.datasource.theo:advanced"
+                    },
+                    "nullable": true,
+                    "maxObjects": 1,
+                    "modificationPolicy": "DEFAULT"
+                }
+            },
+            "type": "object"
+        },
+        "prometheusLocal": {
+            "version": "0",
+            "versionInfo": "",
+            "displayName": "Prometheus",
+            "summaryPattern": "",
+            "description": "",
+            "documentation": "",
+            "properties": {
+                "endpoints": {
+                    "displayName": "Endpoints",
+                    "description": "",
+                    "documentation": "",
+                    "type": "list",
+                    "items": {
+                        "displayName": "",
+                        "description": "",
+                        "documentation": "",
+                        "type": {
+                            "$ref": "#/types/dynatrace.datasource.theo:endpointLocal"
+                        }
+                    },
+                    "nullable": false,
+                    "metadata": {
+                        "addItemButton": "Add endpoint"
+                    },
+                    "minObjects": 1,
+                    "maxObjects": 100,
+                    "modificationPolicy": "DEFAULT"
+                }
+            },
+            "type": "object"
+        }
+    },
+    "properties": {
+        "enabled": {
+            "displayName": "Enabled",
+            "description": "",
+            "documentation": "",
+            "type": "boolean",
+            "nullable": false,
+            "maxObjects": 1,
+            "modificationPolicy": "DEFAULT",
+            "default": true
+        },
+        "description": {
+            "displayName": "Description",
+            "description": "",
+            "documentation": "",
+            "type": "text",
+            "nullable": false,
+            "constraints": [
+                {
+                    "type": "LENGTH",
+                    "maxLength": 500,
+                    "minLength": 1
+                }
+            ],
+            "maxObjects": 1,
+            "modificationPolicy": "DEFAULT",
+            "default": ""
+        },
+        "version": {
+            "displayName": "Version",
+            "description": "",
+            "documentation": "",
+            "type": "text",
+            "nullable": false,
+            "constraints": [
+                {
+                    "type": "LENGTH",
+                    "maxLength": 500,
+                    "minLength": 1
+                }
+            ],
+            "maxObjects": 1,
+            "modificationPolicy": "DEFAULT",
+            "default": "1.1.1"
+        },
+        "featureSets": {
+            "displayName": "Feature sets",
+            "description": "This extension delivers a default set of metrics, choose additional Feature sets to expand it's scope",
+            "documentation": "To learn more about Feature sets visit Dynatrace Help",
+            "type": "set",
+            "items": {
+                "displayName": "",
+                "description": "",
+                "documentation": "",
+                "type": "text"
+            },
+            "nullable": false,
+            "metadata": {
+                "addItemButton": "Add feature set"
+            },
+            "minObjects": 0,
+            "maxObjects": 50,
+            "modificationPolicy": "DEFAULT"
+        },
+        "activationContext": {
+            "displayName": "Selected activation context",
+            "description": "",
+            "documentation": "",
+            "type": {
+                "$ref": "#/enums/ActivationContextEnum"
+            },
+            "nullable": false,
+            "maxObjects": 1,
+            "modificationPolicy": "DEFAULT",
+            "default": "REMOTE"
+        },
+        "activationTags": {
+            "displayName": "Activation tags",
+            "description": "",
+            "documentation": "",
+            "type": "list",
+            "items": {
+                "displayName": "",
+                "description": "",
+                "documentation": "",
+                "type": "text",
+                "subType": "tag",
+                "constraints": [
+                    {
+                        "type": "CUSTOM_VALIDATOR_REF",
+                        "customValidatorId": "universal-tag-validator"
+                    },
+                    {
+                        "type": "LENGTH",
+                        "maxLength": 500,
+                        "minLength": 1
+                    }
+                ]
+            },
+            "nullable": false,
+            "precondition": {
+                "type": "EQUALS",
+                "property": "activationContext",
+                "expectedValue": "LOCAL"
+            },
+            "metadata": {
+                "addItemButton": "Add activation tag"
+            },
+            "minObjects": 0,
+            "maxObjects": 3,
+            "modificationPolicy": "DEFAULT"
+        },
+        "prometheusRemote": {
+            "displayName": "Prometheus",
+            "description": "",
+            "documentation": "",
+            "type": {
+                "$ref": "#/types/prometheusRemote"
+            },
+            "nullable": false,
+            "precondition": {
+                "type": "EQUALS",
+                "property": "activationContext",
+                "expectedValue": "REMOTE"
+            },
+            "maxObjects": 1,
+            "modificationPolicy": "DEFAULT"
+        },
+        "prometheusLocal": {
+            "displayName": "Prometheus",
+            "description": "",
+            "documentation": "",
+            "type": {
+                "$ref": "#/types/prometheusLocal"
+            },
+            "nullable": false,
+            "precondition": {
+                "type": "EQUALS",
+                "property": "activationContext",
+                "expectedValue": "LOCAL"
+            },
+            "maxObjects": 1,
+            "modificationPolicy": "DEFAULT"
+        }
+    }
+}

@@ -1,0 +1,361 @@
+{
+    "allowedScopes": [
+        "ag_group"
+    ],
+    "enums": {
+        "dynatrace.datasource.sql:authenticationScheme": {
+            "displayName": "Authentication scheme",
+            "description": "",
+            "documentation": "",
+            "items": [
+                {
+                    "value": "basic",
+                    "displayName": "Basic authentication"
+                }
+            ],
+            "type": "enum"
+        }
+    },
+    "types": {
+        "dynatrace.datasource.sql:authentication": {
+            "version": "0",
+            "versionInfo": "",
+            "displayName": "Authentication",
+            "summaryPattern": "",
+            "description": "",
+            "documentation": "",
+            "properties": {
+                "scheme": {
+                    "displayName": "Authentication scheme",
+                    "description": "",
+                    "documentation": "",
+                    "type": {
+                        "$ref": "#/enums/dynatrace.datasource.sql:authenticationScheme"
+                    },
+                    "nullable": false,
+                    "maxObjects": 1,
+                    "modificationPolicy": "DEFAULT",
+                    "default": "basic"
+                },
+                "useCredentialVault": {
+                    "displayName": "Use credential vault",
+                    "description": "",
+                    "documentation": "",
+                    "type": "boolean",
+                    "nullable": true,
+                    "precondition": {
+                        "type": "EQUALS",
+                        "property": "scheme",
+                        "expectedValue": "basic"
+                    },
+                    "metadata": {
+                        "featureFlag": "com.compuware.extensions-use-credential-vault.feature",
+                        "maturity": "IN_DEVELOPMENT"
+                    },
+                    "maxObjects": 1,
+                    "modificationPolicy": "DEFAULT"
+                },
+                "credentialVaultId": {
+                    "displayName": "Select Vault credentials",
+                    "description": "",
+                    "documentation": "",
+                    "type": "text",
+                    "subType": "credential",
+                    "referencedType": "USERNAME_PASSWORD",
+                    "nullable": true,
+                    "constraints": [
+                        {
+                            "type": "LENGTH",
+                            "maxLength": 500,
+                            "minLength": 1
+                        },
+                        {
+                            "type": "PATTERN",
+                            "pattern": "^CREDENTIALS_VAULT-.+$"
+                        },
+                        {
+                            "type": "PATTERN",
+                            "customMessage": "Please use a format of TYPE-ID",
+                            "pattern": "^[A-Z][A-Z0-9_]*-[0-9A-F]{16}$"
+                        }
+                    ],
+                    "precondition": {
+                        "type": "EQUALS",
+                        "property": "useCredentialVault",
+                        "expectedValue": true
+                    },
+                    "metadata": {
+                        "featureFlag": "com.compuware.extensions-use-credential-vault.feature",
+                        "maturity": "IN_DEVELOPMENT"
+                    },
+                    "maxObjects": 1,
+                    "modificationPolicy": "DEFAULT"
+                },
+                "username": {
+                    "displayName": "Username",
+                    "description": "",
+                    "documentation": "",
+                    "type": "text",
+                    "nullable": false,
+                    "constraints": [
+                        {
+                            "type": "LENGTH",
+                            "maxLength": 500,
+                            "minLength": 1
+                        }
+                    ],
+                    "precondition": {
+                        "type": "AND",
+                        "preconditions": [
+                            {
+                                "type": "EQUALS",
+                                "property": "scheme",
+                                "expectedValue": "basic"
+                            },
+                            {
+                                "type": "OR",
+                                "preconditions": [
+                                    {
+                                        "type": "NULL",
+                                        "property": "useCredentialVault"
+                                    },
+                                    {
+                                        "type": "EQUALS",
+                                        "property": "useCredentialVault",
+                                        "expectedValue": false
+                                    }
+                                ]
+                            }
+                        ]
+                    },
+                    "maxObjects": 1,
+                    "modificationPolicy": "DEFAULT",
+                    "default": ""
+                },
+                "password": {
+                    "displayName": "Password",
+                    "description": "",
+                    "documentation": "",
+                    "type": "secret",
+                    "nullable": false,
+                    "constraints": [
+                        {
+                            "type": "LENGTH",
+                            "maxLength": 500,
+                            "minLength": 1
+                        }
+                    ],
+                    "precondition": {
+                        "type": "AND",
+                        "preconditions": [
+                            {
+                                "type": "EQUALS",
+                                "property": "scheme",
+                                "expectedValue": "basic"
+                            },
+                            {
+                                "type": "OR",
+                                "preconditions": [
+                                    {
+                                        "type": "NULL",
+                                        "property": "useCredentialVault"
+                                    },
+                                    {
+                                        "type": "EQUALS",
+                                        "property": "useCredentialVault",
+                                        "expectedValue": false
+                                    }
+                                ]
+                            }
+                        ]
+                    },
+                    "maxObjects": 1,
+                    "modificationPolicy": "DEFAULT",
+                    "default": ""
+                }
+            },
+            "type": "object"
+        },
+        "dynatrace.datasource.sql:endpoint": {
+            "version": "0",
+            "versionInfo": "",
+            "displayName": "Database connection",
+            "summaryPattern": "Get metrics from {host}:{port} Database name {databaseName}",
+            "description": "",
+            "documentation": "",
+            "properties": {
+                "host": {
+                    "displayName": "Host",
+                    "description": "",
+                    "documentation": "",
+                    "type": "text",
+                    "nullable": false,
+                    "constraints": [
+                        {
+                            "type": "LENGTH",
+                            "maxLength": 500,
+                            "minLength": 1
+                        }
+                    ],
+                    "maxObjects": 1,
+                    "modificationPolicy": "DEFAULT",
+                    "default": "localhost"
+                },
+                "port": {
+                    "displayName": "Port",
+                    "description": "",
+                    "documentation": "",
+                    "type": "integer",
+                    "nullable": false,
+                    "constraints": [
+                        {
+                            "type": "RANGE",
+                            "maximum": 65535,
+                            "minimum": 0
+                        }
+                    ],
+                    "maxObjects": 1,
+                    "modificationPolicy": "DEFAULT",
+                    "default": 50000
+                },
+                "databaseName": {
+                    "displayName": "Database name",
+                    "description": "",
+                    "documentation": "",
+                    "type": "text",
+                    "nullable": false,
+                    "constraints": [
+                        {
+                            "type": "LENGTH",
+                            "maxLength": 500,
+                            "minLength": 1
+                        }
+                    ],
+                    "maxObjects": 1,
+                    "modificationPolicy": "DEFAULT",
+                    "default": ""
+                },
+                "authentication": {
+                    "displayName": "Authentication",
+                    "description": "",
+                    "documentation": "",
+                    "type": {
+                        "$ref": "#/types/dynatrace.datasource.sql:authentication"
+                    },
+                    "nullable": false,
+                    "maxObjects": 1,
+                    "modificationPolicy": "DEFAULT"
+                }
+            },
+            "type": "object"
+        },
+        "sqlDb2Remote": {
+            "version": "0",
+            "versionInfo": "",
+            "displayName": "SQL Db2",
+            "summaryPattern": "",
+            "description": "",
+            "documentation": "",
+            "properties": {
+                "endpoints": {
+                    "displayName": "Endpoints",
+                    "description": "",
+                    "documentation": "",
+                    "type": "list",
+                    "items": {
+                        "displayName": "",
+                        "description": "",
+                        "documentation": "",
+                        "type": {
+                            "$ref": "#/types/dynatrace.datasource.sql:endpoint"
+                        }
+                    },
+                    "nullable": false,
+                    "metadata": {
+                        "addItemButton": "Add Db2 endpoint"
+                    },
+                    "minObjects": 1,
+                    "maxObjects": 100,
+                    "modificationPolicy": "DEFAULT"
+                }
+            },
+            "type": "object"
+        }
+    },
+    "properties": {
+        "enabled": {
+            "displayName": "Enabled",
+            "description": "",
+            "documentation": "",
+            "type": "boolean",
+            "nullable": false,
+            "maxObjects": 1,
+            "modificationPolicy": "DEFAULT",
+            "default": true
+        },
+        "description": {
+            "displayName": "Description",
+            "description": "",
+            "documentation": "",
+            "type": "text",
+            "nullable": false,
+            "constraints": [
+                {
+                    "type": "LENGTH",
+                    "maxLength": 500,
+                    "minLength": 1
+                }
+            ],
+            "maxObjects": 1,
+            "modificationPolicy": "DEFAULT",
+            "default": ""
+        },
+        "version": {
+            "displayName": "Version",
+            "description": "",
+            "documentation": "",
+            "type": "text",
+            "nullable": false,
+            "constraints": [
+                {
+                    "type": "LENGTH",
+                    "maxLength": 500,
+                    "minLength": 1
+                }
+            ],
+            "maxObjects": 1,
+            "modificationPolicy": "DEFAULT",
+            "default": "1.0.2"
+        },
+        "featureSets": {
+            "displayName": "Feature sets",
+            "description": "This extension delivers a default set of metrics, choose additional Feature sets to expand it's scope",
+            "documentation": "To learn more about Feature sets visit Dynatrace Help",
+            "type": "set",
+            "items": {
+                "displayName": "",
+                "description": "",
+                "documentation": "",
+                "type": "text"
+            },
+            "nullable": false,
+            "metadata": {
+                "addItemButton": "Add feature set"
+            },
+            "minObjects": 0,
+            "maxObjects": 50,
+            "modificationPolicy": "DEFAULT"
+        },
+        "sqlDb2Remote": {
+            "displayName": "SQL Db2",
+            "description": "",
+            "documentation": "",
+            "type": {
+                "$ref": "#/types/sqlDb2Remote"
+            },
+            "nullable": false,
+            "maxObjects": 1,
+            "modificationPolicy": "DEFAULT"
+        }
+    }
+}

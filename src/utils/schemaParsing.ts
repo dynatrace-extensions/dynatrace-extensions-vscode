@@ -14,10 +14,13 @@
   limitations under the License.
  */
 
+import { existsSync, readFileSync } from "fs";
+import path = require("path");
+import { DatasourceName } from "../interfaces/extensionMeta";
+
 /********************************************************************************
  * UTILITIES FOR AGNOSTICALLY/GNERICALLY PARSING SCHEMAS
  ********************************************************************************/
-
 type UnknownSchemaProperties = Record<string, Record<string, unknown>>;
 interface SubPrecondition {
   type: "EQUALS" | "NULL" | "IN";
@@ -285,10 +288,11 @@ function getValueForPrimitive(schema: MinimalSchema, propertyKey: string) {
  * properties and structure to come up with the mandatory properties and some value.
  * The goal is to produce a valid object for the schema, but not necessarily functional.
  * @param schema JSON schema to browse (or Settings 2.0 schema)
+ * @param startingObject schema-compliant object to build onto; useful for enforcing pre-conditions
  * @returns object
  */
-export function createObjectFromSchema(schema: unknown) {
-  const configObject: Record<string, unknown> = {};
+export function createObjectFromSchema(schema: unknown, startingObject?: Record<string, unknown>) {
+  const configObject: Record<string, unknown> = startingObject ?? {};
 
   if (!Object.prototype.hasOwnProperty.call(schema, "properties")) {
     return {};
@@ -346,4 +350,31 @@ export function createObjectFromSchema(schema: unknown) {
   });
 
   return configObject;
+}
+
+/**
+ * Creates a generic Monitoring Configuration object that applies to the given datasource.
+ * This cannot be imported directly to Dynatrace, modifications will be needed.
+ * @param datasource one of the supported datasources
+ * @returns a configuration object that complies with the Dynatrace schema
+ */
+export function createGenericConfigObject(
+  datasource: DatasourceName,
+  startingObject?: Record<string, unknown>,
+) {
+  const schemaPath = path.join(
+    __filename,
+    "..",
+    "..",
+    "src",
+    "assets",
+    "jsonSchemas",
+    `${datasource.toLowerCase()}-generic-schema.json`,
+  );
+  // If we don't have the file, it's not supported yet by Copilot
+  if (!existsSync(schemaPath)) {
+    return { description: "", version: "0.0.0" };
+  }
+  const schema = JSON.parse(readFileSync(schemaPath).toString()) as unknown;
+  return createObjectFromSchema(schema, startingObject);
 }

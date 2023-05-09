@@ -14,10 +14,10 @@
   limitations under the License.
  */
 
-import axios, { AxiosError, ResponseType } from "axios";
+import axios, { ResponseType } from "axios";
 import FormData = require("form-data");
 import { DynatraceAPIError } from "./errors";
-import { ErrorEnvelope, PaginatedResponse } from "./interfaces/dynatrace";
+import { DynatraceAxiosError, ErrorEnvelope, PaginatedResponse } from "./interfaces/dynatrace";
 
 /**
  * Implementation of a HTTP Client specialised for accessing Dynatrace APIs
@@ -89,22 +89,15 @@ export class HttpClient {
           const message = `Error making request to ${url}: ${
             res.status
           }. Response: ${JSON.stringify(errorData, undefined, 2)}`;
-          console.log(message);
-          throw new DynatraceAPIError(message, {
-            code: `${errorData.error.code}`,
-            message: errorData.error.message,
-            data: errorData.error,
-          });
+          console.log(errorData);
+          throw new DynatraceAPIError(message, errorData.error);
         }
         return res.data as T;
       })
-      .catch((err: Error | AxiosError) => {
+      .catch((err: DynatraceAxiosError) => {
         const message = `Error making request to ${url}: ${err.message}.`;
-        throw new DynatraceAPIError(message, {
-          code: axios.isAxiosError(err) && err.code ? err.code : err.name,
-          message: err.message,
-          data: {},
-        });
+        console.log(err.response.data);
+        throw new DynatraceAPIError(message, err.response.data.error);
       });
   }
 

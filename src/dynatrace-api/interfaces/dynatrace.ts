@@ -14,6 +14,8 @@
   limitations under the License.
  */
 
+import { AxiosError, AxiosResponse } from "axios";
+
 interface ConstraintViolation {
   parameterLocation: "HEADER" | "PATH" | "PAYLOAD_BODY" | "QUERY";
   location: string;
@@ -21,7 +23,7 @@ interface ConstraintViolation {
   path: string;
 }
 
-interface DynatraceError {
+export interface DynatraceError {
   constraintViolations: ConstraintViolation[];
   message: string;
   code: number;
@@ -31,11 +33,15 @@ export interface ErrorEnvelope {
   error: DynatraceError;
 }
 
-export interface DynatraceAPIErrorParams {
-  code: string;
-  message: string;
-  data: DynatraceError | Record<string, unknown>;
+export interface DynatraceAxiosError extends AxiosError<ErrorEnvelope> {
+  response: AxiosResponse<ErrorEnvelope>;
 }
+
+// export interface DynatraceAPIErrorParams {
+//   code: number;
+//   message: string;
+//   data: DynatraceError | Record<string, unknown>;
+// }
 
 export interface PaginatedResponse<T> {
   // eslint-disable-next-line @typescript-eslint/consistent-indexed-object-style

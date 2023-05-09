@@ -18,6 +18,7 @@ import * as vscode from "vscode";
 import { PrometheusActionProvider } from "./codeActions/prometheus";
 import { SnippetGenerator } from "./codeActions/snippetGenerator";
 import { SnmpActionProvider } from "./codeActions/snmp";
+import { ConfigurationCompletionProvider } from "./codeCompletions/configuration";
 import { EntitySelectorCompletionProvider } from "./codeCompletions/entitySelectors";
 import { IconCompletionProvider } from "./codeCompletions/icons";
 import { PrometheusCompletionProvider } from "./codeCompletions/prometheus";
@@ -34,6 +35,7 @@ import { activateExtension } from "./commandPalette/activateExtension";
 import { buildExtension } from "./commandPalette/buildExtension";
 import { convertJMXExtension } from "./commandPalette/convertJMXExtension";
 import { createAlert } from "./commandPalette/createAlert";
+import { createMonitoringConfiguration } from "./commandPalette/createConfiguration";
 import { createOverviewDashboard } from "./commandPalette/createDashboard";
 import { createDocumentation } from "./commandPalette/createDocumentation";
 import { distributeCertificate } from "./commandPalette/distributeCertificate";
@@ -110,6 +112,11 @@ function registerCompletionProviders(
     vscode.languages.registerCompletionItemProvider(
       documentSelector,
       new WmiCompletionProvider(cachedDataProvider),
+    ),
+    // Monitoring configurations
+    vscode.languages.registerCompletionItemProvider(
+      { language: "jsonc", pattern: "**/tempConfigFile.jsonc" },
+      new ConfigurationCompletionProvider(cachedDataProvider),
     ),
   ];
 }
@@ -246,6 +253,19 @@ function registerCommandPaletteCommands(
         await convertJMXExtension(await tenantsProvider.getDynatraceClient(), outputPath);
       },
     ),
+    // Create monitoring configuration files
+    vscode.commands.registerCommand("dt-ext-copilot.createMonitoringConfiguration", async () => {
+      if (
+        (await checkWorkspaceOpen()) &&
+        (await isExtensionsWorkspace(context)) &&
+        (await checkEnvironmentConnected(tenantsProvider))
+      ) {
+        const dtClient = await tenantsProvider.getDynatraceClient();
+        if (dtClient) {
+          await createMonitoringConfiguration(dtClient, context, cachedDataProvider);
+        }
+      }
+    }),
   ];
 }
 

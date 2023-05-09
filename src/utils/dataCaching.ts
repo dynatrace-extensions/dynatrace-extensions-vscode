@@ -23,7 +23,7 @@ import * as yaml from "yaml";
 import { PromData } from "../codeLens/prometheusScraper";
 import { ValidationStatus } from "../codeLens/utils/selectorUtils";
 import { WmiQueryResult } from "../codeLens/utils/wmiUtils";
-import { EntityType } from "../dynatrace-api/interfaces/monitoredEntities";
+import { Entity, EntityType } from "../dynatrace-api/interfaces/monitoredEntities";
 import { ExtensionStub } from "../interfaces/extensionMeta";
 import { EnvironmentsTreeDataProvider } from "../treeViews/environmentsTreeView";
 import { fetchOID, OidInformation } from "./snmp";
@@ -43,6 +43,7 @@ export class CachedDataProvider {
   private extensionYaml: ExtensionStub | undefined;
   private extensionText: string | undefined;
   private extensionLineCounter: yaml.LineCounter | undefined;
+  private entityInstances: Record<string, Entity[]> = {};
 
   /**
    * @param environments a Dynatrace Environments provider
@@ -216,5 +217,23 @@ export class CachedDataProvider {
       lineCounter: this.extensionLineCounter,
       lineWidth: 0,
     });
+  }
+
+  public async getEntitiesOfType(type: string): Promise<Entity[]> {
+    const dt = await this.environments.getDynatraceClient();
+    if (dt) {
+      if (!(type in this.entityInstances)) {
+        this.entityInstances[type] = await dt.entitiesV2.list(`type(${type})`).catch(() => []);
+      }
+    } else {
+      return [];
+    }
+    return this.entityInstances[type];
+  }
+
+  public async getBulkEntities(types: string[]) {
+    const entityPromises = types.map(t => this.getEntitiesOfType(t));
+    const entityLists = await Promise.all(entityPromises);
+    return entityLists.flat();
   }
 }

@@ -19,6 +19,7 @@ import * as vscode from "vscode";
 import { Dynatrace } from "../dynatrace-api/dynatrace";
 import { DynatraceEnvironmentData } from "../interfaces/treeViewData";
 import { ConnectionStatusManager } from "../statusBar/connection";
+import { showMessage } from "../utils/code";
 import { decryptToken, encryptToken } from "../utils/cryptography";
 import { getAllEnvironments, registerEnvironment } from "../utils/fileSystem";
 import {
@@ -29,6 +30,7 @@ import {
   editMonitoringConfiguration,
   deleteMonitoringConfiguration,
   addMonitoringConfiguration,
+  saveMoniotringConfiguration,
 } from "./commands/environments";
 
 interface IDynatraceEnvironment extends EnvironmentsTreeItem {
@@ -277,6 +279,14 @@ export class EnvironmentsTreeDataProvider implements vscode.TreeDataProvider<Env
           if (success) {
             this.refresh();
           }
+        });
+      },
+    );
+    vscode.commands.registerCommand(
+      "dt-ext-copilot-environments.saveConfig",
+      async (config: MonitoringConfiguration) => {
+        await saveMoniotringConfiguration(config).catch(err => {
+          showMessage("error", `Unable to save configuration. ${(err as Error).message}`);
         });
       },
     );
