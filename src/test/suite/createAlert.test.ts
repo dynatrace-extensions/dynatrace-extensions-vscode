@@ -1,6 +1,6 @@
 import * as assert from "assert";
 
-import {createValidFileName} from "../../commandPalette/createAlert";
+import { createValidFileName } from "../../utils/fileSystem";
 
 
 suite("Create Alert Test Suite", () => {
