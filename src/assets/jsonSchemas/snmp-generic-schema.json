@@ -1,0 +1,569 @@
+{
+    "allowedScopes": [
+        "ag_group"
+    ],
+    "enums": {
+        "dynatrace.datasource.snmp:authenticationType": {
+            "displayName": "Authentication type",
+            "description": "",
+            "documentation": "",
+            "items": [
+                {
+                    "value": "SNMPv2c",
+                    "displayName": "v2c"
+                },
+                {
+                    "value": "SNMPv3",
+                    "displayName": "v3"
+                }
+            ],
+            "type": "enum"
+        },
+        "dynatrace.datasource.snmp:securityLevel": {
+            "displayName": "Security level",
+            "description": "",
+            "documentation": "",
+            "items": [
+                {
+                    "value": "AUTH_PRIV",
+                    "displayName": "authPriv"
+                },
+                {
+                    "value": "NO_AUTH_NO_PRIV",
+                    "displayName": "noAuthNoPriv"
+                },
+                {
+                    "value": "AUTH_NO_PRIV",
+                    "displayName": "authNoPriv"
+                }
+            ],
+            "type": "enum"
+        },
+        "dynatrace.datasource.snmp:authProtocol": {
+            "displayName": "Authentication protocol",
+            "description": "",
+            "documentation": "",
+            "items": [
+                {
+                    "value": "MD5",
+                    "displayName": "MD5"
+                },
+                {
+                    "value": "SHA",
+                    "displayName": "SHA"
+                },
+                {
+                    "value": "SHA224",
+                    "displayName": "SHA224"
+                },
+                {
+                    "value": "SHA256",
+                    "displayName": "SHA256"
+                },
+                {
+                    "value": "SHA384",
+                    "displayName": "SHA384"
+                },
+                {
+                    "value": "SHA512",
+                    "displayName": "SHA512"
+                }
+            ],
+            "type": "enum"
+        },
+        "dynatrace.datasource.snmp:privProtocol": {
+            "displayName": "Privacy protocol",
+            "description": "",
+            "documentation": "",
+            "items": [
+                {
+                    "value": "DES",
+                    "displayName": "DES"
+                },
+                {
+                    "value": "AES",
+                    "displayName": "AES"
+                },
+                {
+                    "value": "AES192",
+                    "displayName": "AES192"
+                },
+                {
+                    "value": "AES256",
+                    "displayName": "AES256"
+                },
+                {
+                    "value": "AES192C",
+                    "displayName": "AES192C"
+                },
+                {
+                    "value": "AES256C",
+                    "displayName": "AES256C"
+                }
+            ],
+            "type": "enum"
+        }
+    },
+    "types": {
+        "dynatrace.datasource.snmp:authentication": {
+            "version": "0",
+            "versionInfo": "",
+            "displayName": "Credentials",
+            "summaryPattern": "",
+            "description": "",
+            "documentation": "",
+            "properties": {
+                "type": {
+                    "displayName": "SNMP version",
+                    "description": "",
+                    "documentation": "",
+                    "type": {
+                        "$ref": "#/enums/dynatrace.datasource.snmp:authenticationType"
+                    },
+                    "nullable": false,
+                    "maxObjects": 1,
+                    "modificationPolicy": "DEFAULT",
+                    "default": "SNMPv2c"
+                },
+                "community": {
+                    "displayName": "Community string",
+                    "description": "",
+                    "documentation": "",
+                    "type": "secret",
+                    "nullable": false,
+                    "constraints": [
+                        {
+                            "type": "LENGTH",
+                            "maxLength": 500,
+                            "minLength": 1
+                        }
+                    ],
+                    "precondition": {
+                        "type": "IN",
+                        "property": "type",
+                        "expectedValues": [
+                            "SNMPv2c"
+                        ]
+                    },
+                    "maxObjects": 1,
+                    "modificationPolicy": "DEFAULT",
+                    "default": "public"
+                },
+                "userName": {
+                    "displayName": "User name",
+                    "description": "",
+                    "documentation": "",
+                    "type": "text",
+                    "nullable": false,
+                    "constraints": [
+                        {
+                            "type": "LENGTH",
+                            "maxLength": 500,
+                            "minLength": 1
+                        }
+                    ],
+                    "precondition": {
+                        "type": "EQUALS",
+                        "property": "type",
+                        "expectedValue": "SNMPv3"
+                    },
+                    "maxObjects": 1,
+                    "modificationPolicy": "DEFAULT",
+                    "default": "user"
+                },
+                "securityLevel": {
+                    "displayName": "Security level",
+                    "description": "",
+                    "documentation": "",
+                    "type": {
+                        "$ref": "#/enums/dynatrace.datasource.snmp:securityLevel"
+                    },
+                    "nullable": false,
+                    "precondition": {
+                        "type": "EQUALS",
+                        "property": "type",
+                        "expectedValue": "SNMPv3"
+                    },
+                    "maxObjects": 1,
+                    "modificationPolicy": "DEFAULT",
+                    "default": "AUTH_PRIV"
+                },
+                "authPassword": {
+                    "displayName": "Authentication password",
+                    "description": "",
+                    "documentation": "",
+                    "type": "secret",
+                    "nullable": false,
+                    "constraints": [
+                        {
+                            "type": "LENGTH",
+                            "maxLength": 500,
+                            "minLength": 1
+                        }
+                    ],
+                    "precondition": {
+                        "type": "AND",
+                        "preconditions": [
+                            {
+                                "type": "IN",
+                                "property": "securityLevel",
+                                "expectedValues": [
+                                    "AUTH_PRIV",
+                                    "AUTH_NO_PRIV"
+                                ]
+                            },
+                            {
+                                "type": "EQUALS",
+                                "property": "type",
+                                "expectedValue": "SNMPv3"
+                            }
+                        ]
+                    },
+                    "maxObjects": 1,
+                    "modificationPolicy": "DEFAULT",
+                    "default": "password"
+                },
+                "authProtocol": {
+                    "displayName": "Authentication protocol",
+                    "description": "",
+                    "documentation": "",
+                    "type": {
+                        "$ref": "#/enums/dynatrace.datasource.snmp:authProtocol"
+                    },
+                    "nullable": false,
+                    "precondition": {
+                        "type": "AND",
+                        "preconditions": [
+                            {
+                                "type": "IN",
+                                "property": "securityLevel",
+                                "expectedValues": [
+                                    "AUTH_PRIV",
+                                    "AUTH_NO_PRIV"
+                                ]
+                            },
+                            {
+                                "type": "EQUALS",
+                                "property": "type",
+                                "expectedValue": "SNMPv3"
+                            }
+                        ]
+                    },
+                    "maxObjects": 1,
+                    "modificationPolicy": "DEFAULT",
+                    "default": "SHA"
+                },
+                "privPassword": {
+                    "displayName": "Privacy password",
+                    "description": "",
+                    "documentation": "",
+                    "type": "secret",
+                    "nullable": false,
+                    "constraints": [
+                        {
+                            "type": "LENGTH",
+                            "maxLength": 500,
+                            "minLength": 1
+                        }
+                    ],
+                    "precondition": {
+                        "type": "AND",
+                        "preconditions": [
+                            {
+                                "type": "EQUALS",
+                                "property": "securityLevel",
+                                "expectedValue": "AUTH_PRIV"
+                            },
+                            {
+                                "type": "EQUALS",
+                                "property": "type",
+                                "expectedValue": "SNMPv3"
+                            }
+                        ]
+                    },
+                    "maxObjects": 1,
+                    "modificationPolicy": "DEFAULT",
+                    "default": "password"
+                },
+                "privProtocol": {
+                    "displayName": "Privacy protocol",
+                    "description": "",
+                    "documentation": "",
+                    "type": {
+                        "$ref": "#/enums/dynatrace.datasource.snmp:privProtocol"
+                    },
+                    "nullable": false,
+                    "precondition": {
+                        "type": "AND",
+                        "preconditions": [
+                            {
+                                "type": "EQUALS",
+                                "property": "securityLevel",
+                                "expectedValue": "AUTH_PRIV"
+                            },
+                            {
+                                "type": "EQUALS",
+                                "property": "type",
+                                "expectedValue": "SNMPv3"
+                            }
+                        ]
+                    },
+                    "maxObjects": 1,
+                    "modificationPolicy": "DEFAULT",
+                    "default": "AES256C"
+                }
+            },
+            "type": "object"
+        },
+        "dynatrace.datasource.snmp:advanced": {
+            "version": "0",
+            "versionInfo": "",
+            "displayName": "Advanced",
+            "summaryPattern": "",
+            "description": "",
+            "documentation": "",
+            "properties": {
+                "timeoutSecs": {
+                    "displayName": "Timeout in seconds",
+                    "description": "The timeout of one SNMP request/response (default: 1)",
+                    "documentation": "",
+                    "type": "integer",
+                    "nullable": true,
+                    "constraints": [
+                        {
+                            "type": "RANGE",
+                            "maximum": 1800,
+                            "minimum": 1
+                        }
+                    ],
+                    "maxObjects": 1,
+                    "modificationPolicy": "DEFAULT"
+                },
+                "retries": {
+                    "displayName": "Retries",
+                    "description": "How many times an SNMP request will be retried in case of timeout (default: 3)",
+                    "documentation": "",
+                    "type": "integer",
+                    "nullable": true,
+                    "constraints": [
+                        {
+                            "type": "RANGE",
+                            "maximum": 200,
+                            "minimum": 0
+                        }
+                    ],
+                    "maxObjects": 1,
+                    "modificationPolicy": "DEFAULT"
+                },
+                "maxRepetitions": {
+                    "displayName": "Max. repetitions",
+                    "description": "The maximum number of columns returned in one SNMP response (default: 100)",
+                    "documentation": "",
+                    "type": "integer",
+                    "nullable": true,
+                    "constraints": [
+                        {
+                            "type": "RANGE",
+                            "maximum": 400,
+                            "minimum": 1
+                        }
+                    ],
+                    "maxObjects": 1,
+                    "modificationPolicy": "DEFAULT"
+                },
+                "maxOidsPerQuery": {
+                    "displayName": "Max. OIDs per query",
+                    "description": "How many OIDs can be queried in one SNMP request (default: 60)",
+                    "documentation": "",
+                    "type": "integer",
+                    "nullable": true,
+                    "constraints": [
+                        {
+                            "type": "RANGE",
+                            "maximum": 120,
+                            "minimum": 1
+                        }
+                    ],
+                    "maxObjects": 1,
+                    "modificationPolicy": "DEFAULT"
+                }
+            },
+            "type": "object"
+        },
+        "dynatrace.datasource.snmp:device": {
+            "version": "0",
+            "versionInfo": "",
+            "displayName": "Device",
+            "summaryPattern": "{ip} port {port}",
+            "description": "",
+            "documentation": "",
+            "properties": {
+                "ip": {
+                    "displayName": "IP address",
+                    "description": "",
+                    "documentation": "",
+                    "type": "text",
+                    "nullable": false,
+                    "constraints": [
+                        {
+                            "type": "LENGTH",
+                            "maxLength": 500,
+                            "minLength": 1
+                        }
+                    ],
+                    "maxObjects": 1,
+                    "modificationPolicy": "DEFAULT",
+                    "default": "0.0.0.0"
+                },
+                "port": {
+                    "displayName": "Port",
+                    "description": "",
+                    "documentation": "",
+                    "type": "integer",
+                    "nullable": false,
+                    "constraints": [
+                        {
+                            "type": "RANGE",
+                            "maximum": 65535,
+                            "minimum": 1
+                        }
+                    ],
+                    "maxObjects": 1,
+                    "modificationPolicy": "DEFAULT",
+                    "default": 161
+                },
+                "authentication": {
+                    "displayName": "Credentials",
+                    "description": "",
+                    "documentation": "",
+                    "type": {
+                        "$ref": "#/types/dynatrace.datasource.snmp:authentication"
+                    },
+                    "nullable": false,
+                    "maxObjects": 1,
+                    "modificationPolicy": "DEFAULT"
+                },
+                "advanced": {
+                    "displayName": "Advanced",
+                    "description": "",
+                    "documentation": "",
+                    "type": {
+                        "$ref": "#/types/dynatrace.datasource.snmp:advanced"
+                    },
+                    "nullable": true,
+                    "maxObjects": 1,
+                    "modificationPolicy": "DEFAULT"
+                }
+            },
+            "type": "object"
+        },
+        "snmp": {
+            "version": "0",
+            "versionInfo": "",
+            "displayName": "SNMP",
+            "summaryPattern": "",
+            "description": "",
+            "documentation": "",
+            "properties": {
+                "devices": {
+                    "displayName": "Add a device",
+                    "description": "",
+                    "documentation": "",
+                    "type": "list",
+                    "items": {
+                        "displayName": "Device",
+                        "description": "",
+                        "documentation": "",
+                        "type": {
+                            "$ref": "#/types/dynatrace.datasource.snmp:device"
+                        }
+                    },
+                    "nullable": false,
+                    "metadata": {
+                        "addItemButton": "Add device"
+                    },
+                    "minObjects": 1,
+                    "maxObjects": 100,
+                    "modificationPolicy": "DEFAULT"
+                }
+            },
+            "type": "object"
+        }
+    },
+    "properties": {
+        "enabled": {
+            "displayName": "Enabled",
+            "description": "",
+            "documentation": "",
+            "type": "boolean",
+            "nullable": false,
+            "maxObjects": 1,
+            "modificationPolicy": "DEFAULT",
+            "default": true
+        },
+        "description": {
+            "displayName": "Description",
+            "description": "",
+            "documentation": "",
+            "type": "text",
+            "nullable": false,
+            "constraints": [
+                {
+                    "type": "LENGTH",
+                    "maxLength": 500,
+                    "minLength": 1
+                }
+            ],
+            "maxObjects": 1,
+            "modificationPolicy": "DEFAULT",
+            "default": ""
+        },
+        "version": {
+            "displayName": "Version",
+            "description": "",
+            "documentation": "",
+            "type": "text",
+            "nullable": false,
+            "constraints": [
+                {
+                    "type": "LENGTH",
+                    "maxLength": 500,
+                    "minLength": 1
+                }
+            ],
+            "maxObjects": 1,
+            "modificationPolicy": "DEFAULT",
+            "default": "0.0.0"
+        },
+        "featureSets": {
+            "displayName": "Feature sets",
+            "description": "This extension delivers a default set of metrics, choose additional Feature sets to expand it's scope",
+            "documentation": "To learn more about Feature sets visit Dynatrace Help",
+            "type": "set",
+            "items": {
+                "displayName": "",
+                "description": "",
+                "documentation": "",
+                "type": "text"
+            },
+            "nullable": false,
+            "metadata": {
+                "addItemButton": "Add feature set"
+            },
+            "minObjects": 0,
+            "maxObjects": 50,
+            "modificationPolicy": "DEFAULT"
+        },
+        "snmp": {
+            "displayName": "SNMP",
+            "description": "",
+            "documentation": "",
+            "type": {
+                "$ref": "#/types/snmp"
+            },
+            "nullable": false,
+            "maxObjects": 1,
+            "modificationPolicy": "DEFAULT"
+        }
+    }
+}

@@ -19,7 +19,7 @@
  ********************************************************************************/
 
 import { FeatureSetDoc } from "../interfaces/extensionDocs";
-import { DatasourceGroup, ExtensionStub } from "../interfaces/extensionMeta";
+import { DatasourceGroup, DatasourceName, ExtensionStub } from "../interfaces/extensionMeta";
 
 /**
  * Normalize semi-invalid versions of extension because they get re-written cluster-side.
@@ -177,7 +177,7 @@ export function getExtensionDatasource(extension: ExtensionStub): DatasourceGrou
  * @param extension extension.yaml serialized as object
  * @returns datasource name
  */
-export function getDatasourceName(extension: ExtensionStub): string {
+export function getDatasourceName(extension: ExtensionStub): DatasourceName {
   if (extension.snmp) {
     return "snmp";
   }

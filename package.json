@@ -161,6 +161,16 @@
 				"title": "Add configuration",
 				"icon": "$(plus)"
 			},
+      {
+        "command": "dt-ext-copilot-environments.saveConfig",
+				"title": "Save to file",
+				"icon": "$(file-add)"
+      },
+      {
+        "command": "dt-ext-copilot.createMonitoringConfiguration",
+        "title": "Create monitoring configuration",
+        "category": "Dynatrace"
+      },
 			{
 				"command": "dt-ext-copilot-workspaces.enableMetricSelectors",
 				"title": "🔎 Enable metric selector code lens"
@@ -426,6 +436,10 @@
 					"command": "dt-ext-copilot-environments.addConfig",
 					"when": "false"
 				},
+        {
+          "command": "dt-ext-copilot-environments.saveConfig",
+          "when": "false"
+        },
 				{
 					"command": "dt-ext-copilot-workspaces.enableMetricSelectors",
 					"when": "false"
@@ -628,6 +642,11 @@
 					"command": "dt-ext-copilot-environments.deleteConfig",
 					"when": "view == dt-ext-copilot-environments && viewItem == monitoringConfiguration",
 					"group": "inline@2"
+				},
+        {
+					"command": "dt-ext-copilot-environments.saveConfig",
+					"when": "view == dt-ext-copilot-environments && viewItem == monitoringConfiguration",
+					"group": "inline@3"
 				}
 			],
 			"dt-ext-copilot.diagnostics-menu": [

@@ -14,6 +14,20 @@
   limitations under the License.
  */
 
+export type DatasourceName =
+  | "snmp"
+  | "wmi"
+  | "sqlDb2"
+  | "sqlServer"
+  | "sqlMySql"
+  | "sqlOracle"
+  | "sqlPostgres"
+  | "sqlHana"
+  | "sqlSnowflake"
+  | "prometheus"
+  | "python"
+  | "unsupported";
+
 interface TopologyStub {
   types?: TopologyType[];
   relationships?: RelationshipStub[];

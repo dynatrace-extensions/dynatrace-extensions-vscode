@@ -18,7 +18,7 @@
  * UTILITIES FOR INTERACTING WITH THE USER'S FILE SYSTEM
  ********************************************************************************/
 
-import { copyFileSync, existsSync, mkdirSync, readFileSync, writeFileSync } from "fs";
+import { copyFileSync, existsSync, mkdirSync, readFileSync, readdirSync, writeFileSync } from "fs";
 import * as os from "os";
 import * as path from "path";
 import { glob } from "glob";
@@ -443,4 +443,49 @@ venv/
       BASE_GITIGNORE + (includePython ? PYTHON_GITIGNORE : ""),
     );
   }
+}
+
+/**
+ * Converts a given string to a valid file name.
+ * @param name string to convert
+ * @returns valid file name based on string
+ */
+export function createValidFileName(name: string) {
+  // Convert name to lowerCase, only allow \w and - characters
+  // It must follow the pattern [a-zA-Z0-9]+([-_./][a-zA-Z0-9]+)*
+  const nameForFile = name
+    .toLowerCase()
+    .replace(/[^a-z0-9-]/g, "-") // Only allow a-z, 0-9 and -
+    .replace(/-+/g, "-") // Replace multiple '-' with a single '-'
+    .replace(/^-+|-+$/g, ""); // Remove leading and trailing '-'
+
+  return nameForFile;
+}
+
+/**
+ * Creates a unique file name by incrementing an index appended to an initial file name to create a
+ * unique combination within the given directory.
+ * @param dir directory to check for existing files
+ * @param prefix prefix for the file type (e.g. alert, config)
+ * @param initialFileName the initial file name
+ * @returns unique file name
+ */
+export function createUniqueFileName(dir: string, prefix: string, initialFileName: string): string {
+  // Count how many files we have inside the directory
+  const currentFiles = readdirSync(dir);
+  let currentFileNumber = currentFiles.length;
+  let fileName;
+
+  do {
+    currentFileNumber++;
+    const nameForFile = createValidFileName(initialFileName);
+
+    // Pad the number with zeros so the lenght is always 3
+    const paddedFileNumber = currentFileNumber.toString().padStart(3, "0");
+    fileName = `${prefix}-${paddedFileNumber}-${nameForFile}.json`;
+
+    // Check if the file name is unique, otherwise we increment the counter and try again
+  } while (currentFiles.includes(fileName));
+
+  return fileName;
 }

@@ -15,46 +15,14 @@
  */
 
 import * as crypto from "crypto";
-import { existsSync, mkdirSync, readdirSync, readFileSync, writeFileSync } from "fs";
+import { existsSync, mkdirSync, readFileSync, writeFileSync } from "fs";
 import path = require("path");
 import * as vscode from "vscode";
 import { MetricMetadata } from "../interfaces/extensionMeta";
 import { showMessage } from "../utils/code";
 import { CachedDataProvider } from "../utils/dataCaching";
 import { getAllMetricKeysFromDataSource } from "../utils/extensionParsing";
-import { getExtensionFilePath } from "../utils/fileSystem";
-
-export function createValidFileName(name: string) {
-  // Convert name to lowerCase, only allow \w and - characters
-  // It must follow the pattern [a-zA-Z0-9]+([-_./][a-zA-Z0-9]+)*
-  const nameForFile = name
-    .toLowerCase()
-    .replace(/[^a-z0-9-]/g, "-") // Only allow a-z, 0-9 and -
-    .replace(/-+/g, "-") // Replace multiple '-' with a single '-'
-    .replace(/^-+|-+$/g, ""); // Remove leading and trailing '-'
-
-  return nameForFile;
-}
-
-function createUniqueAlertFileName(alertsDir: string, alertName: string): string {
-  // Count how many files we have inside the alerts directory with readDirSync
-  const currentAlertFiles = readdirSync(alertsDir);
-  let currentFileNumber = currentAlertFiles.length;
-  let fileName;
-
-  do {
-    currentFileNumber++;
-    const alertNameForFile = createValidFileName(alertName);
-
-    // Pad the number with zeros so the lenght is always 3
-    const paddedFileNumber = currentFileNumber.toString().padStart(3, "0");
-    fileName = `alert-${paddedFileNumber}-${alertNameForFile}.json`;
-
-    // Check if the file name is unique, otherwise we increment the counter and try again
-  } while (currentAlertFiles.includes(fileName));
-
-  return fileName;
-}
+import { createUniqueFileName, getExtensionFilePath } from "../utils/fileSystem";
 
 export async function createAlert(cachedData: CachedDataProvider) {
   const extensionFile = getExtensionFilePath();
@@ -130,7 +98,7 @@ export async function createAlert(cachedData: CachedDataProvider) {
     mkdirSync(alertsDir);
   }
 
-  const fileName = createUniqueAlertFileName(alertsDir, alertName);
+  const fileName = createUniqueFileName(alertsDir, "alert", alertName);
 
   const alertTemplate = {
     id: crypto.randomUUID(),
