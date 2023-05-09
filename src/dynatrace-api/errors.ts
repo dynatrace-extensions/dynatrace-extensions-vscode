@@ -14,20 +14,20 @@
   limitations under the License.
  */
 
-import { DynatraceAPIErrorParams } from "./interfaces/dynatrace";
+import { DynatraceError } from "./interfaces/dynatrace";
 
 /**
  * Custom error implementation to facilitate passing the Dynatrace error
  * envelope as a parameter.
  */
 export class DynatraceAPIError extends Error {
-  _errorParams: DynatraceAPIErrorParams;
+  _errorParams: DynatraceError;
 
   /**
    * @param message error message
    * @param errorParams any optional parameters
    */
-  constructor(message: string, errorParams: DynatraceAPIErrorParams) {
+  constructor(message: string, errorParams: DynatraceError) {
     super(message);
     this._errorParams = errorParams;
   }

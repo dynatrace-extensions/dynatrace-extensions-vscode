@@ -3,10 +3,14 @@
 .vscode-test/
 .github/
 .gitignore
+.gitattributes
 .yarnrc
 .eslintrc.json
+.prettierrc.json
+.editorconfig
 .vscodeignore
 tsconfig.json
+tsconfig.app.json
 package.json
 package-lock.json
 *.md

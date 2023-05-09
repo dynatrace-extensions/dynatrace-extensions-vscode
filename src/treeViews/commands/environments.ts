@@ -14,19 +14,35 @@
   limitations under the License.
  */
 
-import { readFileSync, rmSync, writeFileSync } from "fs";
+import { readFileSync, readdirSync, rmSync, writeFileSync } from "fs";
 import * as path from "path";
 import * as vscode from "vscode";
 import { DynatraceAPIError } from "../../dynatrace-api/errors";
 import { showMessage } from "../../utils/code";
 import { encryptToken } from "../../utils/cryptography";
-import { getAllEnvironments, registerEnvironment, removeEnvironment } from "../../utils/fileSystem";
+import {
+  createUniqueFileName,
+  getAllEnvironments,
+  getExtensionFilePath,
+  registerEnvironment,
+  removeEnvironment,
+} from "../../utils/fileSystem";
 import { createObjectFromSchema } from "../../utils/schemaParsing";
 import {
   DeployedExtension,
   DynatraceEnvironment,
   MonitoringConfiguration,
 } from "../environmentsTreeView";
+
+export interface MinimalConfiguration {
+  scope: string;
+  value: {
+    activationContext: "LOCAL" | "REMOTE";
+    description: string;
+    version: string;
+    featureSets?: string[];
+  };
+}
 
 /**
  * A workflow for registering a new Dynatrace Environment within the VSCode extension.
@@ -235,7 +251,7 @@ export async function changeConnection(
  * @returns a Promise that will either resolve with the stringified content of the configuration
  * or will reject with the message "No changes.".
  */
-async function getConfigurationDetailsViaFile(
+export async function getConfigurationDetailsViaFile(
   headerContent: string,
   defaultDetails: string,
   context: vscode.ExtensionContext,
@@ -320,7 +336,7 @@ export async function editMonitoringConfiguration(
         })
         .catch((err: DynatraceAPIError) => {
           showMessage("error", `Update operation failed: ${err.message}`);
-          oc.replace(JSON.stringify(err.errorParams.data, undefined, 2));
+          oc.replace(JSON.stringify(err.errorParams, undefined, 2));
           oc.show();
           return false;
         }),
@@ -370,8 +386,10 @@ export async function deleteMonitoringConfiguration(
 
 /**
  * Adds a new configuration to the extension associated with the DeployedExtension tree view item.
- * A temporary file is used to generate a monitoring configuration template that the user can edit
- * before it's sent to Dynatrace. Once the file is saved & closed, the details are POST-ed.
+ * If the currently opened workspace matches the DeployedExtension, and there are config files the
+ * user can add the configuration from file. Otherwise, a temporary file is used to generate a
+ * monitoring configuration template that the user can edit before it's sent to Dynatrace. Once the
+ * file is saved & closed, the details are POST-ed.
  * @param extension the deployed extension to add a configuration to
  * @param context vscode.ExtensionContext
  * @param oc a JSON output channel to communicate errors to
@@ -382,37 +400,137 @@ export async function addMonitoringConfiguration(
   context: vscode.ExtensionContext,
   oc: vscode.OutputChannel,
 ) {
-  // Create a monitoring configuration template
-  const extensionSchema = await extension.dt.extensionsV2.getExtensionSchema(
-    extension.id,
-    extension.extensionVersion,
-  );
-  const configObject = [{ value: createObjectFromSchema(extensionSchema), scope: "" }];
-  const headerContent =
-    `
+  let configObject: MinimalConfiguration | undefined;
+  // Check if workspace matches the extension
+  let workspaceMatch = false;
+  const extensionFilePath = getExtensionFilePath();
+  if (extensionFilePath) {
+    const workspaceExtension = readFileSync(extensionFilePath).toString();
+    const nameMatch = /^name: (.*?)$/gm.exec(workspaceExtension);
+    if (nameMatch.length > 1) {
+      const workspaceExtensionName = nameMatch[1];
+      workspaceMatch = workspaceExtensionName === extension.id;
+    }
+  }
+  // If matched, check workspace for configs
+  if (workspaceMatch) {
+    const workspaceRoot = vscode.workspace.workspaceFolders?.[0].uri.fsPath;
+    if (workspaceRoot) {
+      const configDir = path.join(workspaceRoot, "config");
+      const configFiles = readdirSync(configDir);
+
+      // If there are config files
+      if (configFiles.length > 0) {
+        // Choose whether configuration comes from file or new content
+        const choice = await vscode.window.showQuickPick([
+          ...configFiles.map(file => {
+            const filePath = path.join(configDir, file);
+            const config = JSON.parse(readFileSync(filePath).toString()) as MinimalConfiguration;
+            return {
+              label: `From file ${file}`,
+              detail: `Description: ${config.value.description}; ${
+                config.value.featureSets?.length ?? 0
+              } feature sets; Runs on: ${config.scope}`,
+              filePath: filePath,
+            };
+          }),
+          { label: "Create a new configuration" },
+        ]);
+
+        if (!choice) {
+          showMessage("info", "Operation cancelled.");
+          return false;
+        }
+
+        // If choice is file-based, read the config
+        if ("filePath" in choice) {
+          configObject = JSON.parse(
+            readFileSync(choice.filePath).toString(),
+          ) as MinimalConfiguration;
+        }
+      }
+    }
+  }
+
+  // If by now we don't have a configObject, user wants to create a new one
+  if (!configObject || Object.keys(configObject).length === 0) {
+    // Create a monitoring configuration template
+    const extensionSchema = await extension.dt.extensionsV2.getExtensionSchema(
+      extension.id,
+      extension.extensionVersion,
+    );
+    const configTemplate = { value: createObjectFromSchema(extensionSchema), scope: "" };
+    const headerContent =
+      `
 // This a simple monitoring configuration template. Make any changes as needed below.
 // Lines starting with '//' will be ignored. A configuration instance will be created ` +
-    "once you save and close this tab.";
+      "once you save and close this tab.";
 
-  // Allow the user to make changes
-  const response = await getConfigurationDetailsViaFile(
-    headerContent,
-    JSON.stringify(configObject, undefined, 4),
-    context,
-    false,
-  );
+    // Allow the user to make changes
+    configObject = JSON.parse(
+      await getConfigurationDetailsViaFile(
+        headerContent,
+        JSON.stringify(configTemplate, undefined, 4),
+        context,
+        false,
+      ),
+    ) as MinimalConfiguration;
+  }
+
+  // Finally, create the configuration
   const status = await extension.dt.extensionsV2
-    .postMonitoringConfiguration(extension.id, JSON.parse(response) as Record<string, unknown>)
+    .postMonitoringConfiguration(extension.id, [configObject] as unknown as Record<string, unknown>)
     .then(() => {
       showMessage("info", "Configuration successfully created.");
       return true;
     })
     .catch((err: DynatraceAPIError) => {
       showMessage("error", "Create operation failed.");
-      oc.replace(JSON.stringify(err.errorParams.data, undefined, 2));
+      oc.replace(JSON.stringify(err.errorParams, undefined, 2));
       oc.show();
       return false;
     });
 
   return status;
+}
+
+/**
+ * Saves an existing Monitoring Configuration to file.
+ * The file will be placed in the config directory.
+ * @param config the MonitoringConfiguration item to save
+ */
+export async function saveMoniotringConfiguration(config: MonitoringConfiguration) {
+  const workspaceRoot = vscode.workspace.workspaceFolders?.[0].uri.fsPath;
+  if (!workspaceRoot) {
+    return;
+  }
+  // Fetch the current configuration details
+  const existingConfig = await config.dt.extensionsV2
+    .getMonitoringConfiguration(config.extensionName, config.id)
+    .then(configDetails => {
+      delete configDetails.objectId;
+      return JSON.stringify(configDetails, undefined, 4);
+    });
+
+  // Prompt for file name and save it
+  const configDir = path.join(workspaceRoot, "config");
+  const fileName = await vscode.window.showInputBox({
+    title: "Configuration file name",
+    value: createUniqueFileName(configDir, "config", "monitoring"),
+    prompt: "Must be unique",
+    validateInput: value => {
+      const configFiles = readdirSync(configDir);
+      if (configFiles.includes(value)) {
+        return "Name must be unique";
+      }
+      return undefined;
+    },
+    ignoreFocusOut: true,
+  });
+  if (!fileName) {
+    showMessage("info", "Operation cancelled.");
+    return;
+  }
+  writeFileSync(path.join(configDir, fileName), existingConfig);
+  showMessage("info", "Configuration file saved successfully.");
 }

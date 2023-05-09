@@ -184,7 +184,7 @@ async function validateExtension(
       .then(() => true)
       .catch(async (err: DynatraceAPIError) => {
         showMessage("error", "Extension validation failed.");
-        oc.replace(JSON.stringify(err.errorParams.data, null, 2));
+        oc.replace(JSON.stringify(err.errorParams, null, 2));
         oc.show();
         return false;
       });

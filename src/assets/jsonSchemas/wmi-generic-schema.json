@@ -1,0 +1,229 @@
+{
+  "allowedScopes": [
+    "ag_group",
+    "HOST",
+    "HOST_GROUP",
+    "environment",
+    "management_zone"
+  ],
+  "enums": {
+    "ActivationContextEnum": {
+      "displayName": "ActivationContextEnum",
+      "description": "",
+      "documentation": "",
+      "items": [
+        {
+          "value": "REMOTE",
+          "displayName": "REMOTE"
+        },
+        {
+          "value": "LOCAL",
+          "displayName": "LOCAL"
+        }
+      ],
+      "type": "enum"
+    }
+  },
+  "types": {
+    "dynatrace.datasource.wmi:device": {
+      "version": "0",
+      "versionInfo": "",
+      "displayName": "Device",
+      "summaryPattern": "{host}",
+      "description": "",
+      "documentation": "",
+      "properties": {
+        "host": {
+          "displayName": "Host",
+          "description": "",
+          "documentation": "",
+          "type": "text",
+          "nullable": false,
+          "constraints": [
+            {
+              "type": "LENGTH",
+              "maxLength": 500,
+              "minLength": 1
+            }
+          ],
+          "maxObjects": 1,
+          "modificationPolicy": "DEFAULT",
+          "default": ""
+        },
+        "user": {
+          "displayName": "Username",
+          "description": "",
+          "documentation": "",
+          "type": "text",
+          "nullable": false,
+          "constraints": [
+            {
+              "type": "LENGTH",
+              "maxLength": 500,
+              "minLength": 1
+            }
+          ],
+          "maxObjects": 1,
+          "modificationPolicy": "DEFAULT",
+          "default": ""
+        },
+        "password": {
+          "displayName": "Password",
+          "description": "",
+          "documentation": "",
+          "type": "secret",
+          "nullable": false,
+          "constraints": [
+            {
+              "type": "LENGTH",
+              "maxLength": 500,
+              "minLength": 1
+            }
+          ],
+          "maxObjects": 1,
+          "modificationPolicy": "DEFAULT",
+          "default": ""
+        }
+      },
+      "type": "object"
+    },
+    "wmiRemote": {
+      "version": "0",
+      "versionInfo": "",
+      "displayName": "wmiRemote",
+      "summaryPattern": "",
+      "description": "",
+      "documentation": "",
+      "properties": {
+        "devices": {
+          "displayName": "Devices",
+          "description": "",
+          "documentation": "",
+          "type": "list",
+          "items": {
+            "displayName": "",
+            "description": "",
+            "documentation": "",
+            "type": {
+              "$ref": "#/types/dynatrace.datasource.wmi:device"
+            }
+          },
+          "nullable": false,
+          "metadata": {
+            "addItemButton": "Add host"
+          },
+          "minObjects": 1,
+          "maxObjects": 100,
+          "modificationPolicy": "DEFAULT"
+        }
+      },
+      "type": "object"
+    }
+  },
+  "properties": {
+    "enabled": {
+      "displayName": "Enabled",
+      "description": "",
+      "documentation": "",
+      "type": "boolean",
+      "nullable": false,
+      "maxObjects": 1,
+      "modificationPolicy": "DEFAULT",
+      "default": true
+    },
+    "description": {
+      "displayName": "Description",
+      "description": "",
+      "documentation": "",
+      "type": "text",
+      "nullable": false,
+      "constraints": [
+        {
+          "type": "LENGTH",
+          "maxLength": 500,
+          "minLength": 1
+        }
+      ],
+      "maxObjects": 1,
+      "modificationPolicy": "DEFAULT",
+      "default": ""
+    },
+    "version": {
+      "displayName": "Version",
+      "description": "",
+      "documentation": "",
+      "type": "text",
+      "nullable": false,
+      "constraints": [
+        {
+          "type": "LENGTH",
+          "maxLength": 500,
+          "minLength": 1
+        }
+      ],
+      "maxObjects": 1,
+      "modificationPolicy": "DEFAULT",
+      "default": "0.0.0"
+    },
+    "activationContext": {
+      "displayName": "Selected activation context",
+      "description": "",
+      "documentation": "",
+      "type": {
+        "$ref": "#/enums/ActivationContextEnum"
+      },
+      "nullable": false,
+      "maxObjects": 1,
+      "modificationPolicy": "DEFAULT",
+      "default": "REMOTE"
+    },
+    "activationTags": {
+      "displayName": "Activation tags",
+      "description": "",
+      "documentation": "",
+      "type": "list",
+      "items": {
+        "displayName": "",
+        "description": "",
+        "documentation": "",
+        "type": "text",
+        "subType": "tag",
+        "constraints": [
+          {
+            "type": "LENGTH",
+            "maxLength": 500,
+            "minLength": 1
+          }
+        ]
+      },
+      "nullable": false,
+      "precondition": {
+        "type": "EQUALS",
+        "property": "activationContext",
+        "expectedValue": "LOCAL"
+      },
+      "metadata": {
+        "addItemButton": "Add activation tag"
+      },
+      "minObjects": 0,
+      "maxObjects": 3,
+      "modificationPolicy": "DEFAULT"
+    },
+    "wmiRemote": {
+      "displayName": "WMI",
+      "description": "",
+      "documentation": "",
+      "type": {
+        "$ref": "#/types/wmiRemote"
+      },
+      "nullable": false,
+      "precondition": {
+        "type": "EQUALS",
+        "property": "activationContext",
+        "expectedValue": "REMOTE"
+      },
+      "maxObjects": 1,
+      "modificationPolicy": "DEFAULT"
+    }
+  }
+}
