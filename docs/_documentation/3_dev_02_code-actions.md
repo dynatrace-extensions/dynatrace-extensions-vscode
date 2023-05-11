@@ -57,7 +57,7 @@ Actions may include:
     <td>When clicking on <code>metrics</code> within the <code>prometheus</code> data source</td>
     <td>
       Automatically add details from a 
-      <a href="/docs/dev/code-lens/#prometheus-code-lenses">
+      <a href="/dynatrace-extensions-copilot/docs/dev/code-lens/#prometheus-code-lenses">
         scraped Prometheus endpoint
       </a>
     </td>
