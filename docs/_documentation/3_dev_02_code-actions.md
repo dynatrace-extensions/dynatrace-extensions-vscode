@@ -7,7 +7,7 @@ toc_sticky: true
 
 Code actions happen on key lines of your extension manifest.
 Your editor will automatically show a lightbulb (💡) icon whenever actions exist relevant to the
-current line of your manifest. 
+current line of your manifest.
 
 Actions may include:
 - Generating & inserting content into the manifest
@@ -56,8 +56,8 @@ Actions may include:
   <tr>
     <td>When clicking on <code>metrics</code> within the <code>prometheus</code> data source</td>
     <td>
-      Automatically add details from a 
-      <a href="/dynatrace-extensions-copilot/docs/dev/code-lens/#prometheus-code-lenses">
+      Automatically add details from a
+      <a href="/dynatrace-extensions-vscode/docs/dev/code-lens/#prometheus-code-lenses">
         scraped Prometheus endpoint
       </a>
     </td>

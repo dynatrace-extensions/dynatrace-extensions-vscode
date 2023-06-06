@@ -7,7 +7,7 @@ header:
   overlay_image: /assets/images/copilot-banner-resize-2.png
   actions:
     - label: "<i class='fas fa-download'></i> Download now"
-      url: https://github.com/dynatrace-extensions/dynatrace-extensions-copilot/releases/latest
+      url: https://github.com/dynatrace-extensions/dynatrace-extensions-vscode/releases/latest
     - label: "<i class='fas fa-cart-arrow-down'></i> Marketplace"
       url: https://marketplace.visualstudio.com/items?itemName=DynatracePlatformExtensions.dt-ext-copilot
 excerpt: >
@@ -43,7 +43,7 @@ feature_row:
       official Dynatrace extensions from the online platform Hub.
     btn_label: Go to Hub
     btn_class: btn--info
-    url: https://www.dynatrace.com/hub/?offered=dynatrace
+    url: https://www.dynatrace.com/hub/?filter=all&offered=dynatrace
   - image_path: /assets/images/docs_icon_banner.png
     alt: dynatrace_docs
     title: Extensions Documentation

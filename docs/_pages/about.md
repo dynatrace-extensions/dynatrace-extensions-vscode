@@ -41,6 +41,6 @@ help in three distinct areas:
 This is an open source project that relies on community feedback and contribution and is
 therefore not officially supported by Dynatrace.
 
-For any issues, concerns, or contributions, please leverage the 
-[Issues page](https://github.com/dynatrace-extensions/dynatrace-extensions-copilot/issues)
+For any issues, concerns, or contributions, please leverage the
+[Issues page](https://github.com/dynatrace-extensions/dynatrace-extensions-vscode/issues)
 of the GitHub repository hosting this project.
