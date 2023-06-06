@@ -11,7 +11,7 @@ This is a VisualStudio Code Extension that aims to provide support for all aspec
 <h2 align="center">
   This project's documentation has moved to:
   <br/>
-  <a href="https://dynatrace-extensions.github.io/dynatrace-extensions-copilot/">
+  <a href="https://dynatrace-extensions.github.io/dynatrace-extensions-vscode/">
     GitHub Pages
   </a>
 </h2>
