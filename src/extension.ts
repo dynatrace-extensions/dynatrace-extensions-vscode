@@ -140,7 +140,7 @@ function registerCommandPaletteCommands(
 ): vscode.Disposable[] {
   return [
     // Load extension schemas of a given version
-    vscode.commands.registerCommand("dt-ext-copilot.loadSchemas", async () => {
+    vscode.commands.registerCommand("dynatrace-extensions.loadSchemas", async () => {
       if (await checkEnvironmentConnected(tenantsProvider)) {
         const dtClient = await tenantsProvider.getDynatraceClient();
         if (dtClient) {
@@ -149,7 +149,7 @@ function registerCommandPaletteCommands(
       }
     }),
     // Initialize a new workspace for extension development
-    vscode.commands.registerCommand("dt-ext-copilot.initWorkspace", async () => {
+    vscode.commands.registerCommand("dynatrace-extensions.initWorkspace", async () => {
       if ((await checkWorkspaceOpen()) && (await checkEnvironmentConnected(tenantsProvider))) {
         initWorkspaceStorage(context);
         try {
@@ -160,12 +160,12 @@ function registerCommandPaletteCommands(
             });
           }
         } finally {
-          await context.globalState.update("dt-ext-copilot.initPending", undefined);
+          await context.globalState.update("dynatrace-extensions.initPending", undefined);
         }
       }
     }),
     // Generate the certificates required for extension signing
-    vscode.commands.registerCommand("dt-ext-copilot.generateCertificates", async () => {
+    vscode.commands.registerCommand("dynatrace-extensions.generateCertificates", async () => {
       if (await checkWorkspaceOpen()) {
         initWorkspaceStorage(context);
         return checkOverwriteCertificates(context).then(async approved => {
@@ -178,7 +178,7 @@ function registerCommandPaletteCommands(
       return false;
     }),
     // Distribute CA certificate to Dynatrace credential vault & OneAgents/ActiveGates
-    vscode.commands.registerCommand("dt-ext-copilot.distributeCertificate", async () => {
+    vscode.commands.registerCommand("dynatrace-extensions.distributeCertificate", async () => {
       if ((await checkWorkspaceOpen()) && (await checkEnvironmentConnected(tenantsProvider))) {
         initWorkspaceStorage(context);
         const dtClient = await tenantsProvider.getDynatraceClient();
@@ -188,7 +188,7 @@ function registerCommandPaletteCommands(
       }
     }),
     // Build Extension 2.0 package
-    vscode.commands.registerCommand("dt-ext-copilot.buildExtension", async () => {
+    vscode.commands.registerCommand("dynatrace-extensions.buildExtension", async () => {
       if (
         (await checkWorkspaceOpen()) &&
         (await isExtensionsWorkspace(context)) &&
@@ -199,7 +199,7 @@ function registerCommandPaletteCommands(
       }
     }),
     // Upload an extension to the tenant
-    vscode.commands.registerCommand("dt-ext-copilot.uploadExtension", async () => {
+    vscode.commands.registerCommand("dynatrace-extensions.uploadExtension", async () => {
       if (
         (await checkWorkspaceOpen()) &&
         (await isExtensionsWorkspace(context)) &&
@@ -214,7 +214,7 @@ function registerCommandPaletteCommands(
     }),
     // Activate a given version of extension 2.0
     vscode.commands.registerCommand(
-      "dt-ext-copilot.activateExtension",
+      "dynatrace-extensions.activateExtension",
       async (version?: string) => {
         if (
           (await checkWorkspaceOpen()) &&
@@ -229,43 +229,46 @@ function registerCommandPaletteCommands(
       },
     ),
     // Create Extension documentation
-    vscode.commands.registerCommand("dt-ext-copilot.createDocumentation", async () => {
+    vscode.commands.registerCommand("dynatrace-extensions.createDocumentation", async () => {
       if ((await checkWorkspaceOpen()) && (await isExtensionsWorkspace(context))) {
         await createDocumentation(cachedDataProvider);
       }
     }),
     // Create Overview dashboard
-    vscode.commands.registerCommand("dt-ext-copilot.createDashboard", async () => {
+    vscode.commands.registerCommand("dynatrace-extensions.createDashboard", async () => {
       if ((await checkWorkspaceOpen()) && (await isExtensionsWorkspace(context))) {
         await createOverviewDashboard(tenantsProvider, cachedDataProvider, outputChannel);
       }
     }),
     // Create Alert
-    vscode.commands.registerCommand("dt-ext-copilot.createAlert", async () => {
+    vscode.commands.registerCommand("dynatrace-extensions.createAlert", async () => {
       if ((await checkWorkspaceOpen()) && (await isExtensionsWorkspace(context))) {
         await createAlert(cachedDataProvider);
       }
     }),
     // Convert JMX Extension from 1.0 to 2.0
     vscode.commands.registerCommand(
-      "dt-ext-copilot.convertJmxExtension",
+      "dynatrace-extensions.convertJmxExtension",
       async (outputPath?: string) => {
         await convertJMXExtension(await tenantsProvider.getDynatraceClient(), outputPath);
       },
     ),
     // Create monitoring configuration files
-    vscode.commands.registerCommand("dt-ext-copilot.createMonitoringConfiguration", async () => {
-      if (
-        (await checkWorkspaceOpen()) &&
-        (await isExtensionsWorkspace(context)) &&
-        (await checkEnvironmentConnected(tenantsProvider))
-      ) {
-        const dtClient = await tenantsProvider.getDynatraceClient();
-        if (dtClient) {
-          await createMonitoringConfiguration(dtClient, context, cachedDataProvider);
+    vscode.commands.registerCommand(
+      "dynatrace-extensions.createMonitoringConfiguration",
+      async () => {
+        if (
+          (await checkWorkspaceOpen()) &&
+          (await isExtensionsWorkspace(context)) &&
+          (await checkEnvironmentConnected(tenantsProvider))
+        ) {
+          const dtClient = await tenantsProvider.getDynatraceClient();
+          if (dtClient) {
+            await createMonitoringConfiguration(dtClient, context, cachedDataProvider);
+          }
         }
-      }
-    }),
+      },
+    ),
   ];
 }
 
@@ -277,216 +280,243 @@ function registerCommandPaletteCommands(
 function registerFeatureSwitchCommands() {
   return [
     // Code lenses
-    vscode.commands.registerCommand("dt-ext-copilot-workspaces.enableMetricSelectors", () => {
+    vscode.commands.registerCommand("dynatrace-extensions-workspaces.enableMetricSelectors", () => {
       vscode.workspace
         .getConfiguration()
-        .update("dynatrace.metricSelectorsCodeLens", true)
+        .update("dynatrace_extensons.metricSelectorsCodeLens", true)
         .then(undefined, () => {
-          console.log("Could not update setting dynatrace.metricSelectorsCodeLens");
+          console.log("Could not update setting dynatrace_extensons.metricSelectorsCodeLens");
         });
     }),
-    vscode.commands.registerCommand("dt-ext-copilot-workspaces.disableMetricSelectors", () => {
+    vscode.commands.registerCommand(
+      "dynatrace-extensions-workspaces.disableMetricSelectors",
+      () => {
+        vscode.workspace
+          .getConfiguration()
+          .update("dynatrace_extensons.metricSelectorsCodeLens", false)
+          .then(undefined, () => {
+            console.log("Could not update setting dynatrace_extensons.metricSelectorsCodeLens");
+          });
+      },
+    ),
+    vscode.commands.registerCommand("dynatrace-extensions-workspaces.enableEntitySelectors", () => {
       vscode.workspace
         .getConfiguration()
-        .update("dynatrace.metricSelectorsCodeLens", false)
+        .update("dynatrace_extensions.entitySelectorsCodeLens", true)
         .then(undefined, () => {
-          console.log("Could not update setting dynatrace.metricSelectorsCodeLens");
+          console.log("Could not update setting dynatrace_extensions.entitySelectorsCodeLens");
         });
     }),
-    vscode.commands.registerCommand("dt-ext-copilot-workspaces.enableEntitySelectors", () => {
+    vscode.commands.registerCommand(
+      "dynatrace-extensions-workspaces.disableEntitySelectors",
+      () => {
+        vscode.workspace
+          .getConfiguration()
+          .update("dynatrace_extensions.entitySelectorsCodeLens", false)
+          .then(undefined, () => {
+            console.log("Could not update setting dynatrace_extensions.entitySelectorsCodeLens");
+          });
+      },
+    ),
+    vscode.commands.registerCommand("dynatrace-extensions-workspaces.enableWmiCodelens", () => {
       vscode.workspace
         .getConfiguration()
-        .update("dynatrace.entitySelectorsCodeLens", true)
+        .update("dynatrace_extensions.wmiCodeLens", true)
         .then(undefined, () => {
-          console.log("Could not update setting dynatrace.entitySelectorsCodeLens");
+          console.log("Could not update setting dynatrace_extensions.wmiCodeLens");
         });
     }),
-    vscode.commands.registerCommand("dt-ext-copilot-workspaces.disableEntitySelectors", () => {
+    vscode.commands.registerCommand("dynatrace-extensions-workspaces.disableWmiCodelens", () => {
       vscode.workspace
         .getConfiguration()
-        .update("dynatrace.entitySelectorsCodeLens", false)
+        .update("dynatrace_extensions.wmiCodeLens", false)
         .then(undefined, () => {
-          console.log("Could not update setting dynatrace.entitySelectorsCodeLens");
+          console.log("Could not update setting dynatrace_extensions.wmiCodeLens");
         });
     }),
-    vscode.commands.registerCommand("dt-ext-copilot-workspaces.enableWmiCodelens", () => {
+    vscode.commands.registerCommand("dynatrace-extensions-workspaces.enableScreenCodelens", () => {
       vscode.workspace
         .getConfiguration()
-        .update("dynatrace.wmiCodeLens", true)
+        .update("dynatrace_extensions.screenCodeLens", true)
         .then(undefined, () => {
-          console.log("Could not update setting dynatrace.wmiCodeLens");
+          console.log("Could not update setting dynatrace_extensions.screenCodeLens");
         });
     }),
-    vscode.commands.registerCommand("dt-ext-copilot-workspaces.disableWmiCodelens", () => {
+    vscode.commands.registerCommand("dynatrace-extensions-workspaces.disableScreenCodelens", () => {
       vscode.workspace
         .getConfiguration()
-        .update("dynatrace.wmiCodeLens", false)
+        .update("dynatrace_extensions.screenCodeLens", false)
         .then(undefined, () => {
-          console.log("Could not update setting dynatrace.wmiCodeLens");
-        });
-    }),
-    vscode.commands.registerCommand("dt-ext-copilot-workspaces.enableScreenCodelens", () => {
-      vscode.workspace
-        .getConfiguration()
-        .update("dynatrace.screenCodeLens", true)
-        .then(undefined, () => {
-          console.log("Could not update setting dynatrace.screenCodeLens");
-        });
-    }),
-    vscode.commands.registerCommand("dt-ext-copilot-workspaces.disableScreenCodelens", () => {
-      vscode.workspace
-        .getConfiguration()
-        .update("dynatrace.screenCodeLens", false)
-        .then(undefined, () => {
-          console.log("Could not update setting dynatrace.screenCodeLens");
+          console.log("Could not update setting dynatrace_extensions.screenCodeLens");
         });
     }),
     // Other features
-    vscode.commands.registerCommand("dt-ext-copilot-workspaces.enableFastDevelopment", () => {
+    vscode.commands.registerCommand("dynatrace-extensions-workspaces.enableFastDevelopment", () => {
       vscode.workspace
         .getConfiguration()
-        .update("dynatrace.fastDevelopmentMode", true)
+        .update("dynatrace_extensons.fastDevelopmentMode", true)
         .then(undefined, () => {
-          console.log("Could not update setting dynatrace.fastDevelopmentMode");
+          console.log("Could not update setting fastDevelopmentMode");
         });
     }),
-    vscode.commands.registerCommand("dt-ext-copilot-workspaces.disableFastDevelopment", () => {
-      vscode.workspace
-        .getConfiguration()
-        .update("dynatrace.fastDevelopmentMode", false)
-        .then(undefined, () => {
-          console.log("Could not update setting dynatrace.fastDevelopmentMode");
-        });
-    }),
+    vscode.commands.registerCommand(
+      "dynatrace-extensions-workspaces.disableFastDevelopment",
+      () => {
+        vscode.workspace
+          .getConfiguration()
+          .update("fastDevelopmentMode", false)
+          .then(undefined, () => {
+            console.log("Could not update setting fastDevelopmentMode");
+          });
+      },
+    ),
     // Diagnostics
-    vscode.commands.registerCommand("dt-ext-copilot-workspaces.enableAllDiagnostics", () => {
+    vscode.commands.registerCommand("dynatrace-extensions-workspaces.enableAllDiagnostics", () => {
       vscode.workspace
         .getConfiguration()
-        .update("dynatrace.diagnostics.all", true)
+        .update("dynatrace_extensons.diagnostics.all", true)
         .then(undefined, () => {
-          console.log("Could not update setting dynatrace.diagnostics.all");
+          console.log("Could not update setting diagnostics.all");
         });
       vscode.workspace
         .getConfiguration()
-        .update("dynatrace.diagnostics.extensionName", true)
+        .update("dynatrace_extensons.diagnostics.extensionName", true)
         .then(undefined, () => {
-          console.log("Could not update setting dynatrace.diagnostics.extensionName");
+          console.log("Could not update setting diagnostics.extensionName");
         });
       vscode.workspace
         .getConfiguration()
-        .update("dynatrace.diagnostics.metricKeys", true)
+        .update("dynatrace_extensons.diagnostics.metricKeys", true)
         .then(undefined, () => {
-          console.log("Could not update setting dynatrace.diagnostics.metricKeys");
+          console.log("Could not update setting diagnostics.metricKeys");
         });
       vscode.workspace
         .getConfiguration()
-        .update("dynatrace.diagnostics.cardKeys", true)
+        .update("dynatrace_extensons.diagnostics.cardKeys", true)
         .then(undefined, () => {
-          console.log("Could not update setting dynatrace.diagnostics.cardKeys");
+          console.log("Could not update setting diagnostics.cardKeys");
         });
       vscode.workspace
         .getConfiguration()
-        .update("dynatrace.diagnostics.snmp", true)
+        .update("dynatrace_extensons.diagnostics.snmp", true)
         .then(undefined, () => {
-          console.log("Could not update setting dynatrace.diagnostics.snmp");
-        });
-    }),
-    vscode.commands.registerCommand("dt-ext-copilot-workspaces.disableAllDiagnostics", () => {
-      vscode.workspace
-        .getConfiguration()
-        .update("dynatrace.diagnostics.all", false)
-        .then(undefined, () => {
-          console.log("Could not update setting dynatrace.diagnostics.all");
-        });
-      vscode.workspace
-        .getConfiguration()
-        .update("dynatrace.diagnostics.extensionName", false)
-        .then(undefined, () => {
-          console.log("Could not update setting dynatrace.diagnostics.extensionName");
-        });
-      vscode.workspace
-        .getConfiguration()
-        .update("dynatrace.diagnostics.metricKeys", false)
-        .then(undefined, () => {
-          console.log("Could not update setting dynatrace.diagnostics.metricKeys");
-        });
-      vscode.workspace
-        .getConfiguration()
-        .update("dynatrace.diagnostics.cardKeys", false)
-        .then(undefined, () => {
-          console.log("Could not update setting dynatrace.diagnostics.cardKeys");
-        });
-      vscode.workspace
-        .getConfiguration()
-        .update("dynatrace.diagnostics.snmp", false)
-        .then(undefined, () => {
-          console.log("Could not update setting dynatrace.diagnostics.snmp");
+          console.log("Could not update setting diagnostics.snmp");
         });
     }),
-    vscode.commands.registerCommand("dt-ext-copilot-workspaces.enableNameDiagnostics", () => {
+    vscode.commands.registerCommand("dynatrace-extensions-workspaces.disableAllDiagnostics", () => {
       vscode.workspace
         .getConfiguration()
-        .update("dynatrace.diagnostics.extensionName", true)
+        .update("dynatrace_extensons.diagnostics.all", false)
         .then(undefined, () => {
-          console.log("Could not update setting dynatrace.diagnostics.extensionName");
+          console.log("Could not update setting diagnostics.all");
         });
-    }),
-    vscode.commands.registerCommand("dt-ext-copilot-workspaces.disableNameDiagnostics", () => {
       vscode.workspace
         .getConfiguration()
-        .update("dynatrace.diagnostics.extensionName", false)
+        .update("dynatrace_extensons.diagnostics.extensionName", false)
         .then(undefined, () => {
-          console.log("Could not update setting dynatrace.diagnostics.extensionName");
+          console.log("Could not update setting diagnostics.extensionName");
         });
-    }),
-    vscode.commands.registerCommand("dt-ext-copilot-workspaces.enableMetricKeyDiagnostics", () => {
       vscode.workspace
         .getConfiguration()
-        .update("dynatrace.diagnostics.metricKeys", true)
+        .update("dynatrace_extensons.diagnostics.metricKeys", false)
         .then(undefined, () => {
-          console.log("Could not update setting dynatrace.diagnostics.metricKeys");
+          console.log("Could not update setting diagnostics.metricKeys");
         });
-    }),
-    vscode.commands.registerCommand("dt-ext-copilot-workspaces.disableMetricKeyDiagnostics", () => {
       vscode.workspace
         .getConfiguration()
-        .update("dynatrace.diagnostics.metricKeys", false)
+        .update("dynatrace_extensons.diagnostics.cardKeys", false)
         .then(undefined, () => {
-          console.log("Could not update setting dynatrace.diagnostics.metricKeys");
+          console.log("Could not update setting diagnostics.cardKeys");
         });
-    }),
-    vscode.commands.registerCommand("dt-ext-copilot-workspaces.enableCardKeyDiagnostics", () => {
       vscode.workspace
         .getConfiguration()
-        .update("dynatrace.diagnostics.cardKeys", true)
+        .update("dynatrace_extensons.diagnostics.snmp", false)
         .then(undefined, () => {
-          console.log("Could not update setting dynatrace.diagnostics.cardKeys");
+          console.log("Could not update setting diagnostics.snmp");
         });
     }),
-    vscode.commands.registerCommand("dt-ext-copilot-workspaces.disableCardKeyDiagnostics", () => {
+    vscode.commands.registerCommand("dynatrace-extensions-workspaces.enableNameDiagnostics", () => {
       vscode.workspace
         .getConfiguration()
-        .update("dynatrace.diagnostics.cardKeys", false)
+        .update("dynatrace_extensons.diagnostics.extensionName", true)
         .then(undefined, () => {
-          console.log("Could not update setting dynatrace.diagnostics.cardKeys");
+          console.log("Could not update setting diagnostics.extensionName");
         });
     }),
-    vscode.commands.registerCommand("dt-ext-copilot-workspaces.enableSnmpDiagnostics", () => {
+    vscode.commands.registerCommand(
+      "dynatrace-extensions-workspaces.disableNameDiagnostics",
+      () => {
+        vscode.workspace
+          .getConfiguration()
+          .update("dynatrace_extensons.diagnostics.extensionName", false)
+          .then(undefined, () => {
+            console.log("Could not update setting diagnostics.extensionName");
+          });
+      },
+    ),
+    vscode.commands.registerCommand(
+      "dynatrace-extensions-workspaces.enableMetricKeyDiagnostics",
+      () => {
+        vscode.workspace
+          .getConfiguration()
+          .update("dynatrace_extensons.diagnostics.metricKeys", true)
+          .then(undefined, () => {
+            console.log("Could not update setting diagnostics.metricKeys");
+          });
+      },
+    ),
+    vscode.commands.registerCommand(
+      "dynatrace-extensions-workspaces.disableMetricKeyDiagnostics",
+      () => {
+        vscode.workspace
+          .getConfiguration()
+          .update("dynatrace_extensons.diagnostics.metricKeys", false)
+          .then(undefined, () => {
+            console.log("Could not update setting diagnostics.metricKeys");
+          });
+      },
+    ),
+    vscode.commands.registerCommand(
+      "dynatrace-extensions-workspaces.enableCardKeyDiagnostics",
+      () => {
+        vscode.workspace
+          .getConfiguration()
+          .update("dynatrace_extensons.diagnostics.cardKeys", true)
+          .then(undefined, () => {
+            console.log("Could not update setting diagnostics.cardKeys");
+          });
+      },
+    ),
+    vscode.commands.registerCommand(
+      "dynatrace-extensions-workspaces.disableCardKeyDiagnostics",
+      () => {
+        vscode.workspace
+          .getConfiguration()
+          .update("dynatrace_extensons.diagnostics.cardKeys", false)
+          .then(undefined, () => {
+            console.log("Could not update setting diagnostics.cardKeys");
+          });
+      },
+    ),
+    vscode.commands.registerCommand("dynatrace-extensions-workspaces.enableSnmpDiagnostics", () => {
       vscode.workspace
         .getConfiguration()
-        .update("dynatrace.diagnostics.snmp", true)
+        .update("dynatrace_extensons.diagnostics.snmp", true)
         .then(undefined, () => {
-          console.log("Could not update setting dynatrace.diagnostics.snmp");
+          console.log("Could not update setting diagnostics.snmp");
         });
     }),
-    vscode.commands.registerCommand("dt-ext-copilot-workspaces.disableSnmpDiagnostics", () => {
-      vscode.workspace
-        .getConfiguration()
-        .update("dynatrace.diagnostics.snmp", false)
-        .then(undefined, () => {
-          console.log("Could not update setting dynatrace.diagnostics.snmp");
-        });
-    }),
+    vscode.commands.registerCommand(
+      "dynatrace-extensions-workspaces.disableSnmpDiagnostics",
+      () => {
+        vscode.workspace
+          .getConfiguration()
+          .update("dynatrace_extensons.diagnostics.snmp", false)
+          .then(undefined, () => {
+            console.log("Could not update setting diagnostics.snmp");
+          });
+      },
+    ),
   ];
 }
 
@@ -507,15 +537,19 @@ export function activate(context: vscode.ExtensionContext) {
   };
   // Additonal context: number of workspaces affects the welcome message for the extensions tree view
   vscode.commands
-    .executeCommand("setContext", "dt-ext-copilot.numWorkspaces", getAllWorkspaces(context).length)
+    .executeCommand(
+      "setContext",
+      "dynatrace-extensions.numWorkspaces",
+      getAllWorkspaces(context).length,
+    )
     .then(undefined, () => {
-      console.log("Could not set context for number of Copilot registered workspaces.");
+      console.log("Could not set context for number of registered workspaces.");
     });
   // Additonal context: different welcome message for the extensions tree view if inside a workspace
   vscode.commands
     .executeCommand(
       "setContext",
-      "dt-ext-copilot.extensionWorkspace",
+      "dynatrace-extensions.extensionWorkspace",
       isExtensionsWorkspace(context, false),
     )
     .then(undefined, () => {
@@ -525,7 +559,7 @@ export function activate(context: vscode.ExtensionContext) {
   vscode.commands
     .executeCommand(
       "setContext",
-      "dt-ext-copilot.numEnvironments",
+      "dynatrace-extensions.numEnvironments",
       getAllEnvironments(context).length,
     )
     .then(undefined, () => {
@@ -578,9 +612,15 @@ export function activate(context: vscode.ExtensionContext) {
     // Auto-completion providers
     ...registerCompletionProviders(extension2selector, cachedDataProvider),
     // Extension 2.0 Workspaces Tree View
-    vscode.window.registerTreeDataProvider("dt-ext-copilot-workspaces", extensionsTreeViewProvider),
+    vscode.window.registerTreeDataProvider(
+      "dynatrace-extensions-workspaces",
+      extensionsTreeViewProvider,
+    ),
     // Dynatrace Environments Tree View
-    vscode.window.registerTreeDataProvider("dt-ext-copilot-environments", tenantsTreeViewProvider),
+    vscode.window.registerTreeDataProvider(
+      "dynatrace-extensions-environments",
+      tenantsTreeViewProvider,
+    ),
     // Code actions for adding snippets
     vscode.languages.registerCodeActionsProvider(extension2selector, snippetCodeActionProvider, {
       providedCodeActionKinds: [vscode.CodeActionKind.QuickFix],
@@ -612,7 +652,7 @@ export function activate(context: vscode.ExtensionContext) {
     vscode.languages.registerCodeLensProvider(extension2selector, wmiLensProvider),
     // Commands for metric and entity selector Code Lenses
     vscode.commands.registerCommand(
-      "dt-ext-copilot.codelens.validateSelector",
+      "dynatrace-extensions.codelens.validateSelector",
       async (selector: string, type: "metric" | "entity") => {
         if (await checkEnvironmentConnected(tenantsTreeViewProvider)) {
           const dtClient = await tenantsTreeViewProvider.getDynatraceClient();
@@ -626,7 +666,7 @@ export function activate(context: vscode.ExtensionContext) {
       },
     ),
     vscode.commands.registerCommand(
-      "dt-ext-copilot.codelens.runSelector",
+      "dynatrace-extensions.codelens.runSelector",
       async (selector: string, type: "metric" | "entity") => {
         if (await checkEnvironmentConnected(tenantsTreeViewProvider)) {
           const dtClient = await tenantsTreeViewProvider.getDynatraceClient();
@@ -641,7 +681,7 @@ export function activate(context: vscode.ExtensionContext) {
       },
     ),
     vscode.commands.registerCommand(
-      "dt-ext-copilot.codelens.runWMIQuery",
+      "dynatrace-extensions.codelens.runWMIQuery",
       async (query: string) => {
         wmiLensProvider.setQueryRunning(query);
         runWMIQuery(query, genericChannel, wmiLensProvider.processQueryResults).catch(err => {
@@ -670,7 +710,9 @@ export function activate(context: vscode.ExtensionContext) {
     vscode.workspace.onDidSaveTextDocument(async (doc: vscode.TextDocument) => {
       // Fast Development Mode - build extension
       if (
-        vscode.workspace.getConfiguration("dynatrace", null).get("fastDevelopmentMode") &&
+        vscode.workspace
+          .getConfiguration("dynatrace_extensions", null)
+          .get("fastDevelopmentMode") &&
         doc.fileName.endsWith("extension.yaml") &&
         (await isExtensionsWorkspace(context, false)) &&
         (await checkEnvironmentConnected(tenantsTreeViewProvider))
@@ -715,9 +757,9 @@ export function activate(context: vscode.ExtensionContext) {
     }),
   );
   // We may have an initialization pending from previous window/activation.
-  const pendingInit = context.globalState.get("dt-ext-copilot.initPending");
+  const pendingInit = context.globalState.get("dynatrace-extensions.initPending");
   if (pendingInit) {
-    vscode.commands.executeCommand("dt-ext-copilot.initWorkspace").then(
+    vscode.commands.executeCommand("dynatrace-extensions.initWorkspace").then(
       () => {
         console.log("Pending init handled successfully.");
       },

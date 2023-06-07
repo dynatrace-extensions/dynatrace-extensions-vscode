@@ -478,7 +478,7 @@ export async function buildExtension(
             )
             .then(async choice => {
               if (choice === "Yes") {
-                await vscode.commands.executeCommand("dt-ext-copilot.uploadExtension");
+                await vscode.commands.executeCommand("dynatrace-extensions.uploadExtension");
               }
             });
         }

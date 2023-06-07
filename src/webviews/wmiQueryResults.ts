@@ -19,7 +19,7 @@ import { WmiQueryResult } from "../codeLens/utils/wmiUtils";
 
 export class WMIQueryResultsPanel {
   public static currentPanel: WMIQueryResultsPanel | undefined;
-  public static readonly viewType = "wmiQueryResults";
+  public static readonly viewType = "dynatrace_extensions.wmiQueryResults";
   private readonly _panel: vscode.WebviewPanel;
   private _disposables: vscode.Disposable[] = [];
 

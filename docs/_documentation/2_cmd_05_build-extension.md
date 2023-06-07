@@ -20,7 +20,7 @@ Builds your extension and its artefacts into a signed .zip archive which is plac
 
 ## Detailed command flow
 
-1. The extension version is picked up from the manifest. If the Copilot is connected to a
+1. The extension version is picked up from the manifest. If the add-on is connected to a
    Dynatrace environment, the version is checked for any conflicts. If it would conflict
    with an already existing version it is automatically incremented.
 
@@ -28,7 +28,7 @@ Builds your extension and its artefacts into a signed .zip archive which is plac
    using your developer credentials. The resulting signature along with the archive are
    added to a final `.zip` archive which is the extension package.
 
-3. If the Copilot is connected to an environment, the package is sent to Dynatrace for
+3. If the add-on is connected to an environment, the package is sent to Dynatrace for
    validation. Any validation errors are communicated in an Output Channel (within your)
    editor window and the workflow terminates. Valid packages are moved to the `dist`
    folder of your workspace.

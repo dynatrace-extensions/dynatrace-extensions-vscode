@@ -21,38 +21,38 @@ These include:
 
 ### Requirements
 
-You must have NodeJS (min. version 16) and VisualStudio Code installed on your machine. 
+You must have NodeJS (min. version 16) and VisualStudio Code installed on your machine.
 Please visit [nodejs.org](https://nodejs.org/en/) and
-[code.visualstudio.com](https://code.visualstudio.com/) then follow the instructions 
+[code.visualstudio.com](https://code.visualstudio.com/) then follow the instructions
 for your O/S.
 
 To contribute, you'll have to
-[fork](https://github.com/dynatrace-extensions/dynatrace-extensions-copilot) and then 
+[fork](https://github.com/dynatrace-extensions/dynatrace-extensions-vscode) and then
 clone the repository.
 
 Then install the dependencies:
 ```bash
-cd dynatrace-extensions-copilot
+cd dynatrace-extensions-vscode
 npm install
 ```
 
 ### Running the Extension
 
 The repository already comes with VSCode launch configurations attached. Once you ran
-the `install` command, all you have to do is hit `F5`. VSCode will open a new window 
+the `install` command, all you have to do is hit `F5`. VSCode will open a new window
 with the extension compiled and running inside it.
 
 ### Troubleshooting
 
-With the extension running live, you can use `Ctrl + Shift + I` to open VSCode's 
+With the extension running live, you can use `Ctrl + Shift + I` to open VSCode's
 eveloper tools (same as in a browser). All your `console.log(...)` statements appear here.
 
-Debugging works the same as with any project. Set your breakpoints, then hit `F5` and 
+Debugging works the same as with any project. Set your breakpoints, then hit `F5` and
 the code will pause on them.
 
 ## Make your first contribution
 
-Make sure to check out the 
+Make sure to check out the
 [project structure](/docs/contrib/project-structure/) to
 understand how it works and where to best enhance it.
 
@@ -68,8 +68,8 @@ Here are some basic guidelines depending on your type of work:
   - Describe what is the observed vs. expected behavior
   - Provide the full extension YAML that resulted in this issue
 - **Fix a bug related issue**
-  - Grab an already open 
-    [issue or bug](https://github.com/dynatrace-extensions/dynatrace-extensions-copilot/issues)
+  - Grab an already open
+    [issue or bug](https://github.com/dynatrace-extensions/dynatrace-extensions-vscode/issues)
   - Create a separate branch linked to the issue and work on fixing it
   - Create a pull request mentioning the issue fixed
 - **Improve an existing feature or implement new functionality**

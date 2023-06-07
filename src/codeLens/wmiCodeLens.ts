@@ -31,7 +31,7 @@ class WmiQueryLens extends vscode.CodeLens {
     super(range, {
       title: "▶️ Run WMI Query",
       tooltip: "Run a WMI query on this host",
-      command: "dt-ext-copilot.codelens.runWMIQuery",
+      command: "dynatrace-extensions.codelens.runWMIQuery",
       arguments: [wmiQuery],
     });
     this.wmiQuery = wmiQuery;
@@ -130,7 +130,7 @@ export class WmiCodeLensProvider implements vscode.CodeLensProvider {
     // Return early because it is cheaper than parsing the yaml
     if (
       !text.includes("wmi:") ||
-      !vscode.workspace.getConfiguration("dynatrace", null).get("wmiCodeLens")
+      !vscode.workspace.getConfiguration("dynatrace_extensions", null).get("wmiCodeLens")
     ) {
       return [];
     }

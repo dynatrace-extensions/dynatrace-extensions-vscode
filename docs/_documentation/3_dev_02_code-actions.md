@@ -11,7 +11,7 @@ current line of your manifest.
 
 Actions may include:
 - Generating & inserting content into the manifest
-- Fixing issues highlighted by the Copilot
+- Fixing issues highlighted by the add-on
 
 ## Demo
 

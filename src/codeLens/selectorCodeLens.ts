@@ -84,7 +84,7 @@ class SelectorValidationLens extends vscode.CodeLens {
     super(range, {
       title: "Validate selector",
       tooltip: "Run a query and check if the selector is valid",
-      command: "dt-ext-copilot.codelens.validateSelector",
+      command: "dynatrace-extensions.codelens.validateSelector",
       arguments: [selector, selectorType],
     });
     this.selector = selector;
@@ -105,7 +105,7 @@ class SelectorRunnerLens extends vscode.CodeLens {
     super(range, {
       title: "Query data",
       tooltip: "Run the query and visualize its results",
-      command: "dt-ext-copilot.codelens.runSelector",
+      command: "dynatrace-extensions.codelens.runSelector",
       arguments: [selector, selectorType],
     });
     this.selector = selector;
@@ -152,7 +152,7 @@ export class SelectorCodeLensProvider implements vscode.CodeLensProvider {
     let extension: ExtensionStub;
 
     // Honor the user's settings
-    if (!vscode.workspace.getConfiguration("dynatrace", null).get(this.controlSetting)) {
+    if (!vscode.workspace.getConfiguration("dynatrace_extensions", null).get(this.controlSetting)) {
       return [];
     }
     // Load yaml only for entity selectors

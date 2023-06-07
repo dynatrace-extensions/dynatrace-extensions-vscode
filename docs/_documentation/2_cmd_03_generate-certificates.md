@@ -30,7 +30,7 @@ Generates all the credentials needed for signing and validating Extensions 2.0.
      <strong>📝 Note:</strong>
      <br/>
      Credential details can be customized through
-     <a href="/dynatrace-extensions-copilot/docs/settings-credentials/">settings</a>
+     <a href="/dynatrace-extensions-vscode/docs/settings-credentials/">settings</a>
    </p>
 
 5. All intermediary files are stored in the VSCode workspace storage and the

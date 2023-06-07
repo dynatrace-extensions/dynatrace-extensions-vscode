@@ -1,6 +1,6 @@
 # Contributing to this project
 
-This project is very much still in its infancy and there are many areas where help is needed. 
+This project is very much still in its infancy and there are many areas where help is needed.
 These include:
 - Manually testing features/scenarios and finding bugs and edge cases
 - Writing unit tests
@@ -30,10 +30,10 @@ again.
 
 You must have NodeJS (min. version 16) and VisualStudio Code installed on your machine. Please visit [nodejs.org](https://nodejs.org/en/) and [code.visualstudio.com](https://code.visualstudio.com/) then follow the instructions for your O/S.
 
-To contribute, you'll have to [fork](https://github.com/dynatrace-extensions/dynatrace-extensions-copilot) and clone the repository.
+To contribute, you'll have to [fork](https://github.com/dynatrace-extensions/dynatrace-extensions-vscode) and clone the repository.
 Then install the dependencies:
 ```bash
-cd dynatrace-extensions-copilot
+cd dynatrace-extensions-vscode
 npm install
 ```
 
@@ -143,7 +143,7 @@ Here are some basic guidelines depending on your type of work:
   - Describe what is the observed vs. expected behavior
   - Provide the full extension YAML that resulted in this issue
 - **Fix a bug related issue**
-  - Grab an already open [issue/bug](https://github.com/dynatrace-extensions/dynatrace-extensions-copilot/issues)
+  - Grab an already open [issue/bug](https://github.com/dynatrace-extensions/dynatrace-extensions-vscode/issues)
   - Create a separate branch linked to the issue and work on fixing it
   - Create a pull request mentioning the issue fixed
 - **Improve an existing feature or implement new functionality**

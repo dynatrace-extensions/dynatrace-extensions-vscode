@@ -167,7 +167,7 @@ export class TopologyCompletionProvider implements vscode.CompletionItemProvider
       `${entityName} attributes`,
       vscode.CompletionItemKind.Field,
     );
-    propertyCompletion.detail = "Copilot suggestion";
+    propertyCompletion.detail = "Dynatrace Extensions";
     propertyCompletion.documentation = `Browse ${entityName} (${entityType}) properties ${
       builtinIdx >= 0
         ? "that are built into Dynatrace."
@@ -201,7 +201,7 @@ export class TopologyCompletionProvider implements vscode.CompletionItemProvider
         `${entityName} attributes`,
         vscode.CompletionItemKind.Field,
       );
-      attributeCompletion.detail = "Copilot suggestion";
+      attributeCompletion.detail = "Dynatrace Extensions";
       attributeCompletion.documentation =
         `Browse ${entityName} (${entityType}) attributes ` +
         "that have been detected from this yaml file.";
@@ -239,9 +239,9 @@ export class TopologyCompletionProvider implements vscode.CompletionItemProvider
           "Custom entities",
           vscode.CompletionItemKind.Class,
         );
-        customTypeCompletion.detail = "Copilot suggestion";
+        customTypeCompletion.detail = "Dynatrace Extensions";
         customTypeCompletion.documentation =
-          "Browse custom entity types detected by the Extensions Copilot within this yaml file.";
+          "Browse custom entity types detected within this yaml file.";
         customTypeCompletion.insertText = new vscode.SnippetString();
         if (asList) {
           customTypeCompletion.insertText.appendText("\n - ");
@@ -258,7 +258,7 @@ export class TopologyCompletionProvider implements vscode.CompletionItemProvider
         "Built-in entities",
         vscode.CompletionItemKind.Class,
       );
-      builtinTypeCompletion.detail = "Copilot suggestion";
+      builtinTypeCompletion.detail = "Dynatrace Extensions";
       builtinTypeCompletion.documentation = "Browse Dynatrace's built-in entity types.";
       builtinTypeCompletion.insertText = new vscode.SnippetString();
       if (asList) {
@@ -314,7 +314,7 @@ export class TopologyCompletionProvider implements vscode.CompletionItemProvider
         "Browse dimension keys",
         vscode.CompletionItemKind.Field,
       );
-      dimensionKeyCompletion.detail = "Copilot suggestion";
+      dimensionKeyCompletion.detail = "Dynatrace Extensions";
       dimensionKeyCompletion.documentation =
         "Browse dimension keys detected from this yaml file " +
         "that match the sources defined in this topology rule.";

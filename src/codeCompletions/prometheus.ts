@@ -116,7 +116,7 @@ export class PrometheusCompletionProvider implements vscode.CompletionItemProvid
         "Browse scraped metrics",
         vscode.CompletionItemKind.Function,
       );
-      metricCompletion.detail = "Copilot Suggestion";
+      metricCompletion.detail = "Dynatrace Extensions";
       metricCompletion.documentation =
         "Browse metric keys that have been scraped from your Prometheus endpoint.";
       metricCompletion.insertText = new vscode.SnippetString();
@@ -162,7 +162,7 @@ export class PrometheusCompletionProvider implements vscode.CompletionItemProvid
         "Browse scraped labels",
         vscode.CompletionItemKind.Field,
       );
-      dimensionCompletion.detail = "Copilot Suggestion";
+      dimensionCompletion.detail = "Dynatrace Extensions";
       dimensionCompletion.documentation =
         "Browse metric labels that have scraped from your Prometheus endpoint. " +
         "If you already entered metrics, only matching labels are suggested.";
@@ -196,7 +196,7 @@ export class PrometheusCompletionProvider implements vscode.CompletionItemProvid
           "Add description",
           vscode.CompletionItemKind.Constant,
         );
-        descriptionCompletion.detail = "Copilot Suggestion";
+        descriptionCompletion.detail = "Dynatrace Extensions";
         descriptionCompletion.documentation =
           "Automatically add metric description from your Prometheus endpoint scraped data.";
         descriptionCompletion.insertText = this.prometheusData[promKey].description;

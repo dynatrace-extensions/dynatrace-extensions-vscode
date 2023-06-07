@@ -5,17 +5,16 @@ toc: true
 toc_sticky: true
 ---
 
-Everything you need to start using the Copilot.
+Everything you need to start using the VSCode add-on.
 
 ## Visual Studio Code
 
-This is pretty obvious, the Extensions Copilot exists as an Extension for Visual Studio Code.
 If you haven't already, go ahead and install it from
  [the official website](https://code.visualstudio.com/).
 
 ## Dynatrace
 
-Make sure you have access to a Dynatrace environment (tenant). The Copilot works with either
+Make sure you have access to a Dynatrace environment (tenant). The add-on works with either
  SaaS or Managed. Note down the following details:
 - The full URL to your Dynatrace environment
 - The ID of the environment
@@ -24,7 +23,7 @@ You'll need these for the first time setup.
 
 ## Dynatrace API Token
 
-The Copilot automates a lot of the operations around Extensions development by using the 
+Dynatrace Extensions automates a lot of the operations around Extensions 2.0 development by using the
 Dynatrace API. To get the most out of it, create an API Access Token with the following scopes:
 - `WriteConfig`
 - `ReadConfig`
@@ -42,9 +41,9 @@ Dynatrace API. To get the most out of it, create an API Access Token with the fo
 - `settings.write`
 
 If you already have an Access Token with the `apiTokens.write` scope, you can generate the
-above-described token with the following command, after you replace the <TENANT-ID> and 
+above-described token with the following command, after you replace the <TENANT-ID> and
 Api-Token value with your own:
 
 ```sh
-curl -X POST "https://<TENANT-ID>.live.dynatrace.com/api/v2/apiTokens" -H "accept: application/json; charset=utf-8" -H "Content-Type: application/json; charset=utf-8" -d "{\"name\":\"Dynatrace Extensions Copilot\",\"scopes\":[\"entities.read\",\"extensionConfigurations.read\",\"extensionConfigurations.write\",\"extensionEnvironment.read\",\"extensionEnvironment.write\",\"extensions.read\",\"extensions.write\",\"metrics.read\",\"settings.read\",\"settings.write\",\"credentialVault.read\",\"credentialVault.write\",\"ReadConfig\",\"WriteConfig\"]}" -H "Authorization: Api-Token <CHANGE-ME>"
+curl -X POST "https://<TENANT-ID>.live.dynatrace.com/api/v2/apiTokens" -H "accept: application/json; charset=utf-8" -H "Content-Type: application/json; charset=utf-8" -d "{\"name\":\"Dynatrace Extensions\",\"scopes\":[\"entities.read\",\"extensionConfigurations.read\",\"extensionConfigurations.write\",\"extensionEnvironment.read\",\"extensionEnvironment.write\",\"extensions.read\",\"extensions.write\",\"metrics.read\",\"settings.read\",\"settings.write\",\"credentialVault.read\",\"credentialVault.write\",\"ReadConfig\",\"WriteConfig\"]}" -H "Authorization: Api-Token <CHANGE-ME>"
 ```

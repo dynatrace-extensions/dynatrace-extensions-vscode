@@ -110,7 +110,7 @@ export class ScreensMetaCompletionProvider implements vscode.CompletionItemProvi
             card.key,
             vscode.CompletionItemKind.Field,
           );
-          cardCompletion.detail = "Copilot suggestion";
+          cardCompletion.detail = "Dynatrace Extensions";
           cardCompletion.documentation =
             "Your layout section already has this card key, " +
             "but you don't have a defintion for it yet.";
@@ -125,7 +125,7 @@ export class ScreensMetaCompletionProvider implements vscode.CompletionItemProvi
             card.key,
             vscode.CompletionItemKind.Field,
           );
-          cardCompletion.detail = "Copilot suggestion";
+          cardCompletion.detail = "Dynatrace Extensions";
           cardCompletion.documentation =
             "Your card definitions already include this key, " +
             "but it's not yet included in any layout.";

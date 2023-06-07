@@ -5,7 +5,7 @@ toc: true
 toc_sticky: true
 ---
 
-Code completions or suggestions happen at key points within the extension manifest. 
+Code completions or suggestions happen at key points within the extension manifest.
 Either automatically or on-demand (using `Ctrl + Space`) these offer known values that
 can be inserted at the location of your cursor.
 
@@ -13,7 +13,7 @@ can be inserted at the location of your cursor.
     <strong>📝 Note:</strong>
     <br/>
     Suggestions from other extensions (such as YAML Schema) may take precedence
-    over the Copilot's.
+    over the add-on's.
 </p>
 
 ## Demo
@@ -29,14 +29,14 @@ can be inserted at the location of your cursor.
   </tr>
   <tr>
     <td>
-      On <code>fromType:</code> or <code>toType:</code> inside 
+      On <code>fromType:</code> or <code>toType:</code> inside
       <code>topology.relationships</code> list items
     </td>
     <td>Browse built-in and custom entity types</td>
   </tr>
   <tr>
     <td>
-      On <code>sourceAttribute:</code> inside <code>mappingRules</code> list items of 
+      On <code>sourceAttribute:</code> inside <code>mappingRules</code> list items of
       topology relationships
     </td>
     <td>
@@ -45,7 +45,7 @@ can be inserted at the location of your cursor.
   </tr>
   <tr>
     <td>
-      On <code>destinationAttribute:</code> inside <code>mappingRules</code> list items of 
+      On <code>destinationAttribute:</code> inside <code>mappingRules</code> list items of
       topology relationships
     </td>
     <td>
@@ -69,7 +69,7 @@ can be inserted at the location of your cursor.
   </tr>
   <tr>
     <td>
-      On <code>iconPattern:</code> (within <code>topology.rules</code>) or 
+      On <code>iconPattern:</code> (within <code>topology.rules</code>) or
       <code>icon:</code> (within <code>staticContent.header</code>)
     </td>
     <td>

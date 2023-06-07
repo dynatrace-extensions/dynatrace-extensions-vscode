@@ -5,7 +5,7 @@ toc: true
 toc_sticky: true
 ---
 
-Once the Copilot is installed your editor will show the Dynatrace icon in its activity bar.
+Once the add-on is installed your editor will show the Dynatrace icon in its activity bar.
 Use the Environments view to register Dynatrace tenants and easily switch between them.
 
 ![workspaces]({{ site.baseurl }}assets/images/environments_view.png)
@@ -24,7 +24,7 @@ of the known environments.
 ### Keep track of extension deployments
 
 Expand each environment to reveal all extensions currently deployed on it. Each extension
-contains the latest available version in brackets. 
+contains the latest available version in brackets.
 
 Expand further to see all monitoring configurations of the extension - the configured
 version is displayed in brackets while a colored circle displays its last known status.
@@ -38,6 +38,6 @@ Make changes Monitoring Configurations by clicking the pen icon next to their na
 
 ### Target your operations
 
-Your currently connected environment is the target for all API based operations the Copilot
+Your currently connected environment is the target for all API based operations the add-on
 executes. Quickly change between environments by clicking the status bar entry (usually on
 the bottom of the window).

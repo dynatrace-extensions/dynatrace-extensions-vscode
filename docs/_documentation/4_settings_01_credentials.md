@@ -1,5 +1,5 @@
 ---
-title: Credentials within the Copilot
+title: Credentials within the add-on
 permalink: /docs/settings/credentials/
 toc: true
 toc_sticky: true
@@ -10,7 +10,7 @@ development or allowing you to bring your own credential files.
 
 ## When using your own credentials
 
-Provide your files to the Copilot by using these settings:
+Provide your files to the add-on by using these settings:
 
 <table style="margin-bottom: 40px;">
   <tr>
@@ -18,11 +18,11 @@ Provide your files to the Copilot by using these settings:
     <th>Description</th>
   </tr>
   <tr>
-    <td><code>dynatrace.developerCertkeyLocation</code></td>
+    <td><code>developerCertkeyLocation</code></td>
     <td>This is the path to your fused developer credential file.</td>
   </tr>
   <tr>
-    <td><code>dynatrace.rootOrCaCertificateLocation</code></td>
+    <td><code>rootOrCaCertificateLocation</code></td>
     <td>This is the path to your root (CA) certificate.</td>
   </tr>
 </table>
@@ -31,15 +31,15 @@ Example usage (in `./vscode/settings.json`):
 
 ```json
 {
-    "dynatrace.developerCertkeyLocation": "C:\\Temp\\certificates\\dev.pem",
-    "dynatrace.rootOrCaCertificateLocation": "C:\\Temp\\certificates\\ca.pem"
+    "developerCertkeyLocation": "C:\\Temp\\certificates\\dev.pem",
+    "rootOrCaCertificateLocation": "C:\\Temp\\certificates\\ca.pem"
 }
 ```
 
 <p class="notice--warning">
     <strong>⚠️ Deprecation warning:</strong>
     <br/>
-    Since version <code>1.0.0</code> of the Copilot, split credential files are no longer
+    Since version <code>1.0.0</code> of the add-on, split credential files are no longer
     supported and the following settings have been deprecated:
     <br/>
     <code>dynatrace.developerKeyLocation</code>
@@ -48,7 +48,7 @@ Example usage (in `./vscode/settings.json`):
     <br/>
     <br/>
     If you still want to use older credentials, you must paste the contents together and
-    manually create the fused file. Otherwise, just let the Copilot generate one for you.
+    manually create the fused file. Otherwise, just let the add-on generate one for you.
 </p>
 
 ## When generating credentials
@@ -63,23 +63,23 @@ Customize the credentials metadata by using these settings:
     <th>Description</th>
   </tr>
   <tr>
-    <td><code>dynatrace.certificateCommonName</code></td>
+    <td><code>certificateCommonName</code></td>
     <td>The common name (CN) attribute of the certificate. Defaults to "Extension Developer".</td>
   </tr>
   <tr>
-    <td><code>dynatrace.certificateOrganization</code></td>
+    <td><code>certificateOrganization</code></td>
     <td>The organization (O) attribute of the certificate.</td>
   </tr>
   <tr>
-    <td><code>dynatrace.certificateOrganizationUnit</code></td>
+    <td><code>certificateOrganizationUnit</code></td>
     <td>The organization unit (OU) attribute of the certificate.</td>
   </tr>
   <tr>
-    <td><code>dynatrace.certificateStateOrProvince</code></td>
+    <td><code>certificateStateOrProvince</code></td>
     <td>The state or province (ST) attribute of the certificate.</td>
   </tr>
   <tr>
-    <td><code>dynatrace.certificateCountryCode</code></td>
+    <td><code>certificateCountryCode</code></td>
     <td>The country code (C) attribute of the certificate.</td>
   </tr>
 </table>

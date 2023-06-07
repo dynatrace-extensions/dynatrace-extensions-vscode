@@ -53,7 +53,7 @@ export class PrometheusCodeLensProvider implements vscode.CodeLensProvider {
     this.codeLenses = [];
     this.regex = /^(prometheus:)/gm;
     vscode.commands.registerCommand(
-      "dt-ext-copilot.codelens.scrapeMetrics",
+      "dynatrace-extensions.codelens.scrapeMetrics",
       async (changeConfig: boolean) => {
         await this.scrapeMetrics(changeConfig);
       },
@@ -89,7 +89,7 @@ export class PrometheusCodeLensProvider implements vscode.CodeLensProvider {
           new vscode.CodeLens(range, {
             title: "Scrape data",
             tooltip: "Connect to an exporter and scrape metrics, then use them in the Extension.",
-            command: "dt-ext-copilot.codelens.scrapeMetrics",
+            command: "dynatrace-extensions.codelens.scrapeMetrics",
             arguments: [],
           }),
         );
@@ -99,7 +99,7 @@ export class PrometheusCodeLensProvider implements vscode.CodeLensProvider {
             new vscode.CodeLens(range, {
               title: "Edit config",
               tooltip: "Make changes to the endpoint connection details",
-              command: "dt-ext-copilot.codelens.scrapeMetrics",
+              command: "dynatrace-extensions.codelens.scrapeMetrics",
               arguments: [true],
             }),
           );

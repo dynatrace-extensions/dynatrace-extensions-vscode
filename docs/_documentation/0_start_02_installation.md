@@ -4,7 +4,7 @@ permalink: /docs/start/installation/
 ---
 
 This extension is now available directly from the Visual Studio Code
-[Marketplace](https://marketplace.visualstudio.com/items?itemName=DynatracePlatformExtensions.dt-ext-copilot).
+[Marketplace](https://marketplace.visualstudio.com/items?itemName=DynatracePlatformExtensions.dynatrace-extensions).
 
 You can either open the link above, or access the Extensions menu from your editor, and search
 for "dynatrace". Access the extension and install it from there.

@@ -7,7 +7,7 @@ toc_sticky: true
 
 Many times perfectly valid YAML still produces a manifest that causes issues when we upload the
 extension to Dynatrace or later when it tries to execute. Many of these situations can be caught
-early and the Copilot aims to bring these to light so you can fix them and reduce the number of
+early and the add-on aims to bring these to light so you can fix them and reduce the number of
 deployment attempts.
 
 ## How do diagnostics work in VS Code?
@@ -20,7 +20,7 @@ about the issue.
 Some issues may provide a "Quick fix" link as part of the hover information. If this is availble
 it will trigger a content change of the document in order to solve the issue highlighted.
 
-Finally, if "Error" severity issues are present (highlighted red), the Copilot will not build
+Finally, if "Error" severity issues are present (highlighted red), the add-on will not build
 the extension. You must first resolve these issues before a build can continue.
 
 ## Currently implemented diagnostics

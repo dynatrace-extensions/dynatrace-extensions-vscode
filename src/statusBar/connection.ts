@@ -24,7 +24,7 @@ export class ConnectionStatusManager {
 
   constructor() {
     this.statusBarItem = vscode.window.createStatusBarItem(vscode.StatusBarAlignment.Left, 0);
-    this.statusBarItem.command = "dt-ext-copilot-environments.changeConnection";
+    this.statusBarItem.command = "dynatrace-extensions-environments.changeConnection";
     this.updateStatusBar(false);
   }
 
@@ -46,13 +46,13 @@ export class ConnectionStatusManager {
   updateStatusBar(connected: boolean, environment?: string) {
     if (connected) {
       if (environment) {
-        this.statusBarItem.text = `$(dt-signet) Connected to ${environment}`;
+        this.statusBarItem.text = `$(dt-platform-light) Connected to ${environment}`;
       }
       this.statusBarItem.tooltip = "Using this environment for API calls";
       this.statusBarItem.backgroundColor = undefined;
       this.statusBarItem.color = undefined;
     } else {
-      this.statusBarItem.text = "$(dt-signet) Not connected";
+      this.statusBarItem.text = "$(dt-platform-light) Not connected";
       this.statusBarItem.tooltip = "No API calls are currently possible";
       this.statusBarItem.backgroundColor = new vscode.ThemeColor("statusBarItem.warningBackground");
       this.statusBarItem.color = undefined;

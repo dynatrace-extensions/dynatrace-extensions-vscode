@@ -9,7 +9,7 @@ header:
     - label: "<i class='fas fa-download'></i> Download now"
       url: https://github.com/dynatrace-extensions/dynatrace-extensions-vscode/releases/latest
     - label: "<i class='fas fa-cart-arrow-down'></i> Marketplace"
-      url: https://marketplace.visualstudio.com/items?itemName=DynatracePlatformExtensions.dt-ext-copilot
+      url: https://marketplace.visualstudio.com/items?itemName=DynatracePlatformExtensions.dynatrace-extensions
 excerpt: >
   Take Extension development to the next level.
   <br />

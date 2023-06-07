@@ -99,7 +99,7 @@ export async function registerWorkspace(context: vscode.ExtensionContext) {
   // Update the state
   await vscode.commands.executeCommand(
     "setContext",
-    "dt-ext-copilot.numWorkspaces",
+    "dynatrace-extensions.numWorkspaces",
     workspaces.length,
   );
 }
@@ -201,7 +201,7 @@ export async function registerEnvironment(
   // Update the state
   await vscode.commands.executeCommand(
     "setContext",
-    "dt-ext-copilot.numEnvironments",
+    "dynatrace-extensions.numEnvironments",
     environments.length,
   );
 }
@@ -223,7 +223,7 @@ export async function removeEnvironment(context: vscode.ExtensionContext, enviro
   // Update the state
   await vscode.commands.executeCommand(
     "setContext",
-    "dt-ext-copilot.numEnvironments",
+    "dynatrace-extensions.numEnvironments",
     environments.length - 1,
   );
 }
@@ -243,7 +243,7 @@ export async function removeWorkspace(context: vscode.ExtensionContext, workspac
   // Update the state
   await vscode.commands.executeCommand(
     "setContext",
-    "dt-ext-copilot.numWorkspaces",
+    "dynatrace-extensions.numWorkspaces",
     workspaces.length - 1,
   );
 }
@@ -338,7 +338,7 @@ export function resolveRealPath(pathToResolve: string): string {
 }
 
 /**
- * Writes a .gitignore file for the workspace which applies to Copilot, VSCode, and optionally
+ * Writes a .gitignore file for the workspace which applies to Dynatrace Extensions, VSCode, and optionally
  * Python. If the workspace already has a .gitignore, only the lines missing would get added.
  * @param includePython whether the .gitignore needs the Python content or not
  */
@@ -380,7 +380,7 @@ export async function writeGititnore(includePython: boolean = false) {
 # Built Visual Studio Code Extensions
 *.vsix
 
-# Copilot builds & configs
+# Dynatrace Extensions builds & configs
 config
 dist
 `;
@@ -417,11 +417,11 @@ venv/
       gitignoreLines.push(...vscodeIgnores, "");
     }
 
-    // Copilot ignores
-    const copilotIgnores = COPILOT_IGNORES.filter(line => !existingLines.includes(line));
-    if (copilotIgnores.length > 0) {
-      gitignoreLines.push("# Copilot builds & configs");
-      gitignoreLines.push(...copilotIgnores, "");
+    // Dynatrace Extensions ignores
+    const extensionIgnores = COPILOT_IGNORES.filter(line => !existingLines.includes(line));
+    if (extensionIgnores.length > 0) {
+      gitignoreLines.push("# Dynatrace Extensions builds & configs");
+      gitignoreLines.push(...extensionIgnores, "");
     }
 
     // Python ignores

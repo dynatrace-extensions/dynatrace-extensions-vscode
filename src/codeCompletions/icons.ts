@@ -63,7 +63,7 @@ export class IconCompletionProvider implements vscode.CompletionItemProvider {
       "Browse icons",
       vscode.CompletionItemKind.Enum,
     );
-    iconCompletion.detail = "Copilot suggestion";
+    iconCompletion.detail = "Dynatrace Extensions";
     iconCompletion.documentation = new vscode.MarkdownString(
       "Browse Barista icon IDs that can be used here. You can explore the whole icon set " +
         "[online](https://barista.dynatrace.com/resources/icons).",

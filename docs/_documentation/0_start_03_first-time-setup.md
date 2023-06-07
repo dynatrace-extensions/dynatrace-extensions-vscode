@@ -5,17 +5,17 @@ toc: true
 toc_sticky: true
 ---
 
-Get started and use the Copilot for the first time.
+Get started with Dynatrace Extensions for the first time.
 
 ## Before you begin
 
 Make sure you have followed the previous articles for
-[pre-requisites](/docs/start/pre-requisites) and 
+[pre-requisites](/docs/start/pre-requisites) and
 [installation](/docs/start/installation).
 
 ## Connect to your Dynatrace Tenant
 
-Start by opening the new Dynatrace entry from your editor's activity bar, then go to the 
+Start by opening the new Dynatrace entry from your editor's activity bar, then go to the
 `ENVIRONMENTS` view and click the button to add a new Dynatrace tenant.
 
 Enter the following details when prompted by the editor:

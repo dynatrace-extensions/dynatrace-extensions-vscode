@@ -13,7 +13,7 @@
 # you will see them accessed via {{ site.title }}, {{ site.email }}, and so on.
 # You can create any custom variable you would like, and they will be accessible
 # in the templates via {{ site.myvariable }}.
-title: Dynatrace Extensions Copilot
+title: Dynatrace Extensions
 subtitle: Your personal assistant for developing Extensions 2.0
 baseurl: "/dynatrace-extensions-vscode/"
 url: "https://dynatrace-extensions.github.io"
@@ -21,7 +21,7 @@ domain: dynatrace-extensions.github.io
 name: Platform Extensions
 email: extensions@dynatrace.com
 description: >-
-  Documentation and user guides for the Dynatrace Extensions Copilot - a project
+  Documentation and user guides for the Dynatrace Extensions - a project
   made with love and maintained by the Platform Extensions team at Dynatrace.
 twitter_username: dynatrace
 github_username: dynatrace-extensions

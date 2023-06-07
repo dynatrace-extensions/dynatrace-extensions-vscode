@@ -35,7 +35,7 @@ import { runCommand } from "./subprocesses";
  * @returns check status
  */
 export async function checkSettings(...settings: string[]): Promise<boolean> {
-  const config = vscode.workspace.getConfiguration("dynatrace", null);
+  const config = vscode.workspace.getConfiguration("dynatrace_extensions", null);
   let status = true;
   for (const setting of settings) {
     if (!config.get(setting)) {
@@ -47,7 +47,10 @@ export async function checkSettings(...settings: string[]): Promise<boolean> {
         )
         .then(async opt => {
           if (opt === "Open settings") {
-            await vscode.commands.executeCommand("workbench.action.openSettings", "Dynatrace");
+            await vscode.commands.executeCommand(
+              "workbench.action.openSettings",
+              "@ext:DynatracePlatformExtensions.dynatrace-extensions",
+            );
           }
         });
       status = false;
@@ -204,7 +207,7 @@ export async function checkCertificateExists(type: "ca" | "dev" | "all"): Promis
       .then(async opt => {
         switch (opt) {
           case "Generate new ones":
-            await vscode.commands.executeCommand("dt-ext-copilot.generateCertificates");
+            await vscode.commands.executeCommand("dynatrace-extensions.generateCertificates");
             break;
           case "Open settings":
             await vscode.commands.executeCommand(

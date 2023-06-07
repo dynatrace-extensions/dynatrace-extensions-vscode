@@ -45,7 +45,7 @@ export class ScreenLensProvider implements vscode.CodeLensProvider {
     this.environments = environmentsProvider;
     this.cachedData = cachedDataProvider;
     vscode.commands.registerCommand(
-      "dt-ext-copilot.openScreen",
+      "dynatrace-extensions.openScreen",
       async (entityType: string, screenType: "list" | "details") => {
         await this.openScreen(entityType, screenType);
       },
@@ -67,7 +67,7 @@ export class ScreenLensProvider implements vscode.CodeLensProvider {
     // If no screens or feature disabled, don't continue
     if (
       !text.includes("screens:") ||
-      !vscode.workspace.getConfiguration("dynatrace", null).get("screenCodeLens")
+      !vscode.workspace.getConfiguration("dynatrace_extensions", null).get("screenCodeLens")
     ) {
       return [];
     }
@@ -93,13 +93,13 @@ export class ScreenLensProvider implements vscode.CodeLensProvider {
           new vscode.CodeLens(range, {
             title: "Open List View",
             tooltip: "Open this entity's List View in Dynatrace",
-            command: "dt-ext-copilot.openScreen",
+            command: "dynatrace-extensions.openScreen",
             arguments: [entityType, "list"],
           }),
           new vscode.CodeLens(range, {
             title: "Open Details View",
             tooltip: "Open this entity's Details View in Dynatrace",
-            command: "dt-ext-copilot.openScreen",
+            command: "dynatrace-extensions.openScreen",
             arguments: [entityType, "details"],
           }),
         );

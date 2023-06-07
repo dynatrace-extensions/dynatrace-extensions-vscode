@@ -104,7 +104,7 @@ export class EntitySelectorCompletionProvider implements vscode.CompletionItemPr
       "Begin building selector",
       vscode.CompletionItemKind.Constant,
     );
-    selectorCompletion.detail = "Copilot suggestion";
+    selectorCompletion.detail = "Dynatrace Extensions";
     selectorCompletion.documentation = new vscode.MarkdownString(
       "Begin building an entity selector. You must start with targetting " +
         "either an entity type or ID. `$(entityConditions)` would automatically " +
@@ -169,7 +169,7 @@ export class EntitySelectorCompletionProvider implements vscode.CompletionItemPr
         `Insert relation to ${relEntityName}`,
         vscode.CompletionItemKind.Function,
       );
-      relationCompletionItem.detail = "Copilot suggestion";
+      relationCompletionItem.detail = "Dynatrace Extensions";
       relationCompletionItem.documentation =
         `Insert an entity selector template to pull all related ${relEntityName} entities. ` +
         "This has been configured based on your yaml file.";
@@ -207,7 +207,7 @@ export class EntitySelectorCompletionProvider implements vscode.CompletionItemPr
         "Custom entity types",
         vscode.CompletionItemKind.Class,
       );
-      customTypeCompletion.detail = "Copilot suggestion";
+      customTypeCompletion.detail = "Dynatrace Extensions";
       customTypeCompletion.documentation =
         "Insert one of your custom entity types detected from this yaml file.";
       customTypeCompletion.insertText = new vscode.SnippetString();
@@ -222,7 +222,7 @@ export class EntitySelectorCompletionProvider implements vscode.CompletionItemPr
         "Built-in entity types",
         vscode.CompletionItemKind.Class,
       );
-      builtinTypeCompletion.detail = "Copilot suggestion";
+      builtinTypeCompletion.detail = "Dynatrace Extensions";
       builtinTypeCompletion.documentation = "Insert one of Dynatrace's built-in entity types";
       builtinTypeCompletion.insertText = new vscode.SnippetString();
       builtinTypeCompletion.insertText.appendText('"');
@@ -254,7 +254,7 @@ export class EntitySelectorCompletionProvider implements vscode.CompletionItemPr
         operator.name,
         vscode.CompletionItemKind.Constant,
       );
-      operatorCompletion.detail = "Copilot suggestion";
+      operatorCompletion.detail = "Dynatrace Extensions";
       operatorCompletion.documentation = operator.description;
       operatorCompletion.insertText = new vscode.SnippetString();
       operatorCompletion.insertText.appendChoice(operator.insertions);
@@ -285,7 +285,7 @@ export class EntitySelectorCompletionProvider implements vscode.CompletionItemPr
 
     const entityType = this.getMostRecentEntityType(selector);
     if (entityType) {
-      relationshipCompletion.detail = "Copilot suggestion";
+      relationshipCompletion.detail = "Dynatrace Extensions";
       relationshipCompletion.insertText = new vscode.SnippetString();
 
       const relations = getRelationshipTypes(

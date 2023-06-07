@@ -23,6 +23,22 @@ import { CachedDataProvider } from "../utils/dataCaching";
 import { getAllWorkspaces } from "../utils/fileSystem";
 import { deleteWorkspace } from "./commands/workspaces";
 
+const ICONS_PATH = path.join(__filename, "..", "..", "src", "assets", "icons");
+const ICONS: Record<string, { light: string; dark: string }> = {
+  EXTENSION: {
+    light: path.join(ICONS_PATH, "extension_light.png"),
+    dark: path.join(ICONS_PATH, "extension_dark.png"),
+  },
+  EXTENSION_CURRENT: {
+    light: path.join(ICONS_PATH, "extension_current_light.png"),
+    dark: path.join(ICONS_PATH, "extension_current_dark.png"),
+  },
+  EXTENSION_MANIFEST: {
+    light: path.join(ICONS_PATH, "manifest_light.png"),
+    dark: path.join(ICONS_PATH, "manifest_dark.png"),
+  },
+};
+
 /**
  * Represents an item within the Extensions Tree View. Can be used to represent
  * either an extensions workspace or an actual extension within the workspace.
@@ -98,25 +114,27 @@ export class ExtensionsTreeDataProvider implements vscode.TreeDataProvider<Exten
    * @param context {@link vscode.ExtensionContext}
    */
   private registerCommands(context: vscode.ExtensionContext) {
-    vscode.commands.registerCommand("dt-ext-copilot-workspaces.refresh", () => this.refresh());
-    vscode.commands.registerCommand("dt-ext-copilot-workspaces.addWorkspace", async () => {
-      await context.globalState.update("dt-ext-copilot.initPending", true);
+    vscode.commands.registerCommand("dynatrace-extensions-workspaces.refresh", () =>
+      this.refresh(),
+    );
+    vscode.commands.registerCommand("dynatrace-extensions-workspaces.addWorkspace", async () => {
+      await context.globalState.update("dynatrace-extensions.initPending", true);
       await vscode.commands.executeCommand("vscode.openFolder");
     });
     vscode.commands.registerCommand(
-      "dt-ext-copilot-workspaces.openWorkspace",
+      "dynatrace-extensions-workspaces.openWorkspace",
       async (workspace: ExtensionProjectItem) => {
         await vscode.commands.executeCommand("vscode.openFolder", workspace.path);
       },
     );
     vscode.commands.registerCommand(
-      "dt-ext-copilot-workspaces.deleteWorkspace",
+      "dynatrace-extensions-workspaces.deleteWorkspace",
       async (workspace: ExtensionProjectItem) => {
         await deleteWorkspace(context, workspace).then(() => this.refresh());
       },
     );
     vscode.commands.registerCommand(
-      "dt-ext-copilot-workspaces.editExtension",
+      "dynatrace-extensions-workspaces.editExtension",
       async (extension: ExtensionProjectItem) => {
         await vscode.commands.executeCommand("vscode.open", extension.path);
       },
@@ -163,18 +181,7 @@ export class ExtensionsTreeDataProvider implements vscode.TreeDataProvider<Exten
             extension.name,
             vscode.TreeItemCollapsibleState.None,
             vscode.Uri.file(path.join(workspacePath, filepath)),
-            {
-              light: path.join(
-                __filename,
-                "..",
-                "..",
-                "src",
-                "assets",
-                "icons",
-                "plugin_light.png",
-              ),
-              dark: path.join(__filename, "..", "..", "src", "assets", "icons", "plugin_dark.png"),
-            },
+            ICONS.EXTENSION_MANIFEST,
             "extension",
             `${extension.name}-${extension.version}`,
             extension.version,
@@ -193,8 +200,8 @@ export class ExtensionsTreeDataProvider implements vscode.TreeDataProvider<Exten
           vscode.workspace.workspaceFolders &&
           vscode.workspace.workspaceFolders[0].uri.fsPath ===
             (workspace.folder as vscode.Uri).fsPath
-            ? path.join(__filename, "..", "..", "src", "assets", "icons", "workspace_current.png")
-            : path.join(__filename, "..", "..", "src", "assets", "icons", "workspace.png"),
+            ? ICONS.EXTENSION_CURRENT
+            : ICONS.EXTENSION,
           "extensionWorkspace",
           workspace.id,
         ),

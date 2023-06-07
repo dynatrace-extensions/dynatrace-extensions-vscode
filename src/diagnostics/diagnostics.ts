@@ -34,7 +34,7 @@ import {
   isSameList,
 } from "../utils/yamlParsing";
 import {
-  copilotDiagnostic,
+  extensionDiagnostic,
   COUNT_METRIC_KEY_SUFFIX,
   DEFINED_CARD_NOT_REFERENCED,
   EXTENSION_NAME_CUSTOM_ON_BITBUCKET,
@@ -81,7 +81,7 @@ export class DiagnosticsProvider {
    */
   public async provideDiagnostics(document: vscode.TextDocument) {
     // If feature disabled, don't continue
-    if (!vscode.workspace.getConfiguration("dynatrace", null).get("diagnostics")) {
+    if (!vscode.workspace.getConfiguration("dynatrace_extensions", null).get("diagnostics")) {
       this.collection.set(document.uri, []);
       return;
     }
@@ -101,7 +101,7 @@ export class DiagnosticsProvider {
   }
 
   /**
-   * Retrieve the Diagnostics currently logged by the Extensions Copilot.
+   * Retrieve the currently logged Diagnostics.
    * @param uri URI of the extension.yaml file
    * @returns list of diagnostic items
    */
@@ -149,15 +149,15 @@ export class DiagnosticsProvider {
     // Honor the user's settings
     if (
       !vscode.workspace
-        .getConfiguration()
-        .get("dynatrace.diagnostics.extensionName", false) as boolean
+        .getConfiguration("dynatrace_extensions, null")
+        .get("diagnostics.extensionName", false) as boolean
     ) {
       return [];
     }
 
     if (lineNo === -1) {
       diagnostics.push(
-        copilotDiagnostic(
+        extensionDiagnostic(
           new vscode.Position(1, 0),
           new vscode.Position(1, 0),
           EXTENSION_NAME_MISSING,
@@ -169,17 +169,19 @@ export class DiagnosticsProvider {
       const nameStart = new vscode.Position(lineNo, contentLines[lineNo].indexOf(extensionName));
       const nameEnd = new vscode.Position(lineNo, contentLines[lineNo].length);
       if (extensionName.length > 50) {
-        diagnostics.push(copilotDiagnostic(nameStart, nameEnd, EXTENSION_NAME_TOO_LONG));
+        diagnostics.push(extensionDiagnostic(nameStart, nameEnd, EXTENSION_NAME_TOO_LONG));
       }
       if (!nameRegex.test(extensionName)) {
-        diagnostics.push(copilotDiagnostic(nameStart, nameEnd, EXTENSION_NAME_INVALID));
+        diagnostics.push(extensionDiagnostic(nameStart, nameEnd, EXTENSION_NAME_INVALID));
       }
       const bitBucketRepo = await checkDtInternalProperties();
       if (!extensionName.startsWith("custom:") && !bitBucketRepo) {
-        diagnostics.push(copilotDiagnostic(nameStart, nameEnd, EXTENSION_NAME_NON_CUSTOM));
+        diagnostics.push(extensionDiagnostic(nameStart, nameEnd, EXTENSION_NAME_NON_CUSTOM));
       }
       if (extensionName.startsWith("custom:") && bitBucketRepo) {
-        diagnostics.push(copilotDiagnostic(nameStart, nameEnd, EXTENSION_NAME_CUSTOM_ON_BITBUCKET));
+        diagnostics.push(
+          extensionDiagnostic(nameStart, nameEnd, EXTENSION_NAME_CUSTOM_ON_BITBUCKET),
+        );
       }
     }
     return diagnostics;
@@ -203,7 +205,9 @@ export class DiagnosticsProvider {
 
     // Honor the user's settings
     if (
-      !vscode.workspace.getConfiguration().get("dynatrace.diagnostics.metricKeys", false) as boolean
+      !vscode.workspace
+        .getConfiguration("dynatrace_extensons", null)
+        .get("diagnostics.metricKeys", false) as boolean
     ) {
       return [];
     }
@@ -222,7 +226,7 @@ export class DiagnosticsProvider {
         let match;
         while ((match = metricRegex.exec(content)) !== null) {
           diagnostics.push(
-            copilotDiagnostic(
+            extensionDiagnostic(
               document.positionAt(match.index + match[0].indexOf(m.key)),
               document.positionAt(match.index + match[0].indexOf(m.key) + m.key.length),
               m.type === "count" ? COUNT_METRIC_KEY_SUFFIX : GAUGE_METRIC_KEY_SUFFIX,
@@ -252,8 +256,8 @@ export class DiagnosticsProvider {
     // Honor the user's settings and bail early if no screens
     if (
       (!vscode.workspace
-        .getConfiguration()
-        .get("dynatrace.diagnostics.cardKeys", false) as boolean) ||
+        .getConfiguration("dynatrace_extensions", null)
+        .get("diagnostics.cardKeys", false) as boolean) ||
       !extension.screens
     ) {
       return [];
@@ -268,7 +272,7 @@ export class DiagnosticsProvider {
         .forEach(rc => {
           const keyStart = content.indexOf(`key: ${rc.key}`, screenBounds[idx].start);
           diagnostics.push(
-            copilotDiagnostic(
+            extensionDiagnostic(
               document.positionAt(keyStart),
               document.positionAt(keyStart + `key: ${rc.key}`.length),
               REFERENCED_CARD_NOT_DEFINED,
@@ -280,7 +284,7 @@ export class DiagnosticsProvider {
         .forEach(dc => {
           const keyStart = content.indexOf(`key: ${dc.key}`, screenBounds[idx].start);
           diagnostics.push(
-            copilotDiagnostic(
+            extensionDiagnostic(
               document.positionAt(keyStart),
               document.positionAt(keyStart + `key: ${dc.key}`.length),
               DEFINED_CARD_NOT_REFERENCED,
@@ -307,7 +311,9 @@ export class DiagnosticsProvider {
 
     // Honor the user's settings and bail early if no screens
     if (
-      (!vscode.workspace.getConfiguration().get("dynatrace.diagnostics.snmp", false) as boolean) ||
+      (!vscode.workspace
+        .getConfiguration("dynatrace_extensions", null)
+        .get("diagnostics.snmp", false) as boolean) ||
       !extension.snmp
     ) {
       return [];
@@ -348,19 +354,19 @@ export class DiagnosticsProvider {
 
         // Check if valid
         if (!/^\d[.\d]+\d$/.test(oid)) {
-          diagnostics.push(copilotDiagnostic(startPos, endPos, OID_SYNTAX_INVALID));
+          diagnostics.push(extensionDiagnostic(startPos, endPos, OID_SYNTAX_INVALID));
 
           // Check we have online data
         } else if (!metric.info.objectType) {
-          diagnostics.push(copilotDiagnostic(startPos, endPos, OID_DOES_NOT_EXIST));
+          diagnostics.push(extensionDiagnostic(startPos, endPos, OID_DOES_NOT_EXIST));
 
           // Check things we can infer from online data
         } else {
           if (!isOidReadable(metric.info)) {
-            diagnostics.push(copilotDiagnostic(startPos, endPos, OID_NOT_READABLE));
+            diagnostics.push(extensionDiagnostic(startPos, endPos, OID_NOT_READABLE));
           }
           if (metric.info.syntax?.toLowerCase().includes("string")) {
-            diagnostics.push(copilotDiagnostic(startPos, endPos, OID_STRING_AS_METRIC));
+            diagnostics.push(extensionDiagnostic(startPos, endPos, OID_STRING_AS_METRIC));
           }
           if (metric.info.syntax) {
             // Since OID & metric are re-usable we must get the whole yaml block and match both
@@ -382,7 +388,7 @@ export class DiagnosticsProvider {
 
             if (metric.type === "gauge" && metric.info.syntax.startsWith("Counter")) {
               if (content.substring(blockStart, blockEnd).includes(metric.key)) {
-                diagnostics.push(copilotDiagnostic(startPos, endPos, OID_COUNTER_AS_GAUGE));
+                diagnostics.push(extensionDiagnostic(startPos, endPos, OID_COUNTER_AS_GAUGE));
               }
             }
             if (
@@ -391,7 +397,7 @@ export class DiagnosticsProvider {
                 metric.info.syntax.toLowerCase().includes("integer"))
             ) {
               if (content.substring(blockStart, blockEnd).includes(metric.key)) {
-                diagnostics.push(copilotDiagnostic(startPos, endPos, OID_GAUGE_AS_COUNTER));
+                diagnostics.push(extensionDiagnostic(startPos, endPos, OID_GAUGE_AS_COUNTER));
               }
             }
             diagnostics.push(
@@ -427,7 +433,9 @@ export class DiagnosticsProvider {
 
     // Honor the user's settings and bail early if no screens
     if (
-      (!vscode.workspace.getConfiguration().get("dynatrace.diagnostics.snmp", false) as boolean) ||
+      (!vscode.workspace
+        .getConfiguration("dynatrace_extensions", null)
+        .get("diagnostics.snmp", false) as boolean) ||
       !extension.snmp
     ) {
       return [];
@@ -466,11 +474,11 @@ export class DiagnosticsProvider {
 
         // Check if valid
         if (!/^\d[.\d]+\d$/.test(oid)) {
-          diagnostics.push(copilotDiagnostic(startPos, endPos, OID_SYNTAX_INVALID));
+          diagnostics.push(extensionDiagnostic(startPos, endPos, OID_SYNTAX_INVALID));
 
           // Check if there is online data
         } else if (!dimension.info.objectType) {
-          diagnostics.push(copilotDiagnostic(startPos, endPos, OID_DOES_NOT_EXIST));
+          diagnostics.push(extensionDiagnostic(startPos, endPos, OID_DOES_NOT_EXIST));
 
           // Check things we can infer from the data
         } else {
@@ -523,7 +531,9 @@ export class DiagnosticsProvider {
 
     // Honor the user's settings and bail early if no screens
     if (
-      (!vscode.workspace.getConfiguration().get("dynatrace.diagnostics.snmp", false) as boolean) ||
+      (!vscode.workspace
+        .getConfiguration("dynatrace_extensions", null)
+        .get("diagnostics.snmp", false) as boolean) ||
       !extension.snmp
     ) {
       return [];
@@ -533,7 +543,7 @@ export class DiagnosticsProvider {
       const subgroup = extension.snmp[groupIdx].subgroups?.[subgroupIdx];
       if (subgroup?.table) {
         if (usageInfo.value?.endsWith(".0")) {
-          diagnostics.push(copilotDiagnostic(startPos, endPos, OID_DOT_ZERO_IN_TABLE));
+          diagnostics.push(extensionDiagnostic(startPos, endPos, OID_DOT_ZERO_IN_TABLE));
         } else {
           // Get data for grandparent OID, then check for signs of table
           const grandparentInfo = await this.cachedData.getSingleOidInfo(
@@ -541,12 +551,12 @@ export class DiagnosticsProvider {
             oid.slice(0, oid.slice(0, oid.lastIndexOf(".")).lastIndexOf(".")),
           );
           if (!isTable(grandparentInfo)) {
-            diagnostics.push(copilotDiagnostic(startPos, endPos, OID_STATIC_OBJ_IN_TABLE));
+            diagnostics.push(extensionDiagnostic(startPos, endPos, OID_STATIC_OBJ_IN_TABLE));
           }
         }
       } else {
         if (!usageInfo.value?.endsWith(".0")) {
-          diagnostics.push(copilotDiagnostic(startPos, endPos, OID_DOT_ZERO_MISSING));
+          diagnostics.push(extensionDiagnostic(startPos, endPos, OID_DOT_ZERO_MISSING));
         } else {
           // Get data for grandparent OID, then check for signs of table
           const grandparentInfo = await this.cachedData.getSingleOidInfo(
@@ -557,7 +567,7 @@ export class DiagnosticsProvider {
             ),
           );
           if (isTable(grandparentInfo)) {
-            diagnostics.push(copilotDiagnostic(startPos, endPos, OID_TABLE_OBJ_AS_STATIC));
+            diagnostics.push(extensionDiagnostic(startPos, endPos, OID_TABLE_OBJ_AS_STATIC));
           }
         }
       }
