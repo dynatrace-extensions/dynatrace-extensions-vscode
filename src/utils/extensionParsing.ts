@@ -281,6 +281,20 @@ export function getMetricKeysFromEntitiesListCard(
 }
 
 /**
+ * Extracts all metrics keys detected within the metrics section of the extension.yaml
+ * @param extension extension.yaml serialized as object
+ * @returns list of metric keys
+ */
+export function getAllMetricKeysFromMetrics(extension: ExtensionStub): string[] {
+  const metrics: string[] = [];
+  const metricsSection = extension.metrics;
+  metricsSection.forEach(metric => {
+    metrics.push(metric.key);
+  });
+  return metrics;
+}
+
+/**
  * Extracts all metrics keys detected within the datasource section of the extension.yaml
  * @param extension extension.yaml serialized as object
  * @returns list of metric keys
@@ -348,7 +362,12 @@ export function getEntityMetrics(
   excludeKeys: string[] = [],
 ) {
   const matchingMetrics: string[] = [];
-  const allMetrics = getAllMetricKeysFromDataSource(extension);
+  let allMetrics: string[] = [];
+  if (extension.python) {
+    allMetrics = getAllMetricKeysFromMetrics(extension);
+  } else {
+    allMetrics = getAllMetricKeysFromDataSource(extension);
+  }
   const patterns = getEntityMetricPatterns(typeIdx, extension);
   if (allMetrics.length > 0) {
     patterns.forEach(pattern => {
