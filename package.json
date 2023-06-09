@@ -27,7 +27,7 @@
 	"extensionDependencies": [
 		"redhat.vscode-yaml"
 	],
-	"icon": "src/assets/logos/dynatrace_extensions_signet.png",
+	"icon": "src/assets/icons/logo.png",
 	"galleryBanner": {
 		"color": "#ffffff",
 		"theme": "light"
@@ -710,7 +710,7 @@
 				{
 					"id": "dynatrace-extensions2",
 					"title": "Dynatrace Extensions",
-					"icon": "src/assets/icons/dynatrace_extensions_2.png"
+					"icon": "src/assets/icons/dynatrace_extensions.png"
 				}
 			]
 		},
@@ -749,88 +749,11 @@
 			}
 		],
 		"icons": {
-			"dt-platform-light": {
-				"description": "Platform light bg",
+			"dt-platform": {
+				"description": "Dynatrace platform",
 				"default": {
-					"fontPath": "src/assets/fonts/extensions-icon-set-2.woff",
-					"fontCharacter": "L"
-				}
-			},
-      "dt-platform-dark": {
-				"description": "Platform dark bg",
-				"default": {
-					"fontPath": "src/assets/fonts/extensions-icon-set-2.woff",
-					"fontCharacter": "K"
-				}
-			},
-      "dt-platform-current-light": {
-				"description": "Platform current light bg",
-				"default": {
-					"fontPath": "src/assets/fonts/extensions-icon-set-2.woff",
-					"fontCharacter": "J"
-				}
-			},
-      "dt-platform-current-dark": {
-				"description": "Platform current dark bg",
-				"default": {
-					"fontPath": "src/assets/fonts/extensions-icon-set-2.woff",
-					"fontCharacter": "I"
-				}
-			},
-      "dt-extension-light": {
-				"description": "Extension light bg",
-				"default": {
-					"fontPath": "src/assets/fonts/extensions-icon-set-2.woff",
-					"fontCharacter": "F"
-				}
-			},
-      "dt-extension-dark": {
-				"description": "Extension dark bg",
-				"default": {
-					"fontPath": "src/assets/fonts/extensions-icon-set-2.woff",
-					"fontCharacter": "E"
-				}
-			},
-      "dt-extension-current-light": {
-				"description": "Extension current light bg",
-				"default": {
-					"fontPath": "src/assets/fonts/extensions-icon-set-2.woff",
-					"fontCharacter": "D"
-				}
-			},
-      "dt-extension-current-dark": {
-				"description": "Extension current dark bg",
-				"default": {
-					"fontPath": "src/assets/fonts/extensions-icon-set-2.woff",
-					"fontCharacter": "C"
-				}
-			},
-      "dt-deployed-extension-light": {
-				"description": "Deployed extension light bg",
-				"default": {
-					"fontPath": "src/assets/fonts/extensions-icon-set-2.woff",
-					"fontCharacter": "B"
-				}
-			},
-      "dt-deployed-extension-dark": {
-				"description": "Deployed extension dark bg",
-				"default": {
-					"fontPath": "src/assets/fonts/extensions-icon-set-2.woff",
+					"fontPath": "src/assets/fonts/dt-custom-icons.woff",
 					"fontCharacter": "A"
-				}
-			},
-      "dt-extension-manifest-light": {
-				"description": "Extension manifest light bg",
-				"default": {
-					"fontPath": "src/assets/fonts/extensions-icon-set-2.woff",
-					"fontCharacter": "H"
-				}
-			},
-      "dt-extension-manifest-dark": {
-				"description": "Extension manifest dark bg",
-				"default": {
-					"fontPath": "src/assets/fonts/extensions-icon-set-2.woff",
-					"fontCharacter": "G"
 				}
 			}
 		}
