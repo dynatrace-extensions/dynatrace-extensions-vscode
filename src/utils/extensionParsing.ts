@@ -310,7 +310,7 @@ export function getAllMetricKeys(extension: ExtensionStub): string[] {
       }
     });
   } else {
-      extension.metrics.forEach(metric => {
+    extension.metrics.forEach(metric => {
       metrics.push(metric.key);
     });
   }
