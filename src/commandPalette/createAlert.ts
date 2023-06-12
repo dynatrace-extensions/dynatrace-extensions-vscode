@@ -21,7 +21,7 @@ import * as vscode from "vscode";
 import { MetricMetadata } from "../interfaces/extensionMeta";
 import { showMessage } from "../utils/code";
 import { CachedDataProvider } from "../utils/dataCaching";
-import { getAllMetricKeysFromDataSource } from "../utils/extensionParsing";
+import { getAllMetricKeys } from "../utils/extensionParsing";
 import { createUniqueFileName, getExtensionFilePath } from "../utils/fileSystem";
 
 export async function createAlert(cachedData: CachedDataProvider) {
@@ -35,7 +35,7 @@ export async function createAlert(cachedData: CachedDataProvider) {
   // TODO: we could ask the user if they want to create a new alert or edit an existing one?
 
   // Ask the user to select a metric
-  let metricKeys = getAllMetricKeysFromDataSource(extension);
+  let metricKeys = getAllMetricKeys(extension);
   if (metricKeys.length === 0 && extension.metrics) {
     metricKeys = extension.metrics.map((metric: MetricMetadata) => metric.key);
   }
