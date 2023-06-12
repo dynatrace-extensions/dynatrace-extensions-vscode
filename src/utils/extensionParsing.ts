@@ -281,47 +281,39 @@ export function getMetricKeysFromEntitiesListCard(
 }
 
 /**
- * Extracts all metrics keys detected within the metrics section of the extension.yaml
+ * Extracts all metrics keys detected from the extension.yaml
  * @param extension extension.yaml serialized as object
  * @returns list of metric keys
  */
-export function getAllMetricKeysFromMetrics(extension: ExtensionStub): string[] {
-  const metrics: string[] = [];
-  const metricsSection = extension.metrics;
-  metricsSection.forEach(metric => {
-    metrics.push(metric.key);
-  });
-  return metrics;
-}
-
-/**
- * Extracts all metrics keys detected within the datasource section of the extension.yaml
- * @param extension extension.yaml serialized as object
- * @returns list of metric keys
- */
-export function getAllMetricKeysFromDataSource(extension: ExtensionStub): string[] {
+export function getAllMetricKeys(extension: ExtensionStub): string[] {
   const metrics: string[] = [];
   const datasource = getExtensionDatasource(extension);
-  datasource.forEach(group => {
-    if (group.metrics) {
-      group.metrics.forEach(metric => {
-        if (!metrics.includes(metric.key)) {
-          metrics.push(metric.key);
-        }
-      });
-    }
-    if (group.subgroups) {
-      group.subgroups.forEach(subgroup => {
-        if (subgroup.metrics.length > 0) {
-          subgroup.metrics.forEach(metric => {
-            if (!metrics.includes(metric.key)) {
-              metrics.push(metric.key);
-            }
-          });
-        }
-      });
-    }
-  });
+  if (datasource.length > 0) {
+    datasource.forEach(group => {
+      if (group.metrics) {
+        group.metrics.forEach(metric => {
+          if (!metrics.includes(metric.key)) {
+            metrics.push(metric.key);
+          }
+        });
+      }
+      if (group.subgroups) {
+        group.subgroups.forEach(subgroup => {
+          if (subgroup.metrics.length > 0) {
+            subgroup.metrics.forEach(metric => {
+              if (!metrics.includes(metric.key)) {
+                metrics.push(metric.key);
+              }
+            });
+          }
+        });
+      }
+    });
+  } else {
+      extension.metrics.forEach(metric => {
+      metrics.push(metric.key);
+    });
+  }
   return metrics;
 }
 
@@ -362,12 +354,7 @@ export function getEntityMetrics(
   excludeKeys: string[] = [],
 ) {
   const matchingMetrics: string[] = [];
-  let allMetrics: string[] = [];
-  if (extension.python) {
-    allMetrics = getAllMetricKeysFromMetrics(extension);
-  } else {
-    allMetrics = getAllMetricKeysFromDataSource(extension);
-  }
+  const allMetrics = getAllMetricKeys(extension);
   const patterns = getEntityMetricPatterns(typeIdx, extension);
   if (allMetrics.length > 0) {
     patterns.forEach(pattern => {
