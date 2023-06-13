@@ -1,5 +1,12 @@
 # Change Log
 
+## Version 1.2.4 (unreleased)
+
+### ✨ New in this version:
+- [#91 - Python datasource - support for UA screens & charts](https://github.com/dynatrace-extensions/dynatrace-extensions-vscode/issues/91)
+
+---
+
 ## Version 1.2.3 (09.05.2023)
 
 ### ✨ New in this version:
