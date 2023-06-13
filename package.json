@@ -27,9 +27,6 @@
 	"extensionDependencies": [
 		"redhat.vscode-yaml"
 	],
-	"extensionPack": [
-		"redhat.vscode-yaml"
-	],
 	"icon": "src/assets/logos/copilot_logo.png",
 	"galleryBanner": {
 		"color": "#1e3142",
@@ -620,12 +617,12 @@
 				},
 				{
 					"command": "dt-ext-copilot-environments.editEnvironment",
-					"when": "view == dt-ext-copilot-environments && viewItem == dynatraceEnvironment || viewItem == currentDynatraceEnvironment",
+					"when": "view == dt-ext-copilot-environments && (viewItem == dynatraceEnvironment || viewItem == currentDynatraceEnvironment)",
 					"group": "inline@2"
 				},
 				{
 					"command": "dt-ext-copilot-environments.deleteEnvironment",
-					"when": "view == dt-ext-copilot-environments && viewItem == dynatraceEnvironment || viewItem == currentDynatraceEnvironment",
+					"when": "view == dt-ext-copilot-environments && (viewItem == dynatraceEnvironment || viewItem == currentDynatraceEnvironment)",
 					"group": "inline@3"
 				},
 				{
