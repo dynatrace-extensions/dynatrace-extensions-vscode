@@ -49,6 +49,7 @@ import { ConnectionStatusManager } from "./statusBar/connection";
 import { FastModeStatus } from "./statusBar/fastMode";
 import { EnvironmentsTreeDataProvider } from "./treeViews/environmentsTreeView";
 import { ExtensionsTreeDataProvider } from "./treeViews/extensionsTreeView";
+import { showMessage } from "./utils/code";
 import {
   checkCertificateExists,
   checkEnvironmentConnected,
@@ -495,16 +496,33 @@ function registerFeatureSwitchCommands() {
  * Activation events (e.g. run command) always trigger this function.
  * @param context VSCode Extension Context
  */
-export function activate(context: vscode.ExtensionContext) {
+export async function activate(context: vscode.ExtensionContext) {
   console.log("DYNATRACE EXTENSIONS COPILOT - ACTIVATED!");
 
   // Check newer extension presence
   const newExtension = vscode.extensions.getExtension(
     "DynatracePlatformExtensions.dynatrace-extensions",
   );
-  // Do not activate if newer extension available
+  // Uninstall if newer extension is available
   if (newExtension) {
-    throw Error("Newer extension detected. Will not activate this legacy version.");
+    showMessage(
+      "error",
+      "This is a legacy extension. Please use Dynatrace Extensions, which is already installed.",
+    );
+    // Give the user a few seconds to read the alert by setting up a timeout
+    setTimeout(() => {
+      showMessage("info", "Legacy extension uninstalled");
+      vscode.commands
+        .executeCommand("workbench.extensions.uninstallExtension", context.extension.id)
+        .then(
+          async () => {
+            await vscode.commands.executeCommand("workbench.action.reloadWindow");
+          },
+          err => {
+            console.log(err);
+          },
+        );
+    }, 5_000);
   }
 
   // Initialize global storage
