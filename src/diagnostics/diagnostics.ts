@@ -206,7 +206,7 @@ export class DiagnosticsProvider {
     // Honor the user's settings
     if (
       !vscode.workspace
-        .getConfiguration("dynatrace_extensons", null)
+        .getConfiguration("dynatrace_extensions", null)
         .get("diagnostics.metricKeys", false) as boolean
     ) {
       return [];

@@ -21,9 +21,11 @@
 import { copyFileSync, existsSync, mkdirSync, readFileSync, readdirSync, writeFileSync } from "fs";
 import * as os from "os";
 import * as path from "path";
+import { copySync } from "fs-extra";
 import { glob } from "glob";
 import * as vscode from "vscode";
 import { DynatraceEnvironmentData, ExtensionWorkspace } from "../interfaces/treeViewData";
+import { showMessage } from "./code";
 
 /**
  * Initializes the global storage path for the VS Code extension.
@@ -488,4 +490,101 @@ export function createUniqueFileName(dir: string, prefix: string, initialFileNam
   } while (currentFiles.includes(fileName));
 
   return fileName;
+}
+
+/**
+ * Migrates from the legacy `dt-ext-copilot` extension to the current `dynatrace_extensions`.
+ * This involves migra
+ * @param context
+ */
+export async function migrateFromLegacyExtension(context: vscode.ExtensionContext) {
+  await vscode.window.withProgress(
+    { location: vscode.ProgressLocation.Notification },
+    async progress => {
+      progress.report({ message: "Migrating workspaces and environments" });
+      const globalStoragePath = context.globalStorageUri.fsPath;
+      const legacyGlobalStoragePath = path.resolve(
+        globalStoragePath,
+        "..",
+        "dynatraceplatformextensions.dt-ext-copilot",
+      );
+
+      copySync(legacyGlobalStoragePath, globalStoragePath, { overwrite: true });
+
+      progress.report({ message: "Migrating workspace data" });
+      const workspaces = getAllWorkspaces(context);
+      const genericWorkspaceStorage = path.resolve(context.storageUri?.fsPath, "..", "..");
+      workspaces.forEach(workspace => {
+        const legacyWorkspaceStorage = path.resolve(
+          genericWorkspaceStorage,
+          workspace.id,
+          "DynatracePlatformExtensions.dt-ext-copilot",
+        );
+        const workspaceStorage = path.resolve(
+          genericWorkspaceStorage,
+          workspace.id,
+          "DynatracePlatformExtensions.dynatrace-extensions",
+        );
+        copySync(legacyWorkspaceStorage, workspaceStorage, { overwrite: true });
+      });
+
+      progress.report({ message: "Migrating global settings" });
+      console.log("MIGRATE GLOB SETTS");
+      const settingsKeys = [
+        "metricSelectorsCodeLens",
+        "entitySelectorsCodeLens",
+        "wmiCodeLens",
+        "screenCodeLens",
+        "fastDevelopmentMode",
+        "diagnostics.all",
+        "diagnostics.extensionName",
+        "diagnostics.metricKeys",
+        "diagnostics.cardKeys",
+        "diagnostics.snmp",
+        "developerCertkeyLocation",
+        "rootOrCaCertificateLocation",
+        "certificateCommonName",
+        "certificateOrganization",
+        "certificateOrganizationUnit",
+        "certificateStateOrProvince",
+        "certificateCountryCode",
+      ];
+      const legacyConfig = vscode.workspace.getConfiguration("dynatrace", null);
+      const config = vscode.workspace.getConfiguration("dynatrace_extensions", null);
+      for (const key of settingsKeys) {
+        const legacyValue = legacyConfig.inspect(key).globalValue;
+        if (legacyValue) {
+          await config.update(key, legacyValue, true);
+        }
+      }
+
+      progress.report({ message: "Migrating workspace settings" });
+      for (const workspace of workspaces) {
+        const settingsFilePath = path.resolve(
+          (workspace.folder as vscode.Uri).fsPath,
+          ".vscode",
+          "settings.json",
+        );
+        if (existsSync(settingsFilePath)) {
+          const settingsContent = readFileSync(settingsFilePath).toString();
+          settingsContent.replace(/dt-ext-copilot\./g, "dynatrace_extensions.");
+          for (const key of settingsKeys) {
+            settingsContent.replace(`dynatrace.${key}`, `dynatrace_extensions.${key}`);
+          }
+          writeFileSync(settingsFilePath, settingsContent);
+        }
+      }
+
+      progress.report({ message: "Uninstalling legacy extension" });
+      await vscode.commands
+        .executeCommand(
+          "workbench.extensions.uninstallExtension",
+          "DynatracePlatformExtensions.dt-ext-copilot",
+        )
+        .then(async () => {
+          await vscode.commands.executeCommand("workbench.action.reloadWindow");
+        });
+    },
+  );
+  showMessage("info", "Migration from legacy version complete.");
 }
