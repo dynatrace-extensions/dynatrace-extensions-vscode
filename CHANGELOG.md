@@ -5,7 +5,8 @@
 ### ✨ New in this version:
 - Project rebranding to "Dynatrace Extensions", along with new icons
 - Documentation moved to [Dynatrace Developer](https://developer.dynatrace.com) portal
-- Initial support for latest Dynatrace Platform environments
+- Dynatrace Platform environments (.apps URLs) supported
+- Migration utility from previous version of this project
 
 ---
 

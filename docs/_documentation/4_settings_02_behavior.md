@@ -16,7 +16,7 @@ experience. These settings allow on-demand enabling of various features.
     <th>Feature</th>
   </tr>
   <tr>
-    <td><code>dynatrace_extensons.metricSelectorsCodeLens</code></td>
+    <td><code>dynatrace_extensions.metricSelectorsCodeLens</code></td>
     <td><a href="/docs/dev/code-lens/#metric-selector-code-lenses">Metric selector code lens</a></td>
   </tr>
   <tr>
