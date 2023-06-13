@@ -1,6 +1,6 @@
 # Change Log
 
-## Version 1.2.4 (unreleased)
+## Version 1.2.4 (13.06.2023)
 
 ### ✨ New in this version:
 - [#91 - Python datasource - support for UA screens & charts](https://github.com/dynatrace-extensions/dynatrace-extensions-vscode/issues/91)
@@ -9,6 +9,9 @@
 - [#115 - Uninstall/Disable of Copilot disables/uninstalls YAML extension](https://github.com/dynatrace-extensions/dynatrace-extensions-vscode/issues/115)
   - Disabling Copilot still requires disabling all other extensions that depend on YAML (issue of VSCode marketplace)
   - Uninstalling will only uninstall the Copilot alone
+
+### 🚀 Improved in this version:
+- Guards put in place for parallel running with the newer version of this project (unreleased currently)
 
 ---
 
