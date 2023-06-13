@@ -497,6 +497,16 @@ function registerFeatureSwitchCommands() {
  */
 export function activate(context: vscode.ExtensionContext) {
   console.log("DYNATRACE EXTENSIONS COPILOT - ACTIVATED!");
+
+  // Check newer extension presence
+  const newExtension = vscode.extensions.getExtension(
+    "DynatracePlatformExtensions.dynatrace-extensions",
+  );
+  // Do not activate if newer extension available
+  if (newExtension) {
+    throw Error("Newer extension detected. Will not activate this legacy version.");
+  }
+
   // Initialize global storage
   initGlobalStorage(context);
 
