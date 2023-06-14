@@ -14,6 +14,7 @@
   limitations under the License.
  */
 
+import * as fs from "fs";
 import axios from "axios";
 import * as vscode from "vscode";
 import { showMessage } from "../utils/code";
@@ -35,7 +36,10 @@ export class PrometheusCodeLensProvider implements vscode.CodeLensProvider {
   private codeLenses: vscode.CodeLens[];
   private regex: RegExp;
   private lastScrape = "N/A";
+  private endpointScraped = false;
+  private fileScraped = false;
   private promUrl: string | undefined;
+  private promFile: string | undefined;
   private promAuth: PromAuth | undefined;
   private promToken: string | undefined;
   private promUsername: string | undefined;
@@ -56,6 +60,12 @@ export class PrometheusCodeLensProvider implements vscode.CodeLensProvider {
       "dt-ext-copilot.codelens.scrapeMetrics",
       async (changeConfig: boolean) => {
         await this.scrapeMetrics(changeConfig);
+      },
+    );
+    vscode.commands.registerCommand(
+      "dt-ext-copilot.codelens.scrapeMetricsFromFile",
+      async (changeConfig: boolean) => {
+        await this.scrapeMetricsFromFile();
       },
     );
     this.cachedData = cachedDataProvider;
@@ -87,19 +97,39 @@ export class PrometheusCodeLensProvider implements vscode.CodeLensProvider {
         // Action lens
         this.codeLenses.push(
           new vscode.CodeLens(range, {
-            title: "Scrape data",
+            title: "Scrape data from endpoint",
             tooltip: "Connect to an exporter and scrape metrics, then use them in the Extension.",
             command: "dt-ext-copilot.codelens.scrapeMetrics",
             arguments: [],
           }),
         );
-        // Edit config lens
-        if (this.lastScrape !== "N/A") {
+        if (!this.fileScraped) {
           this.codeLenses.push(
             new vscode.CodeLens(range, {
-              title: "Edit config",
-              tooltip: "Make changes to the endpoint connection details",
+              title: "Scrape data from file",
+              tooltip: "Read a file, scrape metrics, then use them in the Extension.",
+              command: "dt-ext-copilot.codelens.scrapeMetricsFromFile",
+              arguments: [],
+            }),
+          );
+        }
+        // Edit config lens
+        if (this.endpointScraped) {
+          this.codeLenses.push(
+            new vscode.CodeLens(range, {
+              title: "Edit endpoint config",
+              tooltip: "Make changes to the endpoint connection details.",
               command: "dt-ext-copilot.codelens.scrapeMetrics",
+              arguments: [true],
+            }),
+          );
+        }
+        if (this.fileScraped) {
+          this.codeLenses.push(
+            new vscode.CodeLens(range, {
+              title: "Scrape data from different file",
+              tooltip: "Choose a different file to read data from.",
+              command: "dt-ext-copilot.codelens.scrapeMetricsFromFile",
               arguments: [true],
             }),
           );
@@ -142,9 +172,11 @@ export class PrometheusCodeLensProvider implements vscode.CodeLensProvider {
       // Clear cached data since we're now scraping a different endpoint
       this.cachedData.addPrometheusData({});
     }
+    this.endpointScraped = true;
+    this.fileScraped = false;
     const scrapeSuccess = await this.scrape();
     if (scrapeSuccess) {
-      this.lastScrape = `Last scraped at: ${new Date().toLocaleTimeString()}`;
+      this.lastScrape = `Last scraped from endpoint at: ${new Date().toLocaleTimeString()}`;
       this._onDidChangeCodeLenses.fire();
     }
   }
@@ -337,5 +369,65 @@ export class PrometheusCodeLensProvider implements vscode.CodeLensProvider {
         }
       });
     this.cachedData.addPrometheusData(scrapedMetrics);
+  }
+
+  /**
+   * Metric scraping workflow. If no previous details are known, these are collected.
+   * Upon successful scraping and processing, timestamp is updated.
+   * @param changeConfig collect the details required for scraping, even if they exist already
+   * @returns void
+   */
+  private async scrapeMetricsFromFile() {
+    const details = await this.collectFileDetails();
+    if (!details) {
+      return;
+    }
+    // Clear cached data since we're now scraping a different file
+    this.cachedData.addPrometheusData({});
+    this.fileScraped = true;
+    this.endpointScraped = false;
+    const scrapeSuccess = await this.scrapeFile();
+    if (scrapeSuccess) {
+      this.lastScrape = `Last scraped from file at: ${new Date().toLocaleTimeString()}`;
+      this._onDidChangeCodeLenses.fire();
+    }
+  }
+
+  /**
+   * Metrics detail collection workflow.
+   * @returns whether data collection was successful (i.e. mandatory details collected) or not
+   */
+  private async collectFileDetails(): Promise<boolean> {
+    // File location
+    const fileName = await vscode.window.showInputBox({
+      title: "Scrape Prometheus Data From File",
+      placeHolder: "Enter the full, physical location of the file",
+      prompt: "Mandatory",
+      ignoreFocusOut: true,
+    });
+    if (!fileName) {
+      return false;
+    }
+    this.promFile = fileName;
+    return true;
+  }
+
+  /**
+   * Scrapes prometheus metrics.
+   * This involves accessing the file, reading the data, and processing it.
+   * @returns whether scraping was successful (any errors) or not
+   */
+  private async scrapeFile() {
+    if (!this.promFile) {
+      return false;
+    }
+    try {
+      const data = fs.readFileSync(this.promFile, "utf-8");
+      this.processPrometheusData(data);
+      return true;
+    } catch (err) {
+      console.log(err);
+      return false;
+    }
   }
 }

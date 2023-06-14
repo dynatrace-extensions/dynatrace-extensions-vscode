@@ -27,7 +27,7 @@ tenant or other external endpoints.
 
 ## Prometheus Code Lenses
 
-- Connect to a Prometheus endpoint and scrape metrics data. Scraped details can then be used:
+- Connect to a Prometheus endpoint and scrape metrics data or alternatively read exported data directly from a file. Scraped details can then be used:
   - To automatically insert metric definitions in the `prometheus` section of the YAML
   - To automatically insert dimensions in the `prometheus` section of the YAML
   - To automatically insert metric metadata in the `metrics` section of the YAML
