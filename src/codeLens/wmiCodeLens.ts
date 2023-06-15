@@ -130,7 +130,7 @@ export class WmiCodeLensProvider implements vscode.CodeLensProvider {
     // Return early because it is cheaper than parsing the yaml
     if (
       !text.includes("wmi:") ||
-      !vscode.workspace.getConfiguration("dynatrace_extensions", null).get("wmiCodeLens")
+      !vscode.workspace.getConfiguration("dynatraceExtensions", null).get("wmiCodeLens")
     ) {
       return [];
     }

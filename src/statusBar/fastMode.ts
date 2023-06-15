@@ -33,8 +33,9 @@ export class FastModeStatus {
     vscode.commands.registerCommand(this.commandId, () => this.outputChannel.show());
     this.statusBarItem.command = this.commandId;
     this.updateStatusBar(
-      vscode.workspace.getConfiguration("dynatrace_extensions", null).get<boolean>("fastDevelopmentMode") ??
-        false,
+      vscode.workspace
+        .getConfiguration("dynatraceExtensions", null)
+        .get<boolean>("fastDevelopmentMode") ?? false,
     );
   }
 

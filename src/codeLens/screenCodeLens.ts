@@ -67,7 +67,7 @@ export class ScreenLensProvider implements vscode.CodeLensProvider {
     // If no screens or feature disabled, don't continue
     if (
       !text.includes("screens:") ||
-      !vscode.workspace.getConfiguration("dynatrace_extensions", null).get("screenCodeLens")
+      !vscode.workspace.getConfiguration("dynatraceExtensions", null).get("screenCodeLens")
     ) {
       return [];
     }

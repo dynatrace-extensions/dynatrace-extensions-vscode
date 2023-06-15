@@ -33,7 +33,7 @@ import { resolveRealPath, uploadComponentCert } from "../utils/fileSystem";
  */
 export async function distributeCertificate(context: vscode.ExtensionContext, dt: Dynatrace) {
   const certSettingValue = vscode.workspace
-    .getConfiguration("dynatrace", null)
+    .getConfiguration("dynatraceExtensions", null)
     .get<string>("rootOrCaCertificateLocation");
   if (!certSettingValue) {
     return;

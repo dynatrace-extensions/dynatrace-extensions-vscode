@@ -152,7 +152,7 @@ export class SelectorCodeLensProvider implements vscode.CodeLensProvider {
     let extension: ExtensionStub;
 
     // Honor the user's settings
-    if (!vscode.workspace.getConfiguration("dynatrace_extensions", null).get(this.controlSetting)) {
+    if (!vscode.workspace.getConfiguration("dynatraceExtensions", null).get(this.controlSetting)) {
       return [];
     }
     // Load yaml only for entity selectors

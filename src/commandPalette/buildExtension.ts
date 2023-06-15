@@ -322,7 +322,7 @@ export async function buildExtension(
     return;
   }
   const devCertKeySetting = vscode.workspace
-    .getConfiguration("dynatrace", null)
+    .getConfiguration("dynatraceExtensions", null)
     .get<string>("developerCertkeyLocation");
   if (!devCertKeySetting) {
     return;

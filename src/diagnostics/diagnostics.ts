@@ -81,7 +81,7 @@ export class DiagnosticsProvider {
    */
   public async provideDiagnostics(document: vscode.TextDocument) {
     // If feature disabled, don't continue
-    if (!vscode.workspace.getConfiguration("dynatrace_extensions", null).get("diagnostics")) {
+    if (!vscode.workspace.getConfiguration("dynatraceExtensions", null).get("diagnostics")) {
       this.collection.set(document.uri, []);
       return;
     }
@@ -149,7 +149,7 @@ export class DiagnosticsProvider {
     // Honor the user's settings
     if (
       !vscode.workspace
-        .getConfiguration("dynatrace_extensions, null")
+        .getConfiguration("dynatraceExtensions, null")
         .get("diagnostics.extensionName", false) as boolean
     ) {
       return [];
@@ -206,7 +206,7 @@ export class DiagnosticsProvider {
     // Honor the user's settings
     if (
       !vscode.workspace
-        .getConfiguration("dynatrace_extensions", null)
+        .getConfiguration("dynatraceExtensions", null)
         .get("diagnostics.metricKeys", false) as boolean
     ) {
       return [];
@@ -256,7 +256,7 @@ export class DiagnosticsProvider {
     // Honor the user's settings and bail early if no screens
     if (
       (!vscode.workspace
-        .getConfiguration("dynatrace_extensions", null)
+        .getConfiguration("dynatraceExtensions", null)
         .get("diagnostics.cardKeys", false) as boolean) ||
       !extension.screens
     ) {
@@ -312,7 +312,7 @@ export class DiagnosticsProvider {
     // Honor the user's settings and bail early if no screens
     if (
       (!vscode.workspace
-        .getConfiguration("dynatrace_extensions", null)
+        .getConfiguration("dynatraceExtensions", null)
         .get("diagnostics.snmp", false) as boolean) ||
       !extension.snmp
     ) {
@@ -434,7 +434,7 @@ export class DiagnosticsProvider {
     // Honor the user's settings and bail early if no screens
     if (
       (!vscode.workspace
-        .getConfiguration("dynatrace_extensions", null)
+        .getConfiguration("dynatraceExtensions", null)
         .get("diagnostics.snmp", false) as boolean) ||
       !extension.snmp
     ) {
@@ -532,7 +532,7 @@ export class DiagnosticsProvider {
     // Honor the user's settings and bail early if no screens
     if (
       (!vscode.workspace
-        .getConfiguration("dynatrace_extensions", null)
+        .getConfiguration("dynatraceExtensions", null)
         .get("diagnostics.snmp", false) as boolean) ||
       !extension.snmp
     ) {

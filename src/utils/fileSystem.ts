@@ -550,7 +550,7 @@ export async function migrateFromLegacyExtension(context: vscode.ExtensionContex
         "certificateCountryCode",
       ];
       const legacyConfig = vscode.workspace.getConfiguration("dynatrace", null);
-      const config = vscode.workspace.getConfiguration("dynatrace_extensions", null);
+      const config = vscode.workspace.getConfiguration("dynatraceExtensions", null);
       for (const key of settingsKeys) {
         const legacyValue = legacyConfig.inspect(key).globalValue;
         if (legacyValue) {
@@ -567,9 +567,9 @@ export async function migrateFromLegacyExtension(context: vscode.ExtensionContex
         );
         if (existsSync(settingsFilePath)) {
           const settingsContent = readFileSync(settingsFilePath).toString();
-          settingsContent.replace(/dt-ext-copilot\./g, "dynatrace_extensions.");
+          settingsContent.replace(/dt-ext-copilot\./g, "dynatrace-extensions.");
           for (const key of settingsKeys) {
-            settingsContent.replace(`dynatrace.${key}`, `dynatrace_extensions.${key}`);
+            settingsContent.replace(`dynatrace.${key}`, `dynatraceExtensions.${key}`);
           }
           writeFileSync(settingsFilePath, settingsContent);
         }

@@ -157,7 +157,10 @@ export async function uploadExtension(dt: Dynatrace, cachedData: CachedDataProvi
       showMessage("info", "Operation completed.");
       return;
     }
-    await vscode.commands.executeCommand("dynatrace-extensions.activateExtension", extensionVersion);
+    await vscode.commands.executeCommand(
+      "dynatrace-extensions.activateExtension",
+      extensionVersion,
+    );
   } else {
     showMessage("error", status);
     showMessage("error", "Extension upload failed.");

@@ -35,7 +35,7 @@ import { runCommand } from "./subprocesses";
  * @returns check status
  */
 export async function checkSettings(...settings: string[]): Promise<boolean> {
-  const config = vscode.workspace.getConfiguration("dynatrace_extensions", null);
+  const config = vscode.workspace.getConfiguration("dynatraceExtensions", null);
   let status = true;
   for (const setting of settings) {
     if (!config.get(setting)) {
@@ -175,10 +175,10 @@ export async function checkOverwriteCertificates(
 export async function checkCertificateExists(type: "ca" | "dev" | "all"): Promise<boolean> {
   let allExist = true;
   const devCertkeyPath = vscode.workspace
-    .getConfiguration("dynatrace", null)
+    .getConfiguration("dynatraceExtensions", null)
     .get<string>("developerCertkeyLocation");
   const caCertPath = vscode.workspace
-    .getConfiguration("dynatrace", null)
+    .getConfiguration("dynatraceExtensions", null)
     .get<string>("rootOrCaCertificateLocation");
 
   if (type === "ca" || type === "all") {
