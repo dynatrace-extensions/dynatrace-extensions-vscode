@@ -27,6 +27,7 @@ type PromDetails = {
   description?: string;
 };
 type PromAuth = "No authentication" | "Bearer token" | "Username & password" | "AWS key";
+type ScrapingMethod = "Endpoint" | "File";
 
 /**
  * Code Lens Provider implementation to facilitate loading Prometheus metrics and data
@@ -36,8 +37,7 @@ export class PrometheusCodeLensProvider implements vscode.CodeLensProvider {
   private codeLenses: vscode.CodeLens[];
   private regex: RegExp;
   private lastScrape = "N/A";
-  private endpointScraped = false;
-  private fileScraped = false;
+  private method: ScrapingMethod | undefined;
   private promUrl: string | undefined;
   private promFile: string | undefined;
   private promAuth: PromAuth | undefined;
@@ -60,12 +60,6 @@ export class PrometheusCodeLensProvider implements vscode.CodeLensProvider {
       "dt-ext-copilot.codelens.scrapeMetrics",
       async (changeConfig: boolean) => {
         await this.scrapeMetrics(changeConfig);
-      },
-    );
-    vscode.commands.registerCommand(
-      "dt-ext-copilot.codelens.scrapeMetricsFromFile",
-      async (changeConfig: boolean) => {
-        await this.scrapeMetricsFromFile();
       },
     );
     this.cachedData = cachedDataProvider;
@@ -97,39 +91,20 @@ export class PrometheusCodeLensProvider implements vscode.CodeLensProvider {
         // Action lens
         this.codeLenses.push(
           new vscode.CodeLens(range, {
-            title: "Scrape data from endpoint",
-            tooltip: "Connect to an exporter and scrape metrics, then use them in the Extension.",
+            title: "Scrape data",
+            tooltip:
+              "Connect to an exporter or read a file and scrape metrics, then use them in the Extension.",
             command: "dt-ext-copilot.codelens.scrapeMetrics",
             arguments: [],
           }),
         );
-        if (!this.fileScraped) {
-          this.codeLenses.push(
-            new vscode.CodeLens(range, {
-              title: "Scrape data from file",
-              tooltip: "Read a file, scrape metrics, then use them in the Extension.",
-              command: "dt-ext-copilot.codelens.scrapeMetricsFromFile",
-              arguments: [],
-            }),
-          );
-        }
         // Edit config lens
-        if (this.endpointScraped) {
+        if (this.lastScrape !== "N/A") {
           this.codeLenses.push(
             new vscode.CodeLens(range, {
-              title: "Edit endpoint config",
-              tooltip: "Make changes to the endpoint connection details.",
+              title: "Edit scraping config",
+              tooltip: "Make changes to the scraping configuration.",
               command: "dt-ext-copilot.codelens.scrapeMetrics",
-              arguments: [true],
-            }),
-          );
-        }
-        if (this.fileScraped) {
-          this.codeLenses.push(
-            new vscode.CodeLens(range, {
-              title: "Scrape data from different file",
-              tooltip: "Choose a different file to read data from.",
-              command: "dt-ext-copilot.codelens.scrapeMetricsFromFile",
               arguments: [true],
             }),
           );
@@ -164,19 +139,17 @@ export class PrometheusCodeLensProvider implements vscode.CodeLensProvider {
    */
   private async scrapeMetrics(changeConfig: boolean = false) {
     // Only collect details if none are available
-    if (!this.promUrl || changeConfig) {
-      const details = await this.collectEndpointDetails();
+    if ((!this.promUrl && !this.promFile) || changeConfig) {
+      const details = await this.collectScrapingDetails();
       if (!details) {
         return;
       }
-      // Clear cached data since we're now scraping a different endpoint
+      // Clear cached data since we're now scraping a different endpoint/file
       this.cachedData.addPrometheusData({});
     }
-    this.endpointScraped = true;
-    this.fileScraped = false;
     const scrapeSuccess = await this.scrape();
     if (scrapeSuccess) {
-      this.lastScrape = `Last scraped from endpoint at: ${new Date().toLocaleTimeString()}`;
+      this.lastScrape = `Last scraped at: ${new Date().toLocaleTimeString()}`;
       this._onDidChangeCodeLenses.fire();
     }
   }
@@ -186,78 +159,99 @@ export class PrometheusCodeLensProvider implements vscode.CodeLensProvider {
    * all the authenticaiton schemes that Prometheus Extensions 2.0 support.
    * @returns whether data collection was successful (i.e. mandatory details collected) or not
    */
-  private async collectEndpointDetails(): Promise<boolean> {
+  private async collectScrapingDetails(): Promise<boolean> {
     // Endpoint URL
-    const url = await vscode.window.showInputBox({
-      title: "Scrape Prometheus Data (1/2)",
-      placeHolder: "Enter your full metrics endpoint URL",
-      prompt: "Mandatory",
+    this.method = (await vscode.window.showQuickPick(["Endpoint", "File"], {
+      title: "Scrape Prometheus Data (1/3)",
+      placeHolder: "Select your scraping method",
+      canPickMany: false,
       ignoreFocusOut: true,
-    });
-    if (!url) {
-      return false;
-    }
-    this.promUrl = url;
-    // Endpoint connectivity scheme
-    this.promAuth = (await vscode.window.showQuickPick(
-      ["No authentication", "Bearer token", "Username & password", "AWS key"],
-      {
-        title: "Scrape Prometheus Data (2/2)",
-        placeHolder: "Select your endpoint's authentication scheme",
-        canPickMany: false,
-        ignoreFocusOut: true,
-      },
-    )) as PromAuth;
-    // Endpoint authentication details
-    switch (this.promAuth) {
-      case "No authentication":
-        return true;
-      case "Bearer token":
-        this.promToken = await vscode.window.showInputBox({
-          title: "Scrape Prometheus Data (2/2)",
-          placeHolder: "Enter the Bearer token to use for authentication",
+    })) as ScrapingMethod;
+    switch (this.method) {
+      case "Endpoint":
+        this.promUrl = await vscode.window.showInputBox({
+          title: "Scrape Prometheus Data (2/3)",
+          placeHolder: "Enter your full metrics endpoint URL",
           prompt: "Mandatory",
           ignoreFocusOut: true,
         });
-        if (!this.promToken) {
+        if (!this.promUrl) {
           return false;
         }
-        return true;
-      case "Username & password":
-        this.promUsername = await vscode.window.showInputBox({
-          title: "Scrape Prometheus Data (2/2)",
-          placeHolder: "Enter the username to use for authentication",
-          prompt: "Mandatory",
-          ignoreFocusOut: true,
-        });
-        this.promPassword = await vscode.window.showInputBox({
-          title: "Scrape Prometheus Data (2/2)",
-          placeHolder: "Enter the password to use for authentication",
-          prompt: "Mandatory",
-          ignoreFocusOut: true,
-          password: true,
-        });
-        if (!this.promUsername || !this.promPassword) {
-          return false;
+        // Endpoint connectivity scheme
+        this.promAuth = (await vscode.window.showQuickPick(
+          ["No authentication", "Bearer token", "Username & password", "AWS key"],
+          {
+            title: "Scrape Prometheus Data (3/3)",
+            placeHolder: "Select your endpoint's authentication scheme",
+            canPickMany: false,
+            ignoreFocusOut: true,
+          },
+        )) as PromAuth;
+        // Endpoint authentication details
+        switch (this.promAuth) {
+          case "No authentication":
+            return true;
+          case "Bearer token":
+            this.promToken = await vscode.window.showInputBox({
+              title: "Scrape Prometheus Data (3/3)",
+              placeHolder: "Enter the Bearer token to use for authentication",
+              prompt: "Mandatory",
+              ignoreFocusOut: true,
+            });
+            if (!this.promToken) {
+              return false;
+            }
+            return true;
+          case "Username & password":
+            this.promUsername = await vscode.window.showInputBox({
+              title: "Scrape Prometheus Data (3/3)",
+              placeHolder: "Enter the username to use for authentication",
+              prompt: "Mandatory",
+              ignoreFocusOut: true,
+            });
+            this.promPassword = await vscode.window.showInputBox({
+              title: "Scrape Prometheus Data (3/3)",
+              placeHolder: "Enter the password to use for authentication",
+              prompt: "Mandatory",
+              ignoreFocusOut: true,
+              password: true,
+            });
+            if (!this.promUsername || !this.promPassword) {
+              return false;
+            }
+            return true;
+          case "AWS key":
+            // TODO: Figure out how to implement AWS authentication
+            showMessage("error", "AWS authentication not support yet, sorry.");
+            return false;
+            this.promAccessKey = await vscode.window.showInputBox({
+              title: "Scrape Prometheus Data (3/3)",
+              placeHolder: "Enter the AWS access key to use for authentication",
+              prompt: "Mandatory",
+              ignoreFocusOut: true,
+            });
+            this.promSecretKey = await vscode.window.showInputBox({
+              title: "Scrape Prometheus Data (3/3)",
+              placeHolder: "Enter the AWS secret key to use for authentication",
+              prompt: "Mandatory",
+              ignoreFocusOut: true,
+            });
+            if (!this.promAccessKey || !this.promSecretKey) {
+              return false;
+            }
+            return true;
+          default:
+            return false;
         }
-        return true;
-      case "AWS key":
-        // TODO: Figure out how to implement AWS authentication
-        showMessage("error", "AWS authentication not support yet, sorry.");
-        return false;
-        this.promAccessKey = await vscode.window.showInputBox({
-          title: "Scrape Prometheus Data (2/2)",
-          placeHolder: "Enter the AWS access key to use for authentication",
+      case "File":
+        this.promFile = await vscode.window.showInputBox({
+          title: "Scrape Prometheus Data From File",
+          placeHolder: "Enter the full, physical location of the file",
           prompt: "Mandatory",
           ignoreFocusOut: true,
         });
-        this.promSecretKey = await vscode.window.showInputBox({
-          title: "Scrape Prometheus Data (2/2)",
-          placeHolder: "Enter the AWS secret key to use for authentication",
-          prompt: "Mandatory",
-          ignoreFocusOut: true,
-        });
-        if (!this.promAccessKey || !this.promSecretKey) {
+        if (!this.promFile) {
           return false;
         }
         return true;
@@ -276,36 +270,51 @@ export class PrometheusCodeLensProvider implements vscode.CodeLensProvider {
       return false;
     }
     try {
-      switch (this.promAuth) {
-        case "No authentication":
-          await axios.get(this.promUrl).then(res => {
-            this.processPrometheusData(res.data as string);
-          });
-          return true;
-        case "Username & password":
-          if (!this.promUsername || !this.promPassword) {
+      switch (this.method) {
+        case "Endpoint":
+          switch (this.promAuth) {
+            case "No authentication":
+              await axios.get(this.promUrl).then(res => {
+                this.processPrometheusData(res.data as string);
+              });
+              return true;
+            case "Username & password":
+              if (!this.promUsername || !this.promPassword) {
+                return false;
+              }
+              await axios
+                .get(this.promUrl, {
+                  auth: { username: this.promUsername, password: this.promPassword },
+                })
+                .then(res => {
+                  this.processPrometheusData(res.data as string);
+                });
+              return true;
+            case "Bearer token":
+              if (!this.promToken) {
+                return false;
+              }
+              await axios
+                .get(this.promUrl, { headers: { Authorization: `Bearer ${this.promToken}` } })
+                .then(res => {
+                  this.processPrometheusData(res.data as string);
+                });
+              return true;
+            default:
+              return false;
+          }
+        case "File":
+          if (!this.promFile) {
             return false;
           }
-          await axios
-            .get(this.promUrl, {
-              auth: { username: this.promUsername, password: this.promPassword },
-            })
-            .then(res => {
-              this.processPrometheusData(res.data as string);
-            });
-          return true;
-        case "Bearer token":
-          if (!this.promToken) {
+          try {
+            const data = fs.readFileSync(this.promFile, "utf-8");
+            this.processPrometheusData(data);
+            return true;
+          } catch (err) {
+            console.log(err);
             return false;
           }
-          await axios
-            .get(this.promUrl, { headers: { Authorization: `Bearer ${this.promToken}` } })
-            .then(res => {
-              this.processPrometheusData(res.data as string);
-            });
-          return true;
-        default:
-          return false;
       }
     } catch (err) {
       console.log(err);
@@ -369,65 +378,5 @@ export class PrometheusCodeLensProvider implements vscode.CodeLensProvider {
         }
       });
     this.cachedData.addPrometheusData(scrapedMetrics);
-  }
-
-  /**
-   * Metric scraping workflow. If no previous details are known, these are collected.
-   * Upon successful scraping and processing, timestamp is updated.
-   * @param changeConfig collect the details required for scraping, even if they exist already
-   * @returns void
-   */
-  private async scrapeMetricsFromFile() {
-    const details = await this.collectFileDetails();
-    if (!details) {
-      return;
-    }
-    // Clear cached data since we're now scraping a different file
-    this.cachedData.addPrometheusData({});
-    this.fileScraped = true;
-    this.endpointScraped = false;
-    const scrapeSuccess = await this.scrapeFile();
-    if (scrapeSuccess) {
-      this.lastScrape = `Last scraped from file at: ${new Date().toLocaleTimeString()}`;
-      this._onDidChangeCodeLenses.fire();
-    }
-  }
-
-  /**
-   * Metrics detail collection workflow.
-   * @returns whether data collection was successful (i.e. mandatory details collected) or not
-   */
-  private async collectFileDetails(): Promise<boolean> {
-    // File location
-    const fileName = await vscode.window.showInputBox({
-      title: "Scrape Prometheus Data From File",
-      placeHolder: "Enter the full, physical location of the file",
-      prompt: "Mandatory",
-      ignoreFocusOut: true,
-    });
-    if (!fileName) {
-      return false;
-    }
-    this.promFile = fileName;
-    return true;
-  }
-
-  /**
-   * Scrapes prometheus metrics.
-   * This involves accessing the file, reading the data, and processing it.
-   * @returns whether scraping was successful (any errors) or not
-   */
-  private async scrapeFile() {
-    if (!this.promFile) {
-      return false;
-    }
-    try {
-      const data = fs.readFileSync(this.promFile, "utf-8");
-      this.processPrometheusData(data);
-      return true;
-    } catch (err) {
-      console.log(err);
-      return false;
-    }
   }
 }
