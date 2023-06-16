@@ -5,8 +5,13 @@
 ### ✨ New in this version:
 - Project rebranding to "Dynatrace Extensions", along with new icons
 - Documentation moved to [Dynatrace Developer](https://developer.dynatrace.com) portal
-- Dynatrace Platform environments (.apps URLs) supported
-- Migration utility from previous version of this project
+- Migration utility from previous versions of this project
+
+### 🚀 Improved in this version:
+- [#118 - Support for Platform URLs](https://github.com/dynatrace-extensions/dynatrace-extensions-vscode/issues/118)
+- [#109 - Prometheus scraping from file](https://github.com/dynatrace-extensions/dynatrace-extensions-vscode/issues/109)
+- [#117 - Connection checks for Dynatrace environments](https://github.com/dynatrace-extensions/dynatrace-extensions-vscode/issues/117)
+
 
 ---
 
