@@ -94,7 +94,7 @@ export class PrometheusCodeLensProvider implements vscode.CodeLensProvider {
             title: "Scrape data",
             tooltip:
               "Connect to an exporter or read a file and scrape metrics, then use them in the Extension.",
-            command: "dt-ext-copilot.codelens.scrapeMetrics",
+            command: "dynatrace-extensions.codelens.scrapeMetrics",
             arguments: [],
           }),
         );
@@ -102,9 +102,9 @@ export class PrometheusCodeLensProvider implements vscode.CodeLensProvider {
         if (this.lastScrape !== "N/A") {
           this.codeLenses.push(
             new vscode.CodeLens(range, {
-              title: "Edit scraping config",
+              title: "Edit config",
               tooltip: "Make changes to the scraping configuration.",
-              command: "dt-ext-copilot.codelens.scrapeMetrics",
+              command: "dynatrace-extensions.codelens.scrapeMetrics",
               arguments: [true],
             }),
           );
