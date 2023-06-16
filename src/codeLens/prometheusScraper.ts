@@ -162,7 +162,7 @@ export class PrometheusCodeLensProvider implements vscode.CodeLensProvider {
   private async collectScrapingDetails(): Promise<boolean> {
     // Endpoint URL
     this.method = (await vscode.window.showQuickPick(["Endpoint", "File"], {
-      title: "Scrape Prometheus Data (1/3)",
+      title: "Scrape data - method selection",
       placeHolder: "Select your scraping method",
       canPickMany: false,
       ignoreFocusOut: true,
@@ -170,7 +170,7 @@ export class PrometheusCodeLensProvider implements vscode.CodeLensProvider {
     switch (this.method) {
       case "Endpoint":
         this.promUrl = await vscode.window.showInputBox({
-          title: "Scrape Prometheus Data (2/3)",
+          title: "Scrape data - endpoint URL",
           placeHolder: "Enter your full metrics endpoint URL",
           prompt: "Mandatory",
           ignoreFocusOut: true,
@@ -182,7 +182,7 @@ export class PrometheusCodeLensProvider implements vscode.CodeLensProvider {
         this.promAuth = (await vscode.window.showQuickPick(
           ["No authentication", "Bearer token", "Username & password", "AWS key"],
           {
-            title: "Scrape Prometheus Data (3/3)",
+            title: "Scrape data - endpoint authentication",
             placeHolder: "Select your endpoint's authentication scheme",
             canPickMany: false,
             ignoreFocusOut: true,
@@ -194,7 +194,7 @@ export class PrometheusCodeLensProvider implements vscode.CodeLensProvider {
             return true;
           case "Bearer token":
             this.promToken = await vscode.window.showInputBox({
-              title: "Scrape Prometheus Data (3/3)",
+              title: "Scrape data - endpoint authentication",
               placeHolder: "Enter the Bearer token to use for authentication",
               prompt: "Mandatory",
               ignoreFocusOut: true,
@@ -205,13 +205,13 @@ export class PrometheusCodeLensProvider implements vscode.CodeLensProvider {
             return true;
           case "Username & password":
             this.promUsername = await vscode.window.showInputBox({
-              title: "Scrape Prometheus Data (3/3)",
+              title: "Scrape data - endpoint authentication",
               placeHolder: "Enter the username to use for authentication",
               prompt: "Mandatory",
               ignoreFocusOut: true,
             });
             this.promPassword = await vscode.window.showInputBox({
-              title: "Scrape Prometheus Data (3/3)",
+              title: "Scrape data - endpoint authentication",
               placeHolder: "Enter the password to use for authentication",
               prompt: "Mandatory",
               ignoreFocusOut: true,
@@ -226,13 +226,13 @@ export class PrometheusCodeLensProvider implements vscode.CodeLensProvider {
             showMessage("error", "AWS authentication not support yet, sorry.");
             return false;
             this.promAccessKey = await vscode.window.showInputBox({
-              title: "Scrape Prometheus Data (3/3)",
+              title: "Scrape data - endpoint authentication",
               placeHolder: "Enter the AWS access key to use for authentication",
               prompt: "Mandatory",
               ignoreFocusOut: true,
             });
             this.promSecretKey = await vscode.window.showInputBox({
-              title: "Scrape Prometheus Data (3/3)",
+              title: "Scrape data - endpoint authentication",
               placeHolder: "Enter the AWS secret key to use for authentication",
               prompt: "Mandatory",
               ignoreFocusOut: true,
@@ -246,7 +246,7 @@ export class PrometheusCodeLensProvider implements vscode.CodeLensProvider {
         }
       case "File":
         this.promFile = await vscode.window.showInputBox({
-          title: "Scrape Prometheus Data From File",
+          title: "Scrape data - file location",
           placeHolder: "Enter the full, physical location of the file",
           prompt: "Mandatory",
           ignoreFocusOut: true,
