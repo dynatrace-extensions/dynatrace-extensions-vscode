@@ -14,6 +14,7 @@
   limitations under the License.
  */
 
+import * as fs from "fs";
 import axios from "axios";
 import * as vscode from "vscode";
 import { showMessage } from "../utils/code";
@@ -26,6 +27,7 @@ type PromDetails = {
   description?: string;
 };
 type PromAuth = "No authentication" | "Bearer token" | "Username & password" | "AWS key";
+type ScrapingMethod = "Endpoint" | "File";
 
 /**
  * Code Lens Provider implementation to facilitate loading Prometheus metrics and data
@@ -35,7 +37,9 @@ export class PrometheusCodeLensProvider implements vscode.CodeLensProvider {
   private codeLenses: vscode.CodeLens[];
   private regex: RegExp;
   private lastScrape = "N/A";
+  private method: ScrapingMethod | undefined;
   private promUrl: string | undefined;
+  private promFile: string | undefined;
   private promAuth: PromAuth | undefined;
   private promToken: string | undefined;
   private promUsername: string | undefined;
@@ -88,7 +92,8 @@ export class PrometheusCodeLensProvider implements vscode.CodeLensProvider {
         this.codeLenses.push(
           new vscode.CodeLens(range, {
             title: "Scrape data",
-            tooltip: "Connect to an exporter and scrape metrics, then use them in the Extension.",
+            tooltip:
+              "Connect to an exporter or read a file and scrape metrics, then use them in the Extension.",
             command: "dynatrace-extensions.codelens.scrapeMetrics",
             arguments: [],
           }),
@@ -98,7 +103,7 @@ export class PrometheusCodeLensProvider implements vscode.CodeLensProvider {
           this.codeLenses.push(
             new vscode.CodeLens(range, {
               title: "Edit config",
-              tooltip: "Make changes to the endpoint connection details",
+              tooltip: "Make changes to the scraping configuration.",
               command: "dynatrace-extensions.codelens.scrapeMetrics",
               arguments: [true],
             }),
@@ -134,12 +139,12 @@ export class PrometheusCodeLensProvider implements vscode.CodeLensProvider {
    */
   private async scrapeMetrics(changeConfig: boolean = false) {
     // Only collect details if none are available
-    if (!this.promUrl || changeConfig) {
-      const details = await this.collectEndpointDetails();
+    if ((!this.promUrl && !this.promFile) || changeConfig) {
+      const details = await this.collectScrapingDetails();
       if (!details) {
         return;
       }
-      // Clear cached data since we're now scraping a different endpoint
+      // Clear cached data since we're now scraping a different endpoint/file
       this.cachedData.addPrometheusData({});
     }
     const scrapeSuccess = await this.scrape();
@@ -154,78 +159,99 @@ export class PrometheusCodeLensProvider implements vscode.CodeLensProvider {
    * all the authenticaiton schemes that Prometheus Extensions 2.0 support.
    * @returns whether data collection was successful (i.e. mandatory details collected) or not
    */
-  private async collectEndpointDetails(): Promise<boolean> {
+  private async collectScrapingDetails(): Promise<boolean> {
     // Endpoint URL
-    const url = await vscode.window.showInputBox({
-      title: "Scrape Prometheus Data (1/2)",
-      placeHolder: "Enter your full metrics endpoint URL",
-      prompt: "Mandatory",
+    this.method = (await vscode.window.showQuickPick(["Endpoint", "File"], {
+      title: "Scrape data - method selection",
+      placeHolder: "Select your scraping method",
+      canPickMany: false,
       ignoreFocusOut: true,
-    });
-    if (!url) {
-      return false;
-    }
-    this.promUrl = url;
-    // Endpoint connectivity scheme
-    this.promAuth = (await vscode.window.showQuickPick(
-      ["No authentication", "Bearer token", "Username & password", "AWS key"],
-      {
-        title: "Scrape Prometheus Data (2/2)",
-        placeHolder: "Select your endpoint's authentication scheme",
-        canPickMany: false,
-        ignoreFocusOut: true,
-      },
-    )) as PromAuth;
-    // Endpoint authentication details
-    switch (this.promAuth) {
-      case "No authentication":
-        return true;
-      case "Bearer token":
-        this.promToken = await vscode.window.showInputBox({
-          title: "Scrape Prometheus Data (2/2)",
-          placeHolder: "Enter the Bearer token to use for authentication",
+    })) as ScrapingMethod;
+    switch (this.method) {
+      case "Endpoint":
+        this.promUrl = await vscode.window.showInputBox({
+          title: "Scrape data - endpoint URL",
+          placeHolder: "Enter your full metrics endpoint URL",
           prompt: "Mandatory",
           ignoreFocusOut: true,
         });
-        if (!this.promToken) {
+        if (!this.promUrl) {
           return false;
         }
-        return true;
-      case "Username & password":
-        this.promUsername = await vscode.window.showInputBox({
-          title: "Scrape Prometheus Data (2/2)",
-          placeHolder: "Enter the username to use for authentication",
-          prompt: "Mandatory",
-          ignoreFocusOut: true,
-        });
-        this.promPassword = await vscode.window.showInputBox({
-          title: "Scrape Prometheus Data (2/2)",
-          placeHolder: "Enter the password to use for authentication",
-          prompt: "Mandatory",
-          ignoreFocusOut: true,
-          password: true,
-        });
-        if (!this.promUsername || !this.promPassword) {
-          return false;
+        // Endpoint connectivity scheme
+        this.promAuth = (await vscode.window.showQuickPick(
+          ["No authentication", "Bearer token", "Username & password", "AWS key"],
+          {
+            title: "Scrape data - endpoint authentication",
+            placeHolder: "Select your endpoint's authentication scheme",
+            canPickMany: false,
+            ignoreFocusOut: true,
+          },
+        )) as PromAuth;
+        // Endpoint authentication details
+        switch (this.promAuth) {
+          case "No authentication":
+            return true;
+          case "Bearer token":
+            this.promToken = await vscode.window.showInputBox({
+              title: "Scrape data - endpoint authentication",
+              placeHolder: "Enter the Bearer token to use for authentication",
+              prompt: "Mandatory",
+              ignoreFocusOut: true,
+            });
+            if (!this.promToken) {
+              return false;
+            }
+            return true;
+          case "Username & password":
+            this.promUsername = await vscode.window.showInputBox({
+              title: "Scrape data - endpoint authentication",
+              placeHolder: "Enter the username to use for authentication",
+              prompt: "Mandatory",
+              ignoreFocusOut: true,
+            });
+            this.promPassword = await vscode.window.showInputBox({
+              title: "Scrape data - endpoint authentication",
+              placeHolder: "Enter the password to use for authentication",
+              prompt: "Mandatory",
+              ignoreFocusOut: true,
+              password: true,
+            });
+            if (!this.promUsername || !this.promPassword) {
+              return false;
+            }
+            return true;
+          case "AWS key":
+            // TODO: Figure out how to implement AWS authentication
+            showMessage("error", "AWS authentication not support yet, sorry.");
+            return false;
+            this.promAccessKey = await vscode.window.showInputBox({
+              title: "Scrape data - endpoint authentication",
+              placeHolder: "Enter the AWS access key to use for authentication",
+              prompt: "Mandatory",
+              ignoreFocusOut: true,
+            });
+            this.promSecretKey = await vscode.window.showInputBox({
+              title: "Scrape data - endpoint authentication",
+              placeHolder: "Enter the AWS secret key to use for authentication",
+              prompt: "Mandatory",
+              ignoreFocusOut: true,
+            });
+            if (!this.promAccessKey || !this.promSecretKey) {
+              return false;
+            }
+            return true;
+          default:
+            return false;
         }
-        return true;
-      case "AWS key":
-        // TODO: Figure out how to implement AWS authentication
-        showMessage("error", "AWS authentication not support yet, sorry.");
-        return false;
-        this.promAccessKey = await vscode.window.showInputBox({
-          title: "Scrape Prometheus Data (2/2)",
-          placeHolder: "Enter the AWS access key to use for authentication",
+      case "File":
+        this.promFile = await vscode.window.showInputBox({
+          title: "Scrape data - file location",
+          placeHolder: "Enter the full, physical location of the file",
           prompt: "Mandatory",
           ignoreFocusOut: true,
         });
-        this.promSecretKey = await vscode.window.showInputBox({
-          title: "Scrape Prometheus Data (2/2)",
-          placeHolder: "Enter the AWS secret key to use for authentication",
-          prompt: "Mandatory",
-          ignoreFocusOut: true,
-        });
-        if (!this.promAccessKey || !this.promSecretKey) {
+        if (!this.promFile) {
           return false;
         }
         return true;
@@ -244,36 +270,51 @@ export class PrometheusCodeLensProvider implements vscode.CodeLensProvider {
       return false;
     }
     try {
-      switch (this.promAuth) {
-        case "No authentication":
-          await axios.get(this.promUrl).then(res => {
-            this.processPrometheusData(res.data as string);
-          });
-          return true;
-        case "Username & password":
-          if (!this.promUsername || !this.promPassword) {
+      switch (this.method) {
+        case "Endpoint":
+          switch (this.promAuth) {
+            case "No authentication":
+              await axios.get(this.promUrl).then(res => {
+                this.processPrometheusData(res.data as string);
+              });
+              return true;
+            case "Username & password":
+              if (!this.promUsername || !this.promPassword) {
+                return false;
+              }
+              await axios
+                .get(this.promUrl, {
+                  auth: { username: this.promUsername, password: this.promPassword },
+                })
+                .then(res => {
+                  this.processPrometheusData(res.data as string);
+                });
+              return true;
+            case "Bearer token":
+              if (!this.promToken) {
+                return false;
+              }
+              await axios
+                .get(this.promUrl, { headers: { Authorization: `Bearer ${this.promToken}` } })
+                .then(res => {
+                  this.processPrometheusData(res.data as string);
+                });
+              return true;
+            default:
+              return false;
+          }
+        case "File":
+          if (!this.promFile) {
             return false;
           }
-          await axios
-            .get(this.promUrl, {
-              auth: { username: this.promUsername, password: this.promPassword },
-            })
-            .then(res => {
-              this.processPrometheusData(res.data as string);
-            });
-          return true;
-        case "Bearer token":
-          if (!this.promToken) {
+          try {
+            const data = fs.readFileSync(this.promFile, "utf-8");
+            this.processPrometheusData(data);
+            return true;
+          } catch (err) {
+            console.log(err);
             return false;
           }
-          await axios
-            .get(this.promUrl, { headers: { Authorization: `Bearer ${this.promToken}` } })
-            .then(res => {
-              this.processPrometheusData(res.data as string);
-            });
-          return true;
-        default:
-          return false;
       }
     } catch (err) {
       console.log(err);
