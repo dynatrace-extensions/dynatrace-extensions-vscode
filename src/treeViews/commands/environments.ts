@@ -19,6 +19,7 @@ import * as path from "path";
 import * as vscode from "vscode";
 import { DynatraceAPIError } from "../../dynatrace-api/errors";
 import { showMessage } from "../../utils/code";
+import { checkUrlReachable } from "../../utils/conditionCheckers";
 import { encryptToken } from "../../utils/cryptography";
 import {
   createUniqueFileName,
@@ -45,6 +46,37 @@ export interface MinimalConfiguration {
 }
 
 /**
+ * Applies regular expressions for known Dynatrace environment URL schemes.
+ * @param value value to test
+ * @returns null if value matches, an error message otherwise
+ */
+export function validateEnvironmentUrl(value: string): string | null {
+  if (!/^https?:\/\/.*/.test(value)) {
+    return "This URL is invalid. Must start with http or https";
+  }
+  if (value.includes("/e/")) {
+    return !/^https?:\/\/[a-zA-Z.0-9-]+?\/e\/[a-z0-9-]*?(?:\/|$)$/.test(value)
+      ? "This does not look right. It should be the base URL to your Managed environment."
+      : null;
+  }
+  if (value.includes(".apps")) {
+    return !/^https:\/\/[a-z0-9]*?(?:\.dev|\.sprint)?\.apps\.dynatrace(?:labs)?\.com(?:\/|$)$/.test(
+      value,
+    )
+      ? "This does not look right. It should be the base URL to your Platform environment."
+      : null;
+  }
+  if ([".live.", ".dev.", ".sprint."].some(x => value.includes(x))) {
+    return !/^https:\/\/[a-z0-9]*?\.(?:live|dev|sprint)\.dynatrace(?:labs)?\.com(?:\/|$)$/.test(
+      value,
+    )
+      ? "This does not look right. It should be the base URL to your SaaS environment."
+      : null;
+  }
+  return "This does not look like a Dynatrace environment URL";
+}
+
+/**
  * A workflow for registering a new Dynatrace Environment within the VSCode extension.
  * URL, Token, and an optional label are collected. The user can also set this as the
  * currently used environment.
@@ -57,24 +89,7 @@ export async function addEnvironment(context: vscode.ExtensionContext) {
     placeHolder: "The URL at which this environment is accessible...",
     prompt: "Mandatory",
     ignoreFocusOut: true,
-    validateInput: value => {
-      if (!/^https?:\/\/.*/.test(value)) {
-        return "This URL is invalid. Must start with http or https";
-      }
-      if (value.includes("/e/")) {
-        return !/^https?:\/\/[a-zA-Z.0-9-]+?\/e\/[a-z0-9-]*?(?:\/|$)$/.test(value)
-          ? "This does not look right. It should be the base URL to your Managed tenant."
-          : null;
-      }
-      if ([".live.", ".dev.", ".sprint."].some(x => value.includes(x))) {
-        return !/^https?:\/\/[a-z0-9]*?\.(?:live|dev|sprint)\.dynatrace(?:labs)*.*?\.com+?(?:\/|$)$/.test(
-          value,
-        )
-          ? "This does not look right. It should be the base URL to your SaaS tenant."
-          : null;
-      }
-      return "This does not look like a Dynatrace tenant URL";
-    },
+    validateInput: value => validateEnvironmentUrl(value),
   });
   if (!url || url === "") {
     showMessage("error", "URL cannot be blank. Operation was cancelled.");
@@ -82,6 +97,18 @@ export async function addEnvironment(context: vscode.ExtensionContext) {
   }
   if (url.endsWith("/")) {
     url = url.slice(0, -1);
+  }
+
+  let apiUrl = url;
+  if (apiUrl.includes(".apps")) {
+    apiUrl = apiUrl.replace(".apps.dynatrace.com", ".live.dynatrace.com");
+    apiUrl = apiUrl.replace(".apps.dynatracelabs.com", ".dynatracelabs.com");
+  }
+
+  const reachable = await checkUrlReachable(`${apiUrl}/api/v1/time`, true);
+  if (!reachable) {
+    showMessage("error", "The environment URL entered is not reachable.");
+    return;
   }
 
   const token = await vscode.window.showInputBox({
@@ -109,7 +136,7 @@ export async function addEnvironment(context: vscode.ExtensionContext) {
     ignoreFocusOut: true,
   });
 
-  await registerEnvironment(context, url, encryptToken(token), name, current === "Yes");
+  await registerEnvironment(context, url, apiUrl, encryptToken(token), name, current === "Yes");
 }
 
 /**
@@ -131,6 +158,7 @@ export async function editEnvironment(
     value: environment.url,
     prompt: "Mandatory",
     ignoreFocusOut: true,
+    validateInput: value => validateEnvironmentUrl(value),
   });
   if (!url || url === "") {
     showMessage("error", "URL cannot be blank. Operation was cancelled.");
@@ -138,6 +166,18 @@ export async function editEnvironment(
   }
   if (url.endsWith("/")) {
     url = url.slice(0, -1);
+  }
+
+  let apiUrl = url;
+  if (apiUrl.includes(".apps")) {
+    apiUrl = apiUrl.replace(".apps.dynatrace.com", ".live.dynatrace.com");
+    apiUrl = apiUrl.replace(".apps.dynatracelabs.com", ".dynatracelabs.com");
+  }
+
+  const reachable = await checkUrlReachable(`${apiUrl}/api/v1/time`, true);
+  if (!reachable) {
+    showMessage("error", "The environment URL entered is not reachable.");
+    return;
   }
 
   const token = await vscode.window.showInputBox({
@@ -167,7 +207,7 @@ export async function editEnvironment(
     ignoreFocusOut: true,
   });
 
-  await registerEnvironment(context, url, encryptToken(token), name, current === "Yes");
+  await registerEnvironment(context, url, apiUrl, encryptToken(token), name, current === "Yes");
 }
 
 /**
@@ -226,6 +266,7 @@ export async function changeConnection(
       await registerEnvironment(
         context,
         environment.url,
+        environment.apiUrl,
         environment.token,
         environment.name,
         true,

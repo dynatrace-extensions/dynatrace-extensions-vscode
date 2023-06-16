@@ -166,6 +166,7 @@ export function getAllEnvironments(context: vscode.ExtensionContext): DynatraceE
 export async function registerEnvironment(
   context: vscode.ExtensionContext,
   url: string,
+  apiUrl: string,
   token: string,
   name?: string,
   current: boolean = false,
@@ -175,13 +176,7 @@ export async function registerEnvironment(
     readFileSync(environmentsJson).toString(),
   ) as DynatraceEnvironmentData[];
   const id = url.includes("/e/") ? url.split("/e/")[1] : url.split("https://")[1].substring(0, 8);
-  const environment: DynatraceEnvironmentData = {
-    id: id,
-    url: url,
-    token: token,
-    name: name,
-    current: current,
-  };
+  const environment: DynatraceEnvironmentData = { id, url, apiUrl, token, name, current };
 
   // If this will be the currently used environment, deactivate others
   if (current) {

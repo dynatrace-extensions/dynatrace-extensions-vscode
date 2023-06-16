@@ -14,8 +14,6 @@
   limitations under the License.
  */
 
-// @ts-expect-error
-import open from "open";
 import * as vscode from "vscode";
 import { EnvironmentsTreeDataProvider } from "../treeViews/environmentsTreeView";
 import { showMessage } from "../utils/code";
@@ -118,15 +116,20 @@ export class ScreenLensProvider implements vscode.CodeLensProvider {
   private async openScreen(entityType: string, screenType: "list" | "details") {
     try {
       const tenant = await this.environments.getCurrentEnvironment();
+      const baseUrl = tenant.url.includes(".apps")
+        ? `${tenant.url}/ui/apps/dynatrace.classic.technologies`
+        : tenant.url;
       if (tenant) {
         if (screenType === "list") {
-          await open(`${tenant.url}/ui/entity/list/${entityType}`);
+          await vscode.env.openExternal(
+            vscode.Uri.parse(`${baseUrl}/ui/entity/list/${entityType}`),
+          );
         }
         if (screenType === "details") {
           const entities = await tenant.dt.entitiesV2.list(`type("${entityType}")`, "now-5m");
           if (entities.length > 0) {
             const entityId = entities[0].entityId;
-            await open(`${tenant.url}/ui/entity/${entityId}`);
+            await vscode.env.openExternal(vscode.Uri.parse(`${baseUrl}/ui/entity/${entityId}`));
           } else {
             showMessage("error", "No entities of this type were found in your tenant.");
           }

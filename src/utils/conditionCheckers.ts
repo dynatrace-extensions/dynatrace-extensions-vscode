@@ -241,13 +241,20 @@ export async function checkExtensionZipExists(): Promise<boolean> {
 /**
  * Checks whether a URL returns a 200 response code.
  * @param url the URL to check
+ * @param showError whether to print the error received or just supress it
  * @returns status of check
  */
-export async function checkUrlReachable(url: string): Promise<boolean> {
+export async function checkUrlReachable(url: string, showError: boolean = false): Promise<boolean> {
   const status = await axios
     .get(url)
     .then(res => res.status === 200)
-    .catch(() => false);
+    .catch(err => {
+      if (showError) {
+        showMessage("error", (err as Error).message);
+        console.log(JSON.stringify(err));
+      }
+      return false;
+    });
 
   console.log(`Check - is URL ${url} reachable? > ${String(status)}`);
 

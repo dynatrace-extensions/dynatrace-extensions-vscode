@@ -57,12 +57,13 @@ interface IDynatraceEnvironment extends EnvironmentsTreeItem {
 }
 
 /**
- * Represents a Dynatrace (SaaS or Managed) Environment registered with the add-on.
+ * Represents a Dynatrace (SaaS, Managed, Platform) Environment registered with the add-on.
  */
 export class DynatraceEnvironment extends vscode.TreeItem implements IDynatraceEnvironment {
   id: string;
   dt: Dynatrace;
   url: string;
+  apiUrl: string;
   token: string;
   current: boolean;
   contextValue: "currentDynatraceEnvironment" | "dynatraceEnvironment";
@@ -82,12 +83,14 @@ export class DynatraceEnvironment extends vscode.TreeItem implements IDynatraceE
     id: string,
     label?: string,
     current: boolean = false,
+    apiUrl?: string,
   ) {
     super(label ?? id, collapsibleState);
     this.url = url;
+    this.apiUrl = apiUrl ?? url;
     this.token = token;
     this.id = id;
-    this.dt = new Dynatrace(this.url, this.token);
+    this.dt = new Dynatrace(this.apiUrl, this.token);
     this.tooltip = id;
     this.current = current;
     this.contextValue = this.current ? "currentDynatraceEnvironment" : "dynatraceEnvironment";
@@ -239,6 +242,7 @@ export class EnvironmentsTreeDataProvider implements vscode.TreeDataProvider<Env
         await registerEnvironment(
           context,
           environment.url,
+          environment.apiUrl,
           encryptToken(environment.token),
           environment.label?.toString(),
           true,
@@ -396,6 +400,7 @@ export class EnvironmentsTreeDataProvider implements vscode.TreeDataProvider<Env
         environment.id,
         environment.name,
         environment.current,
+        environment.apiUrl,
       );
     });
   }
