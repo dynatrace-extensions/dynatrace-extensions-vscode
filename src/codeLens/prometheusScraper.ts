@@ -15,7 +15,6 @@
  */
 
 import * as fs from "fs";
-import * as fs from "fs";
 import axios from "axios";
 import * as vscode from "vscode";
 import { showMessage } from "../utils/code";
@@ -29,7 +28,6 @@ type PromDetails = {
 };
 type PromAuth = "No authentication" | "Bearer token" | "Username & password" | "AWS key";
 type ScrapingMethod = "Endpoint" | "File";
-type ScrapingMethod = "Endpoint" | "File";
 
 /**
  * Code Lens Provider implementation to facilitate loading Prometheus metrics and data
@@ -40,9 +38,7 @@ export class PrometheusCodeLensProvider implements vscode.CodeLensProvider {
   private regex: RegExp;
   private lastScrape = "N/A";
   private method: ScrapingMethod | undefined;
-  private method: ScrapingMethod | undefined;
   private promUrl: string | undefined;
-  private promFile: string | undefined;
   private promFile: string | undefined;
   private promAuth: PromAuth | undefined;
   private promToken: string | undefined;
@@ -99,7 +95,6 @@ export class PrometheusCodeLensProvider implements vscode.CodeLensProvider {
             tooltip:
               "Connect to an exporter or read a file and scrape metrics, then use them in the Extension.",
             command: "dt-ext-copilot.codelens.scrapeMetrics",
->>>>>>> 2053a29 (Add code lens to scrape prometheus data from file)
             arguments: [],
           }),
         );
@@ -110,7 +105,6 @@ export class PrometheusCodeLensProvider implements vscode.CodeLensProvider {
               title: "Edit scraping config",
               tooltip: "Make changes to the scraping configuration.",
               command: "dt-ext-copilot.codelens.scrapeMetrics",
->>>>>>> 2053a29 (Add code lens to scrape prometheus data from file)
               arguments: [true],
             }),
           );
