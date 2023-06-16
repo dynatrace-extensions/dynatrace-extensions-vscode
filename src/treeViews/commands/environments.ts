@@ -18,6 +18,7 @@ import { readFileSync, readdirSync, rmSync, writeFileSync } from "fs";
 import * as path from "path";
 import * as vscode from "vscode";
 import { DynatraceAPIError } from "../../dynatrace-api/errors";
+import { DynatraceEnvironmentData } from "../../interfaces/treeViewData";
 import { showMessage } from "../../utils/code";
 import { checkUrlReachable } from "../../utils/conditionCheckers";
 import { encryptToken } from "../../utils/cryptography";
@@ -242,12 +243,17 @@ export async function deleteEnvironment(
  * This is useful when you don't want to visit the Dynatrace Activity Bar item - for example
  * when triggered from the global status bar.
  * @param context VSCode Extension Context
- * @returns the connected status as boolean, and name of connected environment or "" as string
+ * @returns the selected status as boolean, and name of connected environment or "" as string
  */
 export async function changeConnection(
   context: vscode.ExtensionContext,
-): Promise<[boolean, string]> {
+): Promise<[boolean, DynatraceEnvironmentData]> {
   const environments = getAllEnvironments(context);
+  // No point showing a list of 1 or empty
+  if (environments.length < 2) {
+    showMessage("info", "No other environments available. Add one first");
+    return [false, undefined];
+  }
   const currentEnv = environments.find(e => e.current);
   const choice = await vscode.window.showQuickPick(
     environments.map(e => (e.current ? `⭐ ${e.name ?? e.id}` : e.name ?? e.id)),
@@ -271,15 +277,15 @@ export async function changeConnection(
         environment.name,
         true,
       );
-      return [true, environment.name ?? environment.id];
+      return [true, environment];
     }
   }
 
   // If no choice made, persist the current connection if any
   if (currentEnv) {
-    return [true, currentEnv.name ?? currentEnv.id];
+    return [true, currentEnv];
   }
-  return [false, ""];
+  return [false, undefined];
 }
 
 /**

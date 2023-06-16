@@ -15,17 +15,20 @@
  */
 
 import * as vscode from "vscode";
+import { DynatraceEnvironmentData } from "../interfaces/treeViewData";
+import { checkUrlReachable } from "../utils/conditionCheckers";
 
 /**
  * Helper class for managing the Connection Status Bar Item.
  */
 export class ConnectionStatusManager {
   statusBarItem: vscode.StatusBarItem;
+  connectionInterval: NodeJS.Timer | undefined;
 
   constructor() {
     this.statusBarItem = vscode.window.createStatusBarItem(vscode.StatusBarAlignment.Left, 0);
     this.statusBarItem.command = "dynatrace-extensions-environments.changeConnection";
-    this.updateStatusBar(false);
+    this.updateStatusBar(false).catch(() => {});
   }
 
   /**
@@ -37,25 +40,44 @@ export class ConnectionStatusManager {
     return this.statusBarItem;
   }
 
+  clearConnectionChecks() {
+    if (this.connectionInterval) {
+      clearInterval(this.connectionInterval);
+      this.connectionInterval = undefined;
+    }
+  }
+
   /**
    * Updates the status bar item to show whether any specific Dynatrace environment
    * is currently being used or not.
-   * @param connected whether any environment is in use
+   * @param selected whether any environment is selected
    * @param environment optional label for the environment, in case one is in use
    */
-  updateStatusBar(connected: boolean, environment?: string) {
-    if (connected) {
-      if (environment) {
-        this.statusBarItem.text = `$(dt-platform) Connected to ${environment}`;
+  async updateStatusBar(selected: boolean, environment?: DynatraceEnvironmentData) {
+    if (selected && environment) {
+      this.statusBarItem.text = `$(dt-platform) Using ${environment.name ?? environment.id}`;
+      const reachable = await checkUrlReachable(`${environment.apiUrl}/api/v1/time`);
+      if (reachable) {
+        this.statusBarItem.tooltip = "Using this environment for API calls";
+        this.statusBarItem.backgroundColor = undefined;
+        this.statusBarItem.color = undefined;
+        this.clearConnectionChecks();
+      } else {
+        this.statusBarItem.tooltip = "This environment is not reachable.";
+        this.statusBarItem.backgroundColor = new vscode.ThemeColor("statusBarItem.errorBackground");
+        this.statusBarItem.color = new vscode.ThemeColor("statusBarItem.errorForeground");
+        if (!this.connectionInterval) {
+          this.connectionInterval = setInterval(() => {
+            this.updateStatusBar(true, environment).catch(() => {});
+          }, 5_000);
+        }
       }
-      this.statusBarItem.tooltip = "Using this environment for API calls";
-      this.statusBarItem.backgroundColor = undefined;
-      this.statusBarItem.color = undefined;
     } else {
-      this.statusBarItem.text = "$(dt-platform) Not connected";
+      this.clearConnectionChecks();
+      this.statusBarItem.text = "$(dt-platform) No environment selected";
       this.statusBarItem.tooltip = "No API calls are currently possible";
       this.statusBarItem.backgroundColor = new vscode.ThemeColor("statusBarItem.warningBackground");
-      this.statusBarItem.color = undefined;
+      this.statusBarItem.color = new vscode.ThemeColor("statusBarItem.warningForeground");
     }
     this.statusBarItem.show();
   }

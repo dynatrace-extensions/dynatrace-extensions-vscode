@@ -95,6 +95,7 @@ export class HttpClient {
         return res.data as T;
       })
       .catch((err: DynatraceAxiosError) => {
+        console.log(err.message);
         const message = `Error making request to ${url}: ${err.message}.`;
         console.log(err.response.data);
         throw new DynatraceAPIError(message, err.response.data.error);

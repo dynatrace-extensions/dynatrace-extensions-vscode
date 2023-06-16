@@ -216,7 +216,12 @@ export class EnvironmentsTreeDataProvider implements vscode.TreeDataProvider<Env
     this.oc = errorChannel;
     this.getCurrentEnvironment()
       .then(environment => {
-        this.connectionStatus.updateStatusBar(Boolean(environment), environment?.label?.toString());
+        this.connectionStatus
+          .updateStatusBar(Boolean(environment), {
+            ...{ ...environment },
+            name: environment.label.toString(),
+          })
+          .catch(() => {});
       })
       .catch(err => {
         console.log((err as Error).message);
@@ -247,6 +252,10 @@ export class EnvironmentsTreeDataProvider implements vscode.TreeDataProvider<Env
           environment.label?.toString(),
           true,
         );
+        this.connectionStatus.clearConnectionChecks();
+        this.connectionStatus
+          .updateStatusBar(true, { ...{ ...environment }, name: environment.label.toString() })
+          .catch(() => {});
         this.refresh();
       },
     );
@@ -266,7 +275,8 @@ export class EnvironmentsTreeDataProvider implements vscode.TreeDataProvider<Env
       "dynatrace-extensions-environments.changeConnection",
       async () => {
         await changeConnection(context).then(([connected, environment]) => {
-          this.connectionStatus.updateStatusBar(connected, environment);
+          this.connectionStatus.clearConnectionChecks();
+          this.connectionStatus.updateStatusBar(connected, environment).catch(() => {});
           this.refresh();
         });
       },
@@ -391,7 +401,7 @@ export class EnvironmentsTreeDataProvider implements vscode.TreeDataProvider<Env
     // If no item specified, grab all environments from global storage
     return getAllEnvironments(this.context).map((environment: DynatraceEnvironmentData) => {
       if (environment.current) {
-        this.connectionStatus.updateStatusBar(true, environment.name ?? environment.id);
+        this.connectionStatus.updateStatusBar(true, environment).catch(() => {});
       }
       return new DynatraceEnvironment(
         vscode.TreeItemCollapsibleState.Collapsed,

@@ -503,12 +503,21 @@ export async function migrateFromLegacyExtension(context: vscode.ExtensionContex
         "..",
         "dynatraceplatformextensions.dt-ext-copilot",
       );
-
       copySync(legacyGlobalStoragePath, globalStoragePath, { overwrite: true });
 
+      // Convert all environments to new format with apiUrl attribute
+      const environments = getAllEnvironments(context);
+      if (environments.length > 0) {
+        writeFileSync(
+          path.resolve(globalStoragePath, "dynatraceEnvironments.json"),
+          JSON.stringify(environments.map(e => ({ ...{ ...e }, apiUrl: e.url }))),
+        );
+      }
+
       progress.report({ message: "Migrating workspace data" });
-      const workspaces = getAllWorkspaces(context);
       const genericWorkspaceStorage = path.resolve(context.storageUri?.fsPath, "..", "..");
+      // Move over all data stored in workspaces
+      const workspaces = getAllWorkspaces(context);
       workspaces.forEach(workspace => {
         const legacyWorkspaceStorage = path.resolve(
           genericWorkspaceStorage,
@@ -524,7 +533,7 @@ export async function migrateFromLegacyExtension(context: vscode.ExtensionContex
       });
 
       progress.report({ message: "Migrating global settings" });
-      console.log("MIGRATE GLOB SETTS");
+      // Change prefix on all global settings
       const settingsKeys = [
         "metricSelectorsCodeLens",
         "entitySelectorsCodeLens",
@@ -560,9 +569,12 @@ export async function migrateFromLegacyExtension(context: vscode.ExtensionContex
           ".vscode",
           "settings.json",
         );
+        // For any workspace that has settings
         if (existsSync(settingsFilePath)) {
+          // Change the old ID for new one
           const settingsContent = readFileSync(settingsFilePath).toString();
           settingsContent.replace(/dt-ext-copilot\./g, "dynatrace-extensions.");
+          // Update all settings keys
           for (const key of settingsKeys) {
             settingsContent.replace(`dynatrace.${key}`, `dynatraceExtensions.${key}`);
           }
@@ -570,6 +582,7 @@ export async function migrateFromLegacyExtension(context: vscode.ExtensionContex
         }
       }
 
+      // Forget Copilot ever existed
       progress.report({ message: "Uninstalling legacy extension" });
       await vscode.commands
         .executeCommand(

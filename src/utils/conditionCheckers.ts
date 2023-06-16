@@ -251,8 +251,8 @@ export async function checkUrlReachable(url: string, showError: boolean = false)
     .catch(err => {
       if (showError) {
         showMessage("error", (err as Error).message);
-        console.log(JSON.stringify(err));
       }
+      console.log(JSON.stringify(err));
       return false;
     });
 

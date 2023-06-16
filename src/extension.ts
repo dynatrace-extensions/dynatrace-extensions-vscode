@@ -49,7 +49,6 @@ import { ConnectionStatusManager } from "./statusBar/connection";
 import { FastModeStatus } from "./statusBar/fastMode";
 import { EnvironmentsTreeDataProvider } from "./treeViews/environmentsTreeView";
 import { ExtensionsTreeDataProvider } from "./treeViews/extensionsTreeView";
-import { showMessage } from "./utils/code";
 import {
   checkCertificateExists,
   checkEnvironmentConnected,
