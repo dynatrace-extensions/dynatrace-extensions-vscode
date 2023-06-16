@@ -15,6 +15,7 @@
  */
 
 import * as fs from "fs";
+import * as fs from "fs";
 import axios from "axios";
 import * as vscode from "vscode";
 import { showMessage } from "../utils/code";
@@ -28,6 +29,7 @@ type PromDetails = {
 };
 type PromAuth = "No authentication" | "Bearer token" | "Username & password" | "AWS key";
 type ScrapingMethod = "Endpoint" | "File";
+type ScrapingMethod = "Endpoint" | "File";
 
 /**
  * Code Lens Provider implementation to facilitate loading Prometheus metrics and data
@@ -38,7 +40,9 @@ export class PrometheusCodeLensProvider implements vscode.CodeLensProvider {
   private regex: RegExp;
   private lastScrape = "N/A";
   private method: ScrapingMethod | undefined;
+  private method: ScrapingMethod | undefined;
   private promUrl: string | undefined;
+  private promFile: string | undefined;
   private promFile: string | undefined;
   private promAuth: PromAuth | undefined;
   private promToken: string | undefined;
@@ -92,10 +96,6 @@ export class PrometheusCodeLensProvider implements vscode.CodeLensProvider {
         this.codeLenses.push(
           new vscode.CodeLens(range, {
             title: "Scrape data",
-<<<<<<< HEAD
-            tooltip: "Connect to an exporter and scrape metrics, then use them in the Extension.",
-            command: "dynatrace-extensions.codelens.scrapeMetrics",
-=======
             tooltip:
               "Connect to an exporter or read a file and scrape metrics, then use them in the Extension.",
             command: "dt-ext-copilot.codelens.scrapeMetrics",
@@ -107,11 +107,6 @@ export class PrometheusCodeLensProvider implements vscode.CodeLensProvider {
         if (this.lastScrape !== "N/A") {
           this.codeLenses.push(
             new vscode.CodeLens(range, {
-<<<<<<< HEAD
-              title: "Edit config",
-              tooltip: "Make changes to the endpoint connection details",
-              command: "dynatrace-extensions.codelens.scrapeMetrics",
-=======
               title: "Edit scraping config",
               tooltip: "Make changes to the scraping configuration.",
               command: "dt-ext-copilot.codelens.scrapeMetrics",
@@ -173,7 +168,7 @@ export class PrometheusCodeLensProvider implements vscode.CodeLensProvider {
   private async collectScrapingDetails(): Promise<boolean> {
     // Endpoint URL
     this.method = (await vscode.window.showQuickPick(["Endpoint", "File"], {
-      title: "Scrape data - method selection",
+      title: "Scrape Prometheus Data (1/3)",
       placeHolder: "Select your scraping method",
       canPickMany: false,
       ignoreFocusOut: true,
@@ -181,7 +176,7 @@ export class PrometheusCodeLensProvider implements vscode.CodeLensProvider {
     switch (this.method) {
       case "Endpoint":
         this.promUrl = await vscode.window.showInputBox({
-          title: "Scrape data - endpoint URL",
+          title: "Scrape Prometheus Data (2/3)",
           placeHolder: "Enter your full metrics endpoint URL",
           prompt: "Mandatory",
           ignoreFocusOut: true,
@@ -193,7 +188,7 @@ export class PrometheusCodeLensProvider implements vscode.CodeLensProvider {
         this.promAuth = (await vscode.window.showQuickPick(
           ["No authentication", "Bearer token", "Username & password", "AWS key"],
           {
-            title: "Scrape data - endpoint authentication",
+            title: "Scrape Prometheus Data (3/3)",
             placeHolder: "Select your endpoint's authentication scheme",
             canPickMany: false,
             ignoreFocusOut: true,
@@ -205,7 +200,7 @@ export class PrometheusCodeLensProvider implements vscode.CodeLensProvider {
             return true;
           case "Bearer token":
             this.promToken = await vscode.window.showInputBox({
-              title: "Scrape data - endpoint authentication",
+              title: "Scrape Prometheus Data (3/3)",
               placeHolder: "Enter the Bearer token to use for authentication",
               prompt: "Mandatory",
               ignoreFocusOut: true,
@@ -216,13 +211,13 @@ export class PrometheusCodeLensProvider implements vscode.CodeLensProvider {
             return true;
           case "Username & password":
             this.promUsername = await vscode.window.showInputBox({
-              title: "Scrape data - endpoint authentication",
+              title: "Scrape Prometheus Data (3/3)",
               placeHolder: "Enter the username to use for authentication",
               prompt: "Mandatory",
               ignoreFocusOut: true,
             });
             this.promPassword = await vscode.window.showInputBox({
-              title: "Scrape data - endpoint authentication",
+              title: "Scrape Prometheus Data (3/3)",
               placeHolder: "Enter the password to use for authentication",
               prompt: "Mandatory",
               ignoreFocusOut: true,
@@ -237,13 +232,13 @@ export class PrometheusCodeLensProvider implements vscode.CodeLensProvider {
             showMessage("error", "AWS authentication not support yet, sorry.");
             return false;
             this.promAccessKey = await vscode.window.showInputBox({
-              title: "Scrape data - endpoint authentication",
+              title: "Scrape Prometheus Data (3/3)",
               placeHolder: "Enter the AWS access key to use for authentication",
               prompt: "Mandatory",
               ignoreFocusOut: true,
             });
             this.promSecretKey = await vscode.window.showInputBox({
-              title: "Scrape data - endpoint authentication",
+              title: "Scrape Prometheus Data (3/3)",
               placeHolder: "Enter the AWS secret key to use for authentication",
               prompt: "Mandatory",
               ignoreFocusOut: true,
@@ -257,7 +252,7 @@ export class PrometheusCodeLensProvider implements vscode.CodeLensProvider {
         }
       case "File":
         this.promFile = await vscode.window.showInputBox({
-          title: "Scrape data - file location",
+          title: "Scrape Prometheus Data From File",
           placeHolder: "Enter the full, physical location of the file",
           prompt: "Mandatory",
           ignoreFocusOut: true,
