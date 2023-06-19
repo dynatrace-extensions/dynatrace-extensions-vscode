@@ -21,7 +21,7 @@ import * as vscode from "vscode";
 import { MetricMetadata } from "../interfaces/extensionMeta";
 import { showMessage } from "../utils/code";
 import { CachedDataProvider } from "../utils/dataCaching";
-import { getAllMetricKeys } from "../utils/extensionParsing";
+import { getAllMetricKeys, getEntityForMetric } from "../utils/extensionParsing";
 import { createUniqueFileName, getExtensionFilePath } from "../utils/fileSystem";
 
 export async function createAlert(cachedData: CachedDataProvider) {
@@ -51,6 +51,7 @@ export async function createAlert(cachedData: CachedDataProvider) {
   const metricToUse = await vscode.window.showQuickPick(metricKeys, {
     placeHolder: "Choose a metric",
     title: "Extension workspace: Create Alert",
+    ignoreFocusOut: true,
   });
   if (!metricToUse) {
     showMessage("error", "No metric was selected. Operation cancelled.");
@@ -61,6 +62,7 @@ export async function createAlert(cachedData: CachedDataProvider) {
   const alertName = await vscode.window.showInputBox({
     placeHolder: `Alert name for ${metricToUse}`,
     title: "Extension workspace: Create Alert",
+    ignoreFocusOut: true,
   });
   if (!alertName) {
     showMessage("error", "No alert name was entered. Operation cancelled.");
@@ -71,6 +73,7 @@ export async function createAlert(cachedData: CachedDataProvider) {
   const alertCondition = await vscode.window.showQuickPick(["ABOVE", "BELOW"], {
     placeHolder: `Alert condition for ${metricToUse}`,
     title: "Extension workspace: Create Alert",
+    ignoreFocusOut: true,
   });
   if (!alertCondition) {
     showMessage("error", "No alert condition was selected. Operation cancelled.");
@@ -81,11 +84,31 @@ export async function createAlert(cachedData: CachedDataProvider) {
   const threshold = await vscode.window.showInputBox({
     placeHolder: `Threshold for ${metricToUse} when ${alertCondition}`,
     title: "Extension workspace: Create Alert",
+    ignoreFocusOut: true,
   });
 
   if (!threshold || isNaN(Number(threshold))) {
     showMessage("error", "No valid threshold was entered. Operation cancelled.");
     return;
+  }
+
+  let primaryEntityType = getEntityForMetric(metricToUse, extension);
+  if (!primaryEntityType) {
+    primaryEntityType =
+      (await vscode.window.showInputBox({
+        placeHolder: "What entity type should the alert be triggered on?",
+        title: "Extension workspace: Create Alert",
+        ignoreFocusOut: true,
+        validateInput: value => {
+          if (value.startsWith("dt.")) {
+            return "Don't add any prefix to the entity type";
+          }
+          return null;
+        },
+      })) ?? null;
+  }
+  if (primaryEntityType) {
+    primaryEntityType = `dt.entity.${primaryEntityType}`;
   }
 
   // Convert threshold to a number
@@ -115,6 +138,7 @@ export async function createAlert(cachedData: CachedDataProvider) {
       alertingOnMissingData: false,
       threshold: numberThreshold,
     },
+    primaryDimensionKey: primaryEntityType,
     alertCondition: alertCondition,
     samples: 5,
     violatingSamples: 3,

@@ -125,6 +125,7 @@ export interface MetricMetadata {
     description?: string;
     unit?: string;
     tags?: string[];
+    sourceEntityType?: string;
   };
 }
 
