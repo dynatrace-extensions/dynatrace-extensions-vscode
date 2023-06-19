@@ -993,12 +993,12 @@ export function getReferencedCardsMeta(screenIdx: number, extension: ExtensionSt
 
   const listSettingsCards = extension.screens?.[screenIdx].listSettings?.layout?.cards;
   if (listSettingsCards) {
-    unparsedCards.push(...listSettingsCards);
+    unparsedCards.push(...listSettingsCards.filter(c => c.type !== "INJECTIONS"));
   }
 
   const detailsSettingsCards = extension.screens?.[screenIdx].detailsSettings?.layout?.cards;
   if (detailsSettingsCards) {
-    unparsedCards.push(...detailsSettingsCards);
+    unparsedCards.push(...detailsSettingsCards.filter(c => c.type !== "INJECTIONS"));
   }
 
   const detailsInjectionsCards = extension.screens?.[screenIdx].detailsInjections;

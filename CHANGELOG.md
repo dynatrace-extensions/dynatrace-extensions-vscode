@@ -11,6 +11,8 @@
 - [#118 - Support for Platform URLs](https://github.com/dynatrace-extensions/dynatrace-extensions-vscode/issues/118)
 - [#109 - Prometheus scraping from file](https://github.com/dynatrace-extensions/dynatrace-extensions-vscode/issues/109)
 - [#117 - Connection checks for Dynatrace environments](https://github.com/dynatrace-extensions/dynatrace-extensions-vscode/issues/117)
+- [#78 - Attach generated alerts to entities](https://github.com/dynatrace-extensions/dynatrace-extensions-vscode/issues/78)
+- [#121 - INJECTIONS card gets error diagnostic over extension's name](https://github.com/dynatrace-extensions/dynatrace-extensions-vscode/issues/121)
 
 ### 🪲 Fixed in this version:
 - [#113 - Temporary file interface closes too early](https://github.com/dynatrace-extensions/dynatrace-extensions-vscode/issues/113)
