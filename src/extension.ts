@@ -126,6 +126,7 @@ function registerCompletionProviders(
  * Registers this extension's Commands for the VSCode Command Palette.
  * This is so that all commands can be created in one function, keeping the activation function more tidy.
  * @param tenantsProvider a provider for environments tree data
+ * @param extensionWorkspacesProvider a provider for extension workspaces tree data
  * @param diagnosticsProvider a provider for diagnostics
  * @param cachedDataProvider a provider for cacheable data
  * @param outputChannel a JSON output channel for communicating data
@@ -134,6 +135,7 @@ function registerCompletionProviders(
  */
 function registerCommandPaletteCommands(
   tenantsProvider: EnvironmentsTreeDataProvider,
+  extensionWorkspacesProvider: ExtensionsTreeDataProvider,
   diagnosticsProvider: DiagnosticsProvider,
   cachedDataProvider: CachedDataProvider,
   outputChannel: vscode.OutputChannel,
@@ -157,7 +159,7 @@ function registerCommandPaletteCommands(
           const dtClient = await tenantsProvider.getDynatraceClient();
           if (dtClient) {
             await initWorkspace(context, dtClient, () => {
-              tenantsProvider.refresh();
+              extensionWorkspacesProvider.refresh();
             });
           }
         } finally {
@@ -612,6 +614,7 @@ export async function activate(context: vscode.ExtensionContext) {
     // Commands for the Command Palette
     ...registerCommandPaletteCommands(
       tenantsTreeViewProvider,
+      extensionsTreeViewProvider,
       diagnosticsProvider,
       cachedDataProvider,
       genericChannel,

@@ -316,9 +316,13 @@ export async function getConfigurationDetailsViaFile(
 
   // Create a promise based on the file
   return new Promise<string>((resolve, reject) => {
-    const disposable = vscode.window.onDidChangeVisibleTextEditors(editors => {
+    const disposable = vscode.window.tabGroups.onDidChangeTabs(tabs => {
       // When the file closes, extract the content
-      if (!editors.map(editor => editor.document.fileName).includes(tempConfigFile)) {
+      if (
+        tabs.closed.findIndex(
+          t => (t.input as vscode.TextDocument).uri.fsPath === tempConfigFile,
+        ) >= 0
+      ) {
         disposable.dispose();
         // Grab all lines that don't start with '//'
         const newDetails = readFileSync(tempConfigFile)
