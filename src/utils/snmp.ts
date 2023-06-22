@@ -18,6 +18,7 @@
  * UTILITIES FOR WORKING WITH SNMP
  ********************************************************************************/
 
+import { readFileSync } from "fs";
 import axios from "axios";
 
 // URL to online OID Repository
@@ -51,50 +52,36 @@ export function isTable(info: OidInformation): boolean {
 }
 
 /**
- * Cleans a metadata key as given by the online OID repository and translates it to
- * camelCase for better readability.
- * @param key metadata attribute key from OID repository
- * @returns key in camelCase
+ * Extract an OID from a metric value text (as present in yaml)
+ * @param value
+ * @returns oid
  */
-function cleanKeyName(key: string): string {
-  const dashIdx = key.indexOf("-");
-  const cleanKey = key.toLowerCase();
-  return dashIdx !== -1
-    ? cleanKey.slice(0, dashIdx) +
-        cleanKey.charAt(dashIdx + 1).toUpperCase() +
-        cleanKey.slice(dashIdx + 2)
-    : cleanKey;
+export function oidFromMetriValue(value: string): string {
+  return value.endsWith(".0") ? value.slice(4, value.length - 2) : value.slice(4);
 }
 
 /**
- * Given raw data from the online OID repository, parses this into a structured object
- * of OID metadata information.
- * @param data raw response from OID repository
+ * Given raw data from the online OID repository or a MIB file, parses this into a structured
+ * object of OID metadata information.
+ * @param details raw data
  * @returns OID metadata info
  */
-function processOidData(data: string) {
-  const details = data.split("<br/>").map(p => p.trim());
+function processOidData(details: string): OidInformation {
+  const objectTypeMatches = /(.*?) OBJECT-TYPE/.exec(details) ?? [];
+  const syntaxMatches = /SYNTAX (.*?) MAX-ACCESS/.exec(details) ?? [];
+  const maxAccessMatches = /MAX-ACCESS (.*?) /.exec(details) ?? [];
+  const statusMatches = /STATUS (.*?) /.exec(details) ?? [];
+  const descriptionMatches = /DESCRIPTION "(.*?)"/.exec(details) ?? [];
+  const indexMatches = /INDEX (.*?) ::=/.exec(details) ?? [];
 
-  const descriptionIdx = details.indexOf("DESCRIPTION");
-
-  const description = details.slice(descriptionIdx + 1).join(" ");
-  const oid: Record<string, string> = { description: description };
-
-  if (description.includes("INDEX")) {
-    oid.description = description.slice(0, description.lastIndexOf("INDEX"));
-    oid.index = description.split("INDEX")[1];
-  }
-
-  details.slice(0, descriptionIdx).forEach(detail => {
-    const [key, ...values] = detail.split(" ");
-    if (values[0] === "OBJECT-TYPE") {
-      oid.objectType = key;
-    } else {
-      oid[cleanKeyName(key)] = values[0] ?? "";
-    }
-  });
-
-  return oid;
+  return {
+    objectType: objectTypeMatches.length > 1 ? objectTypeMatches[1] : undefined,
+    syntax: syntaxMatches.length > 1 ? syntaxMatches[1] : undefined,
+    maxAccess: maxAccessMatches.length > 1 ? maxAccessMatches[1] : undefined,
+    status: statusMatches.length > 1 ? statusMatches[1] : undefined,
+    description: descriptionMatches.length > 1 ? descriptionMatches[1] : undefined,
+    index: indexMatches.length > 1 ? indexMatches[1] : undefined,
+  };
 }
 
 /**
@@ -111,8 +98,9 @@ export async function fetchOID(oid: string) {
         const rawData = String(res.data)
           .slice(String(res.data).lastIndexOf("<code>") + 6)
           .split("</code>")[0]
-          .replace(/"/g, "")
-          .replace(/\n/g, " ");
+          .replace(/\n/g, " ")
+          .replace(/<br\/>/g, "");
+        console.log(rawData);
         return processOidData(rawData);
       }
       return {};
@@ -121,4 +109,17 @@ export async function fetchOID(oid: string) {
       console.log(err);
       return {};
     });
+}
+
+export function parseMibFile(filePath: string) {
+  const mibContent = readFileSync(filePath)
+    .toString()
+    .replace(/\r/g, "")
+    .replace(/\n/g, " ")
+    .replace(/[\r\t\f\v]|\s{2,}/g, " ");
+
+  const objectMatches = mibContent.match(/(\w+ OBJECT-TYPE .*?::= { .*? })/g);
+  const parsedObjects = objectMatches.map(objectData => processOidData(objectData));
+
+  return parsedObjects;
 }

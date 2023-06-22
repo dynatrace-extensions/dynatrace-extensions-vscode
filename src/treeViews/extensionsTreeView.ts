@@ -18,8 +18,9 @@ import { readFileSync } from "fs";
 import * as path from "path";
 import * as glob from "glob";
 import * as vscode from "vscode";
+import * as yaml from "yaml";
+import { ExtensionStub } from "../interfaces/extensionMeta";
 import { ExtensionWorkspace } from "../interfaces/treeViewData";
-import { CachedDataProvider } from "../utils/dataCaching";
 import { getAllWorkspaces } from "../utils/fileSystem";
 import { deleteWorkspace } from "./commands/workspaces";
 
@@ -90,7 +91,6 @@ export class ExtensionProjectItem extends vscode.TreeItem {
  */
 export class ExtensionsTreeDataProvider implements vscode.TreeDataProvider<ExtensionProjectItem> {
   context: vscode.ExtensionContext;
-  private readonly cachedData: CachedDataProvider;
   private _onDidChangeTreeData: vscode.EventEmitter<ExtensionProjectItem | undefined> =
     new vscode.EventEmitter<ExtensionProjectItem | undefined>();
 
@@ -101,9 +101,8 @@ export class ExtensionsTreeDataProvider implements vscode.TreeDataProvider<Exten
    * @param cachedDataProvider a provider for cacheable data
    * @param context VSCode Extension context
    */
-  constructor(cachedDataProvider: CachedDataProvider, context: vscode.ExtensionContext) {
+  constructor(context: vscode.ExtensionContext) {
     this.context = context;
-    this.cachedData = cachedDataProvider;
     this.registerCommands(context);
   }
 
@@ -173,9 +172,9 @@ export class ExtensionsTreeDataProvider implements vscode.TreeDataProvider<Exten
         ...glob.sync("*/extension/extension.yaml", { cwd: workspacePath }),
       ];
       extensionFiles.forEach(filepath => {
-        const extension = this.cachedData.getExtensionYaml(
+        const extension = yaml.parse(
           readFileSync(path.join(workspacePath, filepath)).toString(),
-        );
+        ) as ExtensionStub;
         extensions.push(
           new ExtensionProjectItem(
             extension.name,

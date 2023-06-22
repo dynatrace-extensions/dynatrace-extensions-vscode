@@ -21,7 +21,7 @@ import { Dashboard } from "../dynatrace-api/interfaces/dashboards";
 import { ExtensionStub } from "../interfaces/extensionMeta";
 import { EnvironmentsTreeDataProvider } from "../treeViews/environmentsTreeView";
 import { showMessage } from "../utils/code";
-import { CachedDataProvider } from "../utils/dataCaching";
+import { CachedData } from "../utils/dataCaching";
 import { getEntityMetrics, getMetricDisplayName } from "../utils/extensionParsing";
 import { getExtensionFilePath } from "../utils/fileSystem";
 
@@ -489,7 +489,7 @@ function buildDashboard(
  */
 export async function createOverviewDashboard(
   tenantsProvider: EnvironmentsTreeDataProvider,
-  cachedData: CachedDataProvider,
+  cachedData: CachedData,
   outputChannel: vscode.OutputChannel,
 ) {
   const DASHBOARD_PATH = "dashboards/overview_dashboard.json";
@@ -499,7 +499,7 @@ export async function createOverviewDashboard(
     return;
   }
   const extensionText = readFileSync(extensionFile).toString();
-  const extension = cachedData.getExtensionYaml(extensionText);
+  const extension = cachedData.getCached<ExtensionStub>("parsedExtension");
   // Check topology. No topology = pointless dashboard
   if (!extension.topology) {
     showMessage("warn", "Please define your topology before running this command.");

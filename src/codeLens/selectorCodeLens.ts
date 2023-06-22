@@ -16,7 +16,7 @@
 
 import * as vscode from "vscode";
 import { ExtensionStub } from "../interfaces/extensionMeta";
-import { CachedDataProvider } from "../utils/dataCaching";
+import { CachedData, CachedDataProducer } from "../utils/dataCaching";
 import { resolveSelectorTemplate, ValidationStatus } from "./utils/selectorUtils";
 
 /**
@@ -30,10 +30,9 @@ class ValidationStatusLens extends vscode.CodeLens {
    * @param selector selector relevant to this lens
    * @param cachedData a provider of cached validation statuses
    */
-  constructor(range: vscode.Range, selector: string, cachedData: CachedDataProvider) {
+  constructor(range: vscode.Range, selector: string, cachedStatus: ValidationStatus) {
     super(range);
     this.selector = selector;
-    const cachedStatus = cachedData.getSelectorStatus(selector);
     this.command = this.getStatusAsCommand(cachedStatus);
   }
 
@@ -116,10 +115,12 @@ class SelectorRunnerLens extends vscode.CodeLens {
  * Implementation of a Code Lens Provider to facilitate operations done on metric and entities
  * as well as their respective selectors.
  */
-export class SelectorCodeLensProvider implements vscode.CodeLensProvider {
+export class SelectorCodeLensProvider
+  extends CachedDataProducer
+  implements vscode.CodeLensProvider
+{
   private codeLenses: vscode.CodeLens[];
   private regex: RegExp;
-  public readonly cachedData: CachedDataProvider;
   private _onDidChangeCodeLenses: vscode.EventEmitter<void> = new vscode.EventEmitter<void>();
   public readonly onDidChangeCodeLenses: vscode.Event<void> = this._onDidChangeCodeLenses.event;
   private readonly controlSetting: string;
@@ -131,11 +132,11 @@ export class SelectorCodeLensProvider implements vscode.CodeLensProvider {
    * @param controlSetting the vscode setting which controls this feature
    * @param dataProvider a provider of cacheable data (i.e. selector statuses)
    */
-  constructor(match: string, controlSetting: string, dataProvider: CachedDataProvider) {
+  constructor(match: string, controlSetting: string, cachedData: CachedData) {
+    super(cachedData);
     this.codeLenses = [];
     this.matchString = match;
     this.controlSetting = controlSetting;
-    this.cachedData = dataProvider;
     this.selectorType = match.startsWith("metricSelector") ? "metric" : "entity";
     this.regex = new RegExp(`(${match})`, "g");
   }
@@ -155,10 +156,7 @@ export class SelectorCodeLensProvider implements vscode.CodeLensProvider {
     if (!vscode.workspace.getConfiguration("dynatraceExtensions", null).get(this.controlSetting)) {
       return [];
     }
-    // Load yaml only for entity selectors
-    if (this.selectorType === "entity") {
-      extension = this.cachedData.getExtensionYaml(document.getText());
-    }
+
     // Create lenses
     await Promise.all(
       Array.from(text.matchAll(regex)).map(match =>
@@ -195,7 +193,7 @@ export class SelectorCodeLensProvider implements vscode.CodeLensProvider {
         return [
           new SelectorRunnerLens(range, selector, this.selectorType),
           new SelectorValidationLens(range, selector, this.selectorType),
-          new ValidationStatusLens(range, selector, this.cachedData),
+          new ValidationStatusLens(range, selector, this.selectorStatuses[selector]),
         ];
       }
     }
@@ -209,7 +207,7 @@ export class SelectorCodeLensProvider implements vscode.CodeLensProvider {
    * @param status current validation status
    */
   public updateValidationStatus(selector: string, status: ValidationStatus) {
-    this.cachedData.addSelectorStatus(selector, status);
+    this.cachedData.updateSelectorStatus(selector, status);
     this._onDidChangeCodeLenses.fire();
   }
 }

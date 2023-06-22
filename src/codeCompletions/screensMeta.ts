@@ -16,26 +16,19 @@
 
 import * as vscode from "vscode";
 import { ExtensionStub } from "../interfaces/extensionMeta";
-import { CachedDataProvider } from "../utils/dataCaching";
+import { CachedDataConsumer } from "../utils/dataCaching";
 import { getReferencedCardsMeta, getDefinedCardsMeta } from "../utils/extensionParsing";
 import { getBlockItemIndexAtLine, getParentBlocks } from "../utils/yamlParsing";
 
-export class ScreensMetaCompletionProvider implements vscode.CompletionItemProvider {
-  private readonly cachedData: CachedDataProvider;
-
-  /**
-   * @param cachedDataProvider a provider for cacheable data
-   */
-  constructor(cachedDataProvider: CachedDataProvider) {
-    this.cachedData = cachedDataProvider;
-  }
-
+export class ScreensMetaCompletionProvider
+  extends CachedDataConsumer
+  implements vscode.CompletionItemProvider
+{
   provideCompletionItems(
     document: vscode.TextDocument,
     position: vscode.Position,
   ): vscode.CompletionItem[] {
     const completions: vscode.CompletionItem[] = [];
-    const extension = this.cachedData.getExtensionYaml(document.getText());
     const parentBlocks = getParentBlocks(position.line, document.getText());
     const line = document.lineAt(position.line).text.substring(0, position.character);
     const screenIdx = getBlockItemIndexAtLine("screens", position.line, document.getText());
@@ -48,7 +41,9 @@ export class ScreensMetaCompletionProvider implements vscode.CompletionItemProvi
         parentBlocks[parentBlocks.length - 1] === "cards" &&
         parentBlocks[parentBlocks.length - 2] === "layout"
       ) {
-        completions.push(...this.createCardKeyCompletions("layout", screenIdx, extension));
+        completions.push(
+          ...this.createCardKeyCompletions("layout", screenIdx, this.parsedExtension),
+        );
       }
 
       // In card definitions, suggestions include keys from layout (if any)
@@ -64,7 +59,7 @@ export class ScreensMetaCompletionProvider implements vscode.CompletionItemProvi
           ...this.createCardKeyCompletions(
             "definition",
             screenIdx,
-            extension,
+            this.parsedExtension,
             parentBlocks[parentBlocks.length - 1] as
               | "entitiesListCards"
               | "chartsCards"

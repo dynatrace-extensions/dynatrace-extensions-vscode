@@ -15,30 +15,18 @@
  */
 
 import * as vscode from "vscode";
-import { CachedDataProvider } from "../utils/dataCaching";
+import { CachedDataConsumer } from "../utils/dataCaching";
 
-export class WmiCompletionProvider implements vscode.CompletionItemProvider {
-  // The cached data provider, contains results of WMI queries previously executed by WmiCodeLens
-  private readonly cachedData: CachedDataProvider;
-
-  /**
-   * Provides a list of completion items based on a WMI query result
-   * The query result is previously cached in the CachedDataProvider by WmiCodeLens
-   *
-   * @param cachedDataProvider a provider for cacheable data
-   */
-  constructor(cachedDataProvider: CachedDataProvider) {
-    this.cachedData = cachedDataProvider;
-  }
-
+export class WmiCompletionProvider
+  extends CachedDataConsumer
+  implements vscode.CompletionItemProvider
+{
   provideCompletionItems(
     document: vscode.TextDocument,
     position: vscode.Position,
   ): vscode.CompletionItem[] {
-    const extension = this.cachedData.getExtensionYaml(document.getText());
-
     // Exit early if different datasource
-    if (!extension.wmi) {
+    if (!this.parsedExtension.wmi) {
       return [];
     }
 
@@ -59,7 +47,7 @@ export class WmiCompletionProvider implements vscode.CompletionItemProvider {
 
         // Find out if we have a query result for this query
         // This is only true if the query was executed by WmiCodeLens
-        const cachedQueryResults = this.cachedData.getWmiQueryResult(queryString);
+        const cachedQueryResults = this.wmiData[queryString];
         if (!cachedQueryResults || cachedQueryResults.results.length === 0) {
           return [];
         }

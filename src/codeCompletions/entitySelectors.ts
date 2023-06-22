@@ -15,9 +15,8 @@
  */
 
 import * as vscode from "vscode";
-import { EntityType } from "../dynatrace-api/interfaces/monitoredEntities";
 import { ExtensionStub } from "../interfaces/extensionMeta";
-import { CachedDataProvider } from "../utils/dataCaching";
+import { CachedDataConsumer } from "../utils/dataCaching";
 import {
   getAttributesKeysFromTopology,
   getEntityName,
@@ -34,18 +33,10 @@ const TRIGGER_SUGGEST_CMD: vscode.Command = {
 /**
  * Provider for code auto-completions within entity selectors.
  */
-export class EntitySelectorCompletionProvider implements vscode.CompletionItemProvider {
-  private builtinEntities: EntityType[];
-  private readonly cachedData: CachedDataProvider;
-
-  /**
-   * @param cachedDataProvider a provider for cacheable data
-   */
-  constructor(cachedDataProvider: CachedDataProvider) {
-    this.cachedData = cachedDataProvider;
-    this.builtinEntities = [];
-  }
-
+export class EntitySelectorCompletionProvider
+  extends CachedDataConsumer
+  implements vscode.CompletionItemProvider
+{
   /**
    * Provides the actual completion items related to the currently typed entity selector.
    * @param document
@@ -59,10 +50,7 @@ export class EntitySelectorCompletionProvider implements vscode.CompletionItemPr
     position: vscode.Position,
   ): Promise<vscode.CompletionItem[]> {
     const completionItems: vscode.CompletionItem[] = [];
-    const extension = this.cachedData.getExtensionYaml(document.getText());
     const line = document.lineAt(position.line).text.substring(0, position.character);
-
-    this.builtinEntities = await this.cachedData.getBuiltinEntities();
 
     // Completions are possible on any line containing `entitySelectorTemplate`
     if (line.includes("entitySelectorTemplate:")) {
@@ -70,7 +58,9 @@ export class EntitySelectorCompletionProvider implements vscode.CompletionItemPr
 
       // If at the start of template, offer pre-defined selectors or option to build
       if (line.endsWith("entitySelectorTemplate: ")) {
-        completionItems.push(...this.createKnownSelectorCompletions(position, document, extension));
+        completionItems.push(
+          ...this.createKnownSelectorCompletions(position, document, this.parsedExtension),
+        );
         completionItems.push(this.createBaseSelectorCompletion());
       }
       // If we just started a relationship definition, assume new selector start
@@ -79,15 +69,19 @@ export class EntitySelectorCompletionProvider implements vscode.CompletionItemPr
       }
       // `type` will always require a valid entity type
       if (line.endsWith("type(")) {
-        completionItems.push(...this.createTypeCompletions(extension, currentSelector));
+        completionItems.push(...this.createTypeCompletions(this.parsedExtension, currentSelector));
       }
       // Closing bracket and comma implies continuation, suggest valid operators
       if (line.endsWith("),")) {
-        completionItems.push(...this.createOperatorCompletions(currentSelector, extension));
+        completionItems.push(
+          ...this.createOperatorCompletions(currentSelector, this.parsedExtension),
+        );
       }
       // Clear markers for suggesting relationships relevant to current selector context
       if (line.endsWith("fromRelationships.") || line.endsWith("toRelationships.")) {
-        completionItems.push(this.createRelationshipCompletion(currentSelector, extension));
+        completionItems.push(
+          this.createRelationshipCompletion(currentSelector, this.parsedExtension),
+        );
       }
     }
 
@@ -198,7 +192,7 @@ export class EntitySelectorCompletionProvider implements vscode.CompletionItemPr
     const customTypes = (extension.topology?.types ?? [])
       .map(type => type.name)
       .filter(e => !usedTypes.includes(e));
-    const builtinTypes = this.builtinEntities
+    const builtinTypes = this.builtinEntityTypes
       .map(type => type.type?.toLowerCase())
       .filter(e => e !== undefined && !usedTypes.includes(e)) as string[];
 

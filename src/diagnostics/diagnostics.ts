@@ -18,7 +18,7 @@ import * as vscode from "vscode";
 import { ExtensionStub } from "../interfaces/extensionMeta";
 import { showMessage } from "../utils/code";
 import { checkDtInternalProperties } from "../utils/conditionCheckers";
-import { CachedDataProvider } from "../utils/dataCaching";
+import { CachedData, CachedDataProducer } from "../utils/dataCaching";
 import {
   getDefinedCardsMeta,
   getDimensionsFromDataSource,
@@ -26,7 +26,7 @@ import {
   getReferencedCardsMeta,
 } from "../utils/extensionParsing";
 import { getExtensionFilePath } from "../utils/fileSystem";
-import { isOidReadable, isTable, OidInformation } from "../utils/snmp";
+import { isOidReadable, isTable, oidFromMetriValue, OidInformation } from "../utils/snmp";
 import {
   getBlockItemIndexAtLine,
   getListItemIndexes,
@@ -60,18 +60,17 @@ import {
  * Utility class implemented for providing diagnostics information regarding the contents
  * of an Extensions 2.0 YAML file.
  */
-export class DiagnosticsProvider {
+export class DiagnosticsProvider extends CachedDataProducer {
   private readonly collection: vscode.DiagnosticCollection;
   private readonly context: vscode.ExtensionContext;
-  private readonly cachedData: CachedDataProvider;
 
   /**
    * @param context VSCode Extension Context
    * @param cachedDataProvider Provider for cacheable data
    */
-  constructor(context: vscode.ExtensionContext, cachedDataProvider: CachedDataProvider) {
+  constructor(context: vscode.ExtensionContext, cachedData: CachedData) {
+    super(cachedData);
     this.context = context;
-    this.cachedData = cachedDataProvider;
     this.collection = vscode.languages.createDiagnosticCollection("Dynatrace");
   }
 
@@ -86,15 +85,13 @@ export class DiagnosticsProvider {
       return;
     }
 
-    const extension = this.cachedData.getExtensionYaml(document.getText());
-
     // Diagnostic collections should be awaited all in parallel
     const diagnostics = await Promise.all([
       this.diagnoseExtensionName(document),
-      this.diagnoseMetricKeys(document, extension),
-      this.diagnoseCardKeys(document, extension),
-      this.diagnoseMetricOids(document, extension),
-      this.diagnoseDimensionOids(document, extension),
+      this.diagnoseMetricKeys(document, this.parsedExtension),
+      this.diagnoseCardKeys(document, this.parsedExtension),
+      this.diagnoseMetricOids(document, this.parsedExtension),
+      this.diagnoseDimensionOids(document, this.parsedExtension),
     ]).then(results => results.reduce((collection, result) => collection.concat(result), []));
 
     this.collection.set(document.uri, diagnostics);
@@ -327,17 +324,14 @@ export class DiagnosticsProvider {
         value: string;
       }[]
     ).filter(m => m.value.startsWith("oid:"));
+
     // Reduce the time by bulk fetching all required OIDs
-    const oidInfos = await this.cachedData.getBulkOidsInfo(
-      metrics.map(m =>
-        m.value.endsWith(".0") ? m.value.slice(4, m.value.length - 2) : m.value.slice(4),
-      ),
-    );
-    const metricInfos = metrics.map((m, i) => ({
+    await this.cachedData.updateSnmpData(metrics.map(m => oidFromMetriValue(m.value)));
+    const metricInfos = metrics.map(m => ({
       key: m.key,
       type: m.type,
       value: m.value,
-      info: oidInfos[i],
+      info: this.snmpData[oidFromMetriValue(m.value)],
     }));
 
     for (const metric of metricInfos) {
@@ -451,13 +445,11 @@ export class DiagnosticsProvider {
         value: d.value.endsWith(".0") ? d.value.slice(0, d.value.length - 2) : d.value,
       }));
     // Reduce the time by bulk fetching all required OIDs
-    const dimensionOidInfos = await this.cachedData.getBulkOidsInfo(
-      dimensions.map(d => d.value.split("oid:")[1]),
-    );
-    const dimensionInfos = dimensions.map((d, i) => ({
+    await this.cachedData.updateSnmpData(dimensions.map(d => d.value.split("oid:")[1]));
+    const dimensionInfos = dimensions.map(d => ({
       key: d.key,
       value: d.value,
-      info: dimensionOidInfos[i],
+      info: this.snmpData[d.value.split("oid:")[1]],
     }));
 
     for (const dimension of dimensionInfos) {
@@ -545,12 +537,11 @@ export class DiagnosticsProvider {
         if (usageInfo.value?.endsWith(".0")) {
           diagnostics.push(extensionDiagnostic(startPos, endPos, OID_DOT_ZERO_IN_TABLE));
         } else {
+          // Get the second last index of '.' and slice oid from start
+          const grandparentOid = oid.slice(0, oid.slice(0, oid.lastIndexOf(".")).lastIndexOf("."));
           // Get data for grandparent OID, then check for signs of table
-          const grandparentInfo = await this.cachedData.getSingleOidInfo(
-            // Get the second last index of '.' and slice oid from start
-            oid.slice(0, oid.slice(0, oid.lastIndexOf(".")).lastIndexOf(".")),
-          );
-          if (!isTable(grandparentInfo)) {
+          await this.cachedData.updateSnmpOid(grandparentOid);
+          if (!isTable(this.snmpData[grandparentOid])) {
             diagnostics.push(extensionDiagnostic(startPos, endPos, OID_STATIC_OBJ_IN_TABLE));
           }
         }
@@ -558,15 +549,14 @@ export class DiagnosticsProvider {
         if (!usageInfo.value?.endsWith(".0")) {
           diagnostics.push(extensionDiagnostic(startPos, endPos, OID_DOT_ZERO_MISSING));
         } else {
-          // Get data for grandparent OID, then check for signs of table
-          const grandparentInfo = await this.cachedData.getSingleOidInfo(
-            // Remove '.0', get the second last index of '.' and slice oid from start
-            oid.slice(
-              0,
-              oid.slice(0, oid.slice(0, oid.length - 2).lastIndexOf(".")).lastIndexOf("."),
-            ),
+          // Remove '.0', get the second last index of '.' and slice oid from start
+          const grandparentOid = oid.slice(
+            0,
+            oid.slice(0, oid.slice(0, oid.length - 2).lastIndexOf(".")).lastIndexOf("."),
           );
-          if (isTable(grandparentInfo)) {
+          // Get data for grandparent OID, then check for signs of table
+          await this.cachedData.updateSnmpOid(grandparentOid);
+          if (isTable(this.snmpData[grandparentOid])) {
             diagnostics.push(extensionDiagnostic(startPos, endPos, OID_TABLE_OBJ_AS_STATIC));
           }
         }

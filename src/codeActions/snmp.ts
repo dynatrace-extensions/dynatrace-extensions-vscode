@@ -16,24 +16,16 @@
 
 import * as vscode from "vscode";
 import { ExtensionStub } from "../interfaces/extensionMeta";
-import { CachedDataProvider } from "../utils/dataCaching";
+import { CachedDataProducer } from "../utils/dataCaching";
 import { getMetricsFromDataSource } from "../utils/extensionParsing";
+import { oidFromMetriValue } from "../utils/snmp";
 import { getIndent } from "../utils/yamlParsing";
 import { buildMetricMetadataSnippet, indentSnippet } from "./utils/snippetBuildingUtils";
 
 /**
  * Provider for Code Actions for SNMP-based extensions, leveraging online OID information.
  */
-export class SnmpActionProvider implements vscode.CodeActionProvider {
-  private readonly cachedData: CachedDataProvider;
-
-  /**
-   * @param cachedDataProvider provider of cached data (i.e. prometheus scraped data)
-   */
-  constructor(cachedDataProvider: CachedDataProvider) {
-    this.cachedData = cachedDataProvider;
-  }
-
+export class SnmpActionProvider extends CachedDataProducer implements vscode.CodeActionProvider {
   /**
    * Provides the Code Actions that insert details based on SNMP data.
    * @param document document that activated the provider
@@ -54,10 +46,11 @@ export class SnmpActionProvider implements vscode.CodeActionProvider {
     }
 
     const lineText = document.lineAt(range.start.line).text;
-    const extension = this.cachedData.getExtensionYaml(document.getText());
 
     if (lineText.startsWith("metrics:")) {
-      codeActions.push(...(await this.createMetadataInsertions(document, range, extension)));
+      codeActions.push(
+        ...(await this.createMetadataInsertions(document, range, this.parsedExtension)),
+      );
     }
 
     return codeActions;
@@ -109,18 +102,14 @@ export class SnmpActionProvider implements vscode.CodeActionProvider {
     ).filter(m => m.value.startsWith("oid:"));
 
     // Reduce the time by bulk fetching all required OIDs
-    const oidInfos = await this.cachedData.getBulkOidsInfo(
-      metrics.map(m =>
-        m.value.endsWith(".0") ? m.value.slice(4, m.value.length - 2) : m.value.slice(4),
-      ),
-    );
+    await this.cachedData.updateSnmpData(metrics.map(m => oidFromMetriValue(m.value)));
 
     // Map OID info to each metric
-    const metricInfos = metrics.map((m, i) => ({
+    const metricInfos = metrics.map(m => ({
       key: m.key,
       type: m.type,
       value: m.value,
-      info: oidInfos[i],
+      info: this.snmpData[oidFromMetriValue(m.value)],
     }));
 
     // Filter out metrics that already have metadata or don't have OID info

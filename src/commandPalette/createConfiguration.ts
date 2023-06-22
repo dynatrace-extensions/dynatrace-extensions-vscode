@@ -18,12 +18,13 @@ import { readFileSync, readdirSync, writeFileSync } from "fs";
 import path = require("path");
 import * as vscode from "vscode";
 import { Dynatrace } from "../dynatrace-api/dynatrace";
+import { ExtensionStub } from "../interfaces/extensionMeta";
 import {
   MinimalConfiguration,
   getConfigurationDetailsViaFile,
 } from "../treeViews/commands/environments";
 import { showMessage } from "../utils/code";
-import { CachedDataProvider } from "../utils/dataCaching";
+import { CachedData } from "../utils/dataCaching";
 import { getDatasourceName } from "../utils/extensionParsing";
 import { createUniqueFileName, getExtensionFilePath } from "../utils/fileSystem";
 import { createGenericConfigObject, createObjectFromSchema } from "../utils/schemaParsing";
@@ -42,7 +43,7 @@ import { createGenericConfigObject, createObjectFromSchema } from "../utils/sche
 export async function createMonitoringConfiguration(
   dt: Dynatrace,
   context: vscode.ExtensionContext,
-  cachedData: CachedDataProvider,
+  cachedData: CachedData,
 ) {
   const workspaceRoot = vscode.workspace.workspaceFolders?.[0].uri.fsPath;
   if (!workspaceRoot) {
@@ -53,7 +54,7 @@ export async function createMonitoringConfiguration(
     return;
   }
   const configDir = path.join(workspaceRoot, "config");
-  const extension = cachedData.getExtensionYaml(readFileSync(extensionFilePath).toString());
+  const extension = cachedData.getCached<ExtensionStub>("parsedExtension");
   const deployedExtension = await dt.extensionsV2
     .getExtensionSchema(extension.name, extension.version)
     .catch(() => ({}));
