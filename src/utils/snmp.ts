@@ -100,7 +100,6 @@ export async function fetchOID(oid: string) {
           .split("</code>")[0]
           .replace(/\n/g, " ")
           .replace(/<br\/>/g, "");
-        console.log(rawData);
         return processOidData(rawData);
       }
       return {};

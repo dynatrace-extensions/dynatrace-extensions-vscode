@@ -30,8 +30,8 @@ import { WmiQueryResult } from "../codeLens/utils/wmiUtils";
 import { Entity, EntityType } from "../dynatrace-api/interfaces/monitoredEntities";
 import { ExtensionStub } from "../interfaces/extensionMeta";
 import { EnvironmentsTreeDataProvider } from "../treeViews/environmentsTreeView";
-import { getExtensionFilePath } from "./fileSystem";
-import { fetchOID, OidInformation } from "./snmp";
+import { getExtensionFilePath, getSnmpMibFiles } from "./fileSystem";
+import { fetchOID, OidInformation, parseMibFile } from "./snmp";
 
 type CachedDataType =
   | "builtinEntityTypes"
@@ -96,6 +96,8 @@ export class CachedData {
   private wmiData = new BehaviorSubject<Record<string, WmiQueryResult | undefined>>({});
   private snmpData = new BehaviorSubject<Record<string, OidInformation | undefined>>({});
   private entityInstances = new BehaviorSubject<Record<string, Entity[] | undefined>>({});
+  private localSnmpDatabase: Record<string, OidInformation> = {};
+  public mibFilesLoaded: string[] = [];
 
   /**
    * @param environments a Dynatrace Environments provider
@@ -168,6 +170,9 @@ export class CachedData {
         }
       });
     }).subscribe(this.parsedExtension);
+
+    // Process local SNMP MIB files
+    this.updateLocalSnmpDatabase(getSnmpMibFiles()).catch(() => {});
   }
 
   /**
@@ -315,8 +320,20 @@ export class CachedData {
    */
   public async updateSnmpData(oids: string[]) {
     const oidPromises = oids.map(async (oid: string): Promise<[string, OidInformation]> => {
+      // If it's not in the online data
       if (!(oid in this.snmpData.getValue())) {
-        return [oid, await fetchOID(oid)];
+        // And not in the local database
+        if (!(oid in this.localSnmpDatabase)) {
+          // If it's in name notation, return a blank {}
+          if (/^[\da-zA-Z]+$/.test(oid)) {
+            return [oid, {}];
+            // Otherwise, fetch data from online
+          } else {
+            return [oid, await fetchOID(oid)];
+          }
+        } else {
+          return [oid, this.localSnmpDatabase[oid]];
+        }
       } else {
         return [oid, this.snmpData.getValue()[oid]];
       }
@@ -327,5 +344,27 @@ export class CachedData {
       ...Object.fromEntries(oidData),
     };
     this.snmpData.next(nextSnmpData);
+  }
+
+  /**
+   * Update of SNMP data from local files
+   * @param files
+   */
+  public async updateLocalSnmpDatabase(files: string[]) {
+    const newFiles = files.filter(file => !this.mibFilesLoaded.includes(file));
+    if (newFiles.length > 0) {
+      const newSnmpData = Object.fromEntries(
+        newFiles
+          .flatMap(file => {
+            this.mibFilesLoaded.push(file);
+            return parseMibFile(file);
+          })
+          .map(info => [info.objectType, info]) as [string, OidInformation][],
+      );
+      this.localSnmpDatabase = {
+        ...this.localSnmpDatabase,
+        ...newSnmpData,
+      };
+    }
   }
 }

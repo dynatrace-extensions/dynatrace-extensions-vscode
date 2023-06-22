@@ -28,6 +28,7 @@ import { WmiCompletionProvider } from "./codeCompletions/wmi";
 import { PrometheusCodeLensProvider } from "./codeLens/prometheusScraper";
 import { ScreenLensProvider } from "./codeLens/screenCodeLens";
 import { SelectorCodeLensProvider } from "./codeLens/selectorCodeLens";
+import { SnmpCodeLensProvider } from "./codeLens/snmpCodeLens";
 import { runSelector, validateSelector } from "./codeLens/utils/selectorUtils";
 import { runWMIQuery, WmiQueryResult } from "./codeLens/utils/wmiUtils";
 import { WmiCodeLensProvider } from "./codeLens/wmiCodeLens";
@@ -618,6 +619,7 @@ export async function activate(context: vscode.ExtensionContext) {
   const prometheusActionProvider = new PrometheusActionProvider();
   const snmpActionProvider = new SnmpActionProvider(cachedData);
   const wmiLensProvider = new WmiCodeLensProvider(cachedData);
+  const snmpLensProvider = new SnmpCodeLensProvider(cachedData);
   const fastModeChannel = vscode.window.createOutputChannel("Dynatrace Fast Mode", "json");
   const fastModeStatus = new FastModeStatus(fastModeChannel);
   const diagnosticsProvider = new DiagnosticsProvider(context, cachedData);
@@ -693,6 +695,8 @@ export async function activate(context: vscode.ExtensionContext) {
     vscode.languages.registerCodeLensProvider(extension2selector, screensLensProvider),
     // Code Lens for WMI queries
     vscode.languages.registerCodeLensProvider(extension2selector, wmiLensProvider),
+    // Code Lens for SNMP MIBs
+    vscode.languages.registerCodeLensProvider(extension2selector, snmpLensProvider),
     // Commands for metric and entity selector Code Lenses
     vscode.commands.registerCommand(
       "dynatrace-extensions.codelens.validateSelector",

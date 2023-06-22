@@ -347,7 +347,7 @@ export class DiagnosticsProvider extends CachedDataProducer {
         const endPos = document.positionAt(match.index + match[0].indexOf(oid) + oid.length);
 
         // Check if valid
-        if (!/^\d[.\d]+\d$/.test(oid)) {
+        if (!/^\d[.\d]+\d$|^[\da-zA-Z]+$/.test(oid)) {
           diagnostics.push(extensionDiagnostic(startPos, endPos, OID_SYNTAX_INVALID));
 
           // Check we have online data
@@ -465,7 +465,7 @@ export class DiagnosticsProvider extends CachedDataProducer {
         const endPos = document.positionAt(match.index + match[0].indexOf(oid) + oid.length);
 
         // Check if valid
-        if (!/^\d[.\d]+\d$/.test(oid)) {
+        if (!/^\d[.\d]+\d$|^[\da-zA-Z]+$/.test(oid)) {
           diagnostics.push(extensionDiagnostic(startPos, endPos, OID_SYNTAX_INVALID));
 
           // Check if there is online data
@@ -520,6 +520,11 @@ export class DiagnosticsProvider extends CachedDataProducer {
     const diagnostics: vscode.Diagnostic[] = [];
     const groupIdx = getBlockItemIndexAtLine("snmp", startPos.line, content);
     const subgroupIdx = getBlockItemIndexAtLine("subgroups", startPos.line, content);
+
+    // Currently, table OID diagnostics only work with the ASN.1 notation for OIDs
+    if (/^[\da-zA-Z]+$/.test(oid)) {
+      return [];
+    }
 
     // Honor the user's settings and bail early if no screens
     if (
