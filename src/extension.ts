@@ -634,6 +634,8 @@ export async function activate(context: vscode.ExtensionContext) {
       diagnosticsProvider,
       wmiLensProvider,
       snmpActionProvider,
+      metricLensProvider,
+      entityLensProvider,
     ],
     prometheusData: [prometheusLensProvider, prometheusActionProvider],
     snmpData: [snmpActionProvider, diagnosticsProvider],

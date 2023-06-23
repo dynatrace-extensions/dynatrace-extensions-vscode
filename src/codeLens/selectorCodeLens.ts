@@ -150,7 +150,6 @@ export class SelectorCodeLensProvider
     this.codeLenses = [];
     const regex = new RegExp(this.regex);
     const text = document.getText();
-    let extension: ExtensionStub;
 
     // Honor the user's settings
     if (!vscode.workspace.getConfiguration("dynatraceExtensions", null).get(this.controlSetting)) {
@@ -160,7 +159,7 @@ export class SelectorCodeLensProvider
     // Create lenses
     await Promise.all(
       Array.from(text.matchAll(regex)).map(match =>
-        this.createLenses(extension, match, document).then(lenses =>
+        this.createLenses(this.parsedExtension, match, document).then(lenses =>
           lenses.forEach(lens => this.codeLenses.push(lens)),
         ),
       ),
@@ -193,7 +192,11 @@ export class SelectorCodeLensProvider
         return [
           new SelectorRunnerLens(range, selector, this.selectorType),
           new SelectorValidationLens(range, selector, this.selectorType),
-          new ValidationStatusLens(range, selector, this.selectorStatuses[selector]),
+          new ValidationStatusLens(
+            range,
+            selector,
+            this.selectorStatuses[selector] ?? { status: "unknown" },
+          ),
         ];
       }
     }

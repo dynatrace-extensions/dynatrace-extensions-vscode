@@ -21,7 +21,7 @@
 import { existsSync, readFileSync } from "fs";
 import * as path from "path";
 import Axios from "axios";
-import { BehaviorSubject, Observable } from "rxjs";
+import { BehaviorSubject, Observable, switchMap, of, delay, map } from "rxjs";
 import * as vscode from "vscode";
 import * as yaml from "yaml";
 import { PromData } from "../codeLens/prometheusScraper";
@@ -149,27 +149,32 @@ export class CachedData {
       .catch(() => this.baristaIcons.next([]))
       .finally(() => this.baristaIcons.complete());
 
-    // Fetch extension manifest and update it with every document change
+    // Fetch extension manifest
     new Observable(subscriber => {
-      try {
-        const initialValue = yaml.parse(this.fetchExtensionManifest()) as ExtensionStub;
-        subscriber.next(initialValue);
-      } catch {
-        // Don't really caare about invalid YAMLs
-      }
-      // Extension manifest should be updated on every doc change
+      // As soon as possible
+      subscriber.next(this.fetchExtensionManifest());
+
+      // Then, on every doc change
       const manifestFilePath = getExtensionFilePath();
       vscode.workspace.onDidChangeTextDocument(change => {
         if (path.resolve(change.document.fileName) === path.resolve(manifestFilePath)) {
-          try {
-            const newValue = yaml.parse(change.document.getText()) as ExtensionStub;
-            subscriber.next(newValue);
-          } catch {
-            // Don't really care about invalid YAMLs
-          }
+          subscriber.next(change.document.getText());
         }
       });
-    }).subscribe(this.parsedExtension);
+    })
+      .pipe(
+        // Skip some expensive processing by only parsing the last text after 200 ms
+        switchMap((value: string) => of(value).pipe(delay(200))),
+        map((manifestText: string) => {
+          try {
+            return yaml.parse(manifestText) as ExtensionStub;
+          } catch {
+            // If YAML is invalid, revert back to previous value
+            return this.parsedExtension.getValue();
+          }
+        }),
+      )
+      .subscribe(this.parsedExtension);
 
     // Process local SNMP MIB files
     this.updateLocalSnmpDatabase(getSnmpMibFiles()).catch(() => {});
