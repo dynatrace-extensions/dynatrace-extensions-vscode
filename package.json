@@ -772,7 +772,7 @@
 	},
 	"devDependencies": {
 		"@lwc/eslint-plugin-lwc": "^1.6.2",
-    "@reactivex/rxjs": "^6.6.7",
+		"@reactivex/rxjs": "^6.6.7",
 		"@types/adm-zip": "^0.5.0",
 		"@types/fs-extra": "^11.0.1",
 		"@types/glob": "^7.2.0",
