@@ -53,10 +53,15 @@ export class SnmpCodeLensProvider implements vscode.CodeLensProvider {
       return;
     }
     const newFiles = files.filter(
-      f => !this.cachedData.mibFilesLoaded.includes(path.basename(f.fsPath)),
+      f =>
+        this.cachedData.mibFilesLoaded.findIndex(
+          file =>
+            file.name.toLowerCase() === path.basename(f.fsPath).toLowerCase() ||
+            file.filePath === f.fsPath,
+        ) === -1,
     );
     if (newFiles.length > 0) {
-      await this.cachedData.updateLocalSnmpDatabase(newFiles.map(f => f.fsPath)).then(() => {
+      await this.cachedData.loadLocalMibFiles(newFiles.map(f => f.fsPath)).then(() => {
         const snmpDir = getSnmpDirPath();
         if (!existsSync(snmpDir)) {
           mkdirSync(snmpDir);

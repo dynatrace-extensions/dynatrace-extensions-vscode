@@ -31,7 +31,7 @@ import { Entity, EntityType } from "../dynatrace-api/interfaces/monitoredEntitie
 import { ExtensionStub } from "../interfaces/extensionMeta";
 import { EnvironmentsTreeDataProvider } from "../treeViews/environmentsTreeView";
 import { getExtensionFilePath, getSnmpMibFiles } from "./fileSystem";
-import { fetchOID, OidInformation, parseMibFile } from "./snmp";
+import { fetchOID, MibModuleStore, MibObject, OidInformation, parseMibFile } from "./snmp";
 
 type CachedDataType =
   | "builtinEntityTypes"
@@ -57,6 +57,7 @@ export class CachedDataConsumer {
   protected entityInstances: Record<string, Entity[] | undefined> = undefined;
   protected selectorStatuses: Record<string, ValidationStatus | undefined> = undefined;
   protected snmpData: Record<string, OidInformation | undefined> = undefined;
+  private snmpDatabase: OidInformation[];
 
   public updateCachedData(dataType: CachedDataType, data: unknown) {
     if (Object.keys(this).includes(dataType)) {
@@ -80,6 +81,8 @@ export class CachedDataProducer extends CachedDataConsumer {
   }
 }
 
+type LoadedFile = { name: string; filePath: string };
+
 /**
  * A utility class for caching reusable data that other components depend on.
  * Data is fetched only when needed and stored in-memory for reusability. This class should have
@@ -96,8 +99,9 @@ export class CachedData {
   private wmiData = new BehaviorSubject<Record<string, WmiQueryResult | undefined>>({});
   private snmpData = new BehaviorSubject<Record<string, OidInformation | undefined>>({});
   private entityInstances = new BehaviorSubject<Record<string, Entity[] | undefined>>({});
-  private localSnmpDatabase: Record<string, OidInformation> = {};
-  public mibFilesLoaded: string[] = [];
+  private localSnmpDatabase: OidInformation[] = [];
+  private mibStore: MibModuleStore;
+  public mibFilesLoaded: LoadedFile[] = [];
 
   /**
    * @param environments a Dynatrace Environments provider
@@ -150,11 +154,19 @@ export class CachedData {
       .finally(() => this.baristaIcons.complete());
 
     // Fetch extension manifest
-    new Observable(subscriber => {
-      // As soon as possible
-      subscriber.next(this.fetchExtensionManifest());
+    const initialManifestContent = this.fetchExtensionManifest();
+    // Load local SNMP database if applicable
+    if (/^snmp:.*?$/gm.test(initialManifestContent)) {
+      this.buildLocalSnmpDatabase();
+      // Also process user's MIB files
+      this.loadLocalMibFiles(getSnmpMibFiles()).catch(() => {});
+    }
 
-      // Then, on every doc change
+    // Initial parse of extension manifest
+    new Observable(subscriber => {
+      subscriber.next(initialManifestContent);
+
+      // And then, on every doc change
       const manifestFilePath = getExtensionFilePath();
       vscode.workspace.onDidChangeTextDocument(change => {
         if (path.resolve(change.document.fileName) === path.resolve(manifestFilePath)) {
@@ -175,9 +187,15 @@ export class CachedData {
         }),
       )
       .subscribe(this.parsedExtension);
+  }
 
-    // Process local SNMP MIB files
-    this.updateLocalSnmpDatabase(getSnmpMibFiles()).catch(() => {});
+  /**
+   * Loads some base MIB files and builds out a local in-memory SNMP Database which should have
+   * higher priority for OID searches than the online server.
+   */
+  private buildLocalSnmpDatabase() {
+    this.mibStore = new MibModuleStore();
+    this.localSnmpDatabase = this.mibStore.getAllOidInfos();
   }
 
   /**
@@ -325,19 +343,19 @@ export class CachedData {
    */
   public async updateSnmpData(oids: string[]) {
     const oidPromises = oids.map(async (oid: string): Promise<[string, OidInformation]> => {
-      // If it's not in the online data
+      console.log(`Checking OID: ${oid}`);
+      // Check it's not in the cached data
       if (!(oid in this.snmpData.getValue())) {
         // And not in the local database
-        if (!(oid in this.localSnmpDatabase)) {
-          // If it's in name notation, return a blank {}
-          if (/^[\da-zA-Z]+$/.test(oid)) {
-            return [oid, {}];
-            // Otherwise, fetch data from online
-          } else {
-            return [oid, await fetchOID(oid)];
-          }
+        const nameNotation = /^[\da-zA-Z]+$/.test(oid);
+        const localIndex = this.localSnmpDatabase.findIndex(obj =>
+          nameNotation ? obj.objectType === oid : obj.oid === oid,
+        );
+        if (localIndex === -1) {
+          // Only ASN.1 notation is supported for online fetching
+          return nameNotation ? [oid, {}] : [oid, await fetchOID(oid)];
         } else {
-          return [oid, this.localSnmpDatabase[oid]];
+          return [oid, this.localSnmpDatabase[localIndex]];
         }
       } else {
         return [oid, this.snmpData.getValue()[oid]];
@@ -355,21 +373,32 @@ export class CachedData {
    * Update of SNMP data from local files
    * @param files
    */
-  public async updateLocalSnmpDatabase(files: string[]) {
-    const newFiles = files.filter(file => !this.mibFilesLoaded.includes(file));
+  public async loadLocalMibFiles(files: string[]) {
+    const newFiles = files.filter(
+      file =>
+        this.mibFilesLoaded.findIndex(
+          loadedMib =>
+            loadedMib.name.toLowerCase() === path.basename(file).toLowerCase() ||
+            loadedMib.filePath === file,
+        ) === -1,
+    );
+    const partialParsed: OidInformation[] = [];
+    let mibUpdates = false;
     if (newFiles.length > 0) {
-      const newSnmpData = Object.fromEntries(
-        newFiles
-          .flatMap(file => {
-            this.mibFilesLoaded.push(file);
-            return parseMibFile(file);
-          })
-          .map(info => [info.objectType, info]) as [string, OidInformation][],
-      );
-      this.localSnmpDatabase = {
-        ...this.localSnmpDatabase,
-        ...newSnmpData,
-      };
+      newFiles.forEach(file => {
+        this.mibFilesLoaded.push({ name: path.basename(file).split(".")[0], filePath: file });
+        try {
+          this.mibStore.loadFromFile(file);
+          mibUpdates = true;
+        } catch {
+          partialParsed.push(...parseMibFile(file));
+        }
+      });
+
+      this.localSnmpDatabase = [
+        ...(mibUpdates ? this.mibStore.getAllOidInfos() : this.localSnmpDatabase),
+        ...partialParsed,
+      ];
     }
   }
 }
