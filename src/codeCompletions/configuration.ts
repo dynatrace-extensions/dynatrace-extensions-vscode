@@ -16,22 +16,16 @@
 
 import * as vscode from "vscode";
 import { MinimalConfiguration } from "../treeViews/commands/environments";
-import { CachedDataProvider } from "../utils/dataCaching";
+import { CachedDataProducer } from "../utils/dataCaching";
 import { getExtensionFilePath } from "../utils/fileSystem";
 
 /**
  * Provider for code auto-completions related to monitoring configuration files.
  */
-export class ConfigurationCompletionProvider implements vscode.CompletionItemProvider {
-  private readonly cachedData: CachedDataProvider;
-
-  /**
-   * @param cachedDataProvider a provider for cacheable data
-   */
-  constructor(cachedDataProvider: CachedDataProvider) {
-    this.cachedData = cachedDataProvider;
-  }
-
+export class ConfigurationCompletionProvider
+  extends CachedDataProducer
+  implements vscode.CompletionItemProvider
+{
   async provideCompletionItems(
     document: vscode.TextDocument,
     position: vscode.Position,
@@ -62,10 +56,9 @@ export class ConfigurationCompletionProvider implements vscode.CompletionItemPro
 
   private async createLocalScopeCompletions(): Promise<vscode.CompletionItem[]> {
     const completions: vscode.CompletionItem[] = [];
-    // Fetch entities
-    const entities = await this.cachedData.getBulkEntities(["host", "host_group"]);
-    const hosts = entities.filter(entity => entity.type.toLowerCase() === "host");
-    const hostGroups = entities.filter(entity => entity.type.toLowerCase() === "host_group");
+    await this.cachedData.addEntityInstances(["host", "host_group"]);
+    const hosts = this.entityInstances.host ?? [];
+    const hostGroups = this.entityInstances.host_group ?? [];
 
     const localCompletion = new vscode.CompletionItem(
       "Local scope options",

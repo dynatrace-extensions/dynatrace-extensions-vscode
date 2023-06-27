@@ -18,7 +18,7 @@ import * as fs from "fs";
 import axios from "axios";
 import * as vscode from "vscode";
 import { showMessage } from "../utils/code";
-import { CachedDataProvider } from "../utils/dataCaching";
+import { CachedData, CachedDataProducer } from "../utils/dataCaching";
 
 export type PromData = Record<string, PromDetails>;
 type PromDetails = {
@@ -33,7 +33,10 @@ type ScrapingMethod = "Endpoint" | "File";
  * Code Lens Provider implementation to facilitate loading Prometheus metrics and data
  * from an external endpoint and leveraging it in other parts of the extension.
  */
-export class PrometheusCodeLensProvider implements vscode.CodeLensProvider {
+export class PrometheusCodeLensProvider
+  extends CachedDataProducer
+  implements vscode.CodeLensProvider
+{
   private codeLenses: vscode.CodeLens[];
   private regex: RegExp;
   private lastScrape = "N/A";
@@ -46,14 +49,14 @@ export class PrometheusCodeLensProvider implements vscode.CodeLensProvider {
   private promPassword: string | undefined;
   private promAccessKey: string | undefined;
   private promSecretKey: string | undefined;
-  private readonly cachedData: CachedDataProvider;
   private _onDidChangeCodeLenses: vscode.EventEmitter<void> = new vscode.EventEmitter<void>();
   public readonly onDidChangeCodeLenses: vscode.Event<void> = this._onDidChangeCodeLenses.event;
 
   /**
    * @param cachedDataProvider provider of cacheable data
    */
-  constructor(cachedDataProvider: CachedDataProvider) {
+  constructor(cachedData: CachedData) {
+    super(cachedData);
     this.codeLenses = [];
     this.regex = /^(prometheus:)/gm;
     vscode.commands.registerCommand(
@@ -62,7 +65,6 @@ export class PrometheusCodeLensProvider implements vscode.CodeLensProvider {
         await this.scrapeMetrics(changeConfig);
       },
     );
-    this.cachedData = cachedDataProvider;
   }
 
   /**
@@ -110,7 +112,7 @@ export class PrometheusCodeLensProvider implements vscode.CodeLensProvider {
           );
         }
         // Status lens
-        const scrapedMetrics = Object.keys(this.cachedData.getPrometheusData()).length;
+        const scrapedMetrics = Object.keys(this.prometheusData).length;
         this.codeLenses.push(
           new vscode.CodeLens(range, {
             title:
@@ -145,7 +147,7 @@ export class PrometheusCodeLensProvider implements vscode.CodeLensProvider {
         return;
       }
       // Clear cached data since we're now scraping a different endpoint/file
-      this.cachedData.addPrometheusData({});
+      this.cachedData.setPrometheusData({});
     }
     const scrapeSuccess = await this.scrape();
     if (scrapeSuccess) {
@@ -377,6 +379,6 @@ export class PrometheusCodeLensProvider implements vscode.CodeLensProvider {
           }
         }
       });
-    this.cachedData.addPrometheusData(scrapedMetrics);
+    this.cachedData.setPrometheusData(scrapedMetrics);
   }
 }

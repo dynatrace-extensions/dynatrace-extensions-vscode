@@ -18,19 +18,19 @@ import * as crypto from "crypto";
 import { existsSync, mkdirSync, readFileSync, writeFileSync } from "fs";
 import path = require("path");
 import * as vscode from "vscode";
-import { MetricMetadata } from "../interfaces/extensionMeta";
+import { ExtensionStub, MetricMetadata } from "../interfaces/extensionMeta";
 import { showMessage } from "../utils/code";
-import { CachedDataProvider } from "../utils/dataCaching";
+import { CachedData } from "../utils/dataCaching";
 import { getAllMetricKeys, getEntityForMetric } from "../utils/extensionParsing";
 import { createUniqueFileName, getExtensionFilePath } from "../utils/fileSystem";
 
-export async function createAlert(cachedData: CachedDataProvider) {
+export async function createAlert(cachedData: CachedData) {
   const extensionFile = getExtensionFilePath();
   if (!extensionFile) {
     return;
   }
   const extensionText = readFileSync(extensionFile).toString();
-  const extension = cachedData.getExtensionYaml(extensionText);
+  const extension = cachedData.getCached<ExtensionStub>("parsedExtension");
 
   // TODO: we could ask the user if they want to create a new alert or edit an existing one?
 

@@ -15,7 +15,7 @@
  */
 
 /********************************************************************************
- * UTILITIES FOR CODE PATTERNS REUSABLE ANY FUNCTIONS
+ * UTILITIES FOR CODE PATTERNS AND ANY REUSABLE FUNCTIONS
  ********************************************************************************/
 
 import * as vscode from "vscode";

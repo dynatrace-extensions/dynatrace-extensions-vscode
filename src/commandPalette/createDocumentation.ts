@@ -27,7 +27,7 @@ import {
   MetricEntityMap,
 } from "../interfaces/extensionDocs";
 import { ExtensionStub } from "../interfaces/extensionMeta";
-import { CachedDataProvider } from "../utils/dataCaching";
+import { CachedData } from "../utils/dataCaching";
 import { getAllMetricsByFeatureSet } from "../utils/extensionParsing";
 import { getExtensionFilePath } from "../utils/fileSystem";
 
@@ -304,7 +304,7 @@ function writeDocumentation(extension: ExtensionStub, extensionDir: string) {
  * @param cachedData provider for cacheable data
  * @returns void
  */
-export async function createDocumentation(cachedData: CachedDataProvider) {
+export async function createDocumentation(cachedData: CachedData) {
   await vscode.window.withProgress(
     { location: vscode.ProgressLocation.Notification, title: "Creating documentation" },
     async progress => {
@@ -314,7 +314,7 @@ export async function createDocumentation(cachedData: CachedDataProvider) {
         return;
       }
       const extensionDir = path.dirname(extensionFile);
-      const extension = cachedData.getExtensionYaml(readFileSync(extensionFile).toString());
+      const extension = cachedData.getCached<ExtensionStub>("parsedExtension");
 
       progress.report({ message: "Writing README.md" });
       writeDocumentation(extension, extensionDir);

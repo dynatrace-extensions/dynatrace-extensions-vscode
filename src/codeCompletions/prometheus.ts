@@ -15,9 +15,8 @@
  */
 
 import * as vscode from "vscode";
-import { PromData } from "../codeLens/prometheusScraper";
 import { ExtensionStub } from "../interfaces/extensionMeta";
-import { CachedDataProvider } from "../utils/dataCaching";
+import { CachedDataConsumer } from "../utils/dataCaching";
 import {
   getDatasourceName,
   getMetricValue,
@@ -30,17 +29,10 @@ import { getBlockItemIndexAtLine, getParentBlocks } from "../utils/yamlParsing";
  * Provider for code auto-completions related to Prometheus data.
  * Is dependent on scraped metrics for suggestions.
  */
-export class PrometheusCompletionProvider implements vscode.CompletionItemProvider {
-  private prometheusData: PromData = {};
-  private readonly cachedData: CachedDataProvider;
-
-  /**
-   * @param cachedDataProvider a provider for cacheable data
-   */
-  constructor(cachedDataProvider: CachedDataProvider) {
-    this.cachedData = cachedDataProvider;
-  }
-
+export class PrometheusCompletionProvider
+  extends CachedDataConsumer
+  implements vscode.CompletionItemProvider
+{
   /**
    * Provides the actual completion items related to Prometheus data.
    * @param document {@link vscode.TextDocument} that triggered the provider
@@ -54,15 +46,12 @@ export class PrometheusCompletionProvider implements vscode.CompletionItemProvid
     position: vscode.Position,
   ): vscode.CompletionItem[] {
     const completionItems: vscode.CompletionItem[] = [];
-    const extension = this.cachedData.getExtensionYaml(document.getText());
     const parentBlocks = getParentBlocks(position.line, document.getText());
     const line = document.lineAt(position.line).text.substring(0, position.character);
 
-    this.prometheusData = this.cachedData.getPrometheusData();
-
     // Bail early if different datasource or no scraped data
     if (
-      getDatasourceName(extension) !== "prometheus" ||
+      getDatasourceName(this.parsedExtension) !== "prometheus" ||
       Object.keys(this.prometheusData).length === 0
     ) {
       return [];
@@ -73,8 +62,8 @@ export class PrometheusCompletionProvider implements vscode.CompletionItemProvid
       // Existing datasource yaml details
       const groupIdx = getBlockItemIndexAtLine("prometheus", position.line, document.getText());
       const subgroupIdx = getBlockItemIndexAtLine("subgroups", position.line, document.getText());
-      const metricKeys = getPrometheusMetricKeys(extension, groupIdx, subgroupIdx);
-      const labelKeys = getPrometheusLabelKeys(extension, groupIdx, subgroupIdx);
+      const metricKeys = getPrometheusMetricKeys(this.parsedExtension, groupIdx, subgroupIdx);
+      const labelKeys = getPrometheusLabelKeys(this.parsedExtension, groupIdx, subgroupIdx);
 
       // Metric values from prometheus scraped data
       if (parentBlocks[parentBlocks.length - 1] === "metrics") {
@@ -89,9 +78,9 @@ export class PrometheusCompletionProvider implements vscode.CompletionItemProvid
     // Metric metadata
     if (line.endsWith("description: ") && parentBlocks[parentBlocks.length - 1] === "metadata") {
       const metricIdx = getBlockItemIndexAtLine("metrics", position.line, document.getText());
-      const metric = extension.metrics?.[metricIdx];
+      const metric = this.parsedExtension.metrics?.[metricIdx];
       if (metric) {
-        completionItems.push(...this.createDescriptionCompletion(metric.key, extension));
+        completionItems.push(...this.createDescriptionCompletion(metric.key, this.parsedExtension));
       }
     }
 

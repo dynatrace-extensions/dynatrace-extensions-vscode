@@ -293,7 +293,6 @@ export function getExtensionFilePath(): string | undefined {
     return undefined;
   }
   const workspaceRootPath = vscode.workspace.workspaceFolders[0].uri.fsPath;
-  console.log(`Looking for extension.yaml in workspace root: ${workspaceRootPath}`);
   let matches = glob.sync("extension/extension.yaml", { cwd: workspaceRootPath });
   if (matches.length === 0) {
     matches = glob.sync("*/extension/extension.yaml", { cwd: workspaceRootPath });
@@ -595,4 +594,29 @@ export async function migrateFromLegacyExtension(context: vscode.ExtensionContex
     },
   );
   showMessage("info", "Migration from legacy version complete.");
+}
+
+/**
+ * Returns the path where extension's snmp folder should be.
+ * Does not check if it exists.
+ */
+export function getSnmpDirPath(): string | undefined {
+  const manifestFilePath = getExtensionFilePath();
+  if (manifestFilePath) {
+    return path.resolve(manifestFilePath, "..", "snmp");
+  }
+  return undefined;
+}
+
+/**
+ * Looks for local SNMP Mib files bundled with the extension and returns the list of file paths.
+ */
+export function getSnmpMibFiles(): string[] {
+  const snmpDir = getSnmpDirPath();
+  if (snmpDir) {
+    if (existsSync(snmpDir)) {
+      return readdirSync(snmpDir).map(file => path.resolve(snmpDir, file));
+    }
+  }
+  return [];
 }
