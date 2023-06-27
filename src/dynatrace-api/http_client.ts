@@ -94,11 +94,31 @@ export class HttpClient {
         }
         return res.data as T;
       })
-      .catch((err: DynatraceAxiosError) => {
-        console.log(err.message);
-        const message = `Error making request to ${url}: ${err.message}.`;
-        console.log(err.response.data);
-        throw new DynatraceAPIError(message, err.response.data.error);
+      .catch((err: unknown) => {
+        if (Object.keys(err).includes("response")) {
+          // Request was made, server responded with non-2xx, axios threw as error
+          throw new DynatraceAPIError(
+            (err as DynatraceAxiosError).message,
+            (err as DynatraceAxiosError).response.data.error,
+          );
+        } else if (Object.keys(err).includes("request")) {
+          // Request was made, but no response received
+          console.log(err);
+          throw new DynatraceAPIError(`No response from server ${this.baseUrl}`, {
+            code: 0,
+            constraintViolations: [],
+            message: (err as Error).message,
+          });
+        } else {
+          // Something else unexpected happened
+          const message = `Error making request to ${url}: ${(err as Error).message}.`;
+          console.log(message);
+          throw new DynatraceAPIError(message, {
+            code: 0,
+            constraintViolations: [],
+            message: message,
+          });
+        }
       });
   }
 

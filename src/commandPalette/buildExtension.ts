@@ -351,7 +351,7 @@ export async function buildExtension(
   }
   const currentVersion = normalizeExtensionVersion(versionMatch[1]);
 
-  await vscode.window.withProgress(
+  const followUpFlow = await vscode.window.withProgress(
     {
       location: vscode.ProgressLocation.Notification,
       title: "Building extension",
@@ -372,11 +372,11 @@ export async function buildExtension(
           showMessage("info", "Document saved automatically.");
         } else {
           showMessage("error", "Failed to save extension manifest. Build command cancelled.");
-          return;
+          return false;
         }
       }
       if (cancelToken.isCancellationRequested) {
-        return;
+        return false;
       }
 
       // Pre-build workflow
@@ -404,12 +404,12 @@ export async function buildExtension(
             );
       } catch (err: unknown) {
         showMessage("error", `Error during pre-build phase: ${(err as Error).message}`);
-        return;
+        return false;
       }
 
       // eslint-disable-next-line @typescript-eslint/no-unnecessary-condition
       if (cancelToken.isCancellationRequested) {
-        return;
+        return false;
       }
 
       // Package assembly workflow
@@ -430,26 +430,26 @@ export async function buildExtension(
             );
           } else {
             showMessage("error", "Cannot build Python extension - dt-sdk package not available");
-            return;
+            return false;
           }
         } else {
           assembleStandard(workspaceStorage, extensionDir, zipFilename, devCertKey);
         }
       } catch (err: unknown) {
         showMessage("error", `Error during archiving & signing: ${(err as Error).message}`);
-        return;
+        return false;
       }
 
       // eslint-disable-next-line @typescript-eslint/no-unnecessary-condition
       if (cancelToken.isCancellationRequested) {
-        return;
+        return false;
       }
 
       // Validation & upload workflow
       if (fastMode) {
         progress.report({ message: "Uploading & activating extension" });
         if (!dt) {
-          return;
+          return false;
         }
         await uploadAndActivate(
           workspaceStorage,
@@ -462,27 +462,31 @@ export async function buildExtension(
           oc,
           cancelToken,
         );
+        return false;
       } else {
         progress.report({ message: "Validating extension" });
         // eslint-disable-next-line @typescript-eslint/no-unnecessary-condition
         if (cancelToken.isCancellationRequested) {
-          return;
+          return false;
         }
         const valid = await validateExtension(workspaceStorage, zipFilename, distDir, oc, dt);
-        if (valid) {
-          await vscode.window
-            .showInformationMessage(
-              "Extension built successfully. Would you like to upload it to Dynatrace?",
-              "Yes",
-              "No",
-            )
-            .then(async choice => {
-              if (choice === "Yes") {
-                await vscode.commands.executeCommand("dynatrace-extensions.uploadExtension");
-              }
-            });
-        }
+        return valid;
       }
     },
   );
+
+  // Follow-up is carried out separately to keep notification messages cleaner
+  if (followUpFlow) {
+    await vscode.window
+      .showInformationMessage(
+        "Extension built successfully. Would you like to upload it to Dynatrace?",
+        "Yes",
+        "No",
+      )
+      .then(async choice => {
+        if (choice === "Yes") {
+          await vscode.commands.executeCommand("dynatrace-extensions.uploadExtension");
+        }
+      });
+  }
 }

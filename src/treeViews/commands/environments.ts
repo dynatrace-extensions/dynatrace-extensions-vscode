@@ -53,7 +53,7 @@ export interface MinimalConfiguration {
  */
 export function validateEnvironmentUrl(value: string): string | null {
   if (!/^https?:\/\/.*/.test(value)) {
-    return "This URL is invalid. Must start with http or https";
+    return "This URL is invalid. Must start with http:// or https://";
   }
   if (value.includes("/e/")) {
     return !/^https?:\/\/[a-zA-Z.0-9-]+?\/e\/[a-z0-9-]*?(?:\/|$)$/.test(value)
@@ -61,18 +61,26 @@ export function validateEnvironmentUrl(value: string): string | null {
       : null;
   }
   if (value.includes(".apps")) {
-    return !/^https:\/\/[a-z0-9]*?(?:\.dev|\.sprint)?\.apps\.dynatrace(?:labs)?\.com(?:\/|$)$/.test(
-      value,
-    )
-      ? "This does not look right. It should be the base URL to your Platform environment."
-      : null;
+    if (
+      !(
+        /^https:\/\/[a-z0-9]*?\.apps\.dynatrace\.com(?:\/|$)$/.test(value) ||
+        /^https:\/\/[a-z0-9]*?\.apps\.(?:dev|sprint)\.dynatracelabs\.com(?:\/|$)$/.test(value)
+      )
+    ) {
+      return "This does not look right. It should be the base URL to your Platform environment.";
+    }
+    return null;
   }
   if ([".live.", ".dev.", ".sprint."].some(x => value.includes(x))) {
-    return !/^https:\/\/[a-z0-9]*?\.(?:live|dev|sprint)\.dynatrace(?:labs)?\.com(?:\/|$)$/.test(
-      value,
-    )
-      ? "This does not look right. It should be the base URL to your SaaS environment."
-      : null;
+    if (
+      !(
+        /^https:\/\/[a-z0-9]*?\.live\.dynatrace\.com(?:\/|$)$/.test(value) ||
+        /^https:\/\/[a-z0-9]*?\.(?:dev|sprint)\.dynatracelabs\.com(?:\/|$)$/.test(value)
+      )
+    ) {
+      return "This does not look right. It should be the base URL to your SaaS environment.";
+    }
+    return null;
   }
   return "This does not look like a Dynatrace environment URL";
 }
