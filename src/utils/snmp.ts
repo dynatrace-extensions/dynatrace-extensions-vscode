@@ -1031,7 +1031,7 @@ export class MibModuleStore {
   ];
 
   constructor(basePath?: string) {
-    this.path = basePath ?? path.resolve(__dirname, "lib", "mibs");
+    this.path = basePath ?? path.resolve(__filename, "..", "..", "src", "assets", "mibs");
     this.parser = new MIB(this.path);
     this.loadBaseModules();
   }

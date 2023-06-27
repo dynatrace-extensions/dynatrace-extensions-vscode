@@ -31,7 +31,7 @@ import { Entity, EntityType } from "../dynatrace-api/interfaces/monitoredEntitie
 import { ExtensionStub } from "../interfaces/extensionMeta";
 import { EnvironmentsTreeDataProvider } from "../treeViews/environmentsTreeView";
 import { getExtensionFilePath, getSnmpMibFiles } from "./fileSystem";
-import { fetchOID, MibModuleStore, MibObject, OidInformation, parseMibFile } from "./snmp";
+import { fetchOID, MibModuleStore, OidInformation, parseMibFile } from "./snmp";
 
 type CachedDataType =
   | "builtinEntityTypes"
