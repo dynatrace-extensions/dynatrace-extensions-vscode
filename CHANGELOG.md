@@ -14,6 +14,7 @@
 - [#117 - Connection checks for Dynatrace environments](https://github.com/dynatrace-extensions/dynatrace-extensions-vscode/issues/117)
 - [#78 - Attach generated alerts to entities](https://github.com/dynatrace-extensions/dynatrace-extensions-vscode/issues/78)
 - [#98 - Support for local MIB files in snmp extensions](https://github.com/dynatrace-extensions/dynatrace-extensions-vscode/issues/98)
+- [#122 - Tighten regexes for tenants and improve no data messaging](https://github.com/dynatrace-extensions/dynatrace-extensions-vscode/issues/122)
 
 ### 🪲 Fixed in this version:
 - [#113 - Temporary file interface closes too early](https://github.com/dynatrace-extensions/dynatrace-extensions-vscode/issues/113)
