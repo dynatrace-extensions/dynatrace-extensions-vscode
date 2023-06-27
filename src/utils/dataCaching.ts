@@ -265,6 +265,25 @@ export class CachedData {
     return icons;
   }
 
+  private async collectSingleOid(oid: string): Promise<[string, OidInformation]> {
+    // Check it's not in the cached data
+    if (!(oid in this.snmpData.getValue())) {
+      // And not in the local database
+      const nameNotation = /^[\da-zA-Z]+$/.test(oid);
+      const localIndex = this.localSnmpDatabase.findIndex(obj =>
+        nameNotation ? obj.objectType === oid : obj.oid === oid,
+      );
+      if (localIndex === -1) {
+        // Only ASN.1 notation is supported for online fetching
+        return nameNotation ? [oid, {}] : [oid, await fetchOID(oid)];
+      } else {
+        return [oid, this.localSnmpDatabase[localIndex]];
+      }
+    } else {
+      return [oid, this.snmpData.getValue()[oid]];
+    }
+  }
+
   /**
    * On demand update of built-in entity types (TODO: is this really needed? who would trigger it?).
    */
@@ -329,12 +348,10 @@ export class CachedData {
    * @param oid
    */
   public async updateSnmpOid(oid: string) {
+    const [, info] = await this.collectSingleOid(oid);
     const nextSnmpData = this.snmpData.getValue();
-    if (!(oid in nextSnmpData)) {
-      const data = await fetchOID(oid);
-      nextSnmpData[oid] = data;
-      this.snmpData.next(nextSnmpData);
-    }
+    nextSnmpData[oid] = info;
+    this.snmpData.next(nextSnmpData);
   }
 
   /**
@@ -342,25 +359,7 @@ export class CachedData {
    * @param oids
    */
   public async updateSnmpData(oids: string[]) {
-    const oidPromises = oids.map(async (oid: string): Promise<[string, OidInformation]> => {
-      console.log(`Checking OID: ${oid}`);
-      // Check it's not in the cached data
-      if (!(oid in this.snmpData.getValue())) {
-        // And not in the local database
-        const nameNotation = /^[\da-zA-Z]+$/.test(oid);
-        const localIndex = this.localSnmpDatabase.findIndex(obj =>
-          nameNotation ? obj.objectType === oid : obj.oid === oid,
-        );
-        if (localIndex === -1) {
-          // Only ASN.1 notation is supported for online fetching
-          return nameNotation ? [oid, {}] : [oid, await fetchOID(oid)];
-        } else {
-          return [oid, this.localSnmpDatabase[localIndex]];
-        }
-      } else {
-        return [oid, this.snmpData.getValue()[oid]];
-      }
-    });
+    const oidPromises = oids.map(oid => this.collectSingleOid(oid));
     const oidData = await Promise.all(oidPromises);
     const nextSnmpData = {
       ...this.snmpData.getValue(),
@@ -370,8 +369,8 @@ export class CachedData {
   }
 
   /**
-   * Update of SNMP data from local files
-   * @param files
+   * Update the local SNMP database with content from extension files
+   * @param files filePaths to process
    */
   public async loadLocalMibFiles(files: string[]) {
     const newFiles = files.filter(
@@ -383,22 +382,18 @@ export class CachedData {
         ) === -1,
     );
     const partialParsed: OidInformation[] = [];
-    let mibUpdates = false;
     if (newFiles.length > 0) {
       newFiles.forEach(file => {
         this.mibFilesLoaded.push({ name: path.basename(file).split(".")[0], filePath: file });
         try {
           this.mibStore.loadFromFile(file);
-          mibUpdates = true;
         } catch {
+          // TODO: Should analyse if this is really needed
           partialParsed.push(...parseMibFile(file));
         }
       });
 
-      this.localSnmpDatabase = [
-        ...(mibUpdates ? this.mibStore.getAllOidInfos() : this.localSnmpDatabase),
-        ...partialParsed,
-      ];
+      this.localSnmpDatabase = [...this.mibStore.getAllOidInfos(), ...partialParsed];
     }
   }
 }

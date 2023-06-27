@@ -46,6 +46,7 @@ import { loadSchemas } from "./commandPalette/loadSchemas";
 import { uploadExtension } from "./commandPalette/uploadExtension";
 import { DiagnosticFixProvider } from "./diagnostics/diagnosticFixProvider";
 import { DiagnosticsProvider } from "./diagnostics/diagnostics";
+import { SnmpHoverProvider } from "./hover/snmpHover";
 import { ConnectionStatusManager } from "./statusBar/connection";
 import { FastModeStatus } from "./statusBar/fastMode";
 import { EnvironmentsTreeDataProvider } from "./treeViews/environmentsTreeView";
@@ -620,6 +621,7 @@ export async function activate(context: vscode.ExtensionContext) {
   const snmpActionProvider = new SnmpActionProvider(cachedData);
   const wmiLensProvider = new WmiCodeLensProvider(cachedData);
   const snmpLensProvider = new SnmpCodeLensProvider(cachedData);
+  const snmpHoverProvider = new SnmpHoverProvider(cachedData);
   const fastModeChannel = vscode.window.createOutputChannel("Dynatrace Fast Mode", "json");
   const fastModeStatus = new FastModeStatus(fastModeChannel);
   const diagnosticsProvider = new DiagnosticsProvider(context, cachedData);
@@ -638,7 +640,7 @@ export async function activate(context: vscode.ExtensionContext) {
       entityLensProvider,
     ],
     prometheusData: [prometheusLensProvider, prometheusActionProvider],
-    snmpData: [snmpActionProvider, diagnosticsProvider],
+    snmpData: [snmpActionProvider, diagnosticsProvider, snmpHoverProvider],
     selectorStatuses: [metricLensProvider, entityLensProvider],
     wmiData: [wmiLensProvider],
   });
@@ -668,6 +670,8 @@ export async function activate(context: vscode.ExtensionContext) {
       "dynatrace-extensions-environments",
       tenantsTreeViewProvider,
     ),
+    // Hover provider for SNMP OIDs
+    vscode.languages.registerHoverProvider(extension2selector, snmpHoverProvider),
     // Code actions for adding snippets
     vscode.languages.registerCodeActionsProvider(extension2selector, snippetCodeActionProvider, {
       providedCodeActionKinds: [vscode.CodeActionKind.QuickFix],

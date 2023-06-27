@@ -21,6 +21,7 @@
 import { readFileSync } from "fs";
 import * as path from "path";
 import axios from "axios";
+import { showMessage } from "./code";
 
 // URL to online OID Repository
 const BASE_URL = "https://oid-rep.orange-labs.fr/get";
@@ -33,6 +34,7 @@ export interface OidInformation {
   objectType?: string;
   index?: string;
   oid?: string;
+  source?: string;
 }
 
 /**
@@ -73,7 +75,7 @@ export function oidFromMetriValue(value: string): string {
  * @param details raw data
  * @returns OID metadata info
  */
-function processOidData(details: string): OidInformation {
+function processOidData(details: string, oid?: string): OidInformation {
   const objectTypeMatches = /(.*?) OBJECT-TYPE/.exec(details) ?? [];
   const syntaxMatches = /SYNTAX (.*?) MAX-ACCESS/.exec(details) ?? [];
   const maxAccessMatches = /MAX-ACCESS (.*?) /.exec(details) ?? [];
@@ -88,6 +90,7 @@ function processOidData(details: string): OidInformation {
     status: statusMatches.length > 1 ? statusMatches[1] : undefined,
     description: descriptionMatches.length > 1 ? descriptionMatches[1] : undefined,
     index: indexMatches.length > 1 ? indexMatches[1] : undefined,
+    source: oid ? `https://oid-rep.orange-labs.fr/get/${oid}` : "Local MIB files",
   };
 }
 
@@ -107,7 +110,7 @@ export async function fetchOID(oid: string) {
           .split("</code>")[0]
           .replace(/\n/g, " ")
           .replace(/<br\/>/g, "");
-        return processOidData(rawData);
+        return processOidData(rawData, oid);
       }
       return {};
     })
@@ -117,7 +120,13 @@ export async function fetchOID(oid: string) {
     });
 }
 
-export function parseMibFile(filePath: string) {
+/**
+ * Parses a MIB file to extract OID metadata.
+ * All objects are referenced by name rather than ASN.1 notation.
+ * @param filePath
+ * @returns
+ */
+export function parseMibFile(filePath: string): OidInformation[] {
   const mibContent = readFileSync(filePath)
     .toString()
     .replace(/\r/g, "")
@@ -146,6 +155,9 @@ export interface MibObject {
   "AUGMENTS"?: string;
 }
 
+/**
+ * Character Buffer and Parser
+ */
 class CharBuffer {
   logit = false;
   lastChar = "";
@@ -255,7 +267,10 @@ class CharBuffer {
   }
 }
 
-class MIB {
+/**
+ * MIB Parser
+ */
+class MibParser {
   directory: string;
   SymbolBuffer = {};
   StringBuffer = "";
@@ -852,6 +867,7 @@ class MIB {
                       ModuleName + ": Can not find " + ImportModule + "!!!!!!!!!!!!!!!!!!!!!",
                     );
                     console.log(ModuleName + ": Can not import ", IMPORTS);
+                    showMessage("warn", `Local MIB files missing depenency: ${ImportModule}`);
                   }
                   Module.IMPORTS[ImportModule] = IMPORTS;
                   tmp++;
@@ -1016,9 +1032,12 @@ class MIB {
   }
 }
 
+/**
+ * MIB Module store
+ */
 export class MibModuleStore {
   private path: string;
-  private parser: MIB;
+  private parser: MibParser;
   private BASE_MODULES = [
     "SNMPv2-SMI",
     "SNMPv2-TC",
@@ -1028,11 +1047,12 @@ export class MibModuleStore {
     "RFC1213-MIB",
     "SNMPv2-CONF",
     "SNMPv2-MIB",
+    "INET-ADDRESS-MIB",
   ];
 
   constructor(basePath?: string) {
     this.path = basePath ?? path.resolve(__filename, "..", "..", "src", "assets", "mibs");
-    this.parser = new MIB(this.path);
+    this.parser = new MibParser(this.path);
     this.loadBaseModules();
   }
 
@@ -1070,6 +1090,7 @@ export class MibModuleStore {
             status: oid.STATUS,
             syntax: oid.SYNTAX,
             oid: oid.OID,
+            source: `Local MIB file \`${oid.ModuleName ?? ""}\``,
           } as OidInformation),
       );
   }
