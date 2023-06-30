@@ -4,7 +4,7 @@
 
 ### ✨ New in this version:
 - Project rebranding to "Dynatrace Extensions", along with new icons
-- Documentation moved to [Dynatrace Developer](https://developer.dynatrace.com) portal
+- Documentation moved to Dynatrace [Developer Portal](https://developer.dynatrace.com)
 - Migration utility from previous versions of this project
 - Hover information for SNMP object IDs and names
 

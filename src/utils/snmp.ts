@@ -1063,8 +1063,8 @@ export class MibModuleStore {
     this.parser.Serialize();
   }
 
-  loadFromFile(fileName: string) {
-    this.parser.Import(fileName);
+  loadFromFile(filePath: string) {
+    this.parser.Import(filePath);
     this.parser.Serialize();
   }
 
