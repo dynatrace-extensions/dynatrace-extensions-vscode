@@ -571,11 +571,14 @@ export async function migrateFromLegacyExtension(context: vscode.ExtensionContex
         // For any workspace that has settings
         if (existsSync(settingsFilePath)) {
           // Change the old ID for new one
-          const settingsContent = readFileSync(settingsFilePath).toString();
-          settingsContent.replace(/dt-ext-copilot\./g, "dynatrace-extensions.");
+          let settingsContent = readFileSync(settingsFilePath).toString();
+          settingsContent = settingsContent.replace(/dt-ext-copilot/g, "dynatrace-extensions");
           // Update all settings keys
           for (const key of settingsKeys) {
-            settingsContent.replace(`dynatrace.${key}`, `dynatraceExtensions.${key}`);
+            settingsContent = settingsContent.replace(
+              `dynatrace.${key}`,
+              `dynatraceExtensions.${key}`,
+            );
           }
           writeFileSync(settingsFilePath, settingsContent);
         }
