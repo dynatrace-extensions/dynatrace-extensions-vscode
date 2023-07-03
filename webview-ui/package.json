@@ -1,0 +1,46 @@
+{
+  "name": "webview-ui",
+  "version": "0.1.0",
+  "private": true,
+  "devDependencies": {
+    "@types/node": "^16.18.38",
+    "@types/react": "^17.0.0",
+    "@types/react-dom": "^17.0.0",
+    "@typescript-eslint/eslint-plugin": "^5.23.0",
+    "@typescript-eslint/parser": "^5.23.0",
+    "eslint": "^8.15.0",
+    "eslint-plugin-react": "^7.29.4",
+    "eslint-plugin-react-hooks": "^4.5.0",
+    "react-scripts": "^5.0.1"
+  },
+  "dependencies": {
+    "@dynatrace/strato-components-preview": "^0.97.1",
+    "react": "^17.0.0",
+    "react-dom": "^17.0.0",
+    "react-router-dom": "^6.4.1",
+    "rewire": "^6.0.0"
+  },
+  "scripts": {
+    "start": "EXTEND_ESLINT=true react-scripts start",
+    "build": "node ./scripts/build-react-no-split.js",
+    "test": "EXTEND_ESLINT=true react-scripts test",
+    "eject": "react-scripts eject"
+  },
+  "eslintConfig": {
+    "extends": [
+      "react-app"
+    ]
+  },
+  "browserslist": {
+    "production": [
+      ">0.2%",
+      "not dead",
+      "not op_mini all"
+    ],
+    "development": [
+      "last 1 chrome version",
+      "last 1 firefox version",
+      "last 1 safari version"
+    ]
+  }
+}

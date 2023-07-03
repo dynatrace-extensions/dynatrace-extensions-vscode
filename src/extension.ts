@@ -67,6 +67,7 @@ import {
   initWorkspaceStorage,
   migrateFromLegacyExtension,
 } from "./utils/fileSystem";
+import { HelloReactAppPanel } from "./webviews/helloReactApp";
 import { MetricResultsPanel } from "./webviews/metricResults";
 import { WMIQueryResultsPanel } from "./webviews/wmiQueryResults";
 
@@ -158,6 +159,10 @@ function registerCommandPaletteCommands(
   context: vscode.ExtensionContext,
 ): vscode.Disposable[] {
   return [
+    // DEMO: React Webview
+    vscode.commands.registerCommand("dynatrace-extensions.demoReactWebview", () => {
+      HelloReactAppPanel.render(context.extensionUri);
+    }),
     // Load extension schemas of a given version
     vscode.commands.registerCommand("dynatrace-extensions.loadSchemas", async () => {
       if (await checkEnvironmentConnected(tenantsProvider)) {

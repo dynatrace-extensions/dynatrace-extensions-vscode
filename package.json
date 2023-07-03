@@ -39,6 +39,11 @@
 	"contributes": {
 		"commands": [
 			{
+				"command": "dynatrace-extensions.demoReactWebview",
+				"title": "Demo React webview",
+				"category": "Dynatrace extensions"
+			},
+			{
 				"command": "dynatrace-extensions.loadSchemas",
 				"title": "Load schemas",
 				"category": "Dynatrace extensions"
@@ -768,9 +773,13 @@
 		"pretest": "npm run compile && npm run lint",
 		"lint": "eslint src --ext ts",
 		"test": "node ./out/test/runTest.js",
-		"build": "npm run pretest && npm run vscode:prepublish"
+		"build": "npm run pretest && npm run vscode:prepublish",
+		"install:all": "npm install && cd webview-ui && npm install",
+		"build:webview": "cd webview-ui && npm run build",
+		"build:all": "npm run build:webview && npm run build"
 	},
 	"devDependencies": {
+		"@babel/plugin-proposal-private-property-in-object": "^7.21.11",
 		"@lwc/eslint-plugin-lwc": "^1.6.2",
 		"@reactivex/rxjs": "^6.6.7",
 		"@types/adm-zip": "^0.5.0",
