@@ -1,6 +1,6 @@
 # Change Log
 
-## Version 2.0.0 (03.07.2023)
+## Version 2.0.1 (03.07.2023)
 
 ### ✨ New in this version:
 - Project rebranding to "Dynatrace Extensions", along with new icons
