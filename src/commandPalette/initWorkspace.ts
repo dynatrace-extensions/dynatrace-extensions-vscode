@@ -201,7 +201,7 @@ async function defaultExtensionSetup(schemaVersion: string, rootPath: string) {
 }
 
 /**
- * Register a new or existing extension workspace with the Copilot.
+ * Register a new or existing extension workspace with the add-on.
  * For new workspaces, it creates the mandatory folders (e.g. dist, config, extension),
  * sets up the certificates needed for signing (can use existing or generate new ones), and
  * finally creates some basic artifacts that should form the base of the project.
@@ -278,7 +278,7 @@ export async function initWorkspace(
         }
         case "Generate new ones": {
           const cmdSuccess = await vscode.commands.executeCommand(
-            "dt-ext-copilot.generateCertificates",
+            "dynatrace-extensions.generateCertificates",
           );
           if (!cmdSuccess) {
             showMessage("error", "Cannot initialize workspace without certificates.");
@@ -359,7 +359,7 @@ export async function initWorkspace(
             mkdirSync(extensionDir);
           }
           await vscode.commands.executeCommand(
-            "dt-ext-copilot.convertJmxExtension",
+            "dynatrace-extensions.convertJmxExtension",
             path.resolve(extensionDir, "extension.yaml"),
           );
           break;

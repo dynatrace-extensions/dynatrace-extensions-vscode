@@ -14,38 +14,32 @@
   limitations under the License.
  */
 
-// @ts-expect-error
-import open from "open";
 import * as vscode from "vscode";
 import { EnvironmentsTreeDataProvider } from "../treeViews/environmentsTreeView";
 import { showMessage } from "../utils/code";
-import { CachedDataProvider } from "../utils/dataCaching";
+import { CachedDataConsumer } from "../utils/dataCaching";
 import { getBlockItemIndexAtLine, getParentBlocks } from "../utils/yamlParsing";
 
 /**
  * Implementation of a Code Lens Provider to allow opening Dynatrace screens in the browser.
  */
-export class ScreenLensProvider implements vscode.CodeLensProvider {
+export class ScreenLensProvider extends CachedDataConsumer implements vscode.CodeLensProvider {
   private codeLenses: vscode.CodeLens[];
   private regex: RegExp;
   private _onDidChangeCodeLenses: vscode.EventEmitter<void> = new vscode.EventEmitter<void>();
   public readonly onDidChangeCodeLenses: vscode.Event<void> = this._onDidChangeCodeLenses.event;
   private readonly environments: EnvironmentsTreeDataProvider;
-  private readonly cachedData: CachedDataProvider;
 
   /**
    * @param environmentsProvider - a provider of Dynatrace environments data
    */
-  constructor(
-    environmentsProvider: EnvironmentsTreeDataProvider,
-    cachedDataProvider: CachedDataProvider,
-  ) {
+  constructor(environmentsProvider: EnvironmentsTreeDataProvider) {
+    super();
     this.codeLenses = [];
     this.regex = /^ {2}- ./gm;
     this.environments = environmentsProvider;
-    this.cachedData = cachedDataProvider;
     vscode.commands.registerCommand(
-      "dt-ext-copilot.openScreen",
+      "dynatrace-extensions.openScreen",
       async (entityType: string, screenType: "list" | "details") => {
         await this.openScreen(entityType, screenType);
       },
@@ -67,13 +61,12 @@ export class ScreenLensProvider implements vscode.CodeLensProvider {
     // If no screens or feature disabled, don't continue
     if (
       !text.includes("screens:") ||
-      !vscode.workspace.getConfiguration("dynatrace", null).get("screenCodeLens")
+      !vscode.workspace.getConfiguration("dynatraceExtensions", null).get("screenCodeLens")
     ) {
       return [];
     }
 
     let matches;
-    const extension = this.cachedData.getExtensionYaml(text);
     while ((matches = regex.exec(text)) !== null) {
       const line = document.lineAt(document.positionAt(matches.index).line);
       // Check we're inside the list of screens
@@ -87,22 +80,24 @@ export class ScreenLensProvider implements vscode.CodeLensProvider {
       if (range) {
         // Get the entity type
         const screenIdx = getBlockItemIndexAtLine("screens", line.lineNumber, text);
-        const entityType = extension.screens?.[screenIdx].entityType;
-        // Create the lenses
-        this.codeLenses.push(
-          new vscode.CodeLens(range, {
-            title: "Open List View",
-            tooltip: "Open this entity's List View in Dynatrace",
-            command: "dt-ext-copilot.openScreen",
-            arguments: [entityType, "list"],
-          }),
-          new vscode.CodeLens(range, {
-            title: "Open Details View",
-            tooltip: "Open this entity's Details View in Dynatrace",
-            command: "dt-ext-copilot.openScreen",
-            arguments: [entityType, "details"],
-          }),
-        );
+        const entityType = this.parsedExtension.screens?.[screenIdx].entityType;
+        if (entityType) {
+          // Create the lenses
+          this.codeLenses.push(
+            new vscode.CodeLens(range, {
+              title: "Open List View",
+              tooltip: "Open this entity's List View in Dynatrace",
+              command: "dynatrace-extensions.openScreen",
+              arguments: [entityType, "list"],
+            }),
+            new vscode.CodeLens(range, {
+              title: "Open Details View",
+              tooltip: "Open this entity's Details View in Dynatrace",
+              command: "dynatrace-extensions.openScreen",
+              arguments: [entityType, "details"],
+            }),
+          );
+        }
       }
     }
     return this.codeLenses;
@@ -118,15 +113,20 @@ export class ScreenLensProvider implements vscode.CodeLensProvider {
   private async openScreen(entityType: string, screenType: "list" | "details") {
     try {
       const tenant = await this.environments.getCurrentEnvironment();
+      const baseUrl = tenant.url.includes(".apps")
+        ? `${tenant.url}/ui/apps/dynatrace.classic.technologies`
+        : tenant.url;
       if (tenant) {
         if (screenType === "list") {
-          await open(`${tenant.url}/ui/entity/list/${entityType}`);
+          await vscode.env.openExternal(
+            vscode.Uri.parse(`${baseUrl}/ui/entity/list/${entityType}`),
+          );
         }
         if (screenType === "details") {
           const entities = await tenant.dt.entitiesV2.list(`type("${entityType}")`, "now-5m");
           if (entities.length > 0) {
             const entityId = entities[0].entityId;
-            await open(`${tenant.url}/ui/entity/${entityId}`);
+            await vscode.env.openExternal(vscode.Uri.parse(`${baseUrl}/ui/entity/${entityId}`));
           } else {
             showMessage("error", "No entities of this type were found in your tenant.");
           }

@@ -33,6 +33,22 @@ import {
   saveMoniotringConfiguration,
 } from "./commands/environments";
 
+const ICONS_PATH = path.join(__filename, "..", "..", "src", "assets", "icons");
+const ICONS: Record<string, { light: string; dark: string }> = {
+  DEPLOYED_EXTENSION: {
+    light: path.join(ICONS_PATH, "deployed_extension_light.png"),
+    dark: path.join(ICONS_PATH, "deployed_extension_dark.png"),
+  },
+  ENVIRONMENT: {
+    light: path.join(ICONS_PATH, "platform_light.png"),
+    dark: path.join(ICONS_PATH, "platform_dark.png"),
+  },
+  ENVIRONMENT_CURRENT: {
+    light: path.join(ICONS_PATH, "platform_current_light.png"),
+    dark: path.join(ICONS_PATH, "platform_current_dark.png"),
+  },
+};
+
 interface IDynatraceEnvironment extends EnvironmentsTreeItem {
   url: string;
   token: string;
@@ -41,12 +57,13 @@ interface IDynatraceEnvironment extends EnvironmentsTreeItem {
 }
 
 /**
- * Represents a Dynatrace (SaaS or Managed) Environment registered with the Copilot.
+ * Represents a Dynatrace (SaaS, Managed, Platform) Environment registered with the add-on.
  */
 export class DynatraceEnvironment extends vscode.TreeItem implements IDynatraceEnvironment {
   id: string;
   dt: Dynatrace;
   url: string;
+  apiUrl: string;
   token: string;
   current: boolean;
   contextValue: "currentDynatraceEnvironment" | "dynatraceEnvironment";
@@ -66,18 +83,18 @@ export class DynatraceEnvironment extends vscode.TreeItem implements IDynatraceE
     id: string,
     label?: string,
     current: boolean = false,
+    apiUrl?: string,
   ) {
     super(label ?? id, collapsibleState);
     this.url = url;
+    this.apiUrl = apiUrl ?? url;
     this.token = token;
     this.id = id;
-    this.dt = new Dynatrace(this.url, this.token);
+    this.dt = new Dynatrace(this.apiUrl, this.token);
     this.tooltip = id;
     this.current = current;
     this.contextValue = this.current ? "currentDynatraceEnvironment" : "dynatraceEnvironment";
-    this.iconPath = this.current
-      ? path.join(__filename, "..", "..", "src", "assets", "icons", "environment_current.png")
-      : path.join(__filename, "..", "..", "src", "assets", "icons", "environment.png");
+    this.iconPath = this.current ? ICONS.ENVIRONMENT_CURRENT : ICONS.ENVIRONMENT;
   }
 }
 
@@ -112,10 +129,7 @@ export class DeployedExtension extends vscode.TreeItem implements IDeployedExten
     this.dt = dt;
     this.extensionVersion = extensionVersion;
     this.contextValue = "deployedExtension";
-    this.iconPath = {
-      light: path.join(__filename, "..", "..", "src", "assets", "icons", "plugin_light.png"),
-      dark: path.join(__filename, "..", "..", "src", "assets", "icons", "plugin_dark.png"),
-    };
+    this.iconPath = ICONS.DEPLOYED_EXTENSION;
   }
 }
 
@@ -202,7 +216,12 @@ export class EnvironmentsTreeDataProvider implements vscode.TreeDataProvider<Env
     this.oc = errorChannel;
     this.getCurrentEnvironment()
       .then(environment => {
-        this.connectionStatus.updateStatusBar(Boolean(environment), environment?.label?.toString());
+        this.connectionStatus
+          .updateStatusBar(Boolean(environment), {
+            ...{ ...environment },
+            name: environment.label.toString(),
+          })
+          .catch(() => {});
       })
       .catch(err => {
         console.log((err as Error).message);
@@ -216,44 +235,55 @@ export class EnvironmentsTreeDataProvider implements vscode.TreeDataProvider<Env
    */
   private registerCommands(context: vscode.ExtensionContext) {
     // Commands for Environments
-    vscode.commands.registerCommand("dt-ext-copilot-environments.refresh", () => this.refresh());
-    vscode.commands.registerCommand("dt-ext-copilot-environments.addEnvironment", () =>
+    vscode.commands.registerCommand("dynatrace-extensions-environments.refresh", () =>
+      this.refresh(),
+    );
+    vscode.commands.registerCommand("dynatrace-extensions-environments.addEnvironment", () =>
       addEnvironment(context).then(() => this.refresh()),
     );
     vscode.commands.registerCommand(
-      "dt-ext-copilot-environments.useEnvironment",
+      "dynatrace-extensions-environments.useEnvironment",
       async (environment: DynatraceEnvironment) => {
         await registerEnvironment(
           context,
           environment.url,
+          environment.apiUrl,
           encryptToken(environment.token),
           environment.label?.toString(),
           true,
         );
+        this.connectionStatus.clearConnectionChecks();
+        this.connectionStatus
+          .updateStatusBar(true, { ...{ ...environment }, name: environment.label.toString() })
+          .catch(() => {});
         this.refresh();
       },
     );
     vscode.commands.registerCommand(
-      "dt-ext-copilot-environments.editEnvironment",
+      "dynatrace-extensions-environments.editEnvironment",
       async (environment: DynatraceEnvironment) => {
         await editEnvironment(context, environment).then(() => this.refresh());
       },
     );
     vscode.commands.registerCommand(
-      "dt-ext-copilot-environments.deleteEnvironment",
+      "dynatrace-extensions-environments.deleteEnvironment",
       async (environment: DynatraceEnvironment) => {
         await deleteEnvironment(context, environment).then(() => this.refresh());
       },
     );
-    vscode.commands.registerCommand("dt-ext-copilot-environments.changeConnection", async () => {
-      await changeConnection(context).then(([connected, environment]) => {
-        this.connectionStatus.updateStatusBar(connected, environment);
-        this.refresh();
-      });
-    });
+    vscode.commands.registerCommand(
+      "dynatrace-extensions-environments.changeConnection",
+      async () => {
+        await changeConnection(context).then(([connected, environment]) => {
+          this.connectionStatus.clearConnectionChecks();
+          this.connectionStatus.updateStatusBar(connected, environment).catch(() => {});
+          this.refresh();
+        });
+      },
+    );
     // Commands for monitoring configurations
     vscode.commands.registerCommand(
-      "dt-ext-copilot-environments.addConfig",
+      "dynatrace-extensions-environments.addConfig",
       async (extension: DeployedExtension) => {
         await addMonitoringConfiguration(extension, context, this.oc).then(success => {
           if (success) {
@@ -263,7 +293,7 @@ export class EnvironmentsTreeDataProvider implements vscode.TreeDataProvider<Env
       },
     );
     vscode.commands.registerCommand(
-      "dt-ext-copilot-environments.editConfig",
+      "dynatrace-extensions-environments.editConfig",
       async (config: MonitoringConfiguration) => {
         await editMonitoringConfiguration(config, context, this.oc).then(success => {
           if (success) {
@@ -273,7 +303,7 @@ export class EnvironmentsTreeDataProvider implements vscode.TreeDataProvider<Env
       },
     );
     vscode.commands.registerCommand(
-      "dt-ext-copilot-environments.deleteConfig",
+      "dynatrace-extensions-environments.deleteConfig",
       async (config: MonitoringConfiguration) => {
         await deleteMonitoringConfiguration(config).then(success => {
           if (success) {
@@ -283,7 +313,7 @@ export class EnvironmentsTreeDataProvider implements vscode.TreeDataProvider<Env
       },
     );
     vscode.commands.registerCommand(
-      "dt-ext-copilot-environments.saveConfig",
+      "dynatrace-extensions-environments.saveConfig",
       async (config: MonitoringConfiguration) => {
         await saveMoniotringConfiguration(config).catch(err => {
           showMessage("error", `Unable to save configuration. ${(err as Error).message}`);
@@ -371,7 +401,7 @@ export class EnvironmentsTreeDataProvider implements vscode.TreeDataProvider<Env
     // If no item specified, grab all environments from global storage
     return getAllEnvironments(this.context).map((environment: DynatraceEnvironmentData) => {
       if (environment.current) {
-        this.connectionStatus.updateStatusBar(true, environment.name ?? environment.id);
+        this.connectionStatus.updateStatusBar(true, environment).catch(() => {});
       }
       return new DynatraceEnvironment(
         vscode.TreeItemCollapsibleState.Collapsed,
@@ -380,6 +410,7 @@ export class EnvironmentsTreeDataProvider implements vscode.TreeDataProvider<Env
         environment.id,
         environment.name,
         environment.current,
+        environment.apiUrl,
       );
     });
   }
@@ -414,7 +445,7 @@ export class EnvironmentsTreeDataProvider implements vscode.TreeDataProvider<Env
 }
 
 /**
- * Represents a Tree Item for the Environments tree view of the Copilot.
+ * Represents a Tree Item for the Environments tree view of the add-on.
  * These are the minimum details every other object should include.
  */
 export interface EnvironmentsTreeItem extends vscode.TreeItem {

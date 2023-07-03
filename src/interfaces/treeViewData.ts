@@ -25,6 +25,7 @@ export interface ExtensionWorkspace {
 export interface DynatraceEnvironmentData {
   id: string;
   url: string;
+  apiUrl: string;
   token: string;
   current: boolean;
   name?: string;

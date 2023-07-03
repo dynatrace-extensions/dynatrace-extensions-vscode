@@ -1,6 +1,6 @@
 {
-	"name": "dt-ext-copilot",
-	"displayName": "Dynatrace Extensions Copilot",
+	"name": "dynatrace-extensions",
+	"displayName": "Dynatrace Extensions",
 	"description": "Support for Dynatrace Extension 2.0 development",
 	"publisher": "DynatracePlatformExtensions",
 	"author": {
@@ -8,10 +8,10 @@
 		"email": "extensions@dynatrace.com",
 		"url": "https://info.dynatrace.com/global_all_wp_dynatrace_services_platform_extensions_fact_sheet_13656_fulfillment.html"
 	},
-	"version": "1.2.4",
+	"version": "2.0.0",
 	"repository": {
 		"type": "git",
-		"url": "https://github.com/dynatrace-extensions/dynatrace-extensions-copilot.git"
+		"url": "https://github.com/dynatrace-extensions/dynatrace-extensions-vscode.git"
 	},
 	"engines": {
 		"vscode": "^1.67.0"
@@ -27,10 +27,10 @@
 	"extensionDependencies": [
 		"redhat.vscode-yaml"
 	],
-	"icon": "src/assets/logos/copilot_logo.png",
+	"icon": "src/assets/icons/logo.png",
 	"galleryBanner": {
-		"color": "#1e3142",
-		"theme": "dark"
+		"color": "#ffffff",
+		"theme": "light"
 	},
 	"activationEvents": [
 		"onStartupFinished"
@@ -39,213 +39,213 @@
 	"contributes": {
 		"commands": [
 			{
-				"command": "dt-ext-copilot.loadSchemas",
+				"command": "dynatrace-extensions.loadSchemas",
 				"title": "Load schemas",
-				"category": "Dynatrace"
+				"category": "Dynatrace extensions"
 			},
 			{
-				"command": "dt-ext-copilot.initWorkspace",
+				"command": "dynatrace-extensions.initWorkspace",
 				"title": "Initialize workspace",
-				"category": "Dynatrace"
+				"category": "Dynatrace extensions"
 			},
 			{
-				"command": "dt-ext-copilot.generateCertificates",
+				"command": "dynatrace-extensions.generateCertificates",
 				"title": "Generate certificates",
-				"category": "Dynatrace"
+				"category": "Dynatrace extensions"
 			},
 			{
-				"command": "dt-ext-copilot.distributeCertificate",
+				"command": "dynatrace-extensions.distributeCertificate",
 				"title": "Distribute certificate",
-				"category": "Dynatrace"
+				"category": "Dynatrace extensions"
 			},
 			{
-				"command": "dt-ext-copilot.createDocumentation",
+				"command": "dynatrace-extensions.createDocumentation",
 				"title": "Create documentation",
-				"category": "Dynatrace"
+				"category": "Dynatrace extensions"
 			},
 			{
-				"command": "dt-ext-copilot.buildExtension",
-				"title": "Build extension",
-				"category": "Dynatrace"
+				"command": "dynatrace-extensions.buildExtension",
+				"title": "Build",
+				"category": "Dynatrace extensions"
 			},
 			{
-				"command": "dt-ext-copilot.uploadExtension",
-				"title": "Upload extension to tenant",
-				"category": "Dynatrace"
+				"command": "dynatrace-extensions.uploadExtension",
+				"title": "Upload",
+				"category": "Dynatrace extensions"
 			},
 			{
-				"command": "dt-ext-copilot.activateExtension",
-				"title": "Activate extension on tenant",
-				"category": "Dynatrace"
+				"command": "dynatrace-extensions.activateExtension",
+				"title": "Activate",
+				"category": "Dynatrace extensions"
 			},
 			{
-				"command": "dt-ext-copilot.createDashboard",
-				"title": "Create overview dashboard",
-				"category": "Dynatrace"
+				"command": "dynatrace-extensions.createDashboard",
+				"title": "Create dashboard",
+				"category": "Dynatrace extensions"
 			},
 			{
-				"command": "dt-ext-copilot.createAlert",
+				"command": "dynatrace-extensions.createAlert",
 				"title": "Create alert",
-				"category": "Dynatrace"
+				"category": "Dynatrace extensions"
 			},
 			{
-				"command": "dt-ext-copilot.convertJmxExtension",
-				"title": "Convert JMX Extension",
-				"category": "Dynatrace"
+				"command": "dynatrace-extensions.convertJmxExtension",
+				"title": "Convert JMX",
+				"category": "Dynatrace extensions"
 			},
 			{
-				"command": "dt-ext-copilot-workspaces.refresh",
+				"command": "dynatrace-extensions-workspaces.refresh",
 				"title": "Refresh",
 				"icon": "$(refresh)"
 			},
 			{
-				"command": "dt-ext-copilot-workspaces.addWorkspace",
+				"command": "dynatrace-extensions-workspaces.addWorkspace",
 				"title": "Add & initialize a workspace",
 				"icon": "$(plus)"
 			},
 			{
-				"command": "dt-ext-copilot-workspaces.deleteWorkspace",
+				"command": "dynatrace-extensions-workspaces.deleteWorkspace",
 				"title": "Remove workspace",
 				"icon": "$(trash)"
 			},
 			{
-				"command": "dt-ext-copilot-workspaces.openWorkspace",
+				"command": "dynatrace-extensions-workspaces.openWorkspace",
 				"title": "Open workspace",
 				"icon": "$(folder-opened)"
 			},
 			{
-				"command": "dt-ext-copilot-workspaces.editExtension",
+				"command": "dynatrace-extensions-workspaces.editExtension",
 				"title": "Open extension in editor",
 				"icon": "$(notebook-open-as-text)"
 			},
 			{
-				"command": "dt-ext-copilot-environments.refresh",
+				"command": "dynatrace-extensions-environments.refresh",
 				"title": "Refresh",
 				"icon": "$(refresh)"
 			},
 			{
-				"command": "dt-ext-copilot-environments.addEnvironment",
+				"command": "dynatrace-extensions-environments.addEnvironment",
 				"title": "Add a tenant",
 				"icon": "$(plus)"
 			},
 			{
-				"command": "dt-ext-copilot-environments.useEnvironment",
+				"command": "dynatrace-extensions-environments.useEnvironment",
 				"title": "Use environment",
 				"icon": "$(plug)"
 			},
 			{
-				"command": "dt-ext-copilot-environments.editEnvironment",
+				"command": "dynatrace-extensions-environments.editEnvironment",
 				"title": "Edit environment",
 				"icon": "$(pencil)"
 			},
 			{
-				"command": "dt-ext-copilot-environments.deleteEnvironment",
+				"command": "dynatrace-extensions-environments.deleteEnvironment",
 				"title": "Remove environment",
 				"icon": "$(trash)"
 			},
 			{
-				"command": "dt-ext-copilot-environments.editConfig",
+				"command": "dynatrace-extensions-environments.editConfig",
 				"title": "Edit configuration",
 				"icon": "$(pencil)"
 			},
 			{
-				"command": "dt-ext-copilot-environments.deleteConfig",
+				"command": "dynatrace-extensions-environments.deleteConfig",
 				"title": "Delete configuration",
 				"icon": "$(trash)"
 			},
 			{
-				"command": "dt-ext-copilot-environments.addConfig",
+				"command": "dynatrace-extensions-environments.addConfig",
 				"title": "Add configuration",
 				"icon": "$(plus)"
 			},
-      {
-        "command": "dt-ext-copilot-environments.saveConfig",
+			{
+				"command": "dynatrace-extensions-environments.saveConfig",
 				"title": "Save to file",
 				"icon": "$(file-add)"
-      },
-      {
-        "command": "dt-ext-copilot.createMonitoringConfiguration",
-        "title": "Create monitoring configuration",
-        "category": "Dynatrace"
-      },
+			},
 			{
-				"command": "dt-ext-copilot-workspaces.enableMetricSelectors",
+				"command": "dynatrace-extensions.createMonitoringConfiguration",
+				"title": "Create monitoring configuration",
+				"category": "Dynatrace extensions"
+			},
+			{
+				"command": "dynatrace-extensions-workspaces.enableMetricSelectors",
 				"title": "🔎 Enable metric selector code lens"
 			},
 			{
-				"command": "dt-ext-copilot-workspaces.disableMetricSelectors",
+				"command": "dynatrace-extensions-workspaces.disableMetricSelectors",
 				"title": "🔎 Disable metric selector code lens"
 			},
 			{
-				"command": "dt-ext-copilot-workspaces.enableEntitySelectors",
+				"command": "dynatrace-extensions-workspaces.enableEntitySelectors",
 				"title": "🔎 Enable entity selector code lens"
 			},
 			{
-				"command": "dt-ext-copilot-workspaces.disableEntitySelectors",
+				"command": "dynatrace-extensions-workspaces.disableEntitySelectors",
 				"title": "🔎 Disable entity selector code lens"
 			},
 			{
-				"command": "dt-ext-copilot-workspaces.enableScreenCodelens",
+				"command": "dynatrace-extensions-workspaces.enableScreenCodelens",
 				"title": "🖥️ Enable screens code lens"
 			},
 			{
-				"command": "dt-ext-copilot-workspaces.disableScreenCodelens",
+				"command": "dynatrace-extensions-workspaces.disableScreenCodelens",
 				"title": "🖥️ Disable screens code lens"
 			},
 			{
-				"command": "dt-ext-copilot-workspaces.enableWmiCodelens",
+				"command": "dynatrace-extensions-workspaces.enableWmiCodelens",
 				"title": "🪟 Enable WMI query code lens"
 			},
 			{
-				"command": "dt-ext-copilot-workspaces.disableWmiCodelens",
+				"command": "dynatrace-extensions-workspaces.disableWmiCodelens",
 				"title": "🪟 Disable WMI query code lens"
 			},
 			{
-				"command": "dt-ext-copilot-workspaces.enableAllDiagnostics",
+				"command": "dynatrace-extensions-workspaces.enableAllDiagnostics",
 				"title": "Enable all diagnostics"
 			},
 			{
-				"command": "dt-ext-copilot-workspaces.disableAllDiagnostics",
+				"command": "dynatrace-extensions-workspaces.disableAllDiagnostics",
 				"title": "Disable all diagnostics"
 			},
 			{
-				"command": "dt-ext-copilot-workspaces.enableMetricKeyDiagnostics",
+				"command": "dynatrace-extensions-workspaces.enableMetricKeyDiagnostics",
 				"title": "Enable metric key diagnostics"
 			},
 			{
-				"command": "dt-ext-copilot-workspaces.disableMetricKeyDiagnostics",
+				"command": "dynatrace-extensions-workspaces.disableMetricKeyDiagnostics",
 				"title": "Disable metric key diagnostics"
 			},
 			{
-				"command": "dt-ext-copilot-workspaces.enableCardKeyDiagnostics",
+				"command": "dynatrace-extensions-workspaces.enableCardKeyDiagnostics",
 				"title": "Enable card key diagnostics"
 			},
 			{
-				"command": "dt-ext-copilot-workspaces.disableCardKeyDiagnostics",
+				"command": "dynatrace-extensions-workspaces.disableCardKeyDiagnostics",
 				"title": "Disable card key diagnostics"
 			},
 			{
-				"command": "dt-ext-copilot-workspaces.enableSnmpDiagnostics",
+				"command": "dynatrace-extensions-workspaces.enableSnmpDiagnostics",
 				"title": "Enable SNMP diagnostics"
 			},
 			{
-				"command": "dt-ext-copilot-workspaces.disableSnmpDiagnostics",
+				"command": "dynatrace-extensions-workspaces.disableSnmpDiagnostics",
 				"title": "Disable SNMP diagnostics"
 			},
 			{
-				"command": "dt-ext-copilot-workspaces.enableNameDiagnostics",
+				"command": "dynatrace-extensions-workspaces.enableNameDiagnostics",
 				"title": "Enable extension name diagnostics"
 			},
 			{
-				"command": "dt-ext-copilot-workspaces.disableNameDiagnostics",
+				"command": "dynatrace-extensions-workspaces.disableNameDiagnostics",
 				"title": "Disable extension name diagnostics"
 			},
 			{
-				"command": "dt-ext-copilot-workspaces.enableFastDevelopment",
+				"command": "dynatrace-extensions-workspaces.enableFastDevelopment",
 				"title": "🔥 Enable fast development mode"
 			},
 			{
-				"command": "dt-ext-copilot-workspaces.disableFastDevelopment",
+				"command": "dynatrace-extensions-workspaces.disableFastDevelopment",
 				"title": "🔥 Disable fast development mode"
 			}
 		],
@@ -253,35 +253,35 @@
 			{
 				"title": "Behavior",
 				"properties": {
-					"dynatrace.metricSelectorsCodeLens": {
+					"dynatraceExtensions.metricSelectorsCodeLens": {
 						"type": "boolean",
 						"description": "Enable Code Lens functionality around metric selectors",
 						"order": 1,
 						"scope": "resource",
 						"default": true
 					},
-					"dynatrace.entitySelectorsCodeLens": {
+					"dynatraceExtensions.entitySelectorsCodeLens": {
 						"type": "boolean",
 						"description": "Enable Code Lens functionality around entity selectors",
 						"order": 2,
 						"scope": "resource",
 						"default": true
 					},
-					"dynatrace.wmiCodeLens": {
+					"dynatraceExtensions.wmiCodeLens": {
 						"type": "boolean",
 						"description": "Enable Code Lens functionality around WMI Queries",
 						"order": 3,
 						"scope": "resource",
 						"default": true
 					},
-					"dynatrace.screenCodeLens": {
+					"dynatraceExtensions.screenCodeLens": {
 						"type": "boolean",
 						"description": "Enable Code Lens functionality around (unified analysis) screens",
 						"order": 4,
 						"scope": "resource",
 						"default": true
 					},
-					"dynatrace.fastDevelopmentMode": {
+					"dynatraceExtensions.fastDevelopmentMode": {
 						"type": "boolean",
 						"description": "When enabled, static extension assets are sent to Dynatrace on every Save, and when you build an extension it will automatically get uploaded and activated immediately.",
 						"order": 5,
@@ -293,37 +293,37 @@
 			{
 				"title": "Diagnostics",
 				"properties": {
-					"dynatrace.diagnostics.all": {
+					"dynatraceExtensions.diagnostics.all": {
 						"type": "boolean",
-						"description": "When enabled, the Copilot will provide extension manifest diagnostics for all known issues.",
+						"description": "When enabled, extension manifest diagnostics are provided for all known issues.",
 						"order": 6,
 						"scope": "resource",
 						"default": true
 					},
-					"dynatrace.diagnostics.extensionName": {
+					"dynatraceExtensions.diagnostics.extensionName": {
 						"type": "boolean",
-						"description": "When enabled, the Copilot will provide extension manifest diagnostics for issues related to the extension name.",
+						"description": "When enabled, extension manifest diagnostics are provided for issues related to the extension name.",
 						"order": 6,
 						"scope": "resource",
 						"default": true
 					},
-					"dynatrace.diagnostics.metricKeys": {
+					"dynatraceExtensions.diagnostics.metricKeys": {
 						"type": "boolean",
-						"description": "When enabled, the Copilot will provide extension manifest diagnostics for issues related to keys used for metric definitions.",
+						"description": "When enabled, extension manifest diagnostics are provided for issues related to keys used for metric definitions.",
 						"order": 6,
 						"scope": "resource",
 						"default": true
 					},
-					"dynatrace.diagnostics.cardKeys": {
+					"dynatraceExtensions.diagnostics.cardKeys": {
 						"type": "boolean",
-						"description": "When enabled, the Copilot will provide extension manifest diagnostics for issues related to keys used for screen card definitions.",
+						"description": "When enabled, extension manifest diagnostics are provided for issues related to keys used for screen card definitions.",
 						"order": 6,
 						"scope": "resource",
 						"default": true
 					},
-					"dynatrace.diagnostics.snmp": {
+					"dynatraceExtensions.diagnostics.snmp": {
 						"type": "boolean",
-						"description": "When enabled, the Copilot will provide extension manifest diagnostics for issues related to keys used for OIDs used in the SNMP datasource definition.",
+						"description": "When enabled, extension manifest diagnostics are provided for issues related to keys used for OIDs used in the SNMP datasource definition.",
 						"order": 6,
 						"scope": "resource",
 						"default": true
@@ -333,44 +333,44 @@
 			{
 				"title": "Certificates",
 				"properties": {
-					"dynatrace.developerCertkeyLocation": {
+					"dynatraceExtensions.developerCertkeyLocation": {
 						"type": "string",
 						"description": "Bring your own: use the developer certificate & key from this location instead of generating new ones",
 						"order": 1,
 						"scope": "resource"
 					},
-					"dynatrace.rootOrCaCertificateLocation": {
+					"dynatraceExtensions.rootOrCaCertificateLocation": {
 						"type": "string",
 						"description": "Bring your own: use the root (CA) certificate file at this path instead of generating a new one.",
 						"order": 5,
 						"scope": "resource"
 					},
-					"dynatrace.certificateCommonName": {
+					"dynatraceExtensions.certificateCommonName": {
 						"type": "string",
 						"description": "Specifies the common name (CN) attribute of the certificate.",
 						"order": 6,
 						"scope": "resource",
 						"default": "Extension Developer"
 					},
-					"dynatrace.certificateOrganization": {
+					"dynatraceExtensions.certificateOrganization": {
 						"type": "string",
 						"description": "Specifies the organization (O) attribute of the certificate.",
 						"order": 7,
 						"scope": "resource"
 					},
-					"dynatrace.certificateOrganizationUnit": {
+					"dynatraceExtensions.certificateOrganizationUnit": {
 						"type": "string",
 						"description": "Specifies the organization unit (OU) attribute of the certificate.",
 						"order": 8,
 						"scope": "resource"
 					},
-					"dynatrace.certificateStateOrProvince": {
+					"dynatraceExtensions.certificateStateOrProvince": {
 						"type": "string",
 						"description": "Specifies the state or province (ST) attribute of the certificate.",
 						"order": 9,
 						"scope": "resource"
 					},
-					"dynatrace.certificateCountryCode": {
+					"dynatraceExtensions.certificateCountryCode": {
 						"type": "string",
 						"description": "Specifies the country code (C) attribute of the certificate.",
 						"order": 10,
@@ -382,319 +382,319 @@
 		"menus": {
 			"commandPalette": [
 				{
-					"command": "dt-ext-copilot-workspaces.refresh",
+					"command": "dynatrace-extensions-workspaces.refresh",
 					"when": "false"
 				},
 				{
-					"command": "dt-ext-copilot-workspaces.addWorkspace",
+					"command": "dynatrace-extensions-workspaces.addWorkspace",
 					"when": "false"
 				},
 				{
-					"command": "dt-ext-copilot-workspaces.openWorkspace",
+					"command": "dynatrace-extensions-workspaces.openWorkspace",
 					"when": "false"
 				},
 				{
-					"command": "dt-ext-copilot-workspaces.deleteWorkspace",
+					"command": "dynatrace-extensions-workspaces.deleteWorkspace",
 					"when": "false"
 				},
 				{
-					"command": "dt-ext-copilot-workspaces.editExtension",
+					"command": "dynatrace-extensions-workspaces.editExtension",
 					"when": "false"
 				},
 				{
-					"command": "dt-ext-copilot-environments.refresh",
+					"command": "dynatrace-extensions-environments.refresh",
 					"when": "false"
 				},
 				{
-					"command": "dt-ext-copilot-environments.addEnvironment",
+					"command": "dynatrace-extensions-environments.addEnvironment",
 					"when": "false"
 				},
 				{
-					"command": "dt-ext-copilot-environments.editEnvironment",
+					"command": "dynatrace-extensions-environments.editEnvironment",
 					"when": "false"
 				},
 				{
-					"command": "dt-ext-copilot-environments.deleteEnvironment",
+					"command": "dynatrace-extensions-environments.deleteEnvironment",
 					"when": "false"
 				},
 				{
-					"command": "dt-ext-copilot-environments.useEnvironment",
+					"command": "dynatrace-extensions-environments.useEnvironment",
 					"when": "false"
 				},
 				{
-					"command": "dt-ext-copilot-environments.editConfig",
+					"command": "dynatrace-extensions-environments.editConfig",
 					"when": "false"
 				},
 				{
-					"command": "dt-ext-copilot-environments.deleteConfig",
+					"command": "dynatrace-extensions-environments.deleteConfig",
 					"when": "false"
 				},
 				{
-					"command": "dt-ext-copilot-environments.addConfig",
-					"when": "false"
-				},
-        {
-          "command": "dt-ext-copilot-environments.saveConfig",
-          "when": "false"
-        },
-				{
-					"command": "dt-ext-copilot-workspaces.enableMetricSelectors",
+					"command": "dynatrace-extensions-environments.addConfig",
 					"when": "false"
 				},
 				{
-					"command": "dt-ext-copilot-workspaces.disableMetricSelectors",
+					"command": "dynatrace-extensions-environments.saveConfig",
 					"when": "false"
 				},
 				{
-					"command": "dt-ext-copilot-workspaces.enableEntitySelectors",
+					"command": "dynatrace-extensions-workspaces.enableMetricSelectors",
 					"when": "false"
 				},
 				{
-					"command": "dt-ext-copilot-workspaces.enableEntitySelectors",
+					"command": "dynatrace-extensions-workspaces.disableMetricSelectors",
 					"when": "false"
 				},
 				{
-					"command": "dt-ext-copilot-workspaces.enableScreenCodelens",
+					"command": "dynatrace-extensions-workspaces.enableEntitySelectors",
 					"when": "false"
 				},
 				{
-					"command": "dt-ext-copilot-workspaces.disableScreenCodelens",
+					"command": "dynatrace-extensions-workspaces.enableEntitySelectors",
 					"when": "false"
 				},
 				{
-					"command": "dt-ext-copilot-workspaces.enableWmiCodelens",
+					"command": "dynatrace-extensions-workspaces.enableScreenCodelens",
 					"when": "false"
 				},
 				{
-					"command": "dt-ext-copilot-workspaces.disableWmiCodelens",
+					"command": "dynatrace-extensions-workspaces.disableScreenCodelens",
 					"when": "false"
 				},
 				{
-					"command": "dt-ext-copilot-workspaces.enableFastDevelopment",
+					"command": "dynatrace-extensions-workspaces.enableWmiCodelens",
 					"when": "false"
 				},
 				{
-					"command": "dt-ext-copilot-workspaces.disableFastDevelopment",
+					"command": "dynatrace-extensions-workspaces.disableWmiCodelens",
 					"when": "false"
 				},
 				{
-					"command": "dt-ext-copilot-workspaces.enableNameDiagnostics",
+					"command": "dynatrace-extensions-workspaces.enableFastDevelopment",
 					"when": "false"
 				},
 				{
-					"command": "dt-ext-copilot-workspaces.disableNameDiagnostics",
+					"command": "dynatrace-extensions-workspaces.disableFastDevelopment",
 					"when": "false"
 				},
 				{
-					"command": "dt-ext-copilot-workspaces.enableMetricKeyDiagnostics",
+					"command": "dynatrace-extensions-workspaces.enableNameDiagnostics",
 					"when": "false"
 				},
 				{
-					"command": "dt-ext-copilot-workspaces.disableMetricKeyDiagnostics",
+					"command": "dynatrace-extensions-workspaces.disableNameDiagnostics",
 					"when": "false"
 				},
 				{
-					"command": "dt-ext-copilot-workspaces.enableCardKeyDiagnostics",
+					"command": "dynatrace-extensions-workspaces.enableMetricKeyDiagnostics",
 					"when": "false"
 				},
 				{
-					"command": "dt-ext-copilot-workspaces.disableCardKeyDiagnostics",
+					"command": "dynatrace-extensions-workspaces.disableMetricKeyDiagnostics",
 					"when": "false"
 				},
 				{
-					"command": "dt-ext-copilot-workspaces.enableSnmpDiagnostics",
+					"command": "dynatrace-extensions-workspaces.enableCardKeyDiagnostics",
 					"when": "false"
 				},
 				{
-					"command": "dt-ext-copilot-workspaces.disableSnmpDiagnostics",
+					"command": "dynatrace-extensions-workspaces.disableCardKeyDiagnostics",
 					"when": "false"
 				},
 				{
-					"command": "dt-ext-copilot-workspaces.enableAllDiagnostics",
+					"command": "dynatrace-extensions-workspaces.enableSnmpDiagnostics",
 					"when": "false"
 				},
 				{
-					"command": "dt-ext-copilot-workspaces.disableAllDiagnostics",
+					"command": "dynatrace-extensions-workspaces.disableSnmpDiagnostics",
+					"when": "false"
+				},
+				{
+					"command": "dynatrace-extensions-workspaces.enableAllDiagnostics",
+					"when": "false"
+				},
+				{
+					"command": "dynatrace-extensions-workspaces.disableAllDiagnostics",
 					"when": "false"
 				}
 			],
 			"view/title": [
 				{
-					"command": "dt-ext-copilot-workspaces.addWorkspace",
-					"when": "view == dt-ext-copilot-workspaces",
+					"command": "dynatrace-extensions-workspaces.addWorkspace",
+					"when": "view == dynatrace-extensions-workspaces",
 					"group": "navigation"
 				},
 				{
-					"command": "dt-ext-copilot-workspaces.refresh",
-					"when": "view == dt-ext-copilot-workspaces",
+					"command": "dynatrace-extensions-workspaces.refresh",
+					"when": "view == dynatrace-extensions-workspaces",
 					"group": "navigation"
 				},
 				{
-					"command": "dt-ext-copilot-environments.addEnvironment",
-					"when": "view == dt-ext-copilot-environments",
+					"command": "dynatrace-extensions-environments.addEnvironment",
+					"when": "view == dynatrace-extensions-environments",
 					"group": "navigation"
 				},
 				{
-					"command": "dt-ext-copilot-environments.refresh",
-					"when": "view == dt-ext-copilot-environments",
+					"command": "dynatrace-extensions-environments.refresh",
+					"when": "view == dynatrace-extensions-environments",
 					"group": "navigation"
 				}
 			],
 			"view/item/context": [
 				{
-					"command": "dt-ext-copilot-workspaces.openWorkspace",
-					"when": "view == dt-ext-copilot-workspaces && viewItem == extensionWorkspace",
+					"command": "dynatrace-extensions-workspaces.openWorkspace",
+					"when": "view == dynatrace-extensions-workspaces && viewItem == extensionWorkspace",
 					"group": "inline@1"
 				},
 				{
-					"command": "dt-ext-copilot-workspaces.deleteWorkspace",
-					"when": "view == dt-ext-copilot-workspaces && viewItem == extensionWorkspace",
+					"command": "dynatrace-extensions-workspaces.deleteWorkspace",
+					"when": "view == dynatrace-extensions-workspaces && viewItem == extensionWorkspace",
 					"group": "inline@2"
 				},
 				{
-					"command": "dt-ext-copilot-workspaces.enableMetricSelectors",
-					"when": "view == dt-ext-copilot-workspaces && viewItem == extensionWorkspace && !config.dynatrace.metricSelectorsCodeLens",
+					"command": "dynatrace-extensions-workspaces.enableMetricSelectors",
+					"when": "view == dynatrace-extensions-workspaces && viewItem == extensionWorkspace && !config.dynatraceExtensions.metricSelectorsCodeLens",
 					"group": "2_workspace@1"
 				},
 				{
-					"command": "dt-ext-copilot-workspaces.disableMetricSelectors",
-					"when": "view == dt-ext-copilot-workspaces && viewItem == extensionWorkspace && config.dynatrace.metricSelectorsCodeLens",
+					"command": "dynatrace-extensions-workspaces.disableMetricSelectors",
+					"when": "view == dynatrace-extensions-workspaces && viewItem == extensionWorkspace && config.dynatraceExtensions.metricSelectorsCodeLens",
 					"group": "2_workspace@1"
 				},
 				{
-					"command": "dt-ext-copilot-workspaces.enableEntitySelectors",
-					"when": "view == dt-ext-copilot-workspaces && viewItem == extensionWorkspace && !config.dynatrace.entitySelectorsCodeLens",
+					"command": "dynatrace-extensions-workspaces.enableEntitySelectors",
+					"when": "view == dynatrace-extensions-workspaces && viewItem == extensionWorkspace && !config.dynatraceExtensions.entitySelectorsCodeLens",
 					"group": "2_workspace@2"
 				},
 				{
-					"command": "dt-ext-copilot-workspaces.disableEntitySelectors",
-					"when": "view == dt-ext-copilot-workspaces && viewItem == extensionWorkspace && config.dynatrace.entitySelectorsCodeLens",
+					"command": "dynatrace-extensions-workspaces.disableEntitySelectors",
+					"when": "view == dynatrace-extensions-workspaces && viewItem == extensionWorkspace && config.dynatraceExtensions.entitySelectorsCodeLens",
 					"group": "2_workspace@2"
 				},
 				{
-					"command": "dt-ext-copilot-workspaces.enableWmiCodelens",
-					"when": "view == dt-ext-copilot-workspaces && viewItem == extensionWorkspace && !config.dynatrace.wmiCodeLens",
+					"command": "dynatrace-extensions-workspaces.enableWmiCodelens",
+					"when": "view == dynatrace-extensions-workspaces && viewItem == extensionWorkspace && !config.dynatraceExtensions.wmiCodeLens",
 					"group": "2_workspace@3"
 				},
 				{
-					"command": "dt-ext-copilot-workspaces.disableWmiCodelens",
-					"when": "view == dt-ext-copilot-workspaces && viewItem == extensionWorkspace && config.dynatrace.wmiCodeLens",
+					"command": "dynatrace-extensions-workspaces.disableWmiCodelens",
+					"when": "view == dynatrace-extensions-workspaces && viewItem == extensionWorkspace && config.dynatraceExtensions.wmiCodeLens",
 					"group": "2_workspace@3"
 				},
 				{
-					"command": "dt-ext-copilot-workspaces.enableScreenCodelens",
-					"when": "view == dt-ext-copilot-workspaces && viewItem == extensionWorkspace && !config.dynatrace.screenCodeLens",
+					"command": "dynatrace-extensions-workspaces.enableScreenCodelens",
+					"when": "view == dynatrace-extensions-workspaces && viewItem == extensionWorkspace && !config.dynatraceExtensions.screenCodeLens",
 					"group": "2_workspace@4"
 				},
 				{
-					"command": "dt-ext-copilot-workspaces.disableScreenCodelens",
-					"when": "view == dt-ext-copilot-workspaces && viewItem == extensionWorkspace && config.dynatrace.screenCodeLens",
+					"command": "dynatrace-extensions-workspaces.disableScreenCodelens",
+					"when": "view == dynatrace-extensions-workspaces && viewItem == extensionWorkspace && config.dynatraceExtensions.screenCodeLens",
 					"group": "2_workspace@4"
 				},
 				{
-					"submenu": "dt-ext-copilot.diagnostics-menu",
+					"submenu": "dynatrace-extensions.diagnostics-menu",
 					"group": "2_workspace@5"
 				},
 				{
-					"command": "dt-ext-copilot-workspaces.enableFastDevelopment",
-					"when": "view == dt-ext-copilot-workspaces && viewItem == extensionWorkspace && !config.dynatrace.fastDevelopmentMode",
+					"command": "dynatrace-extensions-workspaces.enableFastDevelopment",
+					"when": "view == dynatrace-extensions-workspaces && viewItem == extensionWorkspace && !config.dynatraceExtensions.fastDevelopmentMode",
 					"group": "2_workspace@6"
 				},
 				{
-					"command": "dt-ext-copilot-workspaces.disableFastDevelopment",
-					"when": "view == dt-ext-copilot-workspaces && viewItem == extensionWorkspace && config.dynatrace.fastDevelopmentMode",
+					"command": "dynatrace-extensions-workspaces.disableFastDevelopment",
+					"when": "view == dynatrace-extensions-workspaces && viewItem == extensionWorkspace && config.dynatraceExtensions.fastDevelopmentMode",
 					"group": "2_workspace@6"
 				},
 				{
-					"command": "dt-ext-copilot-workspaces.editExtension",
-					"when": "view == dt-ext-copilot-workspaces && viewItem == extension",
+					"command": "dynatrace-extensions-workspaces.editExtension",
+					"when": "view == dynatrace-extensions-workspaces && viewItem == extension",
 					"group": "inline"
 				},
 				{
-					"command": "dt-ext-copilot-environments.useEnvironment",
-					"when": "view == dt-ext-copilot-environments && viewItem == dynatraceEnvironment",
+					"command": "dynatrace-extensions-environments.useEnvironment",
+					"when": "view == dynatrace-extensions-environments && viewItem == dynatraceEnvironment",
 					"group": "inline@1"
 				},
 				{
-					"command": "dt-ext-copilot-environments.editEnvironment",
-					"when": "view == dt-ext-copilot-environments && (viewItem == dynatraceEnvironment || viewItem == currentDynatraceEnvironment)",
+					"command": "dynatrace-extensions-environments.editEnvironment",
+					"when": "view == dynatrace-extensions-environments && (viewItem == dynatraceEnvironment || viewItem == currentDynatraceEnvironment)",
 					"group": "inline@2"
 				},
 				{
-					"command": "dt-ext-copilot-environments.deleteEnvironment",
-					"when": "view == dt-ext-copilot-environments && (viewItem == dynatraceEnvironment || viewItem == currentDynatraceEnvironment)",
+					"command": "dynatrace-extensions-environments.deleteEnvironment",
+					"when": "view == dynatrace-extensions-environments && (viewItem == dynatraceEnvironment || viewItem == currentDynatraceEnvironment)",
 					"group": "inline@3"
 				},
 				{
-					"command": "dt-ext-copilot-environments.addConfig",
-					"when": "view == dt-ext-copilot-environments && viewItem == deployedExtension",
+					"command": "dynatrace-extensions-environments.addConfig",
+					"when": "view == dynatrace-extensions-environments && viewItem == deployedExtension",
 					"group": "inline@1"
 				},
 				{
-					"command": "dt-ext-copilot-environments.editConfig",
-					"when": "view == dt-ext-copilot-environments && viewItem == monitoringConfiguration",
+					"command": "dynatrace-extensions-environments.editConfig",
+					"when": "view == dynatrace-extensions-environments && viewItem == monitoringConfiguration",
 					"group": "inline@1"
 				},
 				{
-					"command": "dt-ext-copilot-environments.deleteConfig",
-					"when": "view == dt-ext-copilot-environments && viewItem == monitoringConfiguration",
+					"command": "dynatrace-extensions-environments.deleteConfig",
+					"when": "view == dynatrace-extensions-environments && viewItem == monitoringConfiguration",
 					"group": "inline@2"
 				},
-        {
-					"command": "dt-ext-copilot-environments.saveConfig",
-					"when": "view == dt-ext-copilot-environments && viewItem == monitoringConfiguration",
+				{
+					"command": "dynatrace-extensions-environments.saveConfig",
+					"when": "view == dynatrace-extensions-environments && viewItem == monitoringConfiguration",
 					"group": "inline@3"
 				}
 			],
-			"dt-ext-copilot.diagnostics-menu": [
+			"dynatrace-extensions.diagnostics-menu": [
 				{
-					"command": "dt-ext-copilot-workspaces.enableNameDiagnostics",
-					"when": "view == dt-ext-copilot-workspaces && viewItem == extensionWorkspace && !config.dynatrace.diagnostics.extensionName",
+					"command": "dynatrace-extensions-workspaces.enableNameDiagnostics",
+					"when": "view == dynatrace-extensions-workspaces && viewItem == extensionWorkspace && !config.dynatraceExtensions.diagnostics.extensionName",
 					"group": "navigation@1"
 				},
 				{
-					"command": "dt-ext-copilot-workspaces.disableNameDiagnostics",
-					"when": "view == dt-ext-copilot-workspaces && viewItem == extensionWorkspace && config.dynatrace.diagnostics.extensionName",
+					"command": "dynatrace-extensions-workspaces.disableNameDiagnostics",
+					"when": "view == dynatrace-extensions-workspaces && viewItem == extensionWorkspace && config.dynatraceExtensions.diagnostics.extensionName",
 					"group": "navigation@1"
 				},
 				{
-					"command": "dt-ext-copilot-workspaces.enableMetricKeyDiagnostics",
-					"when": "view == dt-ext-copilot-workspaces && viewItem == extensionWorkspace && !config.dynatrace.diagnostics.metricKeys",
+					"command": "dynatrace-extensions-workspaces.enableMetricKeyDiagnostics",
+					"when": "view == dynatrace-extensions-workspaces && viewItem == extensionWorkspace && !config.dynatraceExtensions.diagnostics.metricKeys",
 					"group": "navigation@2"
 				},
 				{
-					"command": "dt-ext-copilot-workspaces.disableMetricKeyDiagnostics",
-					"when": "view == dt-ext-copilot-workspaces && viewItem == extensionWorkspace && config.dynatrace.diagnostics.metricKeys",
+					"command": "dynatrace-extensions-workspaces.disableMetricKeyDiagnostics",
+					"when": "view == dynatrace-extensions-workspaces && viewItem == extensionWorkspace && config.dynatraceExtensions.diagnostics.metricKeys",
 					"group": "navigation@2"
 				},
 				{
-					"command": "dt-ext-copilot-workspaces.enableCardKeyDiagnostics",
-					"when": "view == dt-ext-copilot-workspaces && viewItem == extensionWorkspace && !config.dynatrace.diagnostics.cardKeys",
+					"command": "dynatrace-extensions-workspaces.enableCardKeyDiagnostics",
+					"when": "view == dynatrace-extensions-workspaces && viewItem == extensionWorkspace && !config.dynatraceExtensions.diagnostics.cardKeys",
 					"group": "navigation@3"
 				},
 				{
-					"command": "dt-ext-copilot-workspaces.disableCardKeyDiagnostics",
-					"when": "view == dt-ext-copilot-workspaces && viewItem == extensionWorkspace && config.dynatrace.diagnostics.cardKeys",
+					"command": "dynatrace-extensions-workspaces.disableCardKeyDiagnostics",
+					"when": "view == dynatrace-extensions-workspaces && viewItem == extensionWorkspace && config.dynatraceExtensions.diagnostics.cardKeys",
 					"group": "navigation@3"
 				},
 				{
-					"command": "dt-ext-copilot-workspaces.enableSnmpDiagnostics",
-					"when": "view == dt-ext-copilot-workspaces && viewItem == extensionWorkspace && !config.dynatrace.diagnostics.snmp",
+					"command": "dynatrace-extensions-workspaces.enableSnmpDiagnostics",
+					"when": "view == dynatrace-extensions-workspaces && viewItem == extensionWorkspace && !config.dynatraceExtensions.diagnostics.snmp",
 					"group": "navigation@4"
 				},
 				{
-					"command": "dt-ext-copilot-workspaces.disableSnmpDiagnostics",
-					"when": "view == dt-ext-copilot-workspaces && viewItem == extensionWorkspace && config.dynatrace.diagnostics.snmp",
+					"command": "dynatrace-extensions-workspaces.disableSnmpDiagnostics",
+					"when": "view == dynatrace-extensions-workspaces && viewItem == extensionWorkspace && config.dynatraceExtensions.diagnostics.snmp",
 					"group": "navigation@4"
 				},
 				{
-					"command": "dt-ext-copilot-workspaces.enableAllDiagnostics",
-					"when": "view == dt-ext-copilot-workspaces && viewItem == extensionWorkspace && !config.dynatrace.diagnostics.all",
+					"command": "dynatrace-extensions-workspaces.enableAllDiagnostics",
+					"when": "view == dynatrace-extensions-workspaces && viewItem == extensionWorkspace && !config.dynatraceExtensions.diagnostics.all",
 					"group": "navigation@5"
 				},
 				{
-					"command": "dt-ext-copilot-workspaces.disableAllDiagnostics",
-					"when": "view == dt-ext-copilot-workspaces && viewItem == extensionWorkspace && config.dynatrace.diagnostics.all",
+					"command": "dynatrace-extensions-workspaces.disableAllDiagnostics",
+					"when": "view == dynatrace-extensions-workspaces && viewItem == extensionWorkspace && config.dynatraceExtensions.diagnostics.all",
 					"group": "navigation@5"
 				}
 			]
@@ -702,55 +702,55 @@
 		"submenus": [
 			{
 				"label": "🪲 Diagnostics",
-				"id": "dt-ext-copilot.diagnostics-menu"
+				"id": "dynatrace-extensions.diagnostics-menu"
 			}
 		],
 		"viewsContainers": {
 			"activitybar": [
 				{
-					"id": "dynatrace-extensions",
-					"title": "Dynatrace",
-					"icon": "src/assets/icons/dynatrace_signet.png"
+					"id": "dynatrace-extensions2",
+					"title": "Dynatrace Extensions",
+					"icon": "src/assets/icons/dynatrace_extensions.png"
 				}
 			]
 		},
 		"views": {
-			"dynatrace-extensions": [
+			"dynatrace-extensions2": [
 				{
-					"id": "dt-ext-copilot-workspaces",
+					"id": "dynatrace-extensions-workspaces",
 					"name": "Extension 2.0 Workspaces"
 				},
 				{
-					"id": "dt-ext-copilot-environments",
+					"id": "dynatrace-extensions-environments",
 					"name": "Environments"
 				}
 			]
 		},
 		"viewsWelcome": [
 			{
-				"view": "dt-ext-copilot-workspaces",
+				"view": "dynatrace-extensions-workspaces",
 				"contents": "Hello. You don't seem to have any extension workspaces initialized.\nStart by opening a folder and running the Initialize Workspace command.\n[Open folder](command:vscode.openFolder)",
-				"when": "workbenchState == empty && dt-ext-copilot.numWorkspaces == 0"
+				"when": "workbenchState == empty && dynatrace-extensions.numWorkspaces == 0"
 			},
 			{
-				"view": "dt-ext-copilot-workspaces",
-				"contents": "Hello. You don't seem to have any extension workspaces initialized.\nRun the Initialize Workspace command to initialize your current workspace.\n[Initialize workspace](command:dt-ext-copilot.initWorkspace)\nOr open a different workspace first.\n[Open folder](command:vscode.openFolder)",
-				"when": "workbenchState != empty && dt-ext-copilot.numWorkspaces == 0 && !dt-ext-copilot.extensionWorkspace"
+				"view": "dynatrace-extensions-workspaces",
+				"contents": "Hello. You don't seem to have any extension workspaces initialized.\nRun the Initialize Workspace command to initialize your current workspace.\n[Initialize workspace](command:dynatrace-extensions.initWorkspace)\nOr open a different workspace first.\n[Open folder](command:vscode.openFolder)",
+				"when": "workbenchState != empty && dynatrace-extensions.numWorkspaces == 0 && !dynatrace-extensions.extensionWorkspace"
 			},
 			{
-				"view": "dt-ext-copilot-workspaces",
-				"contents": "Hello. You don't seem to have any extension workspaces initialized.\nYou seem to already be in an extensions workspace - want to initialize it now?\n[Initialize workspace](command:dt-ext-copilot.initWorkspace)\nOtherwise, open a different workspace first.\n[Open folder](command:vscode.openFolder)",
-				"when": "workbenchState != empty && dt-ext-copilot.numWorkspaces == 0 && dt-ext-copilot.extensionWorkspace"
+				"view": "dynatrace-extensions-workspaces",
+				"contents": "Hello. You don't seem to have any extension workspaces initialized.\nYou seem to already be in an extensions workspace - want to initialize it now?\n[Initialize workspace](command:dynatrace-extensions.initWorkspace)\nOtherwise, open a different workspace first.\n[Open folder](command:vscode.openFolder)",
+				"when": "workbenchState != empty && dynatrace-extensions.numWorkspaces == 0 && dynatrace-extensions.extensionWorkspace"
 			},
 			{
-				"view": "dt-ext-copilot-environments",
-				"contents": "Hello. You don't have any Dynatrace Environments saved.\nWould you like to add one now?\n[Add environment](command:dt-ext-copilot-environments.addEnvironment)",
-				"when": "dt-ext-copilot.numEnvironments == 0"
+				"view": "dynatrace-extensions-environments",
+				"contents": "Hello. You don't have any Dynatrace Environments saved.\nWould you like to add one now?\n[Add environment](command:dynatrace-extensions-environments.addEnvironment)",
+				"when": "dynatrace-extensions.numEnvironments == 0"
 			}
 		],
 		"icons": {
-			"dt-signet": {
-				"description": "Dynatrace signet",
+			"dt-platform": {
+				"description": "Dynatrace platform",
 				"default": {
 					"fontPath": "src/assets/fonts/dt-custom-icons.woff",
 					"fontCharacter": "A"
@@ -772,7 +772,9 @@
 	},
 	"devDependencies": {
 		"@lwc/eslint-plugin-lwc": "^1.6.2",
+		"@reactivex/rxjs": "^6.6.7",
 		"@types/adm-zip": "^0.5.0",
+		"@types/fs-extra": "^11.0.1",
 		"@types/glob": "^7.2.0",
 		"@types/mocha": "^9.1.1",
 		"@types/mock-fs": "^4.13.1",
@@ -802,10 +804,12 @@
 		"adm-zip": "^0.5.9",
 		"axios": "^0.27.2",
 		"form-data": "^4.0.0",
+		"fs-extra": "^11.1.1",
 		"glob": "^8.0.3",
 		"jszip": "^3.10.1",
 		"node-forge": "^1.3.1",
 		"open": "^8.4.2",
+		"rxjs": "^7.8.1",
 		"yaml": ">=2.2.2"
 	}
 }

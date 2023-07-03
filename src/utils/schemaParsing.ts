@@ -371,7 +371,7 @@ export function createGenericConfigObject(
     "jsonSchemas",
     `${datasource.toLowerCase()}-generic-schema.json`,
   );
-  // If we don't have the file, it's not supported yet by Copilot
+  // If we don't have the file, it's not supported yet by Dynatrace Extensions
   if (!existsSync(schemaPath)) {
     return { description: "", version: "0.0.0" };
   }

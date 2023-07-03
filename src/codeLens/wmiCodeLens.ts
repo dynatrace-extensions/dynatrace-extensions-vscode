@@ -15,7 +15,7 @@
  */
 
 import * as vscode from "vscode";
-import { CachedDataProvider } from "../utils/dataCaching";
+import { CachedDataProducer } from "../utils/dataCaching";
 import { WMIQueryResultsPanel } from "../webviews/wmiQueryResults";
 import { WmiQueryResult } from "./utils/wmiUtils";
 
@@ -31,7 +31,7 @@ class WmiQueryLens extends vscode.CodeLens {
     super(range, {
       title: "▶️ Run WMI Query",
       tooltip: "Run a WMI query on this host",
-      command: "dt-ext-copilot.codelens.runWMIQuery",
+      command: "dynatrace-extensions.codelens.runWMIQuery",
       arguments: [wmiQuery],
     });
     this.wmiQuery = wmiQuery;
@@ -91,7 +91,7 @@ class WmiQueryResultLens extends vscode.CodeLens {
   };
 }
 
-export class WmiCodeLensProvider implements vscode.CodeLensProvider {
+export class WmiCodeLensProvider extends CachedDataProducer implements vscode.CodeLensProvider {
   private wmiQueryLens: WmiQueryLens[] = [];
   private wmiQueryResultLens: WmiQueryResultLens[] = [];
 
@@ -104,14 +104,6 @@ export class WmiCodeLensProvider implements vscode.CodeLensProvider {
 
   private _onDidChangeCodeLenses: vscode.EventEmitter<void> = new vscode.EventEmitter<void>();
   public readonly onDidChangeCodeLenses: vscode.Event<void> = this._onDidChangeCodeLenses.event;
-  private cachedData: CachedDataProvider;
-
-  /**
-   * @param cachedDataProvider a provider for cacheable data
-   */
-  constructor(cachedDataProvider: CachedDataProvider) {
-    this.cachedData = cachedDataProvider;
-  }
 
   provideCodeLenses(document: vscode.TextDocument): vscode.ProviderResult<vscode.CodeLens[]> {
     if (!this.selfUpdateTriggered) {
@@ -130,12 +122,10 @@ export class WmiCodeLensProvider implements vscode.CodeLensProvider {
     // Return early because it is cheaper than parsing the yaml
     if (
       !text.includes("wmi:") ||
-      !vscode.workspace.getConfiguration("dynatrace", null).get("wmiCodeLens")
+      !vscode.workspace.getConfiguration("dynatraceExtensions", null).get("wmiCodeLens")
     ) {
       return [];
     }
-
-    const extension = this.cachedData.getExtensionYaml(text);
 
     // Find all query: definitions
     // They can be under the list of groups, or under the list subgroups
@@ -151,7 +141,7 @@ export class WmiCodeLensProvider implements vscode.CodeLensProvider {
     //     - subgroup: Queue
     //       query: SELECT Name, MessagesinQueue, BytesInQueue FROM Win32_PerfRawData_msmq_MSMQQueue
 
-    for (const group of extension.wmi) {
+    for (const group of this.parsedExtension.wmi) {
       if (group.query) {
         const createdEarlier = this.previousWMIQueryLens.find(
           lens => lens.wmiQuery === group.query,
@@ -226,7 +216,7 @@ export class WmiCodeLensProvider implements vscode.CodeLensProvider {
   }
 
   processQueryResults = (query: string, result: WmiQueryResult) => {
-    this.cachedData.addWmiQueryResult(result);
+    this.cachedData.updateWmiQueryResult(result);
 
     // Find the WmiQueryResultLens that matches this query
     const ownerLens = this.previousWMIQueryResultLens.find(lens => lens.wmiQuery === query);

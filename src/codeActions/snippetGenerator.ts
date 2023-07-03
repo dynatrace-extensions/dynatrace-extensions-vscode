@@ -21,7 +21,7 @@ import {
   Property,
   RelationProperty,
 } from "../interfaces/extensionMeta";
-import { CachedDataProvider } from "../utils/dataCaching";
+import { CachedDataConsumer } from "../utils/dataCaching";
 import {
   getAllMetricsByFeatureSet,
   getAttributesFromTopology,
@@ -53,16 +53,7 @@ import {
 /**
  * Provider for Code Actions that insert snippets of code into the existing extension yaml.
  */
-export class SnippetGenerator implements vscode.CodeActionProvider {
-  private readonly cachedData: CachedDataProvider;
-
-  /**
-   * @param cachedDataProvider a provider for cacheable data
-   */
-  constructor(cachedDataProvider: CachedDataProvider) {
-    this.cachedData = cachedDataProvider;
-  }
-
+export class SnippetGenerator extends CachedDataConsumer implements vscode.CodeActionProvider {
   /**
    * Provides Code Actions that insert code snippets relevant to the triggered context.
    * @param document document that activated the provider
@@ -76,7 +67,6 @@ export class SnippetGenerator implements vscode.CodeActionProvider {
     range: vscode.Range | vscode.Selection,
   ): vscode.CodeAction[] {
     const codeActions: vscode.CodeAction[] = [];
-    const extension = this.cachedData.getExtensionYaml(document.getText());
     const parentBlocks = getParentBlocks(range.start.line, document.getText());
     const lineText = document.lineAt(range.start.line).text;
 
@@ -85,11 +75,21 @@ export class SnippetGenerator implements vscode.CodeActionProvider {
       if (lineText.includes("properties:")) {
         // attribute properties
         codeActions.push(
-          ...this.createAttributePropertyInsertions(document, range, extension, "properties"),
+          ...this.createAttributePropertyInsertions(
+            document,
+            range,
+            this.parsedExtension,
+            "properties",
+          ),
         );
         // relation properties
         codeActions.push(
-          ...this.createRelationPropertyInsertions(document, range, extension, "properties"),
+          ...this.createRelationPropertyInsertions(
+            document,
+            range,
+            this.parsedExtension,
+            "properties",
+          ),
         );
       }
     }
@@ -101,11 +101,11 @@ export class SnippetGenerator implements vscode.CodeActionProvider {
     ) {
       // attribute columns
       codeActions.push(
-        ...this.createAttributePropertyInsertions(document, range, extension, "columns"),
+        ...this.createAttributePropertyInsertions(document, range, this.parsedExtension, "columns"),
       );
       // relation columns
       codeActions.push(
-        ...this.createRelationPropertyInsertions(document, range, extension, "columns"),
+        ...this.createRelationPropertyInsertions(document, range, this.parsedExtension, "columns"),
       );
     }
 
@@ -113,12 +113,14 @@ export class SnippetGenerator implements vscode.CodeActionProvider {
     if (lineText.includes("charts:")) {
       // in chartsCard
       if (parentBlocks[parentBlocks.length - 1] === "chartsCards") {
-        codeActions.push(...this.createChartInsertions(document, range, extension, "chartsCard"));
+        codeActions.push(
+          ...this.createChartInsertions(document, range, this.parsedExtension, "chartsCard"),
+        );
       }
       // in entitiesListCard
       if (parentBlocks[parentBlocks.length - 1] === "entitiesListCards") {
         codeActions.push(
-          ...this.createChartInsertions(document, range, extension, "entitiesListCard"),
+          ...this.createChartInsertions(document, range, this.parsedExtension, "entitiesListCard"),
         );
       }
     }
@@ -131,39 +133,49 @@ export class SnippetGenerator implements vscode.CodeActionProvider {
       // in chartCards
       if (parentBlocks[parentBlocks.length - 3] === "chartsCards") {
         codeActions.push(
-          ...this.createChartInsertions(document, range, extension, "chartsCard", true),
+          ...this.createChartInsertions(document, range, this.parsedExtension, "chartsCard", true),
         );
       }
       // in entitiesListCards
       if (parentBlocks[parentBlocks.length - 3] === "entitiesListCards") {
         codeActions.push(
-          ...this.createChartInsertions(document, range, extension, "entitiesListCard", true),
+          ...this.createChartInsertions(
+            document,
+            range,
+            this.parsedExtension,
+            "entitiesListCard",
+            true,
+          ),
         );
       }
     }
 
     // add whole chart cards
     if (lineText.includes("chartsCards:")) {
-      codeActions.push(...this.createChartCardInsertions(document, range, extension));
+      codeActions.push(...this.createChartCardInsertions(document, range, this.parsedExtension));
     }
 
     // add entity list cards
     if (lineText.includes("entitiesListCards:")) {
-      codeActions.push(...this.createEntitiesListCardInsertions(document, range, extension));
+      codeActions.push(
+        ...this.createEntitiesListCardInsertions(document, range, this.parsedExtension),
+      );
     }
 
     // generate entire entity screens
     if (lineText.includes("screens:")) {
-      codeActions.push(...this.createScreenInsertions(document, range, extension));
+      codeActions.push(...this.createScreenInsertions(document, range, this.parsedExtension));
     }
 
     // add known actions
     if (lineText.includes("actions:")) {
       if (parentBlocks[parentBlocks.length - 1] === "screens") {
-        codeActions.push(...this.createGlobalActionInsertions(document, range, extension));
+        codeActions.push(
+          ...this.createGlobalActionInsertions(document, range, this.parsedExtension),
+        );
       }
       if (parentBlocks[parentBlocks.length - 1] === "actions") {
-        codeActions.push(...this.createActionInsertions(document, range, extension));
+        codeActions.push(...this.createActionInsertions(document, range, this.parsedExtension));
       }
     }
 
@@ -173,14 +185,16 @@ export class SnippetGenerator implements vscode.CodeActionProvider {
       parentBlocks[parentBlocks.length - 1] === "entitiesListCards"
     ) {
       // add whole filtering block
-      codeActions.push(...this.createFilteringBlockInsertions(document, range, extension));
+      codeActions.push(
+        ...this.createFilteringBlockInsertions(document, range, this.parsedExtension),
+      );
     }
     if (
       lineText.includes("filters:") &&
       parentBlocks[parentBlocks.length - 3] === "entitiesListCards"
     ) {
       // add individual filters
-      codeActions.push(...this.createFilterInsertions(document, range, extension));
+      codeActions.push(...this.createFilterInsertions(document, range, this.parsedExtension));
     }
 
     return codeActions;

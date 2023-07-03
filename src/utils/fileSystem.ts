@@ -21,9 +21,11 @@
 import { copyFileSync, existsSync, mkdirSync, readFileSync, readdirSync, writeFileSync } from "fs";
 import * as os from "os";
 import * as path from "path";
+import { copySync } from "fs-extra";
 import { glob } from "glob";
 import * as vscode from "vscode";
 import { DynatraceEnvironmentData, ExtensionWorkspace } from "../interfaces/treeViewData";
+import { showMessage } from "./code";
 
 /**
  * Initializes the global storage path for the VS Code extension.
@@ -99,7 +101,7 @@ export async function registerWorkspace(context: vscode.ExtensionContext) {
   // Update the state
   await vscode.commands.executeCommand(
     "setContext",
-    "dt-ext-copilot.numWorkspaces",
+    "dynatrace-extensions.numWorkspaces",
     workspaces.length,
   );
 }
@@ -164,6 +166,7 @@ export function getAllEnvironments(context: vscode.ExtensionContext): DynatraceE
 export async function registerEnvironment(
   context: vscode.ExtensionContext,
   url: string,
+  apiUrl: string,
   token: string,
   name?: string,
   current: boolean = false,
@@ -173,13 +176,7 @@ export async function registerEnvironment(
     readFileSync(environmentsJson).toString(),
   ) as DynatraceEnvironmentData[];
   const id = url.includes("/e/") ? url.split("/e/")[1] : url.split("https://")[1].substring(0, 8);
-  const environment: DynatraceEnvironmentData = {
-    id: id,
-    url: url,
-    token: token,
-    name: name,
-    current: current,
-  };
+  const environment: DynatraceEnvironmentData = { id, url, apiUrl, token, name, current };
 
   // If this will be the currently used environment, deactivate others
   if (current) {
@@ -201,7 +198,7 @@ export async function registerEnvironment(
   // Update the state
   await vscode.commands.executeCommand(
     "setContext",
-    "dt-ext-copilot.numEnvironments",
+    "dynatrace-extensions.numEnvironments",
     environments.length,
   );
 }
@@ -223,7 +220,7 @@ export async function removeEnvironment(context: vscode.ExtensionContext, enviro
   // Update the state
   await vscode.commands.executeCommand(
     "setContext",
-    "dt-ext-copilot.numEnvironments",
+    "dynatrace-extensions.numEnvironments",
     environments.length - 1,
   );
 }
@@ -243,7 +240,7 @@ export async function removeWorkspace(context: vscode.ExtensionContext, workspac
   // Update the state
   await vscode.commands.executeCommand(
     "setContext",
-    "dt-ext-copilot.numWorkspaces",
+    "dynatrace-extensions.numWorkspaces",
     workspaces.length - 1,
   );
 }
@@ -296,7 +293,6 @@ export function getExtensionFilePath(): string | undefined {
     return undefined;
   }
   const workspaceRootPath = vscode.workspace.workspaceFolders[0].uri.fsPath;
-  console.log(`Looking for extension.yaml in workspace root: ${workspaceRootPath}`);
   let matches = glob.sync("extension/extension.yaml", { cwd: workspaceRootPath });
   if (matches.length === 0) {
     matches = glob.sync("*/extension/extension.yaml", { cwd: workspaceRootPath });
@@ -338,7 +334,7 @@ export function resolveRealPath(pathToResolve: string): string {
 }
 
 /**
- * Writes a .gitignore file for the workspace which applies to Copilot, VSCode, and optionally
+ * Writes a .gitignore file for the workspace which applies to Dynatrace Extensions, VSCode, and optionally
  * Python. If the workspace already has a .gitignore, only the lines missing would get added.
  * @param includePython whether the .gitignore needs the Python content or not
  */
@@ -380,7 +376,7 @@ export async function writeGititnore(includePython: boolean = false) {
 # Built Visual Studio Code Extensions
 *.vsix
 
-# Copilot builds & configs
+# Dynatrace Extensions builds & configs
 config
 dist
 `;
@@ -417,11 +413,11 @@ venv/
       gitignoreLines.push(...vscodeIgnores, "");
     }
 
-    // Copilot ignores
-    const copilotIgnores = COPILOT_IGNORES.filter(line => !existingLines.includes(line));
-    if (copilotIgnores.length > 0) {
-      gitignoreLines.push("# Copilot builds & configs");
-      gitignoreLines.push(...copilotIgnores, "");
+    // Dynatrace Extensions ignores
+    const extensionIgnores = COPILOT_IGNORES.filter(line => !existingLines.includes(line));
+    if (extensionIgnores.length > 0) {
+      gitignoreLines.push("# Dynatrace Extensions builds & configs");
+      gitignoreLines.push(...extensionIgnores, "");
     }
 
     // Python ignores
@@ -488,4 +484,142 @@ export function createUniqueFileName(dir: string, prefix: string, initialFileNam
   } while (currentFiles.includes(fileName));
 
   return fileName;
+}
+
+/**
+ * Migrates from the legacy `dt-ext-copilot` extension to the current `dynatrace_extensions`.
+ * This involves migra
+ * @param context
+ */
+export async function migrateFromLegacyExtension(context: vscode.ExtensionContext) {
+  await vscode.window.withProgress(
+    { location: vscode.ProgressLocation.Notification },
+    async progress => {
+      progress.report({ message: "Migrating workspaces and environments" });
+      const globalStoragePath = context.globalStorageUri.fsPath;
+      const legacyGlobalStoragePath = path.resolve(
+        globalStoragePath,
+        "..",
+        "dynatraceplatformextensions.dt-ext-copilot",
+      );
+      copySync(legacyGlobalStoragePath, globalStoragePath, { overwrite: true });
+
+      // Convert all environments to new format with apiUrl attribute
+      const environments = getAllEnvironments(context);
+      if (environments.length > 0) {
+        writeFileSync(
+          path.resolve(globalStoragePath, "dynatraceEnvironments.json"),
+          JSON.stringify(environments.map(e => ({ ...{ ...e }, apiUrl: e.url }))),
+        );
+      }
+
+      progress.report({ message: "Migrating workspace data" });
+      const genericWorkspaceStorage = path.resolve(context.storageUri?.fsPath, "..", "..");
+      // Move over all data stored in workspaces
+      const workspaces = getAllWorkspaces(context);
+      workspaces.forEach(workspace => {
+        const legacyWorkspaceStorage = path.resolve(
+          genericWorkspaceStorage,
+          workspace.id,
+          "DynatracePlatformExtensions.dt-ext-copilot",
+        );
+        const workspaceStorage = path.resolve(
+          genericWorkspaceStorage,
+          workspace.id,
+          "DynatracePlatformExtensions.dynatrace-extensions",
+        );
+        copySync(legacyWorkspaceStorage, workspaceStorage, { overwrite: true });
+      });
+
+      progress.report({ message: "Migrating global settings" });
+      // Change prefix on all global settings
+      const settingsKeys = [
+        "metricSelectorsCodeLens",
+        "entitySelectorsCodeLens",
+        "wmiCodeLens",
+        "screenCodeLens",
+        "fastDevelopmentMode",
+        "diagnostics.all",
+        "diagnostics.extensionName",
+        "diagnostics.metricKeys",
+        "diagnostics.cardKeys",
+        "diagnostics.snmp",
+        "developerCertkeyLocation",
+        "rootOrCaCertificateLocation",
+        "certificateCommonName",
+        "certificateOrganization",
+        "certificateOrganizationUnit",
+        "certificateStateOrProvince",
+        "certificateCountryCode",
+      ];
+      const legacyConfig = vscode.workspace.getConfiguration("dynatrace", null);
+      const config = vscode.workspace.getConfiguration("dynatraceExtensions", null);
+      for (const key of settingsKeys) {
+        const legacyValue = legacyConfig.inspect(key).globalValue;
+        if (legacyValue) {
+          await config.update(key, legacyValue, true);
+        }
+      }
+
+      progress.report({ message: "Migrating workspace settings" });
+      for (const workspace of workspaces) {
+        const settingsFilePath = path.resolve(
+          (workspace.folder as vscode.Uri).fsPath,
+          ".vscode",
+          "settings.json",
+        );
+        // For any workspace that has settings
+        if (existsSync(settingsFilePath)) {
+          // Change the old ID for new one
+          let settingsContent = readFileSync(settingsFilePath).toString();
+          settingsContent = settingsContent.replace(/dt-ext-copilot/g, "dynatrace-extensions");
+          // Update all settings keys
+          for (const key of settingsKeys) {
+            settingsContent = settingsContent.replace(
+              `dynatrace.${key}`,
+              `dynatraceExtensions.${key}`,
+            );
+          }
+          writeFileSync(settingsFilePath, settingsContent);
+        }
+      }
+
+      // Forget Copilot ever existed
+      progress.report({ message: "Uninstalling legacy extension" });
+      await vscode.commands
+        .executeCommand(
+          "workbench.extensions.uninstallExtension",
+          "DynatracePlatformExtensions.dt-ext-copilot",
+        )
+        .then(async () => {
+          await vscode.commands.executeCommand("workbench.action.reloadWindow");
+        });
+    },
+  );
+  showMessage("info", "Migration from legacy version complete.");
+}
+
+/**
+ * Returns the path where extension's snmp folder should be.
+ * Does not check if it exists.
+ */
+export function getSnmpDirPath(): string | undefined {
+  const manifestFilePath = getExtensionFilePath();
+  if (manifestFilePath) {
+    return path.resolve(manifestFilePath, "..", "snmp");
+  }
+  return undefined;
+}
+
+/**
+ * Looks for local SNMP Mib files bundled with the extension and returns the list of file paths.
+ */
+export function getSnmpMibFiles(): string[] {
+  const snmpDir = getSnmpDirPath();
+  if (snmpDir) {
+    if (existsSync(snmpDir)) {
+      return readdirSync(snmpDir).map(file => path.resolve(snmpDir, file));
+    }
+  }
+  return [];
 }

@@ -379,6 +379,52 @@ export function getEntityMetrics(
 }
 
 /**
+ * Attempts to find the entity attached to the given metric key.
+ * @param metricKey key to search entity for
+ * @param extension parsed extension manifest
+ * @returns entity type or undefined
+ */
+export function getEntityForMetric(
+  metricKey: string,
+  extension: ExtensionStub,
+): string | undefined {
+  // First, check metadata
+  if (extension.metrics) {
+    const idx = extension.metrics.findIndex(m => m.key === metricKey);
+    if (idx >= 0 && extension.metrics[idx].metadata.sourceEntityType) {
+      return extension.metrics[idx].metadata.sourceEntityType;
+    }
+  }
+
+  // Otherwise, rely on topology
+  if (extension.topology.types) {
+    for (const type of extension.topology.types) {
+      for (const rule of type.rules) {
+        for (const source of rule.sources.filter(s => s.sourceType === "Metrics")) {
+          const matcher = source.condition.split("(")[0];
+          const value = source.condition.split("(")[1].split(")")[0];
+          // TODO: Dimension filters should be taken into account
+          switch (matcher) {
+            case "$eq":
+              if (value === metricKey) {
+                return type.name;
+              }
+              break;
+            case "$prefix":
+              if (metricKey.startsWith(value)) {
+                return type.name;
+              }
+              break;
+          }
+        }
+      }
+    }
+  }
+
+  return undefined;
+}
+
+/**
  * Gets all the Prometheus metric keys that have been already inserted in the datasource section
  * of the YAML in a given group/subgroup location. Specify the group and subgroup by index.
  * The group index is mandatory if subgroup metrics should be returned as one includes the other.
@@ -947,12 +993,12 @@ export function getReferencedCardsMeta(screenIdx: number, extension: ExtensionSt
 
   const listSettingsCards = extension.screens?.[screenIdx].listSettings?.layout?.cards;
   if (listSettingsCards) {
-    unparsedCards.push(...listSettingsCards);
+    unparsedCards.push(...listSettingsCards.filter(c => c.type !== "INJECTIONS"));
   }
 
   const detailsSettingsCards = extension.screens?.[screenIdx].detailsSettings?.layout?.cards;
   if (detailsSettingsCards) {
-    unparsedCards.push(...detailsSettingsCards);
+    unparsedCards.push(...detailsSettingsCards.filter(c => c.type !== "INJECTIONS"));
   }
 
   const detailsInjectionsCards = extension.screens?.[screenIdx].detailsInjections;

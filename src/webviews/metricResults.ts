@@ -44,7 +44,7 @@ function timestampToStr(timeMillis: number) {
 export class MetricResultsPanel {
   public static currentPanel: MetricResultsPanel | undefined;
 
-  public static readonly viewType = "metricResults";
+  public static readonly viewType = "dynatraceExtensions.metricResults";
   private readonly panel: vscode.WebviewPanel;
   private _disposables: vscode.Disposable[] = [];
 

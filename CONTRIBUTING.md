@@ -1,7 +1,8 @@
 # Contributing to this project
 
-This project is very much still in its infancy and there are many areas where help is needed. 
+This project is fully open source and community driven. There are several areas in which help is needed.
 These include:
+
 - Manually testing features/scenarios and finding bugs and edge cases
 - Writing unit tests
 - Fixing already found bugs
@@ -9,6 +10,7 @@ These include:
 - New feature implementation
 
 Contributing is easy:
+
 1. [Set up your environment](#environment-setup)
 2. [Understand the project structure](#understanding-project-structure)
 3. [Make your first contribution](#make-your-first-contribution)
@@ -30,16 +32,17 @@ again.
 
 You must have NodeJS (min. version 16) and VisualStudio Code installed on your machine. Please visit [nodejs.org](https://nodejs.org/en/) and [code.visualstudio.com](https://code.visualstudio.com/) then follow the instructions for your O/S.
 
-To contribute, you'll have to [fork](https://github.com/dynatrace-extensions/dynatrace-extensions-copilot) and clone the repository.
+To contribute, you'll have to [fork](https://github.com/dynatrace-extensions/dynatrace-extensions-vscode) and clone the repository.
 Then install the dependencies:
+
 ```bash
-cd dynatrace-extensions-copilot
+cd dynatrace-extensions-vscode
 npm install
 ```
 
 ### Running the Extension
 
-The repository already comes with VS Code launch configurations attached. Once you ran the `install` command, all you have to do is hit `F5`. VS Code will open a new window with the extension compiled and running inside it.
+The repository already comes with VS Code launch configurations attached. Once you run the `install` command, all you have to do is hit `F5`. VS Code will open a new window with the extension compiled and running inside it.
 
 ### Troubleshooting
 
@@ -54,14 +57,15 @@ This project is structured as follows:
 ```
 <PROJECT ROOT>
 	|
-	|-- previews/				# Gifs & previews for GitHub
 	|-- src/				# Main folder for source code
 	|   |
 	|   |-- assets/				# Static assets
 	|   |    |-- fonts/			# Custom fonts (i.e. for symbols)
 	|   |    |-- icons/			# Icons
 	|   |    |-- logos/			# Logos (e.g. Dynatrace logo)
-    	|   |
+  |   |    |-- jsonSchemas/     # Custom JSON schemas (i.e. for monitoring configs)
+  |   |    |-- mibs/            # MIB files for the local SNMP database
+  |  	|
 	|   |-- codeActions/			# Main folder for Code Action providers
 	|   |    |-- utils/			# Utility functions for code action providers
 	|   |    |-- <file>.ts 			# Implementation of a code action provider
@@ -82,6 +86,7 @@ This project is structured as follows:
 	|   |    |-- errors.ts          	# Custom errors
 	|   |    |-- http_client.ts 		# HTTP Client implementation
 	|   |
+  |   |-- hover/      # Main folder for hover provider implementations
 	|   |-- interfaces/			# Generic/shared interfaces throughout the project
 	|   |-- statusBar/			# Status Bar implementations
 	|   |-- test/				# Test suite (desperately needs contribution)
@@ -124,15 +129,18 @@ All contribution points are documented [online](https://code.visualstudio.com/ap
 **Tests**
 
 The setup for tests is found in `/src/test` and follows VSCode's default setup for Extension tests using Mocha as the framework. All implemented tests are inside `/src/test/suite` and you can run them at any time with:
+
 ```
 npm test
 ```
+
 This project is lacking proper unit tests so this is probably where one of the most valuable contributions that can be made if you have the knowhow.
 
 ## Make your first contribution
 
 Found something you can work on to contribute to this project? That's awesome.
 Here are some basic guidelines depending on your type of work:
+
 - **Write a unit test**
   - Create a separate branch
   - Write your test either in an existing file or a new one ending in `.test.ts`
@@ -143,7 +151,7 @@ Here are some basic guidelines depending on your type of work:
   - Describe what is the observed vs. expected behavior
   - Provide the full extension YAML that resulted in this issue
 - **Fix a bug related issue**
-  - Grab an already open [issue/bug](https://github.com/dynatrace-extensions/dynatrace-extensions-copilot/issues)
+  - Grab an already open [issue/bug](https://github.com/dynatrace-extensions/dynatrace-extensions-vscode/issues)
   - Create a separate branch linked to the issue and work on fixing it
   - Create a pull request mentioning the issue fixed
 - **Improve an existing feature or implement new functionality**

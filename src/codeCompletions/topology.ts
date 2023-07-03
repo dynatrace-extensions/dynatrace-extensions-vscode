@@ -15,9 +15,8 @@
  */
 
 import * as vscode from "vscode";
-import { EntityType } from "../dynatrace-api/interfaces/monitoredEntities";
 import { ExtensionStub } from "../interfaces/extensionMeta";
-import { CachedDataProvider } from "../utils/dataCaching";
+import { CachedDataConsumer } from "../utils/dataCaching";
 import {
   getAttributesKeysFromTopology,
   getDimensionsFromMatchingMetrics,
@@ -29,17 +28,10 @@ import { getBlockItemIndexAtLine, getParentBlocks } from "../utils/yamlParsing";
 /**
  * Provider for code auto-completion related to entities and entity types.
  */
-export class TopologyCompletionProvider implements vscode.CompletionItemProvider {
-  private builtinEntities: EntityType[] = [];
-  private readonly cachedData: CachedDataProvider;
-
-  /**
-   * @param cachedDataProvider a provider for cacheable data
-   */
-  constructor(cachedDataProvider: CachedDataProvider) {
-    this.cachedData = cachedDataProvider;
-  }
-
+export class TopologyCompletionProvider
+  extends CachedDataConsumer
+  implements vscode.CompletionItemProvider
+{
   /**
    * Provides the actual completion items related to topology section of the extension YAML.
    * @param document {@link vscode.TextDocument} that triggered the provider
@@ -51,20 +43,19 @@ export class TopologyCompletionProvider implements vscode.CompletionItemProvider
     position: vscode.Position,
   ): Promise<vscode.CompletionItem[]> {
     const completionItems: vscode.CompletionItem[] = [];
-    const extension = this.cachedData.getExtensionYaml(document.getText());
     const parentBlocks = getParentBlocks(position.line, document.getText());
     const line = document.lineAt(position.line).text.substring(0, position.character);
-
-    this.builtinEntities = await this.cachedData.getBuiltinEntities();
 
     // Entity types completions
     for (const keyword of ["fromType: ", "toType: ", "entityType: "]) {
       if (line.endsWith(keyword)) {
-        completionItems.push(...this.createTypeCompletions(extension, true, true, false));
+        completionItems.push(
+          ...this.createTypeCompletions(this.parsedExtension, true, true, false),
+        );
       }
     }
     if (line.endsWith("entityTypes: ")) {
-      completionItems.push(...this.createTypeCompletions(extension, true, true, true));
+      completionItems.push(...this.createTypeCompletions(this.parsedExtension, true, true, true));
     }
 
     // Entity attribute completions
@@ -74,7 +65,7 @@ export class TopologyCompletionProvider implements vscode.CompletionItemProvider
           ...this.createPropertyCompletion(
             direction as "source" | "destination",
             getBlockItemIndexAtLine("relationships", position.line, document.getText()),
-            extension,
+            this.parsedExtension,
           ),
         );
       }
@@ -82,10 +73,10 @@ export class TopologyCompletionProvider implements vscode.CompletionItemProvider
 
     if (parentBlocks[parentBlocks.length - 1] === "attribute" && line.endsWith("key: ")) {
       const screenIdx = getBlockItemIndexAtLine("screens", position.line, document.getText());
-      let entityType = extension.screens?.[screenIdx].entityType;
+      let entityType = this.parsedExtension.screens?.[screenIdx].entityType;
       // Attributes listed in propertiesCard
       if (parentBlocks[parentBlocks.length - 2] === "properties" && entityType) {
-        completionItems.push(...this.createAttributeCompletion(entityType, extension));
+        completionItems.push(...this.createAttributeCompletion(entityType, this.parsedExtension));
         // Attributes listed in entitiesListCards
       } else if (parentBlocks[parentBlocks.length - 2] === "columns") {
         const cardIdx = getBlockItemIndexAtLine(
@@ -94,12 +85,13 @@ export class TopologyCompletionProvider implements vscode.CompletionItemProvider
           document.getText(),
         );
         const entitySelector =
-          extension.screens?.[screenIdx].entitiesListCards?.[cardIdx].entitySelectorTemplate;
+          this.parsedExtension.screens?.[screenIdx].entitiesListCards?.[cardIdx]
+            .entitySelectorTemplate;
         if (entitySelector) {
           entityType = entitySelector.split("type(")[1].split(")")[0].replace(/"/g, "");
         }
         if (entityType) {
-          completionItems.push(...this.createAttributeCompletion(entityType, extension));
+          completionItems.push(...this.createAttributeCompletion(entityType, this.parsedExtension));
         }
       }
     }
@@ -107,12 +99,12 @@ export class TopologyCompletionProvider implements vscode.CompletionItemProvider
     // Dimension-based completions
     if (line.endsWith("requiredDimensions: ")) {
       completionItems.push(
-        ...this.createDimensionKeyCompletion(position, document, extension, true),
+        ...this.createDimensionKeyCompletion(position, document, this.parsedExtension, true),
       );
     }
     if (line.endsWith("key: ") && parentBlocks[parentBlocks.length - 1] === "requiredDimensions") {
       completionItems.push(
-        ...this.createDimensionKeyCompletion(position, document, extension, false),
+        ...this.createDimensionKeyCompletion(position, document, this.parsedExtension, false),
       );
     }
 
@@ -147,16 +139,16 @@ export class TopologyCompletionProvider implements vscode.CompletionItemProvider
         : relationships[relationshipIdx].toType.toLowerCase();
 
     // Check if it's a built-in entity
-    const builtinIdx = this.builtinEntities.findIndex(
+    const builtinIdx = this.builtinEntityTypes.findIndex(
       type => type.type?.toLowerCase() === entityType,
     );
     // Get the entity's attributes and name
     let entityName: string = "";
     if (builtinIdx >= 0) {
-      const entity = this.builtinEntities[builtinIdx];
+      const entity = this.builtinEntityTypes[builtinIdx];
       if (entity.displayName) {
         entityName = entity.displayName;
-        attributes.push(...this.builtinEntities[builtinIdx].properties.map(prop => prop.id));
+        attributes.push(...this.builtinEntityTypes[builtinIdx].properties.map(prop => prop.id));
       }
     } else {
       entityName = getEntityName(entityType, extension);
@@ -167,7 +159,7 @@ export class TopologyCompletionProvider implements vscode.CompletionItemProvider
       `${entityName} attributes`,
       vscode.CompletionItemKind.Field,
     );
-    propertyCompletion.detail = "Copilot suggestion";
+    propertyCompletion.detail = "Dynatrace Extensions";
     propertyCompletion.documentation = `Browse ${entityName} (${entityType}) properties ${
       builtinIdx >= 0
         ? "that are built into Dynatrace."
@@ -201,7 +193,7 @@ export class TopologyCompletionProvider implements vscode.CompletionItemProvider
         `${entityName} attributes`,
         vscode.CompletionItemKind.Field,
       );
-      attributeCompletion.detail = "Copilot suggestion";
+      attributeCompletion.detail = "Dynatrace Extensions";
       attributeCompletion.documentation =
         `Browse ${entityName} (${entityType}) attributes ` +
         "that have been detected from this yaml file.";
@@ -239,9 +231,9 @@ export class TopologyCompletionProvider implements vscode.CompletionItemProvider
           "Custom entities",
           vscode.CompletionItemKind.Class,
         );
-        customTypeCompletion.detail = "Copilot suggestion";
+        customTypeCompletion.detail = "Dynatrace Extensions";
         customTypeCompletion.documentation =
-          "Browse custom entity types detected by the Extensions Copilot within this yaml file.";
+          "Browse custom entity types detected within this yaml file.";
         customTypeCompletion.insertText = new vscode.SnippetString();
         if (asList) {
           customTypeCompletion.insertText.appendText("\n - ");
@@ -253,12 +245,12 @@ export class TopologyCompletionProvider implements vscode.CompletionItemProvider
 
     // Builtin entity types
     if (includeBuiltin) {
-      const builtinTypes = this.builtinEntities.map(type => type.type?.toLowerCase());
+      const builtinTypes = this.builtinEntityTypes.map(type => type.type?.toLowerCase());
       const builtinTypeCompletion = new vscode.CompletionItem(
         "Built-in entities",
         vscode.CompletionItemKind.Class,
       );
-      builtinTypeCompletion.detail = "Copilot suggestion";
+      builtinTypeCompletion.detail = "Dynatrace Extensions";
       builtinTypeCompletion.documentation = "Browse Dynatrace's built-in entity types.";
       builtinTypeCompletion.insertText = new vscode.SnippetString();
       if (asList) {
@@ -314,7 +306,7 @@ export class TopologyCompletionProvider implements vscode.CompletionItemProvider
         "Browse dimension keys",
         vscode.CompletionItemKind.Field,
       );
-      dimensionKeyCompletion.detail = "Copilot suggestion";
+      dimensionKeyCompletion.detail = "Dynatrace Extensions";
       dimensionKeyCompletion.documentation =
         "Browse dimension keys detected from this yaml file " +
         "that match the sources defined in this topology rule.";

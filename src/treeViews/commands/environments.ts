@@ -18,7 +18,9 @@ import { readFileSync, readdirSync, rmSync, writeFileSync } from "fs";
 import * as path from "path";
 import * as vscode from "vscode";
 import { DynatraceAPIError } from "../../dynatrace-api/errors";
+import { DynatraceEnvironmentData } from "../../interfaces/treeViewData";
 import { showMessage } from "../../utils/code";
+import { checkUrlReachable } from "../../utils/conditionCheckers";
 import { encryptToken } from "../../utils/cryptography";
 import {
   createUniqueFileName,
@@ -45,6 +47,45 @@ export interface MinimalConfiguration {
 }
 
 /**
+ * Applies regular expressions for known Dynatrace environment URL schemes.
+ * @param value value to test
+ * @returns null if value matches, an error message otherwise
+ */
+export function validateEnvironmentUrl(value: string): string | null {
+  if (!/^https?:\/\/.*/.test(value)) {
+    return "This URL is invalid. Must start with http:// or https://";
+  }
+  if (value.includes("/e/")) {
+    return !/^https?:\/\/[a-zA-Z.0-9-]+?\/e\/[a-z0-9-]*?(?:\/|$)$/.test(value)
+      ? "This does not look right. It should be the base URL to your Managed environment."
+      : null;
+  }
+  if (value.includes(".apps")) {
+    if (
+      !(
+        /^https:\/\/[a-z0-9]*?\.apps\.dynatrace\.com(?:\/|$)$/.test(value) ||
+        /^https:\/\/[a-z0-9]*?\.apps\.(?:dev|sprint)\.dynatracelabs\.com(?:\/|$)$/.test(value)
+      )
+    ) {
+      return "This does not look right. It should be the base URL to your Platform environment.";
+    }
+    return null;
+  }
+  if ([".live.", ".dev.", ".sprint."].some(x => value.includes(x))) {
+    if (
+      !(
+        /^https:\/\/[a-z0-9]*?\.live\.dynatrace\.com(?:\/|$)$/.test(value) ||
+        /^https:\/\/[a-z0-9]*?\.(?:dev|sprint)\.dynatracelabs\.com(?:\/|$)$/.test(value)
+      )
+    ) {
+      return "This does not look right. It should be the base URL to your SaaS environment.";
+    }
+    return null;
+  }
+  return "This does not look like a Dynatrace environment URL";
+}
+
+/**
  * A workflow for registering a new Dynatrace Environment within the VSCode extension.
  * URL, Token, and an optional label are collected. The user can also set this as the
  * currently used environment.
@@ -57,24 +98,7 @@ export async function addEnvironment(context: vscode.ExtensionContext) {
     placeHolder: "The URL at which this environment is accessible...",
     prompt: "Mandatory",
     ignoreFocusOut: true,
-    validateInput: value => {
-      if (!/^https?:\/\/.*/.test(value)) {
-        return "This URL is invalid. Must start with http or https";
-      }
-      if (value.includes("/e/")) {
-        return !/^https?:\/\/[a-zA-Z.0-9-]+?\/e\/[a-z0-9-]*?(?:\/|$)$/.test(value)
-          ? "This does not look right. It should be the base URL to your Managed tenant."
-          : null;
-      }
-      if ([".live.", ".dev.", ".sprint."].some(x => value.includes(x))) {
-        return !/^https?:\/\/[a-z0-9]*?\.(?:live|dev|sprint)\.dynatrace(?:labs)*.*?\.com+?(?:\/|$)$/.test(
-          value,
-        )
-          ? "This does not look right. It should be the base URL to your SaaS tenant."
-          : null;
-      }
-      return "This does not look like a Dynatrace tenant URL";
-    },
+    validateInput: value => validateEnvironmentUrl(value),
   });
   if (!url || url === "") {
     showMessage("error", "URL cannot be blank. Operation was cancelled.");
@@ -82,6 +106,18 @@ export async function addEnvironment(context: vscode.ExtensionContext) {
   }
   if (url.endsWith("/")) {
     url = url.slice(0, -1);
+  }
+
+  let apiUrl = url;
+  if (apiUrl.includes(".apps")) {
+    apiUrl = apiUrl.replace(".apps.dynatrace.com", ".live.dynatrace.com");
+    apiUrl = apiUrl.replace(".apps.dynatracelabs.com", ".dynatracelabs.com");
+  }
+
+  const reachable = await checkUrlReachable(`${apiUrl}/api/v1/time`, true);
+  if (!reachable) {
+    showMessage("error", "The environment URL entered is not reachable.");
+    return;
   }
 
   const token = await vscode.window.showInputBox({
@@ -109,7 +145,7 @@ export async function addEnvironment(context: vscode.ExtensionContext) {
     ignoreFocusOut: true,
   });
 
-  await registerEnvironment(context, url, encryptToken(token), name, current === "Yes");
+  await registerEnvironment(context, url, apiUrl, encryptToken(token), name, current === "Yes");
 }
 
 /**
@@ -131,6 +167,7 @@ export async function editEnvironment(
     value: environment.url,
     prompt: "Mandatory",
     ignoreFocusOut: true,
+    validateInput: value => validateEnvironmentUrl(value),
   });
   if (!url || url === "") {
     showMessage("error", "URL cannot be blank. Operation was cancelled.");
@@ -138,6 +175,18 @@ export async function editEnvironment(
   }
   if (url.endsWith("/")) {
     url = url.slice(0, -1);
+  }
+
+  let apiUrl = url;
+  if (apiUrl.includes(".apps")) {
+    apiUrl = apiUrl.replace(".apps.dynatrace.com", ".live.dynatrace.com");
+    apiUrl = apiUrl.replace(".apps.dynatracelabs.com", ".dynatracelabs.com");
+  }
+
+  const reachable = await checkUrlReachable(`${apiUrl}/api/v1/time`, true);
+  if (!reachable) {
+    showMessage("error", "The environment URL entered is not reachable.");
+    return;
   }
 
   const token = await vscode.window.showInputBox({
@@ -167,7 +216,7 @@ export async function editEnvironment(
     ignoreFocusOut: true,
   });
 
-  await registerEnvironment(context, url, encryptToken(token), name, current === "Yes");
+  await registerEnvironment(context, url, apiUrl, encryptToken(token), name, current === "Yes");
 }
 
 /**
@@ -202,12 +251,17 @@ export async function deleteEnvironment(
  * This is useful when you don't want to visit the Dynatrace Activity Bar item - for example
  * when triggered from the global status bar.
  * @param context VSCode Extension Context
- * @returns the connected status as boolean, and name of connected environment or "" as string
+ * @returns the selected status as boolean, and name of connected environment or "" as string
  */
 export async function changeConnection(
   context: vscode.ExtensionContext,
-): Promise<[boolean, string]> {
+): Promise<[boolean, DynatraceEnvironmentData]> {
   const environments = getAllEnvironments(context);
+  // No point showing a list of 1 or empty
+  if (environments.length < 2) {
+    showMessage("info", "No other environments available. Add one first");
+    return [false, undefined];
+  }
   const currentEnv = environments.find(e => e.current);
   const choice = await vscode.window.showQuickPick(
     environments.map(e => (e.current ? `⭐ ${e.name ?? e.id}` : e.name ?? e.id)),
@@ -226,19 +280,20 @@ export async function changeConnection(
       await registerEnvironment(
         context,
         environment.url,
+        environment.apiUrl,
         environment.token,
         environment.name,
         true,
       );
-      return [true, environment.name ?? environment.id];
+      return [true, environment];
     }
   }
 
   // If no choice made, persist the current connection if any
   if (currentEnv) {
-    return [true, currentEnv.name ?? currentEnv.id];
+    return [true, currentEnv];
   }
-  return [false, ""];
+  return [false, undefined];
 }
 
 /**
@@ -269,9 +324,13 @@ export async function getConfigurationDetailsViaFile(
 
   // Create a promise based on the file
   return new Promise<string>((resolve, reject) => {
-    const disposable = vscode.window.onDidChangeVisibleTextEditors(editors => {
+    const disposable = vscode.window.tabGroups.onDidChangeTabs(tabs => {
       // When the file closes, extract the content
-      if (!editors.map(editor => editor.document.fileName).includes(tempConfigFile)) {
+      if (
+        tabs.closed.findIndex(
+          t => (t.input as vscode.TextDocument).uri.fsPath === tempConfigFile,
+        ) >= 0
+      ) {
         disposable.dispose();
         // Grab all lines that don't start with '//'
         const newDetails = readFileSync(tempConfigFile)

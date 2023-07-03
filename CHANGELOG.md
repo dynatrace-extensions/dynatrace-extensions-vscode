@@ -1,5 +1,27 @@
 # Change Log
 
+## Version 2.0.0 (03.07.2023)
+
+### ✨ New in this version:
+- Project rebranding to "Dynatrace Extensions", along with new icons
+- Documentation moved to Dynatrace [Developer Portal](https://developer.dynatrace.com)
+- Migration utility from previous versions of this project
+- Hover information for SNMP object IDs and names
+
+### 🚀 Improved in this version:
+- [#118 - Support for Platform URLs](https://github.com/dynatrace-extensions/dynatrace-extensions-vscode/issues/118)
+- [#109 - Prometheus scraping from file](https://github.com/dynatrace-extensions/dynatrace-extensions-vscode/issues/109)
+- [#117 - Connection checks for Dynatrace environments](https://github.com/dynatrace-extensions/dynatrace-extensions-vscode/issues/117)
+- [#78 - Attach generated alerts to entities](https://github.com/dynatrace-extensions/dynatrace-extensions-vscode/issues/78)
+- [#98 - Support for local MIB files in snmp extensions](https://github.com/dynatrace-extensions/dynatrace-extensions-vscode/issues/98)
+- [#122 - Tighten regexes for tenants and improve no data messaging](https://github.com/dynatrace-extensions/dynatrace-extensions-vscode/issues/122)
+
+### 🪲 Fixed in this version:
+- [#113 - Temporary file interface closes too early](https://github.com/dynatrace-extensions/dynatrace-extensions-vscode/issues/113)
+- [#121 - INJECTIONS card gets error diagnostic over extension's name](https://github.com/dynatrace-extensions/dynatrace-extensions-vscode/issues/121)
+
+---
+
 ## Version 1.2.4 (13.06.2023)
 
 ### ✨ New in this version:
@@ -28,7 +50,7 @@
 ### 🪲 Fixed in this version:
 - The WMI Code Lens would not be able to interpret single item responses
 - Workspaces initialized since version 1.2.1 may be unaccessible afterwards
-  - For any such workspace, re-initialize it once the Copilot was updated to version 1.2.3
+  - For any such workspace, re-initialize it once the add-on was updated to version 1.2.3
 
 ### 🚀 Improved in this version:
 - [#108 - Prompt user for dashboard name when generating](https://github.com/dynatrace-extensions/dynatrace-extensions-copilot/issues/108)
@@ -140,7 +162,7 @@
 ### ⚠️ Special notes:
 - Since this is a live version available on Marketplace it will appear as a new extension.
   This means any previous version should be removed and any workspaces will have to be initialized again.
-- Starting with this version, the Copilot only supports fused credential files.
+- Starting with this version, the add-on only supports fused credential files.
   If you want to use an older format (key & certificate as separate files) you must paste the contents manually and create a fused file.
 
 ---

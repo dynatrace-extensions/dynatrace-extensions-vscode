@@ -26,6 +26,8 @@
     "airbnb-typescript"
   ],
   "rules": {
+    "brace-style": "off",
+    "@typescript-eslint/brace-style": "off",
     "camelcase": [2, { "properties": "never" }],
     "@typescript-eslint/quotes": [2, "double", { "avoidEscape": true }],
     "@typescript-eslint/indent": [0],

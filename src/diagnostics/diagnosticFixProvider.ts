@@ -36,13 +36,13 @@ interface DeleteOptions {
 }
 
 /**
- * Provider for Code Actions that proposes fixes for Diagnostics raised by the Extensions Copilot
+ * Provider for Code Actions that proposes fixes for Dynatrace Extensions Diagnostics
  */
 export class DiagnosticFixProvider implements vscode.CodeActionProvider {
   private readonly diagnosticProvider: DiagnosticsProvider;
 
   /**
-   * @param diagnosticProvider a provider of Diagnostics raised by the Copilot
+   * @param diagnosticProvider a provider of Diagnostics raised by the add-on
    */
   constructor(diagnosticProvider: DiagnosticsProvider) {
     this.diagnosticProvider = diagnosticProvider;

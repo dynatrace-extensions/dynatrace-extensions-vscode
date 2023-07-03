@@ -14,12 +14,12 @@
   limitations under the License.
  */
 
-import { readFileSync } from "fs";
 import * as vscode from "vscode";
 import { Dynatrace } from "../dynatrace-api/dynatrace";
 import { DynatraceAPIError } from "../dynatrace-api/errors";
+import { ExtensionStub } from "../interfaces/extensionMeta";
 import { showMessage } from "../utils/code";
-import { CachedDataProvider } from "../utils/dataCaching";
+import { CachedData } from "../utils/dataCaching";
 import { getExtensionFilePath } from "../utils/fileSystem";
 
 /**
@@ -29,16 +29,13 @@ import { getExtensionFilePath } from "../utils/fileSystem";
  * @param cachedData provider for cacheable data
  * @param version optional version to activate
  */
-export async function activateExtension(
-  dt: Dynatrace,
-  cachedData: CachedDataProvider,
-  version?: string,
-) {
+export async function activateExtension(dt: Dynatrace, cachedData: CachedData, version?: string) {
   const extensionFile = getExtensionFilePath();
   if (!extensionFile) {
     return;
   }
-  const extension = cachedData.getExtensionYaml(readFileSync(extensionFile).toString());
+
+  const extension = cachedData.getCached<ExtensionStub>("parsedExtension");
 
   // If version was not provided, prompt user for selection
   if (!version) {

@@ -35,7 +35,7 @@ import { runCommand } from "./subprocesses";
  * @returns check status
  */
 export async function checkSettings(...settings: string[]): Promise<boolean> {
-  const config = vscode.workspace.getConfiguration("dynatrace", null);
+  const config = vscode.workspace.getConfiguration("dynatraceExtensions", null);
   let status = true;
   for (const setting of settings) {
     if (!config.get(setting)) {
@@ -47,7 +47,10 @@ export async function checkSettings(...settings: string[]): Promise<boolean> {
         )
         .then(async opt => {
           if (opt === "Open settings") {
-            await vscode.commands.executeCommand("workbench.action.openSettings", "Dynatrace");
+            await vscode.commands.executeCommand(
+              "workbench.action.openSettings",
+              "@ext:DynatracePlatformExtensions.dynatrace-extensions",
+            );
           }
         });
       status = false;
@@ -172,10 +175,10 @@ export async function checkOverwriteCertificates(
 export async function checkCertificateExists(type: "ca" | "dev" | "all"): Promise<boolean> {
   let allExist = true;
   const devCertkeyPath = vscode.workspace
-    .getConfiguration("dynatrace", null)
+    .getConfiguration("dynatraceExtensions", null)
     .get<string>("developerCertkeyLocation");
   const caCertPath = vscode.workspace
-    .getConfiguration("dynatrace", null)
+    .getConfiguration("dynatraceExtensions", null)
     .get<string>("rootOrCaCertificateLocation");
 
   if (type === "ca" || type === "all") {
@@ -204,7 +207,7 @@ export async function checkCertificateExists(type: "ca" | "dev" | "all"): Promis
       .then(async opt => {
         switch (opt) {
           case "Generate new ones":
-            await vscode.commands.executeCommand("dt-ext-copilot.generateCertificates");
+            await vscode.commands.executeCommand("dynatrace-extensions.generateCertificates");
             break;
           case "Open settings":
             await vscode.commands.executeCommand(
@@ -238,13 +241,20 @@ export async function checkExtensionZipExists(): Promise<boolean> {
 /**
  * Checks whether a URL returns a 200 response code.
  * @param url the URL to check
+ * @param showError whether to print the error received or just supress it
  * @returns status of check
  */
-export async function checkUrlReachable(url: string): Promise<boolean> {
+export async function checkUrlReachable(url: string, showError: boolean = false): Promise<boolean> {
   const status = await axios
     .get(url)
     .then(res => res.status === 200)
-    .catch(() => false);
+    .catch(err => {
+      if (showError) {
+        showMessage("error", (err as Error).message);
+      }
+      console.log(JSON.stringify(err));
+      return false;
+    });
 
   console.log(`Check - is URL ${url} reachable? > ${String(status)}`);
 

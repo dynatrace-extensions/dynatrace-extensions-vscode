@@ -20,7 +20,7 @@ import * as vscode from "vscode";
  * Helper class for managing status when in Fast Development Mode
  */
 export class FastModeStatus {
-  private commandId = "dt-ext-copilot-fastmode.openOutput";
+  private commandId = "dynatrace-extensions-fastmode.openOutput";
   private readonly statusBarItem: vscode.StatusBarItem;
   private readonly outputChannel: vscode.OutputChannel;
 
@@ -33,8 +33,9 @@ export class FastModeStatus {
     vscode.commands.registerCommand(this.commandId, () => this.outputChannel.show());
     this.statusBarItem.command = this.commandId;
     this.updateStatusBar(
-      vscode.workspace.getConfiguration("dynatrace", null).get<boolean>("fastDevelopmentMode") ??
-        false,
+      vscode.workspace
+        .getConfiguration("dynatraceExtensions", null)
+        .get<boolean>("fastDevelopmentMode") ?? false,
     );
   }
 

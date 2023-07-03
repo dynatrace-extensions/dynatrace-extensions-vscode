@@ -125,6 +125,7 @@ export interface MetricMetadata {
     description?: string;
     unit?: string;
     tags?: string[];
+    sourceEntityType?: string;
   };
 }
 
@@ -144,13 +145,20 @@ interface ListSettings {
 interface ListScreenCard {
   key: string;
   entitySelectorTemplate?: string;
-  type: "ENTITIES_LIST" | "CHART_GROUP" | "MESSAGE";
+  type: "ENTITIES_LIST" | "CHART_GROUP" | "MESSAGE" | "INJECTIONS";
 }
 
 interface DetailsScreenCard {
   key: string;
   entitySelectorTemplate?: string;
-  type: "ENTITIES_LIST" | "CHART_GROUP" | "MESSAGE" | "LOGS" | "EVENTS" | "METRIC_TABLE";
+  type:
+    | "ENTITIES_LIST"
+    | "CHART_GROUP"
+    | "MESSAGE"
+    | "LOGS"
+    | "EVENTS"
+    | "METRIC_TABLE"
+    | "INJECTIONS";
 }
 
 interface DetailsSettings {

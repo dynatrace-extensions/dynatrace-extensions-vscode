@@ -15,9 +15,8 @@
  */
 
 import * as vscode from "vscode";
-import { PromData } from "../codeLens/prometheusScraper";
 import { ExtensionStub } from "../interfaces/extensionMeta";
-import { CachedDataProvider } from "../utils/dataCaching";
+import { CachedDataConsumer } from "../utils/dataCaching";
 
 import {
   getAllMetricKeysAndValuesFromDataSource,
@@ -45,17 +44,10 @@ function titleCase(metricKey: string): string {
  * Provider for Code Actions that work with scraped Prometheus data to automatically
  * insert it in the Extension yaml.
  */
-export class PrometheusActionProvider implements vscode.CodeActionProvider {
-  private prometheusData: PromData = {};
-  private readonly cachedData: CachedDataProvider;
-
-  /**
-   * @param cachedDataProvider provider of cached data (i.e. prometheus scraped data)
-   */
-  constructor(cachedDataProvider: CachedDataProvider) {
-    this.cachedData = cachedDataProvider;
-  }
-
+export class PrometheusActionProvider
+  extends CachedDataConsumer
+  implements vscode.CodeActionProvider
+{
   /**
    * Provides the Code Actions that insert details based on Prometheus scraped data.
    * @param document document that activated the provider
@@ -71,7 +63,6 @@ export class PrometheusActionProvider implements vscode.CodeActionProvider {
     const codeActions: vscode.CodeAction[] = [];
 
     // Bail early if different datasource or no scraped data
-    this.prometheusData = this.cachedData.getPrometheusData();
     if (
       !/^prometheus:/gm.test(document.getText()) ||
       Object.keys(this.prometheusData).length === 0
@@ -81,7 +72,6 @@ export class PrometheusActionProvider implements vscode.CodeActionProvider {
 
     const lineText = document.lineAt(range.start.line).text;
     const parentBlocks = getParentBlocks(range.start.line, document.getText());
-    const extension = this.cachedData.getExtensionYaml(document.getText());
 
     // Metrics and dimensions
     if (
@@ -95,8 +85,8 @@ export class PrometheusActionProvider implements vscode.CodeActionProvider {
         range.start.line,
         document.getText(),
       );
-      const metricKeys = getPrometheusMetricKeys(extension, groupIdx, subgroupIdx);
-      const labelKeys = getPrometheusLabelKeys(extension, groupIdx, subgroupIdx);
+      const metricKeys = getPrometheusMetricKeys(this.parsedExtension, groupIdx, subgroupIdx);
+      const labelKeys = getPrometheusLabelKeys(this.parsedExtension, groupIdx, subgroupIdx);
       if (lineText.includes("metrics:")) {
         codeActions.push(...this.createMetricInsertions(document, range, metricKeys));
       }
@@ -106,7 +96,7 @@ export class PrometheusActionProvider implements vscode.CodeActionProvider {
     }
     // Metadata
     if (lineText.startsWith("metrics:")) {
-      codeActions.push(...this.createMetadataInsertions(document, range, extension));
+      codeActions.push(...this.createMetadataInsertions(document, range, this.parsedExtension));
     }
 
     return codeActions;

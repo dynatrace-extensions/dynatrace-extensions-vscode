@@ -43,7 +43,7 @@ function generateSerialNo(): string {
  * @returns Array of certificate subject attributes
  */
 function getCertAttributes(type: "ca" | "dev"): pki.CertificateField[] {
-  const config = vscode.workspace.getConfiguration("dynatrace", null);
+  const config = vscode.workspace.getConfiguration("dynatraceExtensions", null);
   const certCN = config.get<string>("certificateCommonName");
   const certO = config.get<string>("certificateOrganization");
   const certOU = config.get<string>("certificateOrganizationUnit");
@@ -228,7 +228,7 @@ export async function generateCerts(context: vscode.ExtensionContext): Promise<b
       "No",
     );
     vscode.workspace
-      .getConfiguration("dynatrace", null)
+      .getConfiguration("dynatraceExtensions", null)
       .update(
         "developerCertkeyLocation",
         path.join(certsDir, "developer.pem"),
@@ -238,7 +238,7 @@ export async function generateCerts(context: vscode.ExtensionContext): Promise<b
         console.log("Could not update setting developerCertkeyLocation");
       });
     vscode.workspace
-      .getConfiguration("dynatrace", null)
+      .getConfiguration("dynatraceExtensions", null)
       .update(
         "rootOrCaCertificateLocation",
         path.join(certsDir, "ca.pem"),
@@ -255,7 +255,7 @@ export async function generateCerts(context: vscode.ExtensionContext): Promise<b
       "No",
     );
     if (choice === "Yes") {
-      await vscode.commands.executeCommand("dt-ext-copilot.distributeCertificate");
+      await vscode.commands.executeCommand("dynatrace-extensions.distributeCertificate");
     }
     // We don't care about success of upload for the success of this command
     return true;

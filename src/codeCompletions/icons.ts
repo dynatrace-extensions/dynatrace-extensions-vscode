@@ -15,23 +15,16 @@
  */
 
 import * as vscode from "vscode";
-import { CachedDataProvider } from "../utils/dataCaching";
+import { CachedDataConsumer } from "../utils/dataCaching";
 import { getParentBlocks } from "../utils/yamlParsing";
 
 /**
  * Provider for code auto-completion related to Barista icons
  */
-export class IconCompletionProvider implements vscode.CompletionItemProvider {
-  private baristaIcons: string[] = [];
-  private readonly cachedData: CachedDataProvider;
-
-  /**
-   * @param cachedDataProvider a provider of cacheable data
-   */
-  constructor(cachedDataProvider: CachedDataProvider) {
-    this.cachedData = cachedDataProvider;
-  }
-
+export class IconCompletionProvider
+  extends CachedDataConsumer
+  implements vscode.CompletionItemProvider
+{
   async provideCompletionItems(
     document: vscode.TextDocument,
     position: vscode.Position,
@@ -39,8 +32,6 @@ export class IconCompletionProvider implements vscode.CompletionItemProvider {
     const completionItems: vscode.CompletionItem[] = [];
     const parentBlocks = getParentBlocks(position.line, document.getText());
     const line = document.lineAt(position.line).text.substring(0, position.character);
-
-    this.baristaIcons = this.cachedData.getBaristaIcons();
 
     if (
       line.endsWith("iconPattern: ") ||
@@ -63,7 +54,7 @@ export class IconCompletionProvider implements vscode.CompletionItemProvider {
       "Browse icons",
       vscode.CompletionItemKind.Enum,
     );
-    iconCompletion.detail = "Copilot suggestion";
+    iconCompletion.detail = "Dynatrace Extensions";
     iconCompletion.documentation = new vscode.MarkdownString(
       "Browse Barista icon IDs that can be used here. You can explore the whole icon set " +
         "[online](https://barista.dynatrace.com/resources/icons).",
