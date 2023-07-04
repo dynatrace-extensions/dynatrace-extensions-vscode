@@ -30,7 +30,7 @@ import { ScreenLensProvider } from "./codeLens/screenCodeLens";
 import { SelectorCodeLensProvider } from "./codeLens/selectorCodeLens";
 import { SnmpCodeLensProvider } from "./codeLens/snmpCodeLens";
 import { runSelector, validateSelector } from "./codeLens/utils/selectorUtils";
-import { runWMIQuery, WmiQueryResult } from "./codeLens/utils/wmiUtils";
+import { runWMIQuery } from "./codeLens/utils/wmiUtils";
 import { WmiCodeLensProvider } from "./codeLens/wmiCodeLens";
 import { activateExtension } from "./commandPalette/activateExtension";
 import { buildExtension } from "./commandPalette/buildExtension";
@@ -67,9 +67,7 @@ import {
   initWorkspaceStorage,
   migrateFromLegacyExtension,
 } from "./utils/fileSystem";
-import { HelloReactAppPanel } from "./webviews/helloReactApp";
-import { MetricResultsPanel } from "./webviews/metricResults";
-import { WMIQueryResultsPanel } from "./webviews/wmiQueryResults";
+import { WebviewPanelManager } from "./webviews/webviewPanel";
 
 /**
  * Registers Completion Providers for this extension.
@@ -159,10 +157,6 @@ function registerCommandPaletteCommands(
   context: vscode.ExtensionContext,
 ): vscode.Disposable[] {
   return [
-    // DEMO: React Webview
-    vscode.commands.registerCommand("dynatrace-extensions.demoReactWebview", () => {
-      HelloReactAppPanel.render(context.extensionUri);
-    }),
     // Load extension schemas of a given version
     vscode.commands.registerCommand("dynatrace-extensions.loadSchemas", async () => {
       if (await checkEnvironmentConnected(tenantsProvider)) {
@@ -608,6 +602,7 @@ export async function activate(context: vscode.ExtensionContext) {
   );
   const cachedData = new CachedData(tenantsTreeViewProvider);
   await cachedData.initialize();
+  const webviewPanelManager = new WebviewPanelManager(context.extensionUri);
   const extensionsTreeViewProvider = new ExtensionsTreeDataProvider(context);
   const metricLensProvider = new SelectorCodeLensProvider(
     "metricSelector:",
@@ -729,11 +724,13 @@ export async function activate(context: vscode.ExtensionContext) {
         if (await checkEnvironmentConnected(tenantsTreeViewProvider)) {
           const dtClient = await tenantsTreeViewProvider.getDynatraceClient();
           if (dtClient) {
-            runSelector(selector, type, dtClient, genericChannel).catch(err => {
-              console.log(
-                `Running selector ${selector} failed unexpectedly. ${(err as Error).message}`,
-              );
-            });
+            runSelector(selector, type, dtClient, genericChannel, webviewPanelManager).catch(
+              err => {
+                console.log(
+                  `Running selector ${selector} failed unexpectedly. ${(err as Error).message}`,
+                );
+              },
+            );
           }
         }
       },
@@ -747,23 +744,23 @@ export async function activate(context: vscode.ExtensionContext) {
         });
       },
     ),
-    // Web view panel - metric query results
-    vscode.window.registerWebviewPanelSerializer(MetricResultsPanel.viewType, {
-      async deserializeWebviewPanel(webviewPanel: vscode.WebviewPanel) {
-        webviewPanel.webview.options = { enableScripts: true };
-        MetricResultsPanel.revive(
-          webviewPanel,
-          "No data to display. Close the tab and trigger the action again.",
-        );
-      },
-    }),
-    // Web view panel - WMI query results
-    vscode.window.registerWebviewPanelSerializer(WMIQueryResultsPanel.viewType, {
-      async deserializeWebviewPanel(webviewPanel: vscode.WebviewPanel) {
-        webviewPanel.webview.options = { enableScripts: true };
-        WMIQueryResultsPanel.revive(webviewPanel, {} as WmiQueryResult);
-      },
-    }),
+    // // Web view panel - metric query results
+    // vscode.window.registerWebviewPanelSerializer(MetricResultsPanel.viewType, {
+    //   async deserializeWebviewPanel(webviewPanel: vscode.WebviewPanel) {
+    //     webviewPanel.webview.options = { enableScripts: true };
+    //     MetricResultsPanel.revive(
+    //       webviewPanel,
+    //       "No data to display. Close the tab and trigger the action again.",
+    //     );
+    //   },
+    // }),
+    // // Web view panel - WMI query results
+    // registerWebviewPanelSerializer (WMIQueryResultsPanel.viewType, {
+    //   async deserializeWebviewPanel(webviewPanel: vscode.WebviewPanel) {
+    //     webviewPanel.webview.options = { enableScripts: true };
+    //     WMIQueryResultsPanel.revive(webviewPanel, {} as WmiQueryResult);
+    //   },
+    // }),
     // Activity on every document save
     vscode.workspace.onDidSaveTextDocument(async (doc: vscode.TextDocument) => {
       // Fast Development Mode - build extension

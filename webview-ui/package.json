@@ -3,6 +3,7 @@
   "version": "0.1.0",
   "private": true,
   "devDependencies": {
+    "@babel/plugin-proposal-private-property-in-object": "^7.21.11",
     "@types/node": "^16.18.38",
     "@types/react": "^17.0.0",
     "@types/react-dom": "^17.0.0",
@@ -14,16 +15,20 @@
     "react-scripts": "^5.0.1"
   },
   "dependencies": {
+    "@dynatrace-sdk/user-preferences": "^1.0.0",
     "@dynatrace/strato-components-preview": "^0.97.1",
+    "@dynatrace/strato-design-tokens": "^0.14.0",
     "react": "^17.0.0",
     "react-dom": "^17.0.0",
     "react-router-dom": "^6.4.1",
-    "rewire": "^6.0.0"
+    "rewire": "^6.0.0",
+    "styled-components": "^6.0.2",
+    "wicg-inert": "^3.1.2"
   },
   "scripts": {
-    "start": "EXTEND_ESLINT=true react-scripts start",
+    "start": "react-scripts start",
     "build": "node ./scripts/build-react-no-split.js",
-    "test": "EXTEND_ESLINT=true react-scripts test",
+    "test": "react-scripts test",
     "eject": "react-scripts eject"
   },
   "eslintConfig": {
