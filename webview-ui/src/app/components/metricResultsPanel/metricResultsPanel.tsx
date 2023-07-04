@@ -36,7 +36,6 @@ export const MetricResultsPanel = ({ data }: MetricResultsPanelProps) => {
   const { metricId, data: dataSets } = data[0];
   const metricData = dataSets[0];
 
-
   return (
     <Flex flexDirection="column" gap={16}>
       <Heading level={1}>Metric selector results</Heading>

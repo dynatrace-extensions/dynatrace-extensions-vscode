@@ -1,7 +1,7 @@
 import React from "react";
 import ReactDOM from "react-dom";
 import App from "./app/App";
-import { AppRoot } from "./app/components/core/AppRoot";
+import { AppRoot } from "./app/components/strato/AppRoot";
 
 declare global {
   interface Window {
