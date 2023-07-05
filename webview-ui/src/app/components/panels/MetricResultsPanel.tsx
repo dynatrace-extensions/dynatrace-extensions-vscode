@@ -20,8 +20,7 @@ const toTimeseriesData = (metricData: MetricSeries): Timeseries[] => {
       name: metricData.dimensions.join(", "),
       datapoints: metricData.timestamps.map((ts, i) => {
         const end = new Date(ts);
-        const start = new Date(ts);
-        start.setSeconds(start.getSeconds() - 60);
+        const start = i > 0 ? new Date(metricData.timestamps[i-1]) : new Date(ts);
         return { start, end, value: metricData.values[i] };
       }),
     },
