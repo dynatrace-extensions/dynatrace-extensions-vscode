@@ -13,19 +13,18 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
+import { FocusProvider } from "@dynatrace/strato-components-preview";
+import Colors from "@dynatrace/strato-design-tokens/colors";
+import Typography from "@dynatrace/strato-design-tokens/typography";
+import VariablesLight from "@dynatrace/strato-design-tokens/variables";
+import VariablesDark from "@dynatrace/strato-design-tokens/variables-dark";
+import { getLanguage } from "@dynatrace-sdk/user-preferences";
 
 import React, { forwardRef, useEffect, useLayoutEffect, useState } from "react";
 import { IntlProvider, MessageFormatElement } from "react-intl";
 import { createGlobalStyle } from "styled-components";
 import "wicg-inert";
 
-import { getLanguage } from "@dynatrace-sdk/user-preferences";
-import Colors from "@dynatrace/strato-design-tokens/colors";
-import Typography from "@dynatrace/strato-design-tokens/typography";
-import VariablesLight from "@dynatrace/strato-design-tokens/variables";
-import VariablesDark from "@dynatrace/strato-design-tokens/variables-dark";
-
-import { FocusProvider } from "@dynatrace/strato-components-preview";
 import type { WithChildren } from "@dynatrace/strato-components-preview";
 
 const GlobalStyle = createGlobalStyle(() => {
@@ -36,8 +35,12 @@ const GlobalStyle = createGlobalStyle(() => {
   return {
     ":root": {
       ...tokens,
-      "--dt-colors-background-base-default": bodyStyles.getPropertyValue('--vscode-editor-background'),
-      "--dt-colors-background-container-neutral-subdued": bodyStyles.getPropertyValue('--vscode-editorWidget-background'),
+      "--dt-colors-background-base-default": bodyStyles.getPropertyValue(
+        "--vscode-editor-background",
+      ),
+      "--dt-colors-background-container-neutral-subdued": bodyStyles.getPropertyValue(
+        "--vscode-editorWidget-background",
+      ),
       "--scrollbar-track": "transparent",
       "--scrollbar-thumb": Colors.Background.Field.Neutral.Emphasized,
       "--scrollbar-thumb--hover": Colors.Background.Field.Neutral.EmphasizedHover,
@@ -146,6 +149,7 @@ export const AppRoot = /* @__PURE__ */ forwardRef<HTMLDivElement, WithChildren>(
           return res.json();
         })
         .then(receivedMessages => {
+          // eslint-disable-next-line @typescript-eslint/no-unsafe-argument
           setMessages(receivedMessages);
         })
         .catch(() => {
@@ -154,7 +158,7 @@ export const AppRoot = /* @__PURE__ */ forwardRef<HTMLDivElement, WithChildren>(
     }, [language]);
 
     return (
-      <div ref={forwardedRef} data-testid="app-root" data-theme={theme}>
+      <div ref={forwardedRef} data-testid='app-root' data-theme={theme}>
         <GlobalStyle />
         <IntlProvider locale={language} messages={messages} defaultLocale={defaultLanguage}>
           <FocusProvider>{children}</FocusProvider>

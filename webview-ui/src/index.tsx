@@ -18,5 +18,5 @@ ReactDOM.render(
       <App vscode={vscode} dataType={window.panelData.dataType} data={window.panelData.data} />
     </AppRoot>
   </React.StrictMode>,
-  document.getElementById("root") as HTMLElement,
+  document.getElementById("root"),
 );

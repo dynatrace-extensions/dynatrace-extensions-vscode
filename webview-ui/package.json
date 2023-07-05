@@ -10,8 +10,21 @@
     "@typescript-eslint/eslint-plugin": "^5.23.0",
     "@typescript-eslint/parser": "^5.23.0",
     "eslint": "^8.15.0",
+    "eslint-config-airbnb-typescript": "^17.0.0",
+    "eslint-config-prettier": "^8.5.0",
+    "eslint-plugin-functional": "^5.0.6",
+    "eslint-plugin-import": "^2.26.0",
+    "eslint-plugin-jsx-a11y": "^6.6.1",
+    "eslint-plugin-no-secrets": "0.8.9",
+    "eslint-plugin-no-unsanitized": "^4.0.1",
+    "eslint-plugin-prettier": "^4.2.1",
     "eslint-plugin-react": "^7.29.4",
     "eslint-plugin-react-hooks": "^4.5.0",
+    "eslint-plugin-redos": "^4.4.1",
+    "eslint-plugin-sonarjs": "^0.15.0",
+    "eslint-plugin-testing-library": "^5.6.1",
+    "eslint-plugin-xss": "^0.1.12",
+    "prettier": "^2.7.1",
     "react-scripts": "^5.0.1"
   },
   "dependencies": {
@@ -20,6 +33,7 @@
     "@dynatrace/strato-design-tokens": "^0.14.0",
     "react": "^17.0.0",
     "react-dom": "^17.0.0",
+    "react-intl": "^6.4.4",
     "react-router-dom": "^6.4.1",
     "rewire": "^6.0.0",
     "sql-formatter": "^12.2.3",
@@ -32,11 +46,6 @@
     "test": "react-scripts test",
     "eject": "react-scripts eject"
   },
-  "eslintConfig": {
-    "extends": [
-      "react-app"
-    ]
-  },
   "browserslist": {
     "production": [
       ">0.2%",
@@ -48,5 +57,23 @@
       "last 1 firefox version",
       "last 1 safari version"
     ]
+  },
+  "prettier": {
+    "arrowParens": "avoid",
+    "tabWidth": 2,
+    "bracketSameLine": false,
+    "bracketSpacing": true,
+    "embeddedLanguageFormatting": "auto",
+    "htmlWhitespaceSensitivity": "strict",
+    "insertPragma": false,
+    "jsxSingleQuote": true,
+    "printWidth": 100,
+    "proseWrap": "preserve",
+    "quoteProps": "consistent",
+    "requirePragma": false,
+    "semi": true,
+    "singleQuote": false,
+    "trailingComma": "all",
+    "editorconfig": true
   }
 }
