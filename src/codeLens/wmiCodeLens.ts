@@ -15,8 +15,8 @@
  */
 
 import * as vscode from "vscode";
-import { CachedDataProducer } from "../utils/dataCaching";
-import { WMIQueryResultsPanel } from "../webviews/wmiQueryResults";
+import { CachedData, CachedDataProducer } from "../utils/dataCaching";
+import { REGISTERED_PANELS, WebviewPanelManager } from "../webviews/webviewPanel";
 import { WmiQueryResult } from "./utils/wmiUtils";
 
 class WmiQueryLens extends vscode.CodeLens {
@@ -92,6 +92,7 @@ class WmiQueryResultLens extends vscode.CodeLens {
 }
 
 export class WmiCodeLensProvider extends CachedDataProducer implements vscode.CodeLensProvider {
+  private readonly panelManager: WebviewPanelManager;
   private wmiQueryLens: WmiQueryLens[] = [];
   private wmiQueryResultLens: WmiQueryResultLens[] = [];
 
@@ -104,6 +105,11 @@ export class WmiCodeLensProvider extends CachedDataProducer implements vscode.Co
 
   private _onDidChangeCodeLenses: vscode.EventEmitter<void> = new vscode.EventEmitter<void>();
   public readonly onDidChangeCodeLenses: vscode.Event<void> = this._onDidChangeCodeLenses.event;
+
+  constructor(cachedData: CachedData, panelManager: WebviewPanelManager) {
+    super(cachedData);
+    this.panelManager = panelManager;
+  }
 
   provideCodeLenses(document: vscode.TextDocument): vscode.ProviderResult<vscode.CodeLens[]> {
     if (!this.selfUpdateTriggered) {
@@ -223,7 +229,10 @@ export class WmiCodeLensProvider extends CachedDataProducer implements vscode.Co
 
     if (ownerLens) {
       ownerLens.updateResult(result);
-      WMIQueryResultsPanel.createOrShow(result);
+      this.panelManager.render(REGISTERED_PANELS.WMI_RESULTS, "WMI query results", {
+        dataType: "WMI_RESULT",
+        data: result,
+      });
       this.selfUpdateTriggered = true;
       this._onDidChangeCodeLenses.fire();
     }

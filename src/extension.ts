@@ -30,7 +30,7 @@ import { ScreenLensProvider } from "./codeLens/screenCodeLens";
 import { SelectorCodeLensProvider } from "./codeLens/selectorCodeLens";
 import { SnmpCodeLensProvider } from "./codeLens/snmpCodeLens";
 import { runSelector, validateSelector } from "./codeLens/utils/selectorUtils";
-import { runWMIQuery } from "./codeLens/utils/wmiUtils";
+import { WmiQueryResult, runWMIQuery } from "./codeLens/utils/wmiUtils";
 import { WmiCodeLensProvider } from "./codeLens/wmiCodeLens";
 import { activateExtension } from "./commandPalette/activateExtension";
 import { buildExtension } from "./commandPalette/buildExtension";
@@ -619,7 +619,7 @@ export async function activate(context: vscode.ExtensionContext) {
   const prometheusLensProvider = new PrometheusCodeLensProvider(cachedData);
   const prometheusActionProvider = new PrometheusActionProvider();
   const snmpActionProvider = new SnmpActionProvider(cachedData);
-  const wmiLensProvider = new WmiCodeLensProvider(cachedData);
+  const wmiLensProvider = new WmiCodeLensProvider(cachedData, webviewPanelManager);
   const snmpLensProvider = new SnmpCodeLensProvider(cachedData);
   const snmpHoverProvider = new SnmpHoverProvider(cachedData);
   const fastModeChannel = vscode.window.createOutputChannel("Dynatrace Fast Mode", "json");
@@ -739,9 +739,16 @@ export async function activate(context: vscode.ExtensionContext) {
       "dynatrace-extensions.codelens.runWMIQuery",
       async (query: string) => {
         wmiLensProvider.setQueryRunning(query);
-        runWMIQuery(query, genericChannel, wmiLensProvider.processQueryResults).catch(err => {
-          console.log(`Running WMI query ${query} failed unexpectedly. ${(err as Error).message}`);
-        });
+        const cachedWmiData: Record<string, WmiQueryResult> = cachedData.getCached("wmiData");
+        if (Object.keys(cachedWmiData).includes(query)) {
+          wmiLensProvider.processQueryResults(query, cachedWmiData[query]);
+        } else {
+          runWMIQuery(query, genericChannel, wmiLensProvider.processQueryResults).catch(err => {
+            console.log(
+              `Running WMI query ${query} failed unexpectedly. ${(err as Error).message}`,
+            );
+          });
+        }
       },
     ),
     // Default WebView Panel Serializers

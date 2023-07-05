@@ -16,12 +16,13 @@
   },
   "dependencies": {
     "@dynatrace-sdk/user-preferences": "^1.0.0",
-    "@dynatrace/strato-components-preview": "^0.97.1",
+    "@dynatrace/strato-components-preview": "^0.98.1",
     "@dynatrace/strato-design-tokens": "^0.14.0",
     "react": "^17.0.0",
     "react-dom": "^17.0.0",
     "react-router-dom": "^6.4.1",
     "rewire": "^6.0.0",
+    "sql-formatter": "^12.2.3",
     "styled-components": "^6.0.2",
     "wicg-inert": "^3.1.2"
   },

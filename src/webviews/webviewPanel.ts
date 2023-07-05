@@ -147,11 +147,11 @@ export class WebviewPanelManager implements vscode.WebviewPanelSerializer {
   }
 
   /**
-   * Setup for a new panel. Adds listeners, sets content, and sets it as current panel.
+   * Updates a panel. Adds listeners, sets content, and sets it as current panel.
    * @param panel webview panel
    * @param data panel data
    */
-  private setupNewPanel(viewType: REGISTERED_PANELS, panel: vscode.WebviewPanel, data: PanelData) {
+  private setupPanel(viewType: REGISTERED_PANELS, panel: vscode.WebviewPanel, data: PanelData) {
     // Event listener for disposing the panel
     panel.onDidDispose(
       () => {
@@ -165,7 +165,7 @@ export class WebviewPanelManager implements vscode.WebviewPanelSerializer {
     panel.webview.html = this._getWebviewContent(panel.webview, data);
 
     // Keep track of panel reference
-    this.currentPanels[viewType] = panel;
+    this.currentPanels.set(viewType, panel);
   }
 
   /**
@@ -177,11 +177,18 @@ export class WebviewPanelManager implements vscode.WebviewPanelSerializer {
    */
   public render(viewType: REGISTERED_PANELS, title: string, data: PanelData) {
     if (this.currentPanels.has(viewType)) {
-      // If a webview panel of this view type exists, show it
-      this.currentPanels.get(viewType)?.reveal(getColumn());
+      // If a webview panel of this view type exists, send it the new data
+      const existingPanel = this.currentPanels.get(viewType);
+      existingPanel.webview.postMessage({ messageType: "updateData", data }).then(
+        () => {},
+        err => {
+          console.log(err);
+          console.log(`Could not post message to webview. ${(err as Error).message}`);
+        },
+      );
     } else {
       // Otherwise, create and show a new one
-      const panel = vscode.window.createWebviewPanel(viewType, title, getColumn(), {
+      const newPanel = vscode.window.createWebviewPanel(viewType, title, getColumn(), {
         enableScripts: true,
         localResourceRoots: [
           // Enable JS in the webview
@@ -191,7 +198,7 @@ export class WebviewPanelManager implements vscode.WebviewPanelSerializer {
         ],
       });
 
-      this.setupNewPanel(viewType, panel, data);
+      this.setupPanel(viewType, newPanel, data);
     }
   }
 
@@ -201,7 +208,7 @@ export class WebviewPanelManager implements vscode.WebviewPanelSerializer {
    * @param state persisted state to restore from
    */
   async deserializeWebviewPanel(panel: vscode.WebviewPanel, state?: PanelData) {
-    this.setupNewPanel(
+    this.setupPanel(
       panel.viewType as REGISTERED_PANELS,
       panel,
       state ?? {
