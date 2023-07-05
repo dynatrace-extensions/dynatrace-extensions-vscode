@@ -21,7 +21,7 @@ import { MetricSeriesCollection } from "../../dynatrace-api/interfaces/metrics";
 import { Entity } from "../../dynatrace-api/interfaces/monitoredEntities";
 import { ExtensionStub } from "../../interfaces/extensionMeta";
 import { getBlockItemIndexAtLine, getParentBlocks } from "../../utils/yamlParsing";
-import { WebviewPanelManager } from "../../webviews/webviewPanel";
+import { REGISTERED_PANELS, WebviewPanelManager } from "../../webviews/webviewPanel";
 
 export interface ValidationStatus {
   status: "valid" | "invalid" | "unknown";
@@ -96,7 +96,7 @@ export async function runSelector(
     dt.metrics
       .query(selector, "5m")
       .then((res: MetricSeriesCollection[]) => {
-        panelManager.render("dynatrace-extensions.MetricResults", "Metric selector results", {
+        panelManager.render(REGISTERED_PANELS.METRIC_RESULTS, "Metric selector results", {
           dataType: "METRIC_RESULTS",
           data: res,
         });

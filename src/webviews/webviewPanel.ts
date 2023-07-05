@@ -17,6 +17,14 @@
 import * as vscode from "vscode";
 
 /**
+ * Registered viewType (id) values for known webivew panels.
+ */
+export enum REGISTERED_PANELS {
+  METRIC_RESULTS = "dynatrace-extensions.MetricResults",
+  WMI_RESULTS = "dynatrace-extensions.WmiResults",
+}
+
+/**
  * A helper function that returns a unique alphanumeric identifier called a nonce.
  *
  * @remarks This function is primarily used to help enforce content security
@@ -52,29 +60,31 @@ interface PanelData {
 /**
  * This class manages the state and behavior of webview panels rendered as a React app.
  * There will be a single global instance of this class managing all panels.
- * Handling each data individually should be done within the React components.
+ * Handling of each data type individually should be done within the React components.
  */
-export class WebviewPanelManager {
-  private currentPanels: Record<string, vscode.WebviewPanel | undefined> = {};
-  private disposables: Record<string, vscode.Disposable[] | undefined> = {};
+export class WebviewPanelManager implements vscode.WebviewPanelSerializer {
+  private currentPanels: Map<REGISTERED_PANELS, vscode.WebviewPanel>;
+  private disposables: Map<REGISTERED_PANELS, vscode.Disposable[]>;
+
   private readonly extensionUri: vscode.Uri;
 
   /**
    * @param extensionUri The URI of the directory containing the extension
    */
   constructor(extensionUri: vscode.Uri) {
+    this.currentPanels = new Map<REGISTERED_PANELS, vscode.WebviewPanel>();
+    this.disposables = new Map<REGISTERED_PANELS, vscode.Disposable[]>();
     this.extensionUri = extensionUri;
   }
 
   /**
    * Defines and returns the HTML that should be rendered within the webview panel.
-   *
-   * @remarks This is also the place where references to the React webview build files
-   * are created and inserted into the webview HTML.
+   * This is also the place where references to the React webview build files are created and
+   * inserted into the webview HTML.
    *
    * @param webview A reference to the extension webview
-   * @returns A template string literal containing the HTML that should be
-   * rendered within the webview panel
+   * @returns A template string literal containing the HTML that should be rendered within the
+   * webview panel
    */
   private _getWebviewContent(webview: vscode.Webview, data: PanelData) {
     const scriptUri = webview
@@ -94,7 +104,7 @@ export class WebviewPanelManager {
             <meta name="viewport" content="width=device-width,initial-scale=1,shrink-to-fit=no">
             <meta name="theme-color" content="#000000">
             <meta http-equiv="Content-Security-Policy" content=${cspString}>
-            <title>Hello World</title>
+            <title>Webview</title>
             <script nonce="${nonce}">
               window.acquireVsCodeApi = acquireVsCodeApi;
               window.panelData = ${JSON.stringify(data)};
@@ -113,13 +123,13 @@ export class WebviewPanelManager {
    * Cleans up and disposes of webview resources of given view type panel
    * @param viewType string representing the view type (id) of the panel
    */
-  private dispose(viewType: string) {
-    const panel = this.currentPanels[viewType];
-    const disposables = this.disposables[viewType];
+  private dispose(viewType: REGISTERED_PANELS) {
+    const panel = this.currentPanels.get(viewType);
+    const disposables = this.disposables.get(viewType);
 
     // Clear references
-    this.currentPanels[viewType] = undefined;
-    this.disposables[viewType] = undefined;
+    this.currentPanels.delete(viewType);
+    this.disposables.delete(viewType);
 
     if (panel) {
       // Dispose of the current panel
@@ -137,16 +147,38 @@ export class WebviewPanelManager {
   }
 
   /**
+   * Setup for a new panel. Adds listeners, sets content, and sets it as current panel.
+   * @param panel webview panel
+   * @param data panel data
+   */
+  private setupNewPanel(viewType: REGISTERED_PANELS, panel: vscode.WebviewPanel, data: PanelData) {
+    // Event listener for disposing the panel
+    panel.onDidDispose(
+      () => {
+        this.dispose(viewType);
+      },
+      null,
+      this.disposables.get(viewType),
+    );
+
+    // Set the HTML content for the panel
+    panel.webview.html = this._getWebviewContent(panel.webview, data);
+
+    // Keep track of panel reference
+    this.currentPanels[viewType] = panel;
+  }
+
+  /**
    * Renders the current webview panel if it exists otherwise a new webview panel will be created
    * and displayed.
    * @param viewType string representing the view type (id) of the panel
    * @param title title of the panel
    * @param data data to be sent to the webview
    */
-  public render(viewType: string, title: string, data: PanelData) {
-    if (this.currentPanels[viewType]) {
+  public render(viewType: REGISTERED_PANELS, title: string, data: PanelData) {
+    if (this.currentPanels.has(viewType)) {
       // If a webview panel of this view type exists, show it
-      this.currentPanels[viewType]?.reveal(getColumn());
+      this.currentPanels.get(viewType)?.reveal(getColumn());
     } else {
       // Otherwise, create and show a new one
       const panel = vscode.window.createWebviewPanel(viewType, title, getColumn(), {
@@ -158,16 +190,24 @@ export class WebviewPanelManager {
           vscode.Uri.joinPath(this.extensionUri, "webview-ui/build"),
         ],
       });
-      this.disposables[viewType] = [];
 
-      // Event listener for disposing the panel
-      panel.onDidDispose(() => this.dispose(viewType), null, this.disposables[viewType]);
-
-      // Set the HTML content for the panel
-      panel.webview.html = this._getWebviewContent(panel.webview, data);
-
-      // Keep track of panel reference
-      this.currentPanels[viewType] = panel;
+      this.setupNewPanel(viewType, panel, data);
     }
+  }
+
+  /**
+   * Restores the contents of a webview from its persisted state.
+   * @param panel webview panel being restored
+   * @param state persisted state to restore from
+   */
+  async deserializeWebviewPanel(panel: vscode.WebviewPanel, state?: PanelData) {
+    this.setupNewPanel(
+      panel.viewType as REGISTERED_PANELS,
+      panel,
+      state ?? {
+        dataType: "EMPTY_STATE",
+        data: undefined,
+      },
+    );
   }
 }

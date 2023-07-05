@@ -22,11 +22,7 @@ const toTimeseriesData = (metricData: MetricSeries): Timeseries[] => {
         const end = new Date(ts);
         const start = new Date(ts);
         start.setSeconds(start.getSeconds() - 60);
-        return {
-          start,
-          end,
-          value: metricData.values[i],
-        };
+        return { start, end, value: metricData.values[i] };
       }),
     },
   ];

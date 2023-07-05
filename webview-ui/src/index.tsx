@@ -2,19 +2,15 @@ import React from "react";
 import ReactDOM from "react-dom";
 import App from "./app/App";
 import { AppRoot } from "./app/components/strato/AppRoot";
+import { PanelData } from "./app/interfaces/general";
 
 declare global {
   interface Window {
-    acquireVsCodeApi(): unknown;
-    colorTheme: "dark" | "light";
-    panelData: {
-      dataType: string;
-      data: unknown;
-    };
+    panelData: PanelData;
   }
 }
 
-const vscode = window.acquireVsCodeApi();
+const vscode = window.acquireVsCodeApi<PanelData>();
 
 ReactDOM.render(
   <React.StrictMode>

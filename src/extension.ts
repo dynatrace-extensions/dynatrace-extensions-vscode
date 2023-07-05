@@ -67,7 +67,7 @@ import {
   initWorkspaceStorage,
   migrateFromLegacyExtension,
 } from "./utils/fileSystem";
-import { WebviewPanelManager } from "./webviews/webviewPanel";
+import { REGISTERED_PANELS, WebviewPanelManager } from "./webviews/webviewPanel";
 
 /**
  * Registers Completion Providers for this extension.
@@ -744,23 +744,15 @@ export async function activate(context: vscode.ExtensionContext) {
         });
       },
     ),
-    // // Web view panel - metric query results
-    // vscode.window.registerWebviewPanelSerializer(MetricResultsPanel.viewType, {
-    //   async deserializeWebviewPanel(webviewPanel: vscode.WebviewPanel) {
-    //     webviewPanel.webview.options = { enableScripts: true };
-    //     MetricResultsPanel.revive(
-    //       webviewPanel,
-    //       "No data to display. Close the tab and trigger the action again.",
-    //     );
-    //   },
-    // }),
-    // // Web view panel - WMI query results
-    // registerWebviewPanelSerializer (WMIQueryResultsPanel.viewType, {
-    //   async deserializeWebviewPanel(webviewPanel: vscode.WebviewPanel) {
-    //     webviewPanel.webview.options = { enableScripts: true };
-    //     WMIQueryResultsPanel.revive(webviewPanel, {} as WmiQueryResult);
-    //   },
-    // }),
+    // Default WebView Panel Serializers
+    vscode.window.registerWebviewPanelSerializer(
+      REGISTERED_PANELS.METRIC_RESULTS,
+      webviewPanelManager,
+    ),
+    vscode.window.registerWebviewPanelSerializer(
+      REGISTERED_PANELS.WMI_RESULTS,
+      webviewPanelManager,
+    ),
     // Activity on every document save
     vscode.workspace.onDidSaveTextDocument(async (doc: vscode.TextDocument) => {
       // Fast Development Mode - build extension
