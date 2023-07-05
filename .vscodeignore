@@ -31,11 +31,5 @@ node_modules
 dist/
 
 # All webview-ui files except build
-webview-ui/src/**
-webview-ui/public/**
-webview-ui/scripts/**
-webview-ui/index.html
-webview-ui/README.md
-webview-ui/package.json
-webview-ui/package-lock.json
-webview-ui/node_modules/**
+webview-ui/
+!webview-ui/build/static/js/main.js
