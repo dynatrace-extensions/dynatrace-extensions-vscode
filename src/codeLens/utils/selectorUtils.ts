@@ -24,7 +24,7 @@ import { getBlockItemIndexAtLine, getParentBlocks } from "../../utils/yamlParsin
 import { REGISTERED_PANELS, WebviewPanelManager } from "../../webviews/webviewPanel";
 
 export interface ValidationStatus {
-  status: "valid" | "invalid" | "unknown";
+  status: "valid" | "invalid" | "unknown" | "loading";
   error?: {
     code: number | string;
     message: string;
@@ -84,6 +84,8 @@ export async function validateSelector(
  * @param dt Dynatrace API Client
  * @param oc JSON OutputChannel where error details can be shown. It will also be used to show
  *           entity queries results.
+ * @param panelManager a webview panel manager to render the result data
+ * @param statusCallback a callback for updating the selector validation lens status
  */
 export async function runSelector(
   selector: string,
@@ -91,56 +93,44 @@ export async function runSelector(
   dt: Dynatrace,
   oc: vscode.OutputChannel,
   panelManager: WebviewPanelManager,
+  statusCallback: (selector: string, status: ValidationStatus) => void,
 ) {
-  if (selectorType === "metric") {
-    dt.metrics
-      .query(selector, "5m")
-      .then((res: MetricSeriesCollection[]) => {
+  try {
+    if (selectorType === "metric") {
+      await dt.metrics.query(selector, "5m").then((res: MetricSeriesCollection[]) => {
+        statusCallback(selector, { status: "valid" });
         panelManager.render(REGISTERED_PANELS.METRIC_RESULTS, "Metric selector results", {
           dataType: "METRIC_RESULTS",
           data: res,
         });
-      })
-      .catch((err: DynatraceAPIError) => {
-        oc.clear();
-        oc.appendLine(
-          JSON.stringify(
-            {
-              metricSelector: selector,
-              responseCode: err.errorParams.code,
-              message: err.errorParams.message,
-              details: err.errorParams.constraintViolations,
-            },
-            null,
-            2,
-          ),
-        );
-        oc.show();
       });
-  } else {
-    dt.entitiesV2
-      .list(selector, "now-2h", undefined, "properties,toRelationships,fromRelationships")
-      .then((res: Entity[]) => {
-        oc.clear();
-        oc.appendLine(JSON.stringify({ selector: selector, entities: res }, null, 2));
-        oc.show();
-      })
-      .catch((err: DynatraceAPIError) => {
-        oc.clear();
-        oc.appendLine(
-          JSON.stringify(
-            {
-              entitySelector: selector,
-              responseCode: err.errorParams.code,
-              message: err.errorParams.message,
-              details: err.errorParams.constraintViolations,
-            },
-            null,
-            2,
-          ),
-        );
-        oc.show();
-      });
+    } else {
+      await dt.entitiesV2
+        .list(selector, "now-2h", undefined, "properties,toRelationships,fromRelationships")
+        .then((res: Entity[]) => {
+          statusCallback(selector, { status: "valid" });
+          oc.clear();
+          oc.appendLine(JSON.stringify({ selector: selector, entities: res }, null, 2));
+          oc.show();
+        });
+    }
+  } catch (err: unknown) {
+    const errorParams = (err as DynatraceAPIError).errorParams;
+    statusCallback(selector, { status: "invalid", error: errorParams });
+    oc.clear();
+    oc.appendLine(
+      JSON.stringify(
+        {
+          metricSelector: selector,
+          responseCode: errorParams.code,
+          message: errorParams.message,
+          details: errorParams.constraintViolations,
+        },
+        null,
+        2,
+      ),
+    );
+    oc.show();
   }
 }
 
