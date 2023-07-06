@@ -15,237 +15,165 @@
  */
 
 import * as vscode from "vscode";
-import { CachedData, CachedDataProducer } from "../utils/dataCaching";
-import { REGISTERED_PANELS, WebviewPanelManager } from "../webviews/webviewPanel";
+import { CachedDataProducer } from "../utils/dataCaching";
+import { getBlockRange } from "../utils/yamlParsing";
+import { ValidationStatus } from "./utils/selectorUtils";
 import { WmiQueryResult } from "./utils/wmiUtils";
 
-class WmiQueryLens extends vscode.CodeLens {
-  wmiQuery: string;
+/**
+ * Implements a Code Lens that shows the status of a WMI Query execution
+ */
+class WmiQueryStatusLens extends vscode.CodeLens {
+  query: string;
 
   /**
-   * Creates a new WMI query code lens
-   * @param range VSCode Range at which lens should be created
-   * @param wmiQuery The WMI query to execute
+   * @param range range at which the lens should be created
+   * @param query the query associated with this lens
+   * @param status the last known status to be displayed
    */
-  constructor(range: vscode.Range, wmiQuery: string) {
+  constructor(range: vscode.Range, query: string, status: ValidationStatus) {
+    super(range);
+    this.query = query;
+    this.command = this.getStatusAsCommand(status);
+  }
+
+  /**
+   * Interprets a ValidationStatus and translates it to a vscode.Command to be used inside the lens.
+   * @param status status of the query
+   * @returns command object
+   */
+  private getStatusAsCommand(status: ValidationStatus): vscode.Command {
+    switch (status.status) {
+      case "valid":
+        return {
+          title: "✅",
+          tooltip: "Query is valid",
+          command: "",
+        };
+      case "invalid":
+        return {
+          title: "❌",
+          tooltip: "Query is invalid",
+          command: "",
+        };
+      case "loading":
+        return {
+          title: "⌛ Running query...",
+          tooltip: "Query exeucution in progress.",
+          command: "",
+        };
+      default:
+        return {
+          title: "❔",
+          tooltip: "Run the query to validate it.",
+          command: "",
+        };
+    }
+  }
+}
+
+/**
+ * Implements a Code Lens that can be used to execute a WMI Query
+ */
+class WmiQueryExecutionLens extends vscode.CodeLens {
+  query: string;
+
+  constructor(range: vscode.Range, query: string) {
     super(range, {
       title: "▶️ Run WMI Query",
       tooltip: "Run a WMI query on this host",
       command: "dynatrace-extensions.codelens.runWMIQuery",
-      arguments: [wmiQuery],
+      arguments: [query],
     });
-    this.wmiQuery = wmiQuery;
+    this.query = query;
   }
 }
 
-class WmiQueryResultLens extends vscode.CodeLens {
-  wmiQuery: string;
-
-  /**
-   * @param range VSCode Range at which lens should be created
-   * @param wmiQuery The WMI query to execute
-   */
-  constructor(range: vscode.Range, wmiQuery: string) {
-    super(range, {
-      title: "❔",
-      tooltip: "Run the query to see the results",
-      command: "",
-      arguments: [],
-    });
-    this.wmiQuery = wmiQuery;
-  }
-
-  /**
-   * Called when the user clicks on the '▶️ Run WMI Query' code lens
-   */
-  setQueryRunning = () => {
-    this.command = {
-      title: "⏳ Running query...",
-      tooltip: "Running query...",
-      command: "",
-      arguments: [],
-    };
-  };
-
-  /**
-   * Callback function to update the code lens with the results of the query
-   * */
-  updateResult = (result: WmiQueryResult) => {
-    switch (result.error) {
-      case true:
-        this.command = {
-          title: "❌ Query failed",
-          tooltip: `Query failed. ${result.errorMessage ?? ""}`,
-          command: "",
-          arguments: [],
-        };
-        break;
-      case false:
-        this.command = {
-          title: `📊 ${result.results.length} instances found`,
-          tooltip: "",
-          command: "",
-          arguments: [result],
-        };
-    }
-  };
-}
-
+/**
+ * Implementation of a Code Lens provider for WMI Queries. It creates two lenses, for executing a
+ * WMI Query against the local Windows machine and checking the last execution status.
+ */
 export class WmiCodeLensProvider extends CachedDataProducer implements vscode.CodeLensProvider {
-  private readonly panelManager: WebviewPanelManager;
-  private wmiQueryLens: WmiQueryLens[] = [];
-  private wmiQueryResultLens: WmiQueryResultLens[] = [];
-
-  // Keep a copy of the old lenses so that we can reuse them if the lines were moved around
-  private previousWMIQueryLens: WmiQueryLens[] = [];
-  private previousWMIQueryResultLens: WmiQueryResultLens[] = [];
-
-  // When we modify lens ourselves, we don't clear the cache
-  private selfUpdateTriggered = false;
-
+  private codeLenses: vscode.CodeLens[] = [];
   private _onDidChangeCodeLenses: vscode.EventEmitter<void> = new vscode.EventEmitter<void>();
   public readonly onDidChangeCodeLenses: vscode.Event<void> = this._onDidChangeCodeLenses.event;
+  private readonly controlSetting = "wmiCodeLens";
+  private readonly regex = new RegExp("query:", "g");
 
-  constructor(cachedData: CachedData, panelManager: WebviewPanelManager) {
-    super(cachedData);
-    this.panelManager = panelManager;
-  }
-
-  provideCodeLenses(document: vscode.TextDocument): vscode.ProviderResult<vscode.CodeLens[]> {
-    if (!this.selfUpdateTriggered) {
-      // Clear the lenses, keep a saved copy of the old ones in case lines were moved around
-      // We only do this if the lenses were not updated by us
-      this.previousWMIQueryLens = this.wmiQueryLens;
-      this.wmiQueryLens = [];
-
-      this.previousWMIQueryResultLens = this.wmiQueryResultLens;
-      this.wmiQueryResultLens = [];
-    }
-
-    this.selfUpdateTriggered = false;
+  /**
+   * Provides the actual code lenses relevant to each valid section of the extension yaml.
+   * @param document the extension manifest
+   * @returns list of code lenses
+   */
+  public async provideCodeLenses(document: vscode.TextDocument): Promise<vscode.CodeLens[]> {
+    this.codeLenses = [];
+    const regex = new RegExp(this.regex);
     const text = document.getText();
 
-    // Return early because it is cheaper than parsing the yaml
+    // Bail early if feature disabled or no wmi in manifest
     if (
       !text.includes("wmi:") ||
-      !vscode.workspace.getConfiguration("dynatraceExtensions", null).get("wmiCodeLens")
+      !vscode.workspace.getConfiguration("dynatraceExtensions", null).get(this.controlSetting)
     ) {
       return [];
     }
 
-    // Find all query: definitions
-    // They can be under the list of groups, or under the list subgroups
-    // Example:
-    // wmi:
-    // - group: Host
-    //   interval:
-    //     minutes: 1
-    //   dimensions:
-    //     - key: host
-    //       value: this:device.host
-    //   subgroups:
-    //     - subgroup: Queue
-    //       query: SELECT Name, MessagesinQueue, BytesInQueue FROM Win32_PerfRawData_msmq_MSMQQueue
+    // Create lenses
+    const { startIndex, endIndex } = getBlockRange("wmi", document);
+    const wmiContent = text.slice(startIndex, endIndex);
+    await Promise.all(
+      Array.from(wmiContent.matchAll(regex)).map(match =>
+        this.createLenses(match, startIndex, document).then(lenses =>
+          this.codeLenses.push(...lenses),
+        ),
+      ),
+    );
 
-    for (const group of this.parsedExtension.wmi) {
-      if (group.query) {
-        const createdEarlier = this.previousWMIQueryLens.find(
-          lens => lens.wmiQuery === group.query,
-        );
-        this.createLens(group.query, document, createdEarlier);
-      }
-
-      if (group.subgroups) {
-        for (const subgroup of group.subgroups) {
-          if (subgroup.query) {
-            const createdEarlier = this.previousWMIQueryLens.find(
-              lens => lens.wmiQuery === subgroup.query,
-            );
-            this.createLens(subgroup.query, document, createdEarlier);
-          }
-        }
-      }
-    }
-
-    return [...this.wmiQueryLens, ...this.wmiQueryResultLens];
+    return this.codeLenses;
   }
 
   /**
-   * This receives a WMI query like 'SELECT Name, MessagesinQueue, BytesInQueue FROM Win32_PerfRawData_msmq_MSMQQueue'
-   * It finds all the ocurrences of this text on the document and creates a code lens for each one
-   * If there was a code lens created earlier, it will reuse it and move it to the new position
-   *
-   * @param lineToMatch The line that we want to match
-   * @param document the document to search for the query
-   * @param createdEarlier a code lens that was created earlier, if it exists
+   * Creates two lenses for a query
+   * @param match match of our regular expression on the extension manifest
+   * @param matchOffest offset, in case the match was done on trimmed content
+   * @param document extension manifest
+   * @returns list of code lenses
    */
-  createLens(lineToMatch: string, document: vscode.TextDocument, createdEarlier?: WmiQueryLens) {
-    // If this exact query string was already added, return
-    // Needed in the rare case the user has the same query more than once
-    if (this.wmiQueryLens.find(lens => lens.wmiQuery === lineToMatch)) {
-      return;
-    }
-    const text = document.getText();
-    // Find the indexes where lineToMatch is on text
-    const matches = [];
-    let i = -1;
-    while ((i = text.indexOf(lineToMatch, i + 1)) !== -1) {
-      matches.push({ line: lineToMatch, index: i });
-    }
+  private async createLenses(
+    match: RegExpMatchArray,
+    matchOffest: number,
+    document: vscode.TextDocument,
+  ) {
+    if (match.index) {
+      const line = document.lineAt(document.positionAt(matchOffest + match.index).line);
+      const indexOf = line.text.indexOf(match[0]);
+      const position = new vscode.Position(line.lineNumber, indexOf);
+      const range = document.getWordRangeAtPosition(position, new RegExp(this.regex));
 
-    for (const match of matches) {
-      const range = new vscode.Range(
-        document.positionAt(match.index),
-        document.positionAt(match.index + match.line.length),
-      );
-
-      if (createdEarlier) {
-        // Update the range (this can change if the user moves lines around)
-        createdEarlier.range = range;
-        this.wmiQueryLens.push(createdEarlier);
-
-        // Find the previous result lens and update the range
-        const previousResultLens = this.previousWMIQueryResultLens.find(
-          lens => lens.wmiQuery === lineToMatch,
-        );
-        if (previousResultLens) {
-          // This is always true
-          previousResultLens.range = range;
-          this.wmiQueryResultLens.push(previousResultLens);
-        }
-      } else {
-        // This was not created earlier, create a new lens
-        this.wmiQueryLens.push(new WmiQueryLens(range, lineToMatch));
-        this.wmiQueryResultLens.push(new WmiQueryResultLens(range, lineToMatch));
+      if (range) {
+        const query = line.text.split("query: ")[1];
+        return [
+          new WmiQueryExecutionLens(range, query),
+          new WmiQueryStatusLens(range, query, this.wmiStatuses[query] ?? { status: "unknown" }),
+        ];
       }
     }
+
+    return [];
   }
 
-  processQueryResults = (query: string, result: WmiQueryResult) => {
-    this.cachedData.updateWmiQueryResult(result);
-
-    // Find the WmiQueryResultLens that matches this query
-    const ownerLens = this.previousWMIQueryResultLens.find(lens => lens.wmiQuery === query);
-
-    if (ownerLens) {
-      ownerLens.updateResult(result);
-      this.panelManager.render(REGISTERED_PANELS.WMI_RESULTS, "WMI query results", {
-        dataType: "WMI_RESULT",
-        data: result,
-      });
-      this.selfUpdateTriggered = true;
-      this._onDidChangeCodeLenses.fire();
+  /**
+   * Updates the last known execution status and result data for a given WMI query and notifies
+   * this provider that the code lenses have changed.
+   * @param query wmi query to update status for
+   * @param status current status
+   * @param result the query execution result, if new
+   */
+  public updateQueryData(query: string, status: ValidationStatus, result?: WmiQueryResult) {
+    this.cachedData.updateWmiStatus(query, status);
+    if (result) {
+      this.cachedData.updateWmiQueryResult(result);
     }
-  };
-
-  setQueryRunning = (query: string) => {
-    // Find the WmiQueryResultLens that matches this query
-    const ownerLens = this.previousWMIQueryResultLens.find(lens => lens.wmiQuery === query);
-
-    if (ownerLens) {
-      ownerLens.setQueryRunning();
-      this.selfUpdateTriggered = true;
-      this._onDidChangeCodeLenses.fire();
-    }
-  };
+    this._onDidChangeCodeLenses.fire();
+  }
 }

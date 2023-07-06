@@ -16,6 +16,9 @@
 
 import { exec } from "child_process";
 import * as vscode from "vscode";
+import { CachedData } from "../../utils/dataCaching";
+import { REGISTERED_PANELS, WebviewPanelManager } from "../../webviews/webviewPanel";
+import { ValidationStatus } from "./selectorUtils";
 
 const ignoreProperties =
   'Select-Object -Property * -ExcludeProperty @("Scope", "Path", "Options", "Properties", ' +
@@ -35,61 +38,102 @@ export interface WmiQueryResult {
  * Runs a WMI query using PowerShell and returns the JSON format of the results
  * @param query The WMI query to run
  * @param oc The output channel to use for logging
- * @param callback The callback to call when the query is complete, used to return the results
+ * @param updateCallback The callback to call when the query is complete, used to return the
+ * results and status
  */
 export async function runWMIQuery(
   query: string,
   oc: vscode.OutputChannel,
-  callback: (query: string, result: WmiQueryResult) => void,
+  panelManager: WebviewPanelManager,
+  cachedData: CachedData,
+  updateCallback: (query: string, status: ValidationStatus, result?: WmiQueryResult) => void,
 ) {
-  const command = `Get-WmiObject -Query "${query}" | ${ignoreProperties} | ConvertTo-Json`;
-  const startTime = new Date();
-  console.log(`Running command: ${command}`);
+  updateCallback(query, { status: "loading" });
 
-  exec(
-    command,
-    { shell: "powershell.exe", maxBuffer: 10 * 1024 * 1024 },
-    (error, stdout, stderr) => {
-      if (error) {
-        console.log(`error: ${error.message}`);
-        oc.clear();
-        oc.appendLine(error.message);
-        oc.show();
-        const responseTime = ((new Date().getTime() - startTime.getTime()) / 1000).toString();
-
-        callback(query, {
-          query,
-          error: true,
-          errorMessage: error.message,
-          results: [],
-          responseTime,
-        });
-        return;
-      }
-      if (stderr) {
-        console.log(`stderr: ${stderr}`);
-        oc.clear();
-        oc.appendLine(stderr);
-        oc.show();
-        const responseTime = ((new Date().getTime() - startTime.getTime()) / 1000).toString();
-        callback(query, { query, error: true, errorMessage: stderr, results: [], responseTime });
-        return;
-      }
-
-      // Wrap single objects in an array for type safety
-      const jsonResponse = JSON.parse(stdout.startsWith("[") ? stdout : `[${stdout}]`) as Record<
-        string,
-        string | number
-      >[];
-
-      const responseTime = ((new Date().getTime() - startTime.getTime()) / 1000).toString();
-      callback(query, {
-        query,
-        error: false,
-        results: jsonResponse,
-        responseTime,
-      });
+  // First check for cached data...
+  const cachedWmiData: Record<string, WmiQueryResult> = cachedData.getCached("wmiData");
+  if (Object.keys(cachedWmiData).includes(query)) {
+    if (cachedWmiData[query].error) {
+      updateCallback(query, { status: "invalid" });
       oc.clear();
-    },
-  );
+      oc.appendLine(cachedWmiData[query].errorMessage);
+      oc.show();
+    } else {
+      updateCallback(query, { status: "valid" });
+      panelManager.render(REGISTERED_PANELS.WMI_RESULTS, "WMI query results", {
+        dataType: "WMI_RESULT",
+        data: cachedWmiData[query],
+      });
+    }
+    // Otherwise, run query...
+  } else {
+    const command = `Get-WmiObject -Query "${query}" | ${ignoreProperties} | ConvertTo-Json`;
+    const startTime = new Date();
+    console.log(`Running command: ${command}`);
+
+    exec(
+      command,
+      { shell: "powershell.exe", maxBuffer: 10 * 1024 * 1024 },
+      (error, stdout, stderr) => {
+        if (error) {
+          console.log(`error: ${error.message}`);
+          oc.clear();
+          oc.appendLine(error.message);
+          oc.show();
+          const responseTime = ((new Date().getTime() - startTime.getTime()) / 1000).toString();
+          updateCallback(
+            query,
+            { status: "invalid" },
+            {
+              query,
+              error: true,
+              errorMessage: error.message,
+              results: [],
+              responseTime,
+            },
+          );
+          return;
+        }
+        if (stderr) {
+          console.log(`stderr: ${stderr}`);
+          oc.clear();
+          oc.appendLine(stderr);
+          oc.show();
+          const responseTime = ((new Date().getTime() - startTime.getTime()) / 1000).toString();
+          updateCallback(
+            query,
+            { status: "invalid" },
+            {
+              query,
+              error: true,
+              errorMessage: stderr,
+              results: [],
+              responseTime,
+            },
+          );
+          return;
+        }
+
+        // Wrap single objects in an array for type safety
+        const jsonResponse = JSON.parse(stdout.startsWith("[") ? stdout : `[${stdout}]`) as Record<
+          string,
+          string | number
+        >[];
+
+        const responseTime = ((new Date().getTime() - startTime.getTime()) / 1000).toString();
+        const queryResult = {
+          query,
+          error: false,
+          results: jsonResponse,
+          responseTime,
+        };
+        panelManager.render(REGISTERED_PANELS.WMI_RESULTS, "WMI query results", {
+          dataType: "WMI_RESULT",
+          data: queryResult,
+        });
+        updateCallback(query, { status: "valid" }, queryResult);
+        oc.clear();
+      },
+    );
+  }
 }

@@ -29,8 +29,8 @@ import { PrometheusCodeLensProvider } from "./codeLens/prometheusScraper";
 import { ScreenLensProvider } from "./codeLens/screenCodeLens";
 import { SelectorCodeLensProvider } from "./codeLens/selectorCodeLens";
 import { SnmpCodeLensProvider } from "./codeLens/snmpCodeLens";
-import { runSelector, validateSelector } from "./codeLens/utils/selectorUtils";
-import { WmiQueryResult, runWMIQuery } from "./codeLens/utils/wmiUtils";
+import { ValidationStatus, runSelector, validateSelector } from "./codeLens/utils/selectorUtils";
+import { runWMIQuery } from "./codeLens/utils/wmiUtils";
 import { WmiCodeLensProvider } from "./codeLens/wmiCodeLens";
 import { activateExtension } from "./commandPalette/activateExtension";
 import { buildExtension } from "./commandPalette/buildExtension";
@@ -619,7 +619,7 @@ export async function activate(context: vscode.ExtensionContext) {
   const prometheusLensProvider = new PrometheusCodeLensProvider(cachedData);
   const prometheusActionProvider = new PrometheusActionProvider();
   const snmpActionProvider = new SnmpActionProvider(cachedData);
-  const wmiLensProvider = new WmiCodeLensProvider(cachedData, webviewPanelManager);
+  const wmiLensProvider = new WmiCodeLensProvider(cachedData);
   const snmpLensProvider = new SnmpCodeLensProvider(cachedData);
   const snmpHoverProvider = new SnmpHoverProvider(cachedData);
   const fastModeChannel = vscode.window.createOutputChannel("Dynatrace Fast Mode", "json");
@@ -634,7 +634,6 @@ export async function activate(context: vscode.ExtensionContext) {
       snippetCodeActionProvider,
       screensLensProvider,
       diagnosticsProvider,
-      wmiLensProvider,
       snmpActionProvider,
       metricLensProvider,
       entityLensProvider,
@@ -643,6 +642,7 @@ export async function activate(context: vscode.ExtensionContext) {
     snmpData: [snmpActionProvider, diagnosticsProvider, snmpHoverProvider],
     selectorStatuses: [metricLensProvider, entityLensProvider],
     wmiData: [wmiLensProvider],
+    wmiStatuses: [wmiLensProvider],
   });
 
   // Perform all feature registrations
@@ -721,16 +721,26 @@ export async function activate(context: vscode.ExtensionContext) {
     vscode.commands.registerCommand(
       "dynatrace-extensions.codelens.runSelector",
       async (selector: string, type: "metric" | "entity") => {
+        const updateCallback = (checkedSelector: string, status: ValidationStatus) => {
+          if (type === "metric") {
+            metricLensProvider.updateValidationStatus(checkedSelector, status);
+          } else {
+            entityLensProvider.updateValidationStatus(checkedSelector, status);
+          }
+        };
         if (await checkEnvironmentConnected(tenantsTreeViewProvider)) {
           const dtClient = await tenantsTreeViewProvider.getDynatraceClient();
           if (dtClient) {
-            runSelector(selector, type, dtClient, genericChannel, webviewPanelManager).catch(
-              err => {
-                console.log(
-                  `Running selector ${selector} failed unexpectedly. ${(err as Error).message}`,
-                );
-              },
-            );
+            runSelector(
+              selector,
+              type,
+              dtClient,
+              genericChannel,
+              webviewPanelManager,
+              updateCallback,
+            ).catch(err => {
+              console.log(`Running selector failed unexpectedly. ${(err as Error).message}`);
+            });
           }
         }
       },
@@ -738,17 +748,17 @@ export async function activate(context: vscode.ExtensionContext) {
     vscode.commands.registerCommand(
       "dynatrace-extensions.codelens.runWMIQuery",
       async (query: string) => {
-        wmiLensProvider.setQueryRunning(query);
-        const cachedWmiData: Record<string, WmiQueryResult> = cachedData.getCached("wmiData");
-        if (Object.keys(cachedWmiData).includes(query)) {
-          wmiLensProvider.processQueryResults(query, cachedWmiData[query]);
-        } else {
-          runWMIQuery(query, genericChannel, wmiLensProvider.processQueryResults).catch(err => {
-            console.log(
-              `Running WMI query ${query} failed unexpectedly. ${(err as Error).message}`,
-            );
-          });
-        }
+        runWMIQuery(
+          query,
+          genericChannel,
+          webviewPanelManager,
+          cachedData,
+          (checkedQuery, status, result) => {
+            wmiLensProvider.updateQueryData(checkedQuery, status, result);
+          },
+        ).catch(err => {
+          console.log(`Running WMI Query failed unexpectedly. ${(err as Error).message}`);
+        });
       },
     ),
     // Default WebView Panel Serializers
