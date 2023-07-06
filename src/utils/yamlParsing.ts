@@ -200,3 +200,52 @@ export function getNextElementIdx(
   }
   return content.length;
 }
+
+/**
+ * Given a YAML block label, calculates the start and end indexes of the block (based on indent).
+ * @param blockLabel yaml block label
+ * @param document document to parse
+ * @returns start and end index
+ */
+export function getBlockRange(
+  blockLabel: string,
+  document: vscode.TextDocument,
+): { startIndex: number; endIndex: number } {
+  let startIndex = -1;
+  let endIndex = -1;
+  let indent = -1;
+  for (let li = 0; li < document.lineCount; li++) {
+    const line = document.lineAt(li);
+
+    // Skip over blank lines;
+    if (line.text.replace(/\s/g, "") === "") {
+      continue;
+    }
+
+    // Block declaration found
+    if (line.text.replace(/ /g, "").startsWith(`${blockLabel}:`)) {
+      indent = getIndent(document, li);
+      startIndex = document.offsetAt(line.range.start);
+      continue;
+    }
+    // We already found the start
+    if (indent > -1) {
+      const currentIndent = getIndent(document, li);
+      // We found the end of the block
+      if (
+        currentIndent < indent ||
+        (currentIndent === indent && !line.text.replace(/ /g, "").startsWith("-"))
+      ) {
+        endIndex = document.offsetAt(line.range.start);
+      }
+    }
+
+    // Return the indexes when end is found
+    if (endIndex > -1) {
+      return { startIndex, endIndex };
+    }
+  }
+
+  // At this point, end of block must be end of file
+  return { startIndex, endIndex: document.getText().length - 1 };
+}

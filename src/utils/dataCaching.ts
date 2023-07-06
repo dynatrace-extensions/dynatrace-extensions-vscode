@@ -39,6 +39,7 @@ type CachedDataType =
   | "baristaIcons"
   | "prometheusData"
   | "wmiData"
+  | "wmiStatuses"
   | "entityInstances"
   | "selectorStatuses"
   | "snmpData";
@@ -54,6 +55,7 @@ export class CachedDataConsumer {
   protected parsedExtension: ExtensionStub = undefined;
   protected prometheusData: PromData = undefined;
   protected wmiData: Record<string, WmiQueryResult | undefined> = undefined;
+  protected wmiStatuses: Record<string, ValidationStatus | undefined> = undefined;
   protected entityInstances: Record<string, Entity[] | undefined> = undefined;
   protected selectorStatuses: Record<string, ValidationStatus | undefined> = undefined;
   protected snmpData: Record<string, OidInformation | undefined> = undefined;
@@ -97,6 +99,7 @@ export class CachedData {
   private selectorStatuses = new BehaviorSubject<Record<string, ValidationStatus | undefined>>({});
   private prometheusData = new BehaviorSubject<PromData>({});
   private wmiData = new BehaviorSubject<Record<string, WmiQueryResult | undefined>>({});
+  private wmiStatuses = new BehaviorSubject<Record<string, ValidationStatus | undefined>>({});
   private snmpData = new BehaviorSubject<Record<string, OidInformation | undefined>>({});
   private entityInstances = new BehaviorSubject<Record<string, Entity[] | undefined>>({});
   private localSnmpDatabase: OidInformation[] = [];
@@ -129,6 +132,7 @@ export class CachedData {
      @returns "baristaIcons" => string[]
      @returns "prometheusData" => {@link PromData}
      @returns "wmiData" => Record<string, {@link WmiQueryResult}>
+     @returns "wmiStatuses" => Record<string, {@link ValidationStatus}>
      @returns "entityInstances" => Record<string, {@link Entity}[]>
      @returns "selectorStatuses" => Record<string, {@link ValidationStatus}>
      @returns "snmpData" => Record<string, {@link OidInformation}>
@@ -341,6 +345,17 @@ export class CachedData {
     const nextSelectorStatuses = this.selectorStatuses.getValue();
     nextSelectorStatuses[selector] = status;
     this.selectorStatuses.next(nextSelectorStatuses);
+  }
+
+  /**
+   * On demand update the execution status for a WMI query.
+   * @param query WMI query to update status for
+   * @param status the current execution status
+   */
+  public updateWmiStatus(query: string, status: ValidationStatus) {
+    const nextWmiStatuses = this.wmiStatuses.getValue();
+    nextWmiStatuses[query] = status;
+    this.wmiStatuses.next(nextWmiStatuses);
   }
 
   /**

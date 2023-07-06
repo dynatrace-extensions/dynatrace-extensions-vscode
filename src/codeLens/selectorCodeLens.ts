@@ -28,12 +28,12 @@ class ValidationStatusLens extends vscode.CodeLens {
   /**
    * @param range VSCode Range at which lens should be created
    * @param selector selector relevant to this lens
-   * @param cachedData a provider of cached validation statuses
+   * @param status the last known status to be displayed
    */
-  constructor(range: vscode.Range, selector: string, cachedStatus: ValidationStatus) {
+  constructor(range: vscode.Range, selector: string, status: ValidationStatus) {
     super(range);
     this.selector = selector;
-    this.command = this.getStatusAsCommand(cachedStatus);
+    this.command = this.getStatusAsCommand(status);
   }
 
   /**
@@ -49,21 +49,18 @@ class ValidationStatusLens extends vscode.CodeLens {
           title: "✅",
           tooltip: "Selector is valid",
           command: "",
-          arguments: [],
         };
       case "invalid":
         return {
           title: `❌ (${status.error?.code ?? ""})`,
           tooltip: `Selector is invalid. ${status.error?.message ?? ""}`,
           command: "",
-          arguments: [],
         };
       default:
         return {
           title: "❔",
           tooltip: "Selector has not been validated yet.",
           command: "",
-          arguments: [],
         };
     }
   }
@@ -159,9 +156,9 @@ export class SelectorCodeLensProvider
     // Create lenses
     await Promise.all(
       Array.from(text.matchAll(regex)).map(match =>
-        this.createLenses(this.parsedExtension, match, document).then(lenses =>
-          lenses.forEach(lens => this.codeLenses.push(lens)),
-        ),
+        this.createLenses(this.parsedExtension, match, document).then(lenses => {
+          this.codeLenses.push(...lenses);
+        }),
       ),
     );
     return this.codeLenses;

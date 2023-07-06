@@ -29,3 +29,7 @@ node_modules
 
 # Packaged distributions
 dist/
+
+# All webview-ui files except build
+webview-ui/
+!webview-ui/build/static/js/main.js

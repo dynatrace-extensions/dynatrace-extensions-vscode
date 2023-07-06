@@ -29,8 +29,8 @@ import { PrometheusCodeLensProvider } from "./codeLens/prometheusScraper";
 import { ScreenLensProvider } from "./codeLens/screenCodeLens";
 import { SelectorCodeLensProvider } from "./codeLens/selectorCodeLens";
 import { SnmpCodeLensProvider } from "./codeLens/snmpCodeLens";
-import { runSelector, validateSelector } from "./codeLens/utils/selectorUtils";
-import { runWMIQuery, WmiQueryResult } from "./codeLens/utils/wmiUtils";
+import { ValidationStatus, runSelector, validateSelector } from "./codeLens/utils/selectorUtils";
+import { runWMIQuery } from "./codeLens/utils/wmiUtils";
 import { WmiCodeLensProvider } from "./codeLens/wmiCodeLens";
 import { activateExtension } from "./commandPalette/activateExtension";
 import { buildExtension } from "./commandPalette/buildExtension";
@@ -67,8 +67,7 @@ import {
   initWorkspaceStorage,
   migrateFromLegacyExtension,
 } from "./utils/fileSystem";
-import { MetricResultsPanel } from "./webviews/metricResults";
-import { WMIQueryResultsPanel } from "./webviews/wmiQueryResults";
+import { REGISTERED_PANELS, WebviewPanelManager } from "./webviews/webviewPanel";
 
 /**
  * Registers Completion Providers for this extension.
@@ -603,6 +602,7 @@ export async function activate(context: vscode.ExtensionContext) {
   );
   const cachedData = new CachedData(tenantsTreeViewProvider);
   await cachedData.initialize();
+  const webviewPanelManager = new WebviewPanelManager(context.extensionUri);
   const extensionsTreeViewProvider = new ExtensionsTreeDataProvider(context);
   const metricLensProvider = new SelectorCodeLensProvider(
     "metricSelector:",
@@ -634,7 +634,6 @@ export async function activate(context: vscode.ExtensionContext) {
       snippetCodeActionProvider,
       screensLensProvider,
       diagnosticsProvider,
-      wmiLensProvider,
       snmpActionProvider,
       metricLensProvider,
       entityLensProvider,
@@ -643,6 +642,7 @@ export async function activate(context: vscode.ExtensionContext) {
     snmpData: [snmpActionProvider, diagnosticsProvider, snmpHoverProvider],
     selectorStatuses: [metricLensProvider, entityLensProvider],
     wmiData: [wmiLensProvider],
+    wmiStatuses: [wmiLensProvider],
   });
 
   // Perform all feature registrations
@@ -721,13 +721,25 @@ export async function activate(context: vscode.ExtensionContext) {
     vscode.commands.registerCommand(
       "dynatrace-extensions.codelens.runSelector",
       async (selector: string, type: "metric" | "entity") => {
+        const updateCallback = (checkedSelector: string, status: ValidationStatus) => {
+          if (type === "metric") {
+            metricLensProvider.updateValidationStatus(checkedSelector, status);
+          } else {
+            entityLensProvider.updateValidationStatus(checkedSelector, status);
+          }
+        };
         if (await checkEnvironmentConnected(tenantsTreeViewProvider)) {
           const dtClient = await tenantsTreeViewProvider.getDynatraceClient();
           if (dtClient) {
-            runSelector(selector, type, dtClient, genericChannel).catch(err => {
-              console.log(
-                `Running selector ${selector} failed unexpectedly. ${(err as Error).message}`,
-              );
+            runSelector(
+              selector,
+              type,
+              dtClient,
+              genericChannel,
+              webviewPanelManager,
+              updateCallback,
+            ).catch(err => {
+              console.log(`Running selector failed unexpectedly. ${(err as Error).message}`);
             });
           }
         }
@@ -736,29 +748,28 @@ export async function activate(context: vscode.ExtensionContext) {
     vscode.commands.registerCommand(
       "dynatrace-extensions.codelens.runWMIQuery",
       async (query: string) => {
-        wmiLensProvider.setQueryRunning(query);
-        runWMIQuery(query, genericChannel, wmiLensProvider.processQueryResults).catch(err => {
-          console.log(`Running WMI query ${query} failed unexpectedly. ${(err as Error).message}`);
+        runWMIQuery(
+          query,
+          genericChannel,
+          webviewPanelManager,
+          cachedData,
+          (checkedQuery, status, result) => {
+            wmiLensProvider.updateQueryData(checkedQuery, status, result);
+          },
+        ).catch(err => {
+          console.log(`Running WMI Query failed unexpectedly. ${(err as Error).message}`);
         });
       },
     ),
-    // Web view panel - metric query results
-    vscode.window.registerWebviewPanelSerializer(MetricResultsPanel.viewType, {
-      async deserializeWebviewPanel(webviewPanel: vscode.WebviewPanel) {
-        webviewPanel.webview.options = { enableScripts: true };
-        MetricResultsPanel.revive(
-          webviewPanel,
-          "No data to display. Close the tab and trigger the action again.",
-        );
-      },
-    }),
-    // Web view panel - WMI query results
-    vscode.window.registerWebviewPanelSerializer(WMIQueryResultsPanel.viewType, {
-      async deserializeWebviewPanel(webviewPanel: vscode.WebviewPanel) {
-        webviewPanel.webview.options = { enableScripts: true };
-        WMIQueryResultsPanel.revive(webviewPanel, {} as WmiQueryResult);
-      },
-    }),
+    // Default WebView Panel Serializers
+    vscode.window.registerWebviewPanelSerializer(
+      REGISTERED_PANELS.METRIC_RESULTS,
+      webviewPanelManager,
+    ),
+    vscode.window.registerWebviewPanelSerializer(
+      REGISTERED_PANELS.WMI_RESULTS,
+      webviewPanelManager,
+    ),
     // Activity on every document save
     vscode.workspace.onDidSaveTextDocument(async (doc: vscode.TextDocument) => {
       // Fast Development Mode - build extension
