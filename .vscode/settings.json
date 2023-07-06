@@ -10,6 +10,6 @@
     "typescript.tsc.autoDetect": "off",
     "markdown.extension.toc.updateOnSave": false,
     "eslint.workingDirectories": [
-      "./src", "./webview-ui"
+      "./", "./webview-ui"
     ]
 }
