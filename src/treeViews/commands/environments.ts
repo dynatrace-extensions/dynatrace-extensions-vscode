@@ -64,7 +64,7 @@ export function validateEnvironmentUrl(value: string): string | null {
     if (
       !(
         /^https:\/\/[a-z0-9]*?\.apps\.dynatrace\.com(?:\/|$)$/.test(value) ||
-        /^https:\/\/[a-z0-9]*?\.apps\.(?:dev|sprint)\.dynatracelabs\.com(?:\/|$)$/.test(value)
+        /^https:\/\/[a-z0-9]*?\.(?:dev|sprint)\.apps\.dynatracelabs\.com(?:\/|$)$/.test(value)
       )
     ) {
       return "This does not look right. It should be the base URL to your Platform environment.";
