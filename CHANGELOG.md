@@ -1,5 +1,12 @@
 # Change Log
 
+## Version 2.2.0 (unreleased)
+
+### ✨ New in this version:
+- [#125 - Standardize WebView Panels](https://github.com/dynatrace-extensions/dynatrace-extensions-vscode/issues/125)
+
+---
+
 ## Version 2.0.1 (03.07.2023)
 
 ### ✨ New in this version:
