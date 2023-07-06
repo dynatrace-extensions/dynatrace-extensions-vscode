@@ -55,14 +55,13 @@ jobs:
         uses: actions/setup-node@v3
         with:
           node-version: 16.x
-      - name: Install Linux dependencies
-        run: sudo apt install xvfb -y
-        if: runner.os == 'Linux'
       - name: Install extension
-        run: npm install
+        run: npm run install:all
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
           npm_config_arch: ${{ matrix.npm_config_arch }}
+      - name: Build everything
+        run: npm run build:all
       - shell: pwsh
         run: echo "target=${{ matrix.platform }}-${{ matrix.arch }}" >> $env:GITHUB_ENV
       - name: Package

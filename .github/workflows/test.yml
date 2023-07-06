@@ -11,7 +11,7 @@ on:
 
 jobs:
   test:
-    runs-on: ubuntu-latest    
+    runs-on: ubuntu-latest
     steps:
       - name: Checkout
         uses: actions/checkout@v3
@@ -22,8 +22,8 @@ jobs:
       - name: Install Linux deps
         run: sudo apt install xvfb -y
       - name: Install Extension
-        run: npm install
-      - name: Pre-test activities
-        run: npm run pretest
+        run: npm run install:all
+      - name: Build everything
+        run: npm run build:all
       - name: Run the tests
         run: xvfb-run -a npm test
