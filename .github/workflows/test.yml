@@ -25,9 +25,5 @@ jobs:
         run: npm run install:all
       - name: Build everything
         run: npm run build:all
-      - name: pwd
-        run: pwd
-      - name: ls
-        run: ls
       - name: Run the tests
         run: xvfb-run -a npm test

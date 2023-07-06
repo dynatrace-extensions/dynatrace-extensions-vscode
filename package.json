@@ -772,7 +772,7 @@
 		"watch": "tsc -watch -p ./",
 		"pretest": "npm run compile && npm run lint",
 		"lint": "eslint src --ext ts",
-		"test": "node ./out/test/runTest.js",
+		"test": "node ./out/src/test/runTest.js",
 		"build": "npm run pretest && npm run vscode:prepublish",
 		"install:all": "npm install && cd webview-ui && npm install",
 		"build:webview": "cd webview-ui && npm run build",
