@@ -21,7 +21,7 @@ jobs:
           node-version: 16.x
       - name: Install Linux deps
         run: sudo apt install xvfb -y
-      - name: Install Extension
+      - name: Install all
         run: npm run install:all
       - name: Build everything
         run: npm run build:all
