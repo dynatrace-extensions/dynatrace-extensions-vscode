@@ -20,8 +20,8 @@ import VariablesLight from "@dynatrace/strato-design-tokens/variables";
 import VariablesDark from "@dynatrace/strato-design-tokens/variables-dark";
 import { getLanguage } from "@dynatrace-sdk/user-preferences";
 
-import React, { forwardRef, useEffect, useLayoutEffect, useState } from "react";
-import { IntlProvider, MessageFormatElement } from "react-intl";
+import React, { forwardRef, useLayoutEffect } from "react";
+import { IntlProvider } from "react-intl";
 import { createGlobalStyle } from "styled-components";
 import "wicg-inert";
 
@@ -96,17 +96,6 @@ const GlobalStyle = createGlobalStyle(() => {
 });
 
 /**
- * Gets the href value set in the <base> element to prefix fetches correctly.
- * Will always end with a `/` value
- */
-function getBaseHref(): string {
-  const baseElement = document.querySelector("base");
-  const href = baseElement?.href ?? "/";
-  return href.endsWith("/") ? href : `${href}/`;
-}
-
-const defaultLanguage = "en";
-/**
  * In order to have all the providers in place for rendering overlays, applying
  * global styles or internationalization, you need to wrap your app in the
  * `AppRoot`. If you're using the `dt-app` to create your app, this is
@@ -116,11 +105,6 @@ const defaultLanguage = "en";
 // eslint-disable-next-line react/display-name
 export const AppRoot = /* @__PURE__ */ forwardRef<HTMLDivElement, WithChildren>(
   (props, forwardedRef) => {
-    /** Messages that are used for the translation. */
-    const [messages, setMessages] = useState<
-      Record<string, string> | Record<string, MessageFormatElement[]>
-    >({});
-
     const { children } = props;
 
     const theme = document.body.classList.contains("vscode-light") ? "light" : "dark";
@@ -143,24 +127,10 @@ export const AppRoot = /* @__PURE__ */ forwardRef<HTMLDivElement, WithChildren>(
       };
     }, []);
 
-    useEffect(() => {
-      fetch(`${getBaseHref()}lang/${language}.json`)
-        .then(res => {
-          return res.json();
-        })
-        .then(receivedMessages => {
-          // eslint-disable-next-line @typescript-eslint/no-unsafe-argument
-          setMessages(receivedMessages);
-        })
-        .catch(() => {
-          setMessages({});
-        });
-    }, [language]);
-
     return (
       <div ref={forwardedRef} data-testid='app-root' data-theme={theme}>
         <GlobalStyle />
-        <IntlProvider locale={language} messages={messages} defaultLocale={defaultLanguage}>
+        <IntlProvider locale={language} messages={{}} defaultLocale='en'>
           <FocusProvider>{children}</FocusProvider>
         </IntlProvider>
       </div>
