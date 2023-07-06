@@ -41,7 +41,6 @@
     "prettier/prettier": "error",
     "lines-between-class-members": "off",
     "no-underscore-dangle": ["error", {"allowAfterThis": true}],
-    "no-console": "warn",
     "prefer-const": "error",
     "functional/no-let": "warn",
     "functional/no-throw-statements": "error",
