@@ -29,8 +29,7 @@ export const WmiResultPanel = ({ data }: WmiResultPanelProps) => {
   return (
     <Flex flexDirection='column' gap={16}>
       <Heading level={1}>WMI query result</Heading>
-      <br />
-      <Flex flexDirection='column'>
+      <Flex flexDirection='column' paddingTop={20}>
         <Text textStyle='base-emphasized'>Query:</Text>
         <CodeSnippet showLineNumbers={false} language='sql'>
           {sqlFormat(query)}
