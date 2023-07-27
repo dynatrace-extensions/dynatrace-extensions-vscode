@@ -14,7 +14,7 @@
   limitations under the License.
  */
 
-import * as fs from "fs";
+import { readFileSync } from "fs";
 import axios from "axios";
 import * as vscode from "vscode";
 import { showMessage } from "../utils/code";
@@ -268,7 +268,7 @@ export class PrometheusCodeLensProvider
    * @returns whether scraping was successful (any errors) or not
    */
   private async scrape() {
-    if (!this.promUrl) {
+    if (!this.promUrl && !this.promFile) {
       return false;
     }
     try {
@@ -310,7 +310,7 @@ export class PrometheusCodeLensProvider
             return false;
           }
           try {
-            const data = fs.readFileSync(this.promFile, "utf-8");
+            const data = readFileSync(this.promFile, "utf-8");
             this.processPrometheusData(data);
             return true;
           } catch (err) {

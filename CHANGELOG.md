@@ -1,9 +1,13 @@
 # Change Log
 
-## Version 2.2.0 (unreleased)
+## Version 2.2.0 (27.07.2023)
 
 ### ✨ New in this version:
 - [#125 - Standardize WebView Panels](https://github.com/dynatrace-extensions/dynatrace-extensions-vscode/issues/125)
+
+### 🪲 Fixed in this version:
+- Prometheus scraping from file not working
+- Code Actions from Prometheus scraped metrics not being suggested
 
 ---
 
