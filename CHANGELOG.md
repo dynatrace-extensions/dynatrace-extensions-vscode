@@ -4,6 +4,7 @@
 
 ### 🚀 Improved in this version:
 - [#136 - Charts cards should specify mode](https://github.com/dynatrace-extensions/dynatrace-extensions-vscode/issues/136)
+- [#131 - Clean up lib folder on python builds](https://github.com/dynatrace-extensions/dynatrace-extensions-vscode/issues/131)
 
 ### 🪲 Fixed in this version:
 - [#132 - Error "cannot read name" when activating new extension](https://github.com/dynatrace-extensions/dynatrace-extensions-vscode/issues/132)

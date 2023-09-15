@@ -441,6 +441,7 @@ export async function buildExtension(
           const envOptions = await getPythonVenvOpts();
           const sdkAvailable = await checkDtSdkPresent(oc, cancelToken, envOptions);
           if (sdkAvailable) {
+            // Wait for the packaging to finish
             await assemblePython(
               workspaceStorage,
               path.resolve(extensionDir, ".."),
@@ -449,6 +450,15 @@ export async function buildExtension(
               oc,
               cancelToken,
             );
+            // Then, remove the lib folder
+            const libDir = path.join(extensionDir, "lib");
+            if (existsSync(libDir)) {
+              try {
+                rmSync(libDir, { recursive: true, force: true });
+              } catch (e) {
+                console.log("Couldn't clean up `lib` directory.", e.message);
+              }
+            }
           } else {
             showMessage("error", "Cannot build Python extension - dt-sdk package not available");
             return false;
