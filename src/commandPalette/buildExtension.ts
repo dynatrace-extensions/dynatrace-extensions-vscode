@@ -15,9 +15,18 @@
  */
 
 import { ExecOptions } from "child_process";
-import { copyFileSync, existsSync, mkdirSync, readFileSync, rmSync, writeFileSync } from "fs";
+import {
+  copyFileSync,
+  existsSync,
+  mkdirSync,
+  readFileSync,
+  rmSync,
+  unlinkSync,
+  writeFileSync,
+} from "fs";
 import * as path from "path";
 import AdmZip = require("adm-zip");
+import { glob } from "glob";
 import * as vscode from "vscode";
 import { Dynatrace } from "../dynatrace-api/dynatrace";
 import { DynatraceAPIError } from "../dynatrace-api/errors";
@@ -38,7 +47,8 @@ type FastModeOptions = {
 /**
  * Carries out general tasks that should be executed before the build workflow.
  * Ensures the dist folder exists and increments the extension version in case there might
- * be a conflict on the tenant (if dt is provided).
+ * be a conflict on the tenant (if dt is provided). We also delete any .DS_Store files that
+ * will mess up the extension archive for MAC users.
  * @param distDir path to the "dist" directory within the workspace
  * @param extensionFile path to the extension.yaml file
  * @param extensionContent contents of the extension.yaml file
@@ -63,6 +73,17 @@ async function preBuildTasks(
 
   const versionRegex = /^version: ("?[0-9.]+"?)/gm;
   const nextVersion = incrementExtensionVersion(currentVersion);
+
+  // Delete any .DS_Store files found
+  const extensionDir = path.resolve(extensionFile, "..");
+  const dsFiles = glob.sync("**/.DS_Store", { cwd: extensionDir });
+  dsFiles.forEach(file => {
+    try {
+      unlinkSync(path.join(extensionDir, file));
+    } catch {
+      console.log(`Couldn't delete file ${file}`);
+    }
+  });
 
   if (forceIncrement) {
     // Always increment the version
