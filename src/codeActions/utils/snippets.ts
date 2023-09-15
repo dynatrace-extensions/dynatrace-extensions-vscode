@@ -79,10 +79,8 @@ export const filterSnippet = `\
 
 export const configActionSnippet = `\
 - actionScope: GLOBAL_LIST
-  actionLocation: HEADER
   actions: <config-subaction>
 - actionScope: GLOBAL_DETAILS
-  actionLocation: HEADER
   actions: <config-subaction>`;
 
 export const configSubActionSnippet = `\
