@@ -1,5 +1,12 @@
 # Change Log
 
+## Version 2.2.1 (unreleased)
+
+### 🪲 Fixed in this version:
+- [#136 - Charts cards should specify mode](https://github.com/dynatrace-extensions/dynatrace-extensions-vscode/issues/136)
+- [#132 - Error "cannot read name" when activating new extension](https://github.com/dynatrace-extensions/dynatrace-extensions-vscode/issues/132)
+- [#135 - Screens rejected on subsequent uploads](https://github.com/dynatrace-extensions/dynatrace-extensions-vscode/issues/135)
+
 ## Version 2.2.0 (27.07.2023)
 
 ### ✨ New in this version:
