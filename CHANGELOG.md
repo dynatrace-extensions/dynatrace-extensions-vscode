@@ -2,6 +2,9 @@
 
 ## Version 2.2.1 (unreleased)
 
+### ✨ New in this version:
+- [#130 - Shortcuts to open extension in Dynatrace](https://github.com/dynatrace-extensions/dynatrace-extensions-vscode/issues/130)
+
 ### 🚀 Improved in this version:
 - [#136 - Charts cards should specify mode](https://github.com/dynatrace-extensions/dynatrace-extensions-vscode/issues/136)
 - [#131 - Clean up lib folder on python builds](https://github.com/dynatrace-extensions/dynatrace-extensions-vscode/issues/131)
