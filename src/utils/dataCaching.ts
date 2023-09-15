@@ -30,6 +30,7 @@ import { WmiQueryResult } from "../codeLens/utils/wmiUtils";
 import { Entity, EntityType } from "../dynatrace-api/interfaces/monitoredEntities";
 import { ExtensionStub } from "../interfaces/extensionMeta";
 import { EnvironmentsTreeDataProvider } from "../treeViews/environmentsTreeView";
+import { loopSafeWait } from "./code";
 import { getExtensionFilePath, getSnmpMibFiles } from "./fileSystem";
 import { fetchOID, MibModuleStore, OidInformation, parseMibFile } from "./snmp";
 
@@ -191,6 +192,11 @@ export class CachedData {
         }),
       )
       .subscribe(this.parsedExtension);
+
+    // Wait for the parsed extension to be available before completing the init
+    while (this.parsedExtension.getValue() === undefined) {
+      await loopSafeWait(100);
+    }
   }
 
   /**
