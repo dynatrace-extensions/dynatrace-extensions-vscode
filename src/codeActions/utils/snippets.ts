@@ -35,6 +35,7 @@ export const graphChartSnippet = `\
 
 export const chartCardSnippet = `\
 - key: <card-key>
+  <mode>
   numberOfVisibleCharts: 3
   displayName: <card-name>
   charts: <charts>`;

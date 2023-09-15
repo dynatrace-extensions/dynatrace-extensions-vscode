@@ -731,6 +731,7 @@ export class SnippetGenerator extends CachedDataConsumer implements vscode.CodeA
     const cardsInserted = getEntityChartCardKeys(screenIdx, extension);
     const entityMetrics = getEntityMetrics(typeIdx, extension);
     const cardsToInsert: { key: string; featureSet: string; metrics: string[] }[] = [];
+    const [, minorVersion] = extension.minDynatraceVersion.split(".");
 
     getAllMetricsByFeatureSet(extension)
       .filter(fs => !cardsInserted.includes(slugify(`${entityType}-charts-${fs.name}`)))
@@ -748,7 +749,15 @@ export class SnippetGenerator extends CachedDataConsumer implements vscode.CodeA
     return cardsToInsert.map(card =>
       this.createInsertAction(
         `Insert card for ${card.featureSet} metrics`,
-        buildChartCardSnippet(card.key, card.featureSet, card.metrics, entityType, indent),
+        buildChartCardSnippet(
+          card.key,
+          card.featureSet,
+          card.metrics,
+          entityType,
+          indent,
+          true,
+          Number(minorVersion) >= 269,
+        ),
         document,
         range,
       ),

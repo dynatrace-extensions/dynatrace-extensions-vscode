@@ -266,7 +266,8 @@ export function buildEntitiesListCardSnippet(
  * @param metrics the metrics that should be translated to charts
  * @param entityType the type of entity the metrics are assocaited with
  * @param indent level of indentation required
- * @param withNewline if true, a newline is added at the end of the snippet
+ * @param withNewline if true, a newline is added at the end of the snippet (default true)
+ * @param addMode if true, `mode` will be included in the snippet (default false)
  * @returns the formatted and indented snippet
  */
 export function buildChartCardSnippet(
@@ -276,6 +277,7 @@ export function buildChartCardSnippet(
   entityType: string,
   indent: number,
   withNewline: boolean = true,
+  addMode: boolean = false,
 ): string {
   let snippet = chartCardSnippet;
   const charts = metrics.map(m => buildGraphChartSnippet(m, entityType, 0, false)).join("\n");
@@ -283,6 +285,12 @@ export function buildChartCardSnippet(
   snippet = snippet.replace("<card-key>", slugify(key));
   snippet = snippet.replace("<card-name>", `${featureSet} metrics`);
   snippet = snippet.replace("<charts>", "\n" + indentSnippet(charts, 0, false));
+
+  if (addMode) {
+    snippet = snippet.replace("<mode>", "mode: NORMAL");
+  } else {
+    snippet = snippet.replace(/\n *<mode>/, "");
+  }
 
   return indentSnippet(snippet, indent, withNewline);
 }
@@ -410,6 +418,7 @@ export function getAllChartCardsSnippet(entityType: string, extension: Extension
   const typeIdx = types.findIndex(type => type.name === entityType);
   const entityMetrics = getEntityMetrics(typeIdx, extension);
   const cards: { key: string; featureSet: string; metrics: string[] }[] = [];
+  const [, minorVersion] = extension.minDynatraceVersion.split(".");
 
   getAllMetricsByFeatureSet(extension).forEach(fs => {
     const metrics = fs.metrics.filter(m => entityMetrics.includes(m));
@@ -423,7 +432,15 @@ export function getAllChartCardsSnippet(entityType: string, extension: Extension
   });
   return cards
     .map(card =>
-      buildChartCardSnippet(card.key, card.featureSet, card.metrics, entityType, 0, false),
+      buildChartCardSnippet(
+        card.key,
+        card.featureSet,
+        card.metrics,
+        entityType,
+        0,
+        false,
+        Number(minorVersion) >= 269,
+      ),
     )
     .join("\n");
 }
