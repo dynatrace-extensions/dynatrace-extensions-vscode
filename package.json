@@ -148,6 +148,11 @@
 				"title": "Remove environment",
 				"icon": "$(trash)"
 			},
+      {
+        "command": "dynatrace-extensions-environments.openExtension",
+        "title": "Open in Dynatrace",
+        "icon": "$(link-external)"
+      },
 			{
 				"command": "dynatrace-extensions-environments.editConfig",
 				"title": "Edit configuration",
@@ -426,6 +431,10 @@
 					"command": "dynatrace-extensions-environments.useEnvironment",
 					"when": "false"
 				},
+        {
+          "command": "dynatrace-extensions-environments.openExtension",
+          "when": "false"
+        },
 				{
 					"command": "dynatrace-extensions-environments.editConfig",
 					"when": "false"
@@ -630,6 +639,11 @@
 					"when": "view == dynatrace-extensions-environments && (viewItem == dynatraceEnvironment || viewItem == currentDynatraceEnvironment)",
 					"group": "inline@3"
 				},
+        {
+          "command": "dynatrace-extensions-environments.openExtension",
+          "when": "view == dynatrace-extensions-environments && viewItem == deployedExtension",
+          "group": "inline@2"
+        },
 				{
 					"command": "dynatrace-extensions-environments.addConfig",
 					"when": "view == dynatrace-extensions-environments && viewItem == deployedExtension",

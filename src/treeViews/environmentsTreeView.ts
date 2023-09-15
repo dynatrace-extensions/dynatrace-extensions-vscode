@@ -31,6 +31,7 @@ import {
   deleteMonitoringConfiguration,
   addMonitoringConfiguration,
   saveMoniotringConfiguration,
+  openExtension,
 } from "./commands/environments";
 
 const ICONS_PATH = path.join(__filename, "..", "..", "src", "assets", "icons");
@@ -109,6 +110,7 @@ interface IDeployedExtension extends EnvironmentsTreeItem {
 export class DeployedExtension extends vscode.TreeItem implements IDeployedExtension {
   id: string;
   dt: Dynatrace;
+  tenantUrl: string;
   extensionVersion: string;
   contextValue: "deployedExtension";
 
@@ -123,10 +125,12 @@ export class DeployedExtension extends vscode.TreeItem implements IDeployedExten
     extensionName: string,
     extensionVersion: string,
     dt: Dynatrace,
+    tenantUrl: string,
   ) {
     super(`${extensionName} (${extensionVersion})`, collapsibleState);
     this.id = extensionName;
     this.dt = dt;
+    this.tenantUrl = tenantUrl;
     this.extensionVersion = extensionVersion;
     this.contextValue = "deployedExtension";
     this.iconPath = ICONS.DEPLOYED_EXTENSION;
@@ -320,6 +324,15 @@ export class EnvironmentsTreeDataProvider implements vscode.TreeDataProvider<Env
         });
       },
     );
+    // Other commands
+    vscode.commands.registerCommand(
+      "dynatrace-extensions-environments.openExtension",
+      async (extension: DeployedExtension) => {
+        await openExtension(extension).catch(err => {
+          console.log(`Couldn't open URL for extension ${extension.id}`, (err as Error).message);
+        });
+      },
+    );
   }
 
   /**
@@ -362,6 +375,7 @@ export class EnvironmentsTreeDataProvider implements vscode.TreeDataProvider<Env
                       extension.extensionName,
                       extension.version,
                       element.dt,
+                      (element as DynatraceEnvironment).url,
                     ),
                 ),
               ),

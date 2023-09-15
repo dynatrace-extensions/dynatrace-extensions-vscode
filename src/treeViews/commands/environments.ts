@@ -593,3 +593,15 @@ export async function saveMoniotringConfiguration(config: MonitoringConfiguratio
   writeFileSync(path.join(configDir, fileName), existingConfig);
   showMessage("info", "Configuration file saved successfully.");
 }
+
+/**
+ * Opens the Extension configuration page in the browser.
+ * @param extension extension clicked on
+ */
+export async function openExtension(extension: DeployedExtension) {
+  const baseUrl = extension.tenantUrl.includes(".apps")
+    ? `${extension.tenantUrl}/ui/apps/dynatrace.classic.extensions`
+    : extension.tenantUrl;
+
+  await vscode.env.openExternal(vscode.Uri.parse(`${baseUrl}/ui/hub/ext/${extension.id}`));
+}
