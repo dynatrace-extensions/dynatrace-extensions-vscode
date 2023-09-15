@@ -225,8 +225,9 @@ function registerCommandPaletteCommands(
         (await checkExtensionZipExists())
       ) {
         const dtClient = await tenantsProvider.getDynatraceClient();
-        if (dtClient) {
-          await uploadExtension(dtClient);
+        const currentEnv = await tenantsProvider.getCurrentEnvironment();
+        if (dtClient && currentEnv) {
+          await uploadExtension(dtClient, currentEnv.url);
         }
       }
     }),
@@ -240,8 +241,9 @@ function registerCommandPaletteCommands(
           (await checkEnvironmentConnected(tenantsProvider))
         ) {
           const dtClient = await tenantsProvider.getDynatraceClient();
-          if (dtClient) {
-            await activateExtension(dtClient, cachedData, version);
+          const currentEnv = await tenantsProvider.getCurrentEnvironment();
+          if (dtClient && currentEnv) {
+            await activateExtension(dtClient, cachedData, currentEnv.url, version);
           }
         }
       },

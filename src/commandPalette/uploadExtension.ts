@@ -29,9 +29,10 @@ import { loopSafeWait, showMessage } from "../utils/code";
  * a registered extensions workspace. In case the maximum number of versions is reached,
  * the user is prompted for deletion. At the end, the activate extension command is linked.
  * @param dt Dynatrace API Client
+ * @param tenantUrl Base URL to the Dynatrace environment
  * @returns void
  */
-export async function uploadExtension(dt: Dynatrace) {
+export async function uploadExtension(dt: Dynatrace, tenantUrl: string) {
   // Get the most recent entry in dist folder
   const rootPath = vscode.workspace.workspaceFolders?.[0].uri.fsPath;
   if (!rootPath) {
@@ -154,7 +155,14 @@ export async function uploadExtension(dt: Dynatrace) {
       "No",
     );
     if (choice !== "Yes") {
-      showMessage("info", "Operation completed.");
+      const open = await vscode.window.showInformationMessage("Operation completed.", "Open");
+      if (open === "Open") {
+        const baseUrl = tenantUrl.includes(".apps")
+          ? `${tenantUrl}/ui/apps/dynatrace.classic.extensions`
+          : tenantUrl;
+
+        await vscode.env.openExternal(vscode.Uri.parse(`${baseUrl}/ui/hub/ext/${extensionName}`));
+      }
       return;
     }
     await vscode.commands.executeCommand(

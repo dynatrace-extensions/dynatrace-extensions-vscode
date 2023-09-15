@@ -29,7 +29,12 @@ import { getExtensionFilePath } from "../utils/fileSystem";
  * @param cachedData provider for cacheable data
  * @param version optional version to activate
  */
-export async function activateExtension(dt: Dynatrace, cachedData: CachedData, version?: string) {
+export async function activateExtension(
+  dt: Dynatrace,
+  cachedData: CachedData,
+  tenantUrl: string,
+  version?: string,
+) {
   const extensionFile = getExtensionFilePath();
   if (!extensionFile) {
     return;
@@ -54,8 +59,17 @@ export async function activateExtension(dt: Dynatrace, cachedData: CachedData, v
   if (version) {
     dt.extensionsV2
       .putEnvironmentConfiguration(extension.name, version)
-      .then(() => {
-        showMessage("info", "Extension activated successfully");
+      .then(() => vscode.window.showInformationMessage("Extension activated successfully.", "Open"))
+      .then(open => {
+        if (open === "Open") {
+          const baseUrl = tenantUrl.includes(".apps")
+            ? `${tenantUrl}/ui/apps/dynatrace.classic.extensions`
+            : tenantUrl;
+
+          return vscode.env.openExternal(
+            vscode.Uri.parse(`${baseUrl}/ui/hub/ext/${extension.name}`),
+          );
+        }
       })
       .catch((err: DynatraceAPIError) => {
         showMessage("error", err.message);
