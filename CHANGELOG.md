@@ -1,6 +1,6 @@
 # Change Log
 
-## Version 2.2.1 (unreleased)
+## Version 2.2.1 (15.09.2023)
 
 ### ✨ New in this version:
 - [#130 - Shortcuts to open extension in Dynatrace](https://github.com/dynatrace-extensions/dynatrace-extensions-vscode/issues/130)
