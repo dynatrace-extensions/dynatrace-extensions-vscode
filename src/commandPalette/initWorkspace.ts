@@ -243,10 +243,12 @@ export async function initWorkspace(
         }
       } else {
         showMessage("info", `Using cached schema version ${schemaVersion}`);
-        const mainSchema = path.join(
-          path.join(context.globalStorageUri.fsPath, schemaVersion),
-          "extension.schema.json",
-        );
+        const mainSchema = vscode.Uri.file(
+          path.join(
+            path.join(context.globalStorageUri.fsPath, schemaVersion),
+            "extension.schema.json",
+          ),
+        ).toString();
         vscode.workspace
           .getConfiguration()
           .update("yaml.schemas", { [mainSchema]: "extension.yaml" })

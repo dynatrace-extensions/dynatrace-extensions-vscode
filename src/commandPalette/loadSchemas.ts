@@ -135,7 +135,7 @@ export async function loadSchemas(
   }
 
   // Update the YAML Schema extension to use the new version
-  const mainSchema = path.join(location, "extension.schema.json");
+  const mainSchema = vscode.Uri.file(path.join(location, "extension.schema.json")).toString();
   vscode.workspace
     .getConfiguration()
     .update("yaml.schemas", { [mainSchema]: "extension.yaml" })
