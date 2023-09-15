@@ -2,12 +2,17 @@
 
 ## Version 2.2.1 (unreleased)
 
-### 🪲 Fixed in this version:
+### 🚀 Improved in this version:
 - [#136 - Charts cards should specify mode](https://github.com/dynatrace-extensions/dynatrace-extensions-vscode/issues/136)
+
+### 🪲 Fixed in this version:
 - [#132 - Error "cannot read name" when activating new extension](https://github.com/dynatrace-extensions/dynatrace-extensions-vscode/issues/132)
 - [#135 - Screens rejected on subsequent uploads](https://github.com/dynatrace-extensions/dynatrace-extensions-vscode/issues/135)
 - [#127 - .DS_Store files may impact zip archiving for Mac users](https://github.com/dynatrace-extensions/dynatrace-extensions-vscode/issues/127)
 - [#134 - Validation broken from special characters on path](https://github.com/dynatrace-extensions/dynatrace-extensions-vscode/issues/134)
+- [#133 - Create Alert command fails if no topology exists](https://github.com/dynatrace-extensions/dynatrace-extensions-vscode/issues/133)
+
+---
 
 ## Version 2.2.0 (27.07.2023)
 

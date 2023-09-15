@@ -397,7 +397,7 @@ export function getEntityForMetric(
   }
 
   // Otherwise, rely on topology
-  if (extension.topology.types) {
+  if (extension.topology?.types) {
     for (const type of extension.topology.types) {
       for (const rule of type.rules) {
         for (const source of rule.sources.filter(s => s.sourceType === "Metrics")) {
