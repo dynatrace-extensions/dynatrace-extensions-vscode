@@ -24,6 +24,7 @@ import * as path from "path";
 import { copySync } from "fs-extra";
 import { glob } from "glob";
 import * as vscode from "vscode";
+import { LocalExecutionSummary, RemoteExecutionSummary } from "../interfaces/simulator";
 import { DynatraceEnvironmentData, ExtensionWorkspace } from "../interfaces/treeViewData";
 import { showMessage } from "./code";
 
@@ -261,6 +262,24 @@ export async function removeWorkspace(context: vscode.ExtensionContext, workspac
     "dynatrace-extensions.numWorkspaces",
     workspaces.length - 1,
   );
+}
+
+/**
+ * Writes an extension simulator summary to the global storage.
+ * @param context - VSCode Extension Context
+ * @param summary - the summary to write
+ */
+export function registerSimulatorSummary(
+  context: vscode.ExtensionContext,
+  summary: LocalExecutionSummary | RemoteExecutionSummary,
+) {
+  const summariesJson = path.join(context.globalStorageUri.fsPath, "summaries.json");
+  const summaries = JSON.parse(readFileSync(summariesJson).toString()) as (
+    | LocalExecutionSummary
+    | RemoteExecutionSummary
+  )[];
+  summaries.push(summary);
+  writeFileSync(summariesJson, JSON.stringify(summaries));
 }
 
 /**

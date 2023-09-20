@@ -13,7 +13,7 @@ import {
 import { showMessage } from "../utils/code";
 import { CachedDataConsumer } from "../utils/dataCaching";
 import { getDatasourceName } from "../utils/extensionParsing";
-import { getExtensionFilePath } from "../utils/fileSystem";
+import { getExtensionFilePath, registerSimulatorSummary } from "../utils/fileSystem";
 import {
   canSimulateDatasource,
   getDatasourceDir,
@@ -34,12 +34,14 @@ export class SimulatorManager extends CachedDataConsumer {
   private activationFile: string;
   private datasourceDir: string;
   private datasourceExe: string;
+  private readonly context: vscode.ExtensionContext;
   private readonly outputChannel: vscode.OutputChannel;
   private readonly statusBar: vscode.StatusBarItem;
 
   constructor(context: vscode.ExtensionContext) {
     super(); // Data cache access
     this.url = "file://CONSOLE";
+    this.context = context;
     this.idToken = path.join(context.globalStorageUri.fsPath, "idToken.txt");
     this.localOs = process.platform === "win32" ? "WINDOWS" : "LINUX";
 
@@ -163,11 +165,18 @@ export class SimulatorManager extends CachedDataConsumer {
     return true;
   }
 
+  /**
+   * Spawns a child process which executes the datasource with the current extension files.
+   * @param command - command to execute
+   * @param options - spawn options
+   */
   private createProcess(command: string, options: SpawnOptions) {
+    const startTime = new Date();
+    let success = true;
     const logFilePath = path.join(
       vscode.workspace.workspaceFolders[0].uri.fsPath,
       "logs",
-      `${new Date().toISOString().replace(/:/g, "-")}_simulator.log`,
+      `${startTime.toISOString().replace(/:/g, "-")}_simulator.log`,
     );
     this.simulatorProcess = spawn(command, options);
 
@@ -178,6 +187,7 @@ export class SimulatorManager extends CachedDataConsumer {
     this.simulatorProcess.on("error", err => {
       this.outputChannel.appendLine("ERROR:");
       this.outputChannel.appendLine(err.message);
+      success = false;
       writeFileSync(logFilePath, `ERROR:\n${err.message}\n`, { flag: "a" });
     });
 
@@ -188,6 +198,7 @@ export class SimulatorManager extends CachedDataConsumer {
     this.simulatorProcess.stderr.on("data", (data: Buffer) => {
       this.outputChannel.appendLine("Error:");
       this.outputChannel.append(data.toString());
+      success = false;
       writeFileSync(logFilePath, `Error:\n${data.toString()}`, { flag: "a" });
     });
 
@@ -198,6 +209,8 @@ export class SimulatorManager extends CachedDataConsumer {
     });
 
     this.simulatorProcess.on("close", (code, signal) => {
+      const duration = Math.round((new Date().getTime() - startTime.getTime()) / 1000);
+      registerSimulatorSummary(this.context, { location: "LOCAL", startTime, duration, success });
       this.outputChannel.appendLine(
         `Simulator process closed with code ${code ?? signal.toString()}`,
       );
