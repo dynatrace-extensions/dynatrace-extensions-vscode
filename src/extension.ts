@@ -49,6 +49,7 @@ import { DiagnosticsProvider } from "./diagnostics/diagnostics";
 import { SnmpHoverProvider } from "./hover/snmpHover";
 import { ConnectionStatusManager } from "./statusBar/connection";
 import { FastModeStatus } from "./statusBar/fastMode";
+import { SimulatorManager } from "./statusBar/simulator";
 import { EnvironmentsTreeDataProvider } from "./treeViews/environmentsTreeView";
 import { ExtensionsTreeDataProvider } from "./treeViews/extensionsTreeView";
 import {
@@ -606,6 +607,7 @@ export async function activate(context: vscode.ExtensionContext) {
   await cachedData.initialize();
   const webviewPanelManager = new WebviewPanelManager(context.extensionUri);
   const extensionsTreeViewProvider = new ExtensionsTreeDataProvider(context);
+  const simulatorManager = new SimulatorManager(context);
   const metricLensProvider = new SelectorCodeLensProvider(
     "metricSelector:",
     "metricSelectorsCodeLens",
@@ -640,6 +642,7 @@ export async function activate(context: vscode.ExtensionContext) {
       metricLensProvider,
       entityLensProvider,
       prometheusActionProvider,
+      simulatorManager,
     ],
     prometheusData: [prometheusLensProvider, prometheusActionProvider],
     snmpData: [snmpActionProvider, diagnosticsProvider, snmpHoverProvider],
@@ -647,6 +650,9 @@ export async function activate(context: vscode.ExtensionContext) {
     wmiData: [wmiLensProvider],
     wmiStatuses: [wmiLensProvider],
   });
+
+  // Subscribers can now access cached data
+  simulatorManager.isReady();
 
   // Perform all feature registrations
   context.subscriptions.push(

@@ -37,6 +37,9 @@ export function initGlobalStorage(context: vscode.ExtensionContext) {
   const globalStoragePath = context.globalStorageUri.fsPath;
   const extensionWorkspacesJson = path.join(globalStoragePath, "extensionWorkspaces.json");
   const dynatraceEnvironmentsJson = path.join(globalStoragePath, "dynatraceEnvironments.json");
+  const idTokenPath = path.join(globalStoragePath, "idToken.txt");
+  const targetsJson = path.join(globalStoragePath, "targets.json");
+  const summariesJson = path.join(globalStoragePath, "summaries.json");
 
   // Create global storage folder if needed
   if (!existsSync(globalStoragePath)) {
@@ -51,6 +54,21 @@ export function initGlobalStorage(context: vscode.ExtensionContext) {
   // Create environments json if needed
   if (!existsSync(dynatraceEnvironmentsJson)) {
     writeFileSync(dynatraceEnvironmentsJson, "[]");
+  }
+
+  // Create idToken file if needed
+  if (!existsSync(idTokenPath)) {
+    writeFileSync(idTokenPath, "1234");
+  }
+
+  // Create targets json if needed
+  if (!existsSync(targetsJson)) {
+    writeFileSync(targetsJson, "[]");
+  }
+
+  // Create summaries json if needed
+  if (!existsSync(summariesJson)) {
+    writeFileSync(summariesJson, "[]");
   }
 }
 
