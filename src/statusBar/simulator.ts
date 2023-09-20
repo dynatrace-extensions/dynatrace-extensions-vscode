@@ -1,5 +1,7 @@
-import { existsSync } from "fs";
+import { ChildProcess, SpawnOptions, spawn } from "child_process";
+import { existsSync, mkdirSync, writeFileSync } from "fs";
 import * as path from "path";
+import pidtree = require("pidtree");
 import * as vscode from "vscode";
 import {
   EecType,
@@ -24,13 +26,14 @@ const SIMULATOR_STOP_CMD = "dynatrace-extensions.simulator.stop";
 const SIMULATOR_CHECK_READY_CMD = "dynatrace-extensions.simulator.checkReady";
 
 export class SimulatorManager extends CachedDataConsumer {
+  private simulatorProcess: ChildProcess | undefined;
   private idToken: string;
   private url: string;
   private localOs: OsType;
-  private datasourceDir: string;
-  private datasourceExe: string;
   private extensionFile: string;
   private activationFile: string;
+  private datasourceDir: string;
+  private datasourceExe: string;
   private readonly outputChannel: vscode.OutputChannel;
   private readonly statusBar: vscode.StatusBarItem;
 
@@ -41,7 +44,7 @@ export class SimulatorManager extends CachedDataConsumer {
     this.localOs = process.platform === "win32" ? "WINDOWS" : "LINUX";
 
     // Create staus bar and hide it
-    this.statusBar = vscode.window.createStatusBarItem(vscode.StatusBarAlignment.Left, 1);
+    this.statusBar = vscode.window.createStatusBarItem(vscode.StatusBarAlignment.Left, 0);
     this.statusBar.hide();
 
     // Create the output channel for logs
@@ -78,6 +81,7 @@ export class SimulatorManager extends CachedDataConsumer {
         this.statusBar.command = SIMULATOR_CHECK_READY_CMD;
         break;
     }
+    this.statusBar.show();
   }
 
   /**
@@ -159,14 +163,73 @@ export class SimulatorManager extends CachedDataConsumer {
     return true;
   }
 
-  private createProcess() {}
+  private createProcess(command: string, options: SpawnOptions) {
+    const logFilePath = path.join(
+      vscode.workspace.workspaceFolders[0].uri.fsPath,
+      "logs",
+      `${new Date().toISOString().replace(/:/g, "-")}_simulator.log`,
+    );
+    this.simulatorProcess = spawn(command, options);
 
+    this.outputChannel.appendLine(
+      `Simulator process created with PID ${this.simulatorProcess.pid}`,
+    );
+
+    this.simulatorProcess.on("error", err => {
+      this.outputChannel.appendLine("ERROR:");
+      this.outputChannel.appendLine(err.message);
+      writeFileSync(logFilePath, `ERROR:\n${err.message}\n`, { flag: "a" });
+    });
+
+    this.simulatorProcess.stdout.on("data", (data: Buffer) => {
+      this.outputChannel.append(data.toString());
+      writeFileSync(logFilePath, data.toString(), { flag: "a" });
+    });
+    this.simulatorProcess.stderr.on("data", (data: Buffer) => {
+      this.outputChannel.appendLine("Error:");
+      this.outputChannel.append(data.toString());
+      writeFileSync(logFilePath, `Error:\n${data.toString()}`, { flag: "a" });
+    });
+
+    this.simulatorProcess.on("exit", (code, signal) => {
+      this.outputChannel.appendLine(
+        `Simulator process exited with code ${code ?? signal.toString()}`,
+      );
+    });
+
+    this.simulatorProcess.on("close", (code, signal) => {
+      this.outputChannel.appendLine(
+        `Simulator process closed with code ${code ?? signal.toString()}`,
+      );
+      this.simulatorProcess = undefined;
+    });
+  }
+
+  /**
+   * Starts a local simulation of the extension.
+   */
   private startLocally() {
-    showMessage("info", "Great! Good job so far!");
+    const command =
+      `.${path.sep}${this.datasourceExe} --url "${this.url}"  --idtoken "${this.idToken}" ` +
+      `--extConfig "file://${this.extensionFile}" --userConfig "file://${this.activationFile}"`;
+
+    // Initial message before starting the process
+    this.outputChannel.replace("Starting simulation...\n");
+    this.outputChannel.show();
+    this.outputChannel.appendLine(`Running command: ${command}\n`);
+
+    // Create the process
+    this.createProcess(command, {
+      shell: process.platform === "win32" ? "powershell.exe" : "/bin/bash",
+      cwd: this.datasourceDir,
+    });
   }
 
   private startRemotely() {}
 
+  /**
+   * Starts the main user flow for the simulator.
+   */
   private async start() {
     // Simulation location
     const locationChoice = await vscode.window.showQuickPick(
@@ -228,18 +291,61 @@ export class SimulatorManager extends CachedDataConsumer {
     if (
       this.isReady(locationChoice.value as SimulationLocation, eecChoice.value as EecType, target)
     ) {
-      switch (locationChoice.value) {
-        case "LOCAL":
-          this.startLocally();
-          break;
-        case "REMOTE":
-          this.startRemotely();
-          break;
+      // Create log folder if it doesn't exist
+      const logsDir = path.join(vscode.workspace.workspaceFolders[0].uri.fsPath, "logs");
+      if (!existsSync(logsDir)) {
+        mkdirSync(logsDir);
+      }
+      // Start the simulation
+      try {
+        switch (locationChoice.value) {
+          case "LOCAL":
+            this.startLocally();
+            break;
+          case "REMOTE":
+            this.startRemotely();
+            break;
+        }
+        this.updateStatusBarDetails("RUNNING");
+      } catch (err) {
+        showMessage("error", `Error starting the simulation ${(err as Error).message}`);
       }
     } else {
       showMessage("warn", "Cannot simulate extension, check status bar for details");
     }
   }
 
-  private stop() {}
+  /**
+   * Performs all the necessary cleanup when the simulator is stopped.
+   */
+  private stop() {
+    try {
+      if (this.simulatorProcess) {
+        // Datasource is detached from main process, so we need to kill the entire process tree
+        pidtree(this.simulatorProcess.pid, (err, pids) => {
+          if (err) {
+            showMessage(
+              "error",
+              `Error getting all PIDs: ${err.message}. Please ensure all processes are manually stopped.`,
+            );
+          } else {
+            pids.forEach(pid => {
+              try {
+                process.kill(pid, "SIGKILL");
+              } catch (e) {
+                showMessage("error", `Process ${pid} must be stopped manually.`);
+              }
+            });
+          }
+        });
+        // Finally, kill our main process
+        this.simulatorProcess.kill("SIGKILL");
+        this.simulatorProcess = undefined;
+      }
+    } catch (err) {
+      showMessage("error", `Error stopping the simulation ${(err as Error).message}`);
+    } finally {
+      this.updateStatusBarDetails("READY");
+    }
+  }
 }
