@@ -287,6 +287,21 @@ export function registerSimulatorSummary(
 }
 
 /**
+ * Gets all extension simulator summaries from the global storage.
+ * @param context - VSCode Extension Context
+ * @returns all summaries
+ */
+export function getSimulatorSummaries(
+  context: vscode.ExtensionContext,
+): (LocalExecutionSummary | RemoteExecutionSummary)[] {
+  const summariesJson = path.join(context.globalStorageUri.fsPath, "summaries.json");
+  return JSON.parse(readFileSync(summariesJson).toString()) as (
+    | LocalExecutionSummary
+    | RemoteExecutionSummary
+  )[];
+}
+
+/**
  * Registers a list of targets for the extension simulator in the global storage.
  * @param context - VSCode Extension Context
  * @param targets - the targets to write

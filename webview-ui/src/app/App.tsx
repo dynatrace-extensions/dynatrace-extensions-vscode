@@ -1,10 +1,12 @@
 import { Page } from "@dynatrace/strato-components-preview";
 import React, { useEffect, useState } from "react";
 import { EmptyState } from "./components/EmptyState";
+import { ExtensionSimulator } from "./components/panels/ExtensionSimulator";
 import { MetricResultsPanel } from "./components/panels/MetricResultsPanel";
 import { WmiResultPanel } from "./components/panels/WmiResultPanel";
 import { PanelData } from "./interfaces/general";
 import { MetricSeriesCollection } from "./interfaces/metricResultsPanel";
+import { SimulatorPanelData } from "./interfaces/simulator";
 import { WebviewApi } from "./interfaces/vscode";
 import { WmiQueryResult } from "./interfaces/wmiResultPanel";
 
@@ -51,6 +53,18 @@ export const App = ({ vscode, dataType, data }: AppProps) => {
           <MetricResultsPanel data={panelData.data as MetricSeriesCollection[]} />
         )}
         {dataType === "WMI_RESULT" && <WmiResultPanel data={panelData.data as WmiQueryResult} />}
+        {dataType === "SIMULATOR_DATA" && (
+          <ExtensionSimulator
+            panelData={panelData as SimulatorPanelData}
+            setPanelData={
+              setPanelData as (
+                newData:
+                  | SimulatorPanelData
+                  | ((prevValue: SimulatorPanelData) => SimulatorPanelData),
+              ) => void
+            }
+          />
+        )}
       </Page.Main>
     </Page>
   );

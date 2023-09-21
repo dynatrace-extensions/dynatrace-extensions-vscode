@@ -10,6 +10,7 @@ import {
   RemoteExecutionSummary,
   RemoteTarget,
   SimulationLocation,
+  SimulatorPanelData,
   SimulatorStatus,
 } from "../interfaces/simulator";
 import { loopSafeWait, showMessage } from "../utils/code";
@@ -17,6 +18,7 @@ import { CachedDataConsumer } from "../utils/dataCaching";
 import { getDatasourceName } from "../utils/extensionParsing";
 import {
   getExtensionFilePath,
+  getSimulatorSummaries,
   getSimulatorTargets,
   registerSimulatorSummary,
 } from "../utils/fileSystem";
@@ -26,13 +28,20 @@ import {
   getDatasourceExe,
   getDatasourcePath,
 } from "../utils/simulator";
+import { REGISTERED_PANELS, WebviewPanelManager } from "../webviews/webviewPanel";
 
 const SIMULATOR_START_CMD = "dynatrace-extensions.simulator.start";
 const SIMULATOR_STOP_CMD = "dynatrace-extensions.simulator.stop";
 const SIMULATOR_CHECK_READY_CMD = "dynatrace-extensions.simulator.checkReady";
+const SIMULATOR_OPEN_UI_CMD = "dynatrace-extensions.simulator.openUI";
+const SIMULATOR_PANEL_DATA_TYPE = "SIMULATOR_DATA";
 
+/**
+ * Helper class for managing the Extension Simulator, its UI, and data.
+ */
 export class SimulatorManager extends CachedDataConsumer {
   private simulatorProcess: ChildProcess | undefined;
+  private simulatorStatus: SimulatorStatus;
   private idToken: string;
   private url: string;
   private localOs: OsType;
@@ -43,13 +52,15 @@ export class SimulatorManager extends CachedDataConsumer {
   private readonly context: vscode.ExtensionContext;
   private readonly outputChannel: vscode.OutputChannel;
   private readonly statusBar: vscode.StatusBarItem;
+  private readonly panelManager: WebviewPanelManager;
 
-  constructor(context: vscode.ExtensionContext) {
+  constructor(context: vscode.ExtensionContext, panelManager: WebviewPanelManager) {
     super(); // Data cache access
     this.url = "file://CONSOLE";
     this.context = context;
     this.idToken = path.join(context.globalStorageUri.fsPath, "idToken.txt");
     this.localOs = process.platform === "win32" ? "WINDOWS" : "LINUX";
+    this.panelManager = panelManager;
 
     // Create staus bar and hide it
     this.statusBar = vscode.window.createStatusBarItem(vscode.StatusBarAlignment.Left, 0);
@@ -64,6 +75,7 @@ export class SimulatorManager extends CachedDataConsumer {
     });
     vscode.commands.registerCommand(SIMULATOR_STOP_CMD, () => this.stop());
     vscode.commands.registerCommand(SIMULATOR_CHECK_READY_CMD, () => this.isReady());
+    vscode.commands.registerCommand(SIMULATOR_OPEN_UI_CMD, () => this.openUI());
   }
 
   /**
@@ -72,21 +84,23 @@ export class SimulatorManager extends CachedDataConsumer {
    * @param message - optional message to display in the tooltip
    */
   private updateStatusBarDetails(status: SimulatorStatus, message?: string) {
+    this.simulatorStatus = status;
+    this.statusBar.command = SIMULATOR_OPEN_UI_CMD;
     switch (status) {
       case "READY":
         this.statusBar.text = "$(debug-start) Simulate extension";
         this.statusBar.tooltip = "Click to start simulating your extension";
-        this.statusBar.command = SIMULATOR_START_CMD;
+        // this.statusBar.command = SIMULATOR_START_CMD;
         break;
       case "RUNNING":
         this.statusBar.text = "$(debug-stop) Simulate extension";
         this.statusBar.tooltip = "Click to stop the current simulation";
-        this.statusBar.command = SIMULATOR_STOP_CMD;
+        // this.statusBar.command = SIMULATOR_STOP_CMD;
         break;
       case "NOTREADY":
         this.statusBar.text = "$(warning) Cannot simulate extension";
         this.statusBar.tooltip = message ?? "One or more checks failed. Click to check again.";
-        this.statusBar.command = SIMULATOR_CHECK_READY_CMD;
+        // this.statusBar.command = SIMULATOR_CHECK_READY_CMD;
         break;
     }
     this.statusBar.show();
@@ -447,5 +461,16 @@ export class SimulatorManager extends CachedDataConsumer {
     } finally {
       this.updateStatusBarDetails("READY");
     }
+  }
+
+  private openUI() {
+    this.panelManager.render(REGISTERED_PANELS.SIMULATOR_UI, "Extension Simulator", {
+      dataType: SIMULATOR_PANEL_DATA_TYPE,
+      data: {
+        targets: getSimulatorTargets(this.context),
+        summaries: getSimulatorSummaries(this.context),
+        status: this.simulatorStatus,
+      },
+    } as SimulatorPanelData);
   }
 }

@@ -22,6 +22,7 @@ import * as vscode from "vscode";
 export enum REGISTERED_PANELS {
   METRIC_RESULTS = "dynatrace-extensions.MetricResults",
   WMI_RESULTS = "dynatrace-extensions.WmiResults",
+  SIMULATOR_UI = "dynatrace-extensions.SimulatorUI",
 }
 
 /**
@@ -50,7 +51,7 @@ function getColumn() {
   return vscode.window.activeTextEditor ? vscode.ViewColumn.Beside : vscode.ViewColumn.One;
 }
 
-interface PanelData {
+export interface PanelData {
   // Used to match component on the React side
   dataType: string;
   // Holds actual data the panel works with
@@ -190,6 +191,7 @@ export class WebviewPanelManager implements vscode.WebviewPanelSerializer {
       // Otherwise, create and show a new one
       const newPanel = vscode.window.createWebviewPanel(viewType, title, getColumn(), {
         enableScripts: true,
+        enableCommandUris: true,
         localResourceRoots: [
           // Enable JS in the webview
           vscode.Uri.joinPath(this.extensionUri, "out"),

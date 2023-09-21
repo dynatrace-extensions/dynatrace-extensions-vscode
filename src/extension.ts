@@ -607,7 +607,7 @@ export async function activate(context: vscode.ExtensionContext) {
   await cachedData.initialize();
   const webviewPanelManager = new WebviewPanelManager(context.extensionUri);
   const extensionsTreeViewProvider = new ExtensionsTreeDataProvider(context);
-  const simulatorManager = new SimulatorManager(context);
+  const simulatorManager = new SimulatorManager(context, webviewPanelManager);
   const metricLensProvider = new SelectorCodeLensProvider(
     "metricSelector:",
     "metricSelectorsCodeLens",
