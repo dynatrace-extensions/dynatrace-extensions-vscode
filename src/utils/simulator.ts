@@ -22,9 +22,9 @@ export function getDatasourceDir(os: OsType, eecType: EecType, dataSource: strin
  * @param dataSource - datasource name
  * @returns name of the file
  */
-export function getDatasourceExe(eecType: EecType, dataSource: string) {
+export function getDatasourceExe(os: OsType, eecType: EecType, dataSource: string) {
   const exePrefix = eecType === "ONEAGENT" ? "oneagent" : "dynatrace";
-  return `${exePrefix}source${dataSource}.exe`;
+  return `${exePrefix}source${dataSource}` + (os === "WINDOWS" ? ".exe" : "");
 }
 
 /**
@@ -35,7 +35,7 @@ export function getDatasourceExe(eecType: EecType, dataSource: string) {
  * @returns - full path to the datasource executable
  */
 export function getDatasourcePath(os: OsType, eecType: EecType, dataSource: string) {
-  return `${getDatasourceDir(os, eecType, dataSource)}${getDatasourceExe(eecType, dataSource)}`;
+  return `${getDatasourceDir(os, eecType, dataSource)}${getDatasourceExe(os, eecType, dataSource)}`;
 }
 
 export function canSimulateDatasource(os: OsType, eecType: EecType, dataSource: string) {

@@ -24,7 +24,11 @@ import * as path from "path";
 import { copySync } from "fs-extra";
 import { glob } from "glob";
 import * as vscode from "vscode";
-import { LocalExecutionSummary, RemoteExecutionSummary } from "../interfaces/simulator";
+import {
+  LocalExecutionSummary,
+  RemoteExecutionSummary,
+  RemoteTarget,
+} from "../interfaces/simulator";
 import { DynatraceEnvironmentData, ExtensionWorkspace } from "../interfaces/treeViewData";
 import { showMessage } from "./code";
 
@@ -280,6 +284,29 @@ export function registerSimulatorSummary(
   )[];
   summaries.push(summary);
   writeFileSync(summariesJson, JSON.stringify(summaries));
+}
+
+/**
+ * Registers a list of targets for the extension simulator in the global storage.
+ * @param context - VSCode Extension Context
+ * @param targets - the targets to write
+ */
+export function registerSimulatorTargets(
+  context: vscode.ExtensionContext,
+  targets: RemoteTarget[],
+) {
+  const targetsJson = path.join(context.globalStorageUri.fsPath, "targets.json");
+  writeFileSync(targetsJson, JSON.stringify(targets));
+}
+
+/**
+ * Fetches all extension simulator summaries from the global storage.
+ * @param context - VSCode Extension Context
+ * @returns - all targets
+ */
+export function getSimulatorTargets(context: vscode.ExtensionContext): RemoteTarget[] {
+  const targetsJson = path.join(context.globalStorageUri.fsPath, "targets.json");
+  return JSON.parse(readFileSync(targetsJson).toString()) as RemoteTarget[];
 }
 
 /**

@@ -5,15 +5,21 @@ import pidtree = require("pidtree");
 import * as vscode from "vscode";
 import {
   EecType,
+  LocalExecutionSummary,
   OsType,
+  RemoteExecutionSummary,
   RemoteTarget,
   SimulationLocation,
   SimulatorStatus,
 } from "../interfaces/simulator";
-import { showMessage } from "../utils/code";
+import { loopSafeWait, showMessage } from "../utils/code";
 import { CachedDataConsumer } from "../utils/dataCaching";
 import { getDatasourceName } from "../utils/extensionParsing";
-import { getExtensionFilePath, registerSimulatorSummary } from "../utils/fileSystem";
+import {
+  getExtensionFilePath,
+  getSimulatorTargets,
+  registerSimulatorSummary,
+} from "../utils/fileSystem";
 import {
   canSimulateDatasource,
   getDatasourceDir,
@@ -143,7 +149,7 @@ export class SimulatorManager extends CachedDataConsumer {
         return false;
       } else {
         this.datasourceDir = getDatasourceDir(this.localOs, eecType, datasourceName);
-        this.datasourceExe = getDatasourceExe(eecType, datasourceName);
+        this.datasourceExe = getDatasourceExe(this.localOs, eecType, datasourceName);
       }
     }
 
@@ -157,6 +163,9 @@ export class SimulatorManager extends CachedDataConsumer {
           `Datasource ${datasourceName} cannot be simulated on ${target.osType}`,
         );
         return false;
+      } else {
+        this.datasourceDir = getDatasourceDir(target.osType, target.eecType, datasourceName);
+        this.datasourceExe = getDatasourceExe(target.osType, target.eecType, datasourceName);
       }
     }
 
@@ -167,10 +176,15 @@ export class SimulatorManager extends CachedDataConsumer {
 
   /**
    * Spawns a child process which executes the datasource with the current extension files.
+   * @param staticDetails - static details to add to the summary
    * @param command - command to execute
    * @param options - spawn options
    */
-  private createProcess(command: string, options: SpawnOptions) {
+  private createProcess(
+    staticDetails: Partial<LocalExecutionSummary | RemoteExecutionSummary>,
+    command: string,
+    options: SpawnOptions,
+  ) {
     const startTime = new Date();
     let success = true;
     const logFilePath = path.join(
@@ -210,7 +224,9 @@ export class SimulatorManager extends CachedDataConsumer {
 
     this.simulatorProcess.on("close", (code, signal) => {
       const duration = Math.round((new Date().getTime() - startTime.getTime()) / 1000);
-      registerSimulatorSummary(this.context, { location: "LOCAL", startTime, duration, success });
+      registerSimulatorSummary(this.context, { ...staticDetails, startTime, duration, success } as
+        | LocalExecutionSummary
+        | RemoteExecutionSummary);
       this.outputChannel.appendLine(
         `Simulator process closed with code ${code ?? signal.toString()}`,
       );
@@ -232,13 +248,68 @@ export class SimulatorManager extends CachedDataConsumer {
     this.outputChannel.appendLine(`Running command: ${command}\n`);
 
     // Create the process
-    this.createProcess(command, {
+    this.createProcess({ location: "LOCAL" }, command, {
       shell: process.platform === "win32" ? "powershell.exe" : "/bin/bash",
       cwd: this.datasourceDir,
     });
   }
 
-  private startRemotely() {}
+  /**
+   * Starts the simulation on a remote target machine.
+   * @param target - remote target
+   */
+  private async startRemotely(target: RemoteTarget) {
+    this.outputChannel.replace(`Copying required files to remote machine at ${target.address}\n`);
+    this.outputChannel.show();
+
+    // Copy the files onto the host
+    const scp = spawn(
+      `scp -i "${target.privateKey}" "${this.activationFile}" "${this.extensionFile}" "${this.idToken}" ${target.username}@${target.address}:/tmp`,
+      { shell: process.platform === "win32" ? "powershell.exe" : "/bin/sh" },
+    );
+    scp.stdout.on("data", (data: Buffer) => {
+      this.outputChannel.append(data.toString());
+    });
+    scp.stderr.on("data", (data: Buffer) => {
+      this.outputChannel.append(data.toString());
+    });
+    scp.on("exit", (code, signal) => {
+      if (code === 0) {
+        this.outputChannel.appendLine("Files copied successfully.");
+      } else {
+        this.outputChannel.appendLine(`SCP process exited with code ${code ?? signal.toString()}`);
+      }
+    });
+
+    // Wait for SCP to finish
+    while (scp.exitCode === null) {
+      await loopSafeWait(100);
+    }
+
+    // Set the new file paths
+    this.idToken = "/tmp/idToken";
+    this.extensionFile = "/tmp/extension.yaml";
+    this.activationFile = "/tmp/simulator.json";
+
+    // Initial message before starting the process
+    this.outputChannel.appendLine("Starting remote simulation...");
+    this.outputChannel.appendLine(`Target details: ${JSON.stringify(target)}\n`);
+
+    // Build the command
+    const command =
+      `ssh -i "${target.privateKey}" ${target.username}@${target.address} ` +
+      `'cd ${this.datasourceDir} && ./${this.datasourceExe} --url "${this.url}"  --idtoken "${this.idToken}" ` +
+      `--extConfig "file://${this.extensionFile}" --userConfig "file://${this.activationFile}"'`;
+
+    this.outputChannel.appendLine(`Running command: ${command}`);
+
+    // Start the simulation
+    this.createProcess({ location: "REMOTE", target: target.name }, command, {
+      shell: process.platform === "win32" ? "powershell.exe" : "/bin/sh",
+    });
+
+    this.updateStatusBarDetails("RUNNING");
+  }
 
   /**
    * Starts the main user flow for the simulator.
@@ -295,9 +366,25 @@ export class SimulatorManager extends CachedDataConsumer {
     }
 
     // Remote target
-    let target;
+    let target: RemoteTarget;
     if (locationChoice.value === "REMOTE") {
-      showMessage("warn", "NOT IMPLEMENTED");
+      const targetChoice = await vscode.window.showQuickPick(
+        getSimulatorTargets(this.context).map(t => ({
+          label: `${t.name} (${t.username}@${t.address})`,
+          value: t,
+        })),
+        {
+          canPickMany: false,
+          title: "Which remote target will run the simulation?",
+          ignoreFocusOut: true,
+        },
+      );
+      if (!targetChoice) {
+        showMessage("error", "No target selected");
+        return;
+      } else {
+        target = targetChoice.value;
+      }
     }
 
     // Check simulator is ready for selected choice and start simulation
@@ -316,7 +403,7 @@ export class SimulatorManager extends CachedDataConsumer {
             this.startLocally();
             break;
           case "REMOTE":
-            this.startRemotely();
+            await this.startRemotely(target);
             break;
         }
         this.updateStatusBarDetails("RUNNING");
