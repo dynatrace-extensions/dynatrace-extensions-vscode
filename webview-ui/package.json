@@ -32,7 +32,7 @@
     "@dynatrace-sdk/user-preferences": "^1.0.0",
     "@dynatrace/strato-components-preview": "^0.98.1",
     "@dynatrace/strato-design-tokens": "^0.14.0",
-    "@dynatrace/strato-icons": "^0.31.0",
+    "@dynatrace/strato-icons": "^0.33.0",
     "d3-color": ">=3.1.0",
     "react": "^17.0.0",
     "react-dom": "^17.0.0",

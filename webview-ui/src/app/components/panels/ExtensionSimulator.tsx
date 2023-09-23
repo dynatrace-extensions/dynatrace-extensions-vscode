@@ -13,6 +13,7 @@ interface ExtensionSimulatorProps {
 
 export const ExtensionSimulator = ({ panelData, setPanelData }: ExtensionSimulatorProps) => {
   const [page, setPage] = useState("executions");
+  const { targets, summaries, status } = panelData.data;
 
   const handleExecutionsClick = () => {
     setPage("executions");
@@ -28,15 +29,15 @@ export const ExtensionSimulator = ({ panelData, setPanelData }: ExtensionSimulat
         <AppHeader.NavItems>
           <AppHeader.AppNavLink appName='' href='' />
           <AppHeader.NavItem onClick={handleExecutionsClick} isSelected={page === "executions"}>
-            Executions
+            Simulator Executions
           </AppHeader.NavItem>
           <AppHeader.NavItem onClick={handleTargetsClick} isSelected={page === "targets"}>
-            Targets
+            Remote Targets
           </AppHeader.NavItem>
         </AppHeader.NavItems>
       </AppHeader>
-      {page === "targets" && <SimulatorTargets panelData={panelData} setPanelData={setPanelData} />}
-      {page === "executions" && <SimulatorExecutions panelData={panelData} />}
+      {page === "targets" && <SimulatorTargets targets={targets} setPanelData={setPanelData} />}
+      {page === "executions" && <SimulatorExecutions summaries={summaries} status={status} />}
     </>
   );
 };

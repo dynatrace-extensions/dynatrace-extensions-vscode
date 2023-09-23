@@ -5,6 +5,7 @@ import {
   Flex,
   Heading,
   Link,
+  ProgressBar,
   TableColumn,
   TitleBar,
 } from "@dynatrace/strato-components-preview";
@@ -12,12 +13,13 @@ import { Colors } from "@dynatrace/strato-design-tokens";
 import {
   ActionIcon,
   DescriptionIcon,
-  PauseIcon,
+  EpicIcon,
   PlayIcon,
   RefreshIcon,
+  StopIcon,
 } from "@dynatrace/strato-icons";
 import React from "react";
-import { ExecutionSummary, SimulatorPanelData } from "src/app/interfaces/simulator";
+import { ExecutionSummary, SimulatorStatus } from "src/app/interfaces/simulator";
 
 const tableColumns: TableColumn[] = [
   {
@@ -102,63 +104,59 @@ const tableColumns: TableColumn[] = [
 ];
 
 interface SimulatorExecutionsProps {
-  panelData: SimulatorPanelData;
+  summaries: ExecutionSummary[];
+  status: SimulatorStatus;
 }
 
-export const SimulatorExecutions = ({ panelData }: SimulatorExecutionsProps) => {
-  const { summaries, status } = panelData.data;
-
-  const getSimulatorCommandUri = (command: "START" | "STOP" | "CHECK") => {
-    switch (command) {
-      case "START":
+export const SimulatorExecutions = ({ summaries, status }: SimulatorExecutionsProps) => {
+  const getSimulatorCommandUri = (simulatorStatus: SimulatorStatus) => {
+    switch (simulatorStatus) {
+      case "READY":
         return "command:dynatrace-extensions.simulator.start";
-      case "STOP":
+      case "RUNNING":
         return "command:dynatrace-extensions.simulator.stop";
-      case "CHECK":
+      case "NOTREADY":
         return "command:dynatrace-extensions.simulator.checkReady";
     }
   };
 
-  const SimulatorButton = () => {
-    switch (status) {
-      case "READY":
-        return (
-          <Button
-            as={Link}
-            style={{ textDecoration: "none" }}
-            href={getSimulatorCommandUri("START")}
-            variant='emphasized'
-          >
-            <Button.Prefix>{<PlayIcon />}</Button.Prefix>Start
-          </Button>
-        );
-      case "NOTREADY":
-        return (
-          <Button
-            as={Link}
-            style={{ textDecoration: "none" }}
-            href={getSimulatorCommandUri("CHECK")}
-            variant='emphasized'
-          >
-            <Button.Prefix>{<RefreshIcon />}</Button.Prefix>Check status
-          </Button>
-        );
-      case "RUNNING":
-        return (
-          <Button
-            as={Link}
-            style={{ textDecoration: "none" }}
-            href={getSimulatorCommandUri("STOP")}
-            variant='emphasized'
-          >
-            <Button.Prefix>{<PauseIcon />}</Button.Prefix>Stop
-          </Button>
-        );
-    }
+  const SimulatorButton = ({ simulatorStatus }: { simulatorStatus: SimulatorStatus }) => {
+    const PrefixIcon = () => {
+      switch (simulatorStatus) {
+        case "READY":
+          return <PlayIcon />;
+        case "RUNNING":
+          return <StopIcon />;
+        case "NOTREADY":
+          return <RefreshIcon />;
+      }
+    };
+    const buttonText = (() => {
+      switch (simulatorStatus) {
+        case "READY":
+          return "Start";
+        case "RUNNING":
+          return "Stop";
+        case "NOTREADY":
+          return "Check again";
+      }
+    })();
+    return (
+      <Button
+        as={Link}
+        style={{ textDecoration: "none" }}
+        href={getSimulatorCommandUri(simulatorStatus)}
+        variant='emphasized'
+        color='primary'
+      >
+        <Button.Prefix>{<PrefixIcon />}</Button.Prefix>
+        {buttonText}
+      </Button>
+    );
   };
 
   return (
-    <Flex flexDirection='column' gap={16}>
+    <Flex flexDirection='column' gap={16} padding={32}>
       <TitleBar>
         <TitleBar.Title>Simulator executions</TitleBar.Title>
         <TitleBar.Subtitle>
@@ -170,12 +168,33 @@ export const SimulatorExecutions = ({ panelData }: SimulatorExecutionsProps) => 
           </Container>
         </TitleBar.Prefix>
         <TitleBar.Suffix>
-          <SimulatorButton />
+          <SimulatorButton simulatorStatus={status} />
         </TitleBar.Suffix>
       </TitleBar>
+      {status === "RUNNING" && (
+        <ProgressBar>
+          <ProgressBar.Label>Simulating extension...</ProgressBar.Label>
+          <ProgressBar.Icon>
+            <EpicIcon />
+          </ProgressBar.Icon>
+        </ProgressBar>
+      )}
       <Flex flexDirection='column'>
-        <Heading level={2}>Previous simulator runs</Heading>
-        <DataTable columns={tableColumns} data={summaries} />
+        <Heading level={2}>Simulator execution history</Heading>
+        <DataTable
+          columns={tableColumns}
+          data={summaries.sort((a, b) => {
+            if (typeof a.startTime === "string") {
+              return new Date(b.startTime).getTime() - new Date(a.startTime).getTime();
+            }
+            return b.startTime.getTime() - a.startTime.getTime();
+          })}
+        >
+          <DataTable.EmptyState>
+            {'Click "Start" to start your first simulation'}
+          </DataTable.EmptyState>
+          <DataTable.Pagination defaultPageSize={5} />
+        </DataTable>
       </Flex>
     </Flex>
   );

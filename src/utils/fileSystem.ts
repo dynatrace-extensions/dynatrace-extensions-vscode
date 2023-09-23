@@ -295,10 +295,14 @@ export function getSimulatorSummaries(
   context: vscode.ExtensionContext,
 ): (LocalExecutionSummary | RemoteExecutionSummary)[] {
   const summariesJson = path.join(context.globalStorageUri.fsPath, "summaries.json");
-  return JSON.parse(readFileSync(summariesJson).toString()) as (
-    | LocalExecutionSummary
-    | RemoteExecutionSummary
-  )[];
+  return (
+    JSON.parse(readFileSync(summariesJson).toString()) as Partial<
+      LocalExecutionSummary | RemoteExecutionSummary
+    >[]
+  ).map(s => ({
+    ...s,
+    startTime: new Date(s.startTime),
+  })) as (LocalExecutionSummary | RemoteExecutionSummary)[];
 }
 
 /**

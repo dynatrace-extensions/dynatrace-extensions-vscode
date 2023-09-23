@@ -652,7 +652,7 @@ export async function activate(context: vscode.ExtensionContext) {
   });
 
   // Subscribers can now access cached data
-  simulatorManager.isReady();
+  simulatorManager.isReady(false);
 
   // Perform all feature registrations
   context.subscriptions.push(

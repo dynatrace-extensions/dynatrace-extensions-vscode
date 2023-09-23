@@ -91,24 +91,16 @@ export class SimulatorManager extends CachedDataConsumer {
    * @param status - simulator status
    * @param message - optional message to display in the tooltip
    */
-  private updateStatusBarDetails(status: SimulatorStatus, message?: string) {
+  private updateStatusBarDetails(
+    status: SimulatorStatus,
+    message?: string,
+    openUI: boolean = true,
+  ) {
     this.simulatorStatus = status;
     this.statusBar.command = SIMULATOR_OPEN_UI_CMD;
-    switch (status) {
-      case "READY":
-        this.statusBar.text = "$(debug-start) Simulate extension";
-        this.statusBar.tooltip = "Click to start simulating your extension";
-        break;
-      case "RUNNING":
-        this.statusBar.text = "$(debug-stop) Simulate extension";
-        this.statusBar.tooltip = "Click to stop the current simulation";
-        break;
-      case "NOTREADY":
-        this.statusBar.text = "$(warning) Cannot simulate extension";
-        this.statusBar.tooltip = message ?? "One or more checks failed. Click to check again.";
-        break;
-    }
-    this.openUI();
+    this.statusBar.text = "Extension simulator";
+    this.statusBar.tooltip = "Click to open";
+    if (openUI) this.openUI();
     this.statusBar.show();
   }
 
@@ -119,17 +111,26 @@ export class SimulatorManager extends CachedDataConsumer {
    * @param target - remote target
    * @returns true if simulator is ready, false otherwise
    */
-  public isReady(location?: SimulationLocation, eecType?: EecType, target?: RemoteTarget) {
+  public isReady(
+    openUI: boolean = true,
+    location?: SimulationLocation,
+    eecType?: EecType,
+    target?: RemoteTarget,
+  ) {
     // Check extension has datasource
     const datasourceName = getDatasourceName(this.parsedExtension);
     if (datasourceName === "unsupported") {
-      this.updateStatusBarDetails("NOTREADY", "Extension does not have a supported datasource");
+      this.updateStatusBarDetails(
+        "NOTREADY",
+        "Extension does not have a supported datasource",
+        openUI,
+      );
       return false;
     }
     // Check extension file exists
     const extensionFile = getExtensionFilePath();
     if (!extensionFile) {
-      this.updateStatusBarDetails("NOTREADY", "Could not detect extension manifest file");
+      this.updateStatusBarDetails("NOTREADY", "Could not detect extension manifest file", openUI);
       return false;
     } else {
       this.extensionFile = extensionFile;
@@ -142,7 +143,11 @@ export class SimulatorManager extends CachedDataConsumer {
       "simulator.json",
     );
     if (!existsSync(activationFile)) {
-      this.updateStatusBarDetails("NOTREADY", 'Could not detect config file "simulator.json"');
+      this.updateStatusBarDetails(
+        "NOTREADY",
+        'Could not detect config file "simulator.json"',
+        openUI,
+      );
       return false;
     } else {
       this.activationFile = activationFile;
@@ -156,6 +161,7 @@ export class SimulatorManager extends CachedDataConsumer {
         this.updateStatusBarDetails(
           "NOTREADY",
           `Datasource ${datasourceName} cannot be simulated on this OS`,
+          openUI,
         );
         return false;
       }
@@ -165,6 +171,7 @@ export class SimulatorManager extends CachedDataConsumer {
         this.updateStatusBarDetails(
           "NOTREADY",
           `Could not find datasource executable at ${datasourcePath}`,
+          openUI,
         );
         return false;
       } else {
@@ -181,6 +188,7 @@ export class SimulatorManager extends CachedDataConsumer {
         this.updateStatusBarDetails(
           "NOTREADY",
           `Datasource ${datasourceName} cannot be simulated on ${target.osType}`,
+          openUI,
         );
         return false;
       } else {
@@ -190,7 +198,7 @@ export class SimulatorManager extends CachedDataConsumer {
     }
 
     // At this point, simulator is ready
-    this.updateStatusBarDetails("READY");
+    this.updateStatusBarDetails("READY", undefined, openUI);
     return true;
   }
 
@@ -416,7 +424,12 @@ export class SimulatorManager extends CachedDataConsumer {
 
     // Check simulator is ready for selected choice and start simulation
     if (
-      this.isReady(locationChoice.value as SimulationLocation, eecChoice.value as EecType, target)
+      this.isReady(
+        true,
+        locationChoice.value as SimulationLocation,
+        eecChoice.value as EecType,
+        target,
+      )
     ) {
       // Create log folder if it doesn't exist
       const logsDir = path.join(vscode.workspace.workspaceFolders[0].uri.fsPath, "logs");
