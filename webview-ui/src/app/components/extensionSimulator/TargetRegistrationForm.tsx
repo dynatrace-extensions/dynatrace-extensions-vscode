@@ -3,160 +3,210 @@ import {
   FieldSet,
   Flex,
   FormField,
+  Modal,
   Radio,
   RadioGroup,
   TextInput,
+  showToast,
 } from "@dynatrace/strato-components-preview";
 import React, { useState } from "react";
 import { useForm } from "react-hook-form";
-import { EecType, OsType, RemoteTarget, SimulatorPanelData } from "src/app/interfaces/simulator";
+import { EecType, OsType, RemoteTarget } from "src/app/interfaces/simulator";
 
 interface TargetRegistrationFormProps {
-  setModalViewState: (newState: boolean) => void;
-  setPanelData: (
-    newData: SimulatorPanelData | ((prevValue: SimulatorPanelData) => SimulatorPanelData),
-  ) => void;
+  modalOpen: boolean;
+  handleCloseModal: () => void;
+  onSubmit: (target: RemoteTarget) => void;
 }
 
+type RemoteTargetForm = {
+  name: string;
+  address: string;
+  osType: OsType;
+  eecType: EecType;
+  username: string;
+  privateKey: string;
+};
+
 export const TargetRegistrationForm = ({
-  setModalViewState,
-  setPanelData,
+  handleCloseModal,
+  modalOpen,
+  onSubmit,
 }: TargetRegistrationFormProps) => {
   const [targetName, setTargetName] = useState("");
   const [address, setAddress] = useState("");
   const [username, setUsername] = useState("");
   const [privateKey, setPrivateKey] = useState("");
-  const [eecType, setEECType] = useState<EecType>("ACTIVEGATE");
-  const [osType, setOSType] = useState<OsType>("LINUX");
-
-  const onFormSubmit = () => {
-    console.log("Submit");
-    setModalViewState(false);
-
-    const remoteTarget: RemoteTarget = {
-      name: targetName,
-      address,
-      username,
-      privateKey,
-      eecType: eecType,
-      osType: osType,
-    };
-
-    setPanelData(prevValue => {
-      for (const target of prevValue.data.targets) {
-        if (remoteTarget.name == target.name) {
-          console.log("Duplicate name");
-
-          return prevValue;
-        }
-      }
-      return {
-        dataType: prevValue.dataType,
-        data: {
-          targets: [...prevValue.data.targets, remoteTarget],
-          summaries: prevValue.data.summaries,
-          status: prevValue.data.status,
-        },
-      };
-    });
-
-    return remoteTarget;
-  };
-
-  // Address validation
-  type AddressForm = {
-    address: string | null;
-  };
+  const [eecType, setEecType] = useState<EecType>("ACTIVEGATE");
+  const [osType, setOsType] = useState<OsType>("LINUX");
 
   const {
     register,
+    handleSubmit,
     setValue,
     formState: { errors },
-  } = useForm<AddressForm>({
-    mode: "all",
-  });
+  } = useForm<RemoteTargetForm>({ mode: "all" });
+
+  const createTarget = (): [RemoteTarget | undefined, string] => {
+    if ([address, username, privateKey].includes("")) {
+      return [undefined, "Not all fields are filled in"];
+    }
+
+    // TODO: Check if reachable?
+
+    return [
+      {
+        name: targetName === "" ? address : targetName,
+        address,
+        osType: osType,
+        eecType: eecType,
+        username,
+        privateKey,
+      },
+      "",
+    ];
+  };
+
+  const clearForm = () => {
+    setTargetName("");
+    setAddress("");
+    setOsType("LINUX");
+    setEecType("ACTIVEGATE");
+    setUsername("");
+    setPrivateKey("");
+  };
+
+  const handleSubmitClick = () => {
+    const [target, errorMessage] = createTarget();
+    if (!target) {
+      showToast({
+        title: "Invalid target",
+        message: errorMessage,
+        type: "critical",
+        role: "alert",
+        lifespan: 3000,
+      });
+      return;
+    }
+
+    onSubmit(target);
+    clearForm();
+    handleCloseModal();
+  };
 
   return (
-    <Flex flexDirection='column'>
-      <FormField label='Name' required={true}>
-        <TextInput
-          placeholder='Add target name'
-          required={true}
-          value={targetName}
-          onChange={setTargetName}
-        />
-      </FormField>
-      <FieldSet legend='Target info'>
-        <FormField label='Address' required={true}>
-          <TextInput
-            placeholder='192.168.0.1'
-            controlState={{
-              state: errors.address ? "error" : "valid",
-              hint: errors.address?.message ?? "Please enter a valid IP address or hostname",
-            }}
-            value={address}
-            {...register("address", {
-              required: {
-                value: true,
-                message: "Please enter a address.",
-              },
-              pattern: {
-                value:
-                  /^(?:(?:(?!-)[A-Za-z0-9-]{1,63}(?<!-)\.)+(?!-)[A-Za-z0-9-]{1,63}(?<!-))$|^((25[0-5]|2[0-4][0-9]|[01]?[0-9][0-9]?)\.){3}(25[0-5]|2[0-4][0-9]|[01]?[0-9][0-9]?)$/,
-                message: "Please enter a valid IP address or hostname",
-              },
-            })}
-            // value={address}
-
-            // onChange={setAddress} />
-            onChange={value => {
-              setAddress(value);
-              setValue("address", value, { shouldValidate: true });
-            }}
-          />
-        </FormField>
-        <FormField label='Username' required={true}>
-          <TextInput placeholder='Admin' value={username} onChange={setUsername} />
-        </FormField>
-        <FormField label='Private Key' required={true}>
-          <TextInput
-            placeholder='/path/to/private/key'
-            value={privateKey}
-            onChange={setPrivateKey}
-          />
-        </FormField>
-      </FieldSet>
-      <FieldSet legend='Target type'>
-        <Flex flexDirection='row'>
-          <FormField label='EEC'>
-            <RadioGroup value={eecType} onChange={val => setEECType(val as EecType)}>
-              <Radio aria-label='ONEAGENT' value={"ONEAGENT"}>
-                OneAgent
-              </Radio>
-              <Radio aria-label='ACTIVEGATE' value={"ACTIVEGATE"}>
-                ActiveGate
-              </Radio>
-            </RadioGroup>
-          </FormField>
-          <Flex flexItem paddingLeft={24}>
-            <FormField label='OS'>
-              <RadioGroup value={osType} onChange={val => setOSType(val as OsType)}>
-                <Radio aria-label='LINUX' value='LINUX'>
-                  Linux
-                </Radio>
-                <Radio aria-label='WINDOWS' value='WINDOWS'>
-                  Windows
-                </Radio>
-              </RadioGroup>
+    <Modal
+      title='Register a new simulator target'
+      show={modalOpen}
+      onDismiss={() => {
+        clearForm();
+        handleCloseModal();
+      }}
+      size='small'
+    >
+      <form onSubmit={handleSubmit(handleSubmitClick)} onReset={() => clearForm()} noValidate>
+        <Flex flexDirection='column' gap={32}>
+          <FieldSet legend='Target details' name='target-details'>
+            <FormField label='Name'>
+              <TextInput
+                placeholder='Enter a unique name for this target'
+                value={targetName}
+                onChange={value => {
+                  setTargetName(value);
+                  setValue("name", value, { shouldValidate: false });
+                }}
+              />
             </FormField>
+            <FormField label='Address' required>
+              <TextInput
+                placeholder='Enter an IP address or hostname'
+                controlState={{
+                  state: errors.address ? "error" : "valid",
+                  hint: errors.address?.message ?? "Please enter a valid IP address or hostname",
+                }}
+                value={address}
+                {...register("address", {
+                  required: {
+                    value: true,
+                    message: "Please enter an address.",
+                  },
+                  pattern: {
+                    value: /^(?:[a-z-.0-9A-Z]+|((25[0-5]|(2[0-4]|1\d|[1-9]|)\d)\.?\b){4})$/,
+                    message: "Must be a valid IP address or hostname",
+                  },
+                })}
+                onChange={value => {
+                  setAddress(value);
+                  setValue("address", value, { shouldValidate: true });
+                }}
+              />
+            </FormField>
+            <Flex gap={32}>
+              <FormField label='EEC' required>
+                <RadioGroup
+                  value={eecType}
+                  onChange={value => {
+                    setEecType(value as EecType);
+                    setValue("eecType", value as EecType, { shouldValidate: false });
+                  }}
+                >
+                  <Radio value='ONEAGENT'>OneAgent</Radio>
+                  <Radio value='ACTIVEGATE'>ActiveGate</Radio>
+                </RadioGroup>
+              </FormField>
+              <FormField label='OS' required>
+                <RadioGroup
+                  value={osType}
+                  onChange={value => {
+                    setOsType(value as OsType);
+                    setValue("osType", value as OsType, { shouldValidate: false });
+                  }}
+                >
+                  <Radio value='LINUX'>Linux</Radio>
+                  <Radio value='WINDOWS'>Windows</Radio>
+                </RadioGroup>
+              </FormField>
+            </Flex>
+          </FieldSet>
+          <FieldSet legend='Authentication'>
+            <FormField label='Username' required>
+              <TextInput
+                placeholder='Enter a username that can login'
+                value={username}
+                {...register("username", {
+                  required: { value: true, message: "Must enter a username" },
+                })}
+                onChange={value => {
+                  setUsername(value);
+                  setValue("username", value, { shouldValidate: true });
+                }}
+              />
+            </FormField>
+            <FormField label='Private key' required>
+              <TextInput
+                placeholder='/path/to/private/key'
+                controlState={{
+                  state: errors.privateKey ? "error" : "valid",
+                  hint: errors.privateKey?.message,
+                }}
+                value={privateKey}
+                {...register("privateKey", {
+                  required: { value: true, message: "Must enter a path" },
+                })}
+                onChange={value => {
+                  setPrivateKey(value);
+                  setValue("privateKey", value, { shouldValidate: true });
+                }}
+              />
+            </FormField>
+          </FieldSet>
+          <Flex paddingTop={16}>
+            <Button type='submit' variant='accent' color='primary'>
+              Submit
+            </Button>
           </Flex>
         </Flex>
-      </FieldSet>
-      <Flex paddingTop={32}>
-        <Button type='submit' variant='emphasized' color='success' onClick={onFormSubmit}>
-          Submit
-        </Button>
-      </Flex>
-    </Flex>
+      </form>
+    </Modal>
   );
 };

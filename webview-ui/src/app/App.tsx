@@ -1,4 +1,4 @@
-import { CodeSnippet, Modal, Page } from "@dynatrace/strato-components-preview";
+import { CodeSnippet, Modal, Page, ToastContainer } from "@dynatrace/strato-components-preview";
 import React, { useEffect, useState } from "react";
 import { EmptyState } from "./components/EmptyState";
 import { ExtensionSimulator } from "./components/panels/ExtensionSimulator";
@@ -56,37 +56,40 @@ export const App = ({ vscode, dataType, data }: AppProps) => {
   }, []);
 
   return (
-    <Page>
-      <Page.Main>
-        {dataType === "EMPTY_STATE" && <EmptyState />}
-        {dataType === "METRIC_RESULTS" && (
-          <MetricResultsPanel data={panelData.data as MetricSeriesCollection[]} />
-        )}
-        {dataType === "WMI_RESULT" && <WmiResultPanel data={panelData.data as WmiQueryResult} />}
-        {dataType === "SIMULATOR_DATA" && (
-          <ExtensionSimulator
-            panelData={panelData as SimulatorPanelData}
-            setPanelData={
-              setPanelData as (
-                newData:
-                  | SimulatorPanelData
-                  | ((prevValue: SimulatorPanelData) => SimulatorPanelData),
-              ) => void
-            }
-          />
-        )}
-      </Page.Main>
-      <Modal
-        title='Simulation log'
-        size='large'
-        show={modalOpen}
-        onDismiss={() => setModalOpen(false)}
-      >
-        <CodeSnippet language='bash' showLineNumbers={false}>
-          {modalContent}
-        </CodeSnippet>
-      </Modal>
-    </Page>
+    <>
+      <Page>
+        <Page.Main>
+          {dataType === "EMPTY_STATE" && <EmptyState />}
+          {dataType === "METRIC_RESULTS" && (
+            <MetricResultsPanel data={panelData.data as MetricSeriesCollection[]} />
+          )}
+          {dataType === "WMI_RESULT" && <WmiResultPanel data={panelData.data as WmiQueryResult} />}
+          {dataType === "SIMULATOR_DATA" && (
+            <ExtensionSimulator
+              panelData={panelData as SimulatorPanelData}
+              setPanelData={
+                setPanelData as (
+                  newData:
+                    | SimulatorPanelData
+                    | ((prevValue: SimulatorPanelData) => SimulatorPanelData),
+                ) => void
+              }
+            />
+          )}
+        </Page.Main>
+        <Modal
+          title='Simulation log'
+          size='large'
+          show={modalOpen}
+          onDismiss={() => setModalOpen(false)}
+        >
+          <CodeSnippet language='bash' showLineNumbers={false}>
+            {modalContent}
+          </CodeSnippet>
+        </Modal>
+      </Page>
+      <ToastContainer />
+    </>
   );
 };
 

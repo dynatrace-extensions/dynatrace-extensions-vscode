@@ -4,9 +4,9 @@ import {
   DataTable,
   Flex,
   Heading,
-  Modal,
   TableColumn,
   TitleBar,
+  showToast,
 } from "@dynatrace/strato-components-preview";
 import { PlusIcon, EditIcon, DeleteIcon, IntegrationsIcon } from "@dynatrace/strato-icons";
 import React, { useState } from "react";
@@ -74,7 +74,37 @@ interface SimulatorTargetsProps {
 }
 
 export const SimulatorTargets = ({ targets, setPanelData }: SimulatorTargetsProps) => {
-  const [modalViewState, setModalViewState] = useState(false);
+  const [modalOpen, setModalOpen] = useState(false);
+
+  const handleOpenModal = () => {
+    setModalOpen(true);
+  };
+  const handleCloseModal = () => {
+    setModalOpen(false);
+  };
+
+  const addTarget = (target: RemoteTarget) => {
+    if (targets.findIndex(t => t.name === target.name) >= 0) {
+      showToast({
+        type: "critical",
+        role: "alert",
+        title: "Could not register target",
+        message: `A target with name ${target.name} already exists`,
+        lifespan: 3000,
+      });
+    } else {
+      setPanelData(prevValue => {
+        return {
+          dataType: prevValue.dataType,
+          data: {
+            targets: [...prevValue.data.targets, target],
+            summaries: prevValue.data.summaries,
+            status: prevValue.data.status,
+          },
+        };
+      });
+    }
+  };
 
   return (
     <>
@@ -89,7 +119,7 @@ export const SimulatorTargets = ({ targets, setPanelData }: SimulatorTargetsProp
           </TitleBar.Prefix>
           <TitleBar.Suffix>
             <Flex gap={4}>
-              <Button onClick={() => setModalViewState(true)} variant='accent' color='primary'>
+              <Button onClick={handleOpenModal} variant='accent' color='primary'>
                 <Button.Prefix>{<PlusIcon />}</Button.Prefix>Add
               </Button>
             </Flex>
@@ -114,14 +144,11 @@ export const SimulatorTargets = ({ targets, setPanelData }: SimulatorTargetsProp
           </DataTable>
         </Flex>
       </Flex>
-      <Modal
-        title='Add Remote Target'
-        show={modalViewState}
-        size='small'
-        onDismiss={() => setModalViewState(false)}
-      >
-        <TargetRegistrationForm setPanelData={setPanelData} setModalViewState={setModalViewState} />
-      </Modal>
+      <TargetRegistrationForm
+        modalOpen={modalOpen}
+        handleCloseModal={handleCloseModal}
+        onSubmit={addTarget}
+      />
     </>
   );
 };
