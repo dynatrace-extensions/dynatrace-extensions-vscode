@@ -39,11 +39,6 @@
 	"contributes": {
 		"commands": [
 			{
-				"command": "dynatrace-extensions.demoReactWebview",
-				"title": "Demo React webview",
-				"category": "Dynatrace extensions"
-			},
-			{
 				"command": "dynatrace-extensions.loadSchemas",
 				"title": "Load schemas",
 				"category": "Dynatrace extensions"
@@ -387,7 +382,24 @@
 						"scope": "resource"
 					}
 				}
-			}
+			},
+      {
+        "title": "Extension simulator",
+        "properties": {
+          "dynatraceExtensions.autoDeleteLogs":{
+            "type" :"boolean",
+            "description": "Automatically delete simulator log files",
+            "order": 1,
+            "default": true
+          },
+          "dynatraceExtensions.maximumSimulatorFiles": {
+            "type": "number",
+            "description": "Maximum number of log files to keep per workspace. Oldest files are removed first.",
+            "order": 2,
+            "default": 5
+          }
+        }
+      }
 		],
 		"menus": {
 			"commandPalette": [

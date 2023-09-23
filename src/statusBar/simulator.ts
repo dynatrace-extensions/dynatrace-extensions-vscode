@@ -17,6 +17,7 @@ import { loopSafeWait, showMessage } from "../utils/code";
 import { CachedDataConsumer } from "../utils/dataCaching";
 import { getDatasourceName } from "../utils/extensionParsing";
 import {
+  cleanUpSimulatorLogs,
   getExtensionFilePath,
   getSimulatorSummaries,
   getSimulatorTargets,
@@ -66,6 +67,9 @@ export class SimulatorManager extends CachedDataConsumer {
     this.idToken = path.join(context.globalStorageUri.fsPath, "idToken.txt");
     this.localOs = process.platform === "win32" ? "WINDOWS" : "LINUX";
     this.panelManager = panelManager;
+
+    // Initial clean-up of files
+    cleanUpSimulatorLogs(context);
 
     // Create staus bar and hide it
     this.statusBar = vscode.window.createStatusBarItem(vscode.StatusBarAlignment.Left, 0);
@@ -215,6 +219,8 @@ export class SimulatorManager extends CachedDataConsumer {
   ) {
     const startTime = new Date();
     let success = true;
+    // If needed, make room for new log
+    cleanUpSimulatorLogs(this.context);
     const logFilePath = path.join(
       vscode.workspace.workspaceFolders[0].uri.fsPath,
       "logs",

@@ -38,6 +38,14 @@ export function getDatasourcePath(os: OsType, eecType: EecType, dataSource: stri
   return `${getDatasourceDir(os, eecType, dataSource)}${getDatasourceExe(os, eecType, dataSource)}`;
 }
 
+/**
+ * Checks if the combination of O/S, EEC Type and Datasource is valid.
+ * E.g. WMI cannot be simulated on Linux.
+ * @param os - operating system
+ * @param eecType - type of EEC
+ * @param dataSource - datasource name
+ * @returns boolean
+ */
 export function canSimulateDatasource(os: OsType, eecType: EecType, dataSource: string) {
   const DATASOURCES = {
     WINDOWS: {

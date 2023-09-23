@@ -18,13 +18,22 @@
  * UTILITIES FOR INTERACTING WITH THE USER'S FILE SYSTEM
  ********************************************************************************/
 
-import { copyFileSync, existsSync, mkdirSync, readFileSync, readdirSync, writeFileSync } from "fs";
+import {
+  copyFileSync,
+  existsSync,
+  mkdirSync,
+  readFileSync,
+  readdirSync,
+  rmSync,
+  writeFileSync,
+} from "fs";
 import * as os from "os";
 import * as path from "path";
 import { copySync } from "fs-extra";
 import { glob } from "glob";
 import * as vscode from "vscode";
 import {
+  ExecutionSummary,
   LocalExecutionSummary,
   RemoteExecutionSummary,
   RemoteTarget,
@@ -303,6 +312,59 @@ export function getSimulatorSummaries(
     ...s,
     startTime: new Date(s.startTime),
   })) as (LocalExecutionSummary | RemoteExecutionSummary)[];
+}
+
+/**
+ * Does some basic clean-up of the simulator log files for the current workspace.
+ * The user can disable the feature and also control the max number of files kept.
+ * The max number of files is not handled per workspace yet.
+ * @param context - Extension Context
+ */
+export function cleanUpSimulatorLogs(context: vscode.ExtensionContext) {
+  // No clean-up is done if user disabled it
+  const autoDelete = vscode.workspace
+    .getConfiguration("dynatraceExtensions", null)
+    .get<boolean>("autoDeleteLogs");
+  if (!autoDelete) return;
+
+  const maxFiles = vscode.workspace
+    .getConfiguration("dynatraceExtensions", null)
+    .get<number>("maximumSimulatorFiles");
+
+  // Order summaries by workspace
+  const newSummaries: ExecutionSummary[] = [];
+  const summariesByWorkspace: Record<string, ExecutionSummary[] | undefined> = {};
+  getSimulatorSummaries(context).forEach(s => {
+    if (!summariesByWorkspace[s.workspace]) {
+      summariesByWorkspace[s.workspace] = [];
+    }
+    summariesByWorkspace[s.workspace].push(s);
+  });
+
+  // Keep the summaries based on max number of files, delete the rest
+  Object.values(summariesByWorkspace).forEach(summaryList => {
+    if (summaryList.length <= maxFiles - 1) {
+      newSummaries.push(...summaryList);
+    } else {
+      summaryList
+        .sort((a, b) => b.startTime.getTime() - a.startTime.getTime())
+        .forEach((summary, i) => {
+          if (i < maxFiles - 1) {
+            newSummaries.push(summary);
+          } else {
+            try {
+              rmSync(summary.logPath);
+            } catch (err) {
+              console.log(`Error deleting file "${summary.logPath}": ${(err as Error).message}`);
+            }
+          }
+        });
+    }
+  });
+
+  // Write the new summaries list to disk
+  const summariesPath = path.join(context.globalStorageUri.fsPath, "summaries.json");
+  writeFileSync(summariesPath, JSON.stringify(newSummaries));
 }
 
 /**
