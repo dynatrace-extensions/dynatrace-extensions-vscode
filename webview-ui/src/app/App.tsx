@@ -1,4 +1,4 @@
-import { Page } from "@dynatrace/strato-components-preview";
+import { CodeSnippet, Modal, Page } from "@dynatrace/strato-components-preview";
 import React, { useEffect, useState } from "react";
 import { EmptyState } from "./components/EmptyState";
 import { ExtensionSimulator } from "./components/panels/ExtensionSimulator";
@@ -18,17 +18,27 @@ interface AppProps {
 
 interface UpdateDataEvent {
   messageType: string;
-  data: PanelData;
+  data: PanelData | unknown;
 }
 
 export const App = ({ vscode, dataType, data }: AppProps) => {
   const [panelData, setPanelData] = useState<PanelData>(vscode.getState() ?? { dataType, data });
+  const [modalOpen, setModalOpen] = useState(false);
+  const [modalContent, setModalContent] = useState("");
 
-  // Handles data updates coming from the extension
-  const handleDataUpdate = (event: MessageEvent<UpdateDataEvent>) => {
+  // Handles messages coming from the extension
+  const handleMessage = (event: MessageEvent<UpdateDataEvent>) => {
     const { messageType, data: messageData } = event.data;
-    if (messageType === "updateData") {
-      setPanelData(messageData);
+
+    switch (messageType) {
+      case "updateData":
+        setPanelData(messageData as PanelData);
+        break;
+      case "openLog":
+        console.log(messageData);
+        setModalContent((messageData as { logContent: string }).logContent);
+        setModalOpen(true);
+        break;
     }
   };
 
@@ -37,11 +47,11 @@ export const App = ({ vscode, dataType, data }: AppProps) => {
     vscode.setState(panelData);
   }, [panelData, vscode]);
 
-  // At mount time, add a listener for data updates from extension
+  // At mount time, add a listener for messages from the extension
   useEffect(() => {
-    window.addEventListener("message", handleDataUpdate);
+    window.addEventListener("message", handleMessage);
     return () => {
-      window.removeEventListener("message", handleDataUpdate);
+      window.removeEventListener("message", handleMessage);
     };
   }, []);
 
@@ -66,6 +76,16 @@ export const App = ({ vscode, dataType, data }: AppProps) => {
           />
         )}
       </Page.Main>
+      <Modal
+        title='Simulation log'
+        size='large'
+        show={modalOpen}
+        onDismiss={() => setModalOpen(false)}
+      >
+        <CodeSnippet language='bash' showLineNumbers={false}>
+          {modalContent}
+        </CodeSnippet>
+      </Modal>
     </Page>
   );
 };

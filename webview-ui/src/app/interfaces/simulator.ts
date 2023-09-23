@@ -30,6 +30,8 @@ export interface ExecutionSummary {
   startTime: Date;
   duration: number;
   success: boolean;
+  workspace: string;
+  logPath: string;
 }
 
 export interface LocalExecutionSummary extends ExecutionSummary {

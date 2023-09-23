@@ -205,6 +205,24 @@ export class WebviewPanelManager implements vscode.WebviewPanelSerializer {
   }
 
   /**
+   * Sends a message to the panel using the postMessage API.
+   * @param viewType
+   * @param message
+   */
+  public postMessage(viewType: REGISTERED_PANELS, message: unknown) {
+    if (this.currentPanels.has(viewType)) {
+      const existingPanel = this.currentPanels.get(viewType);
+      existingPanel.webview.postMessage(message).then(
+        () => {},
+        err => {
+          console.log(err);
+          console.log(`Could not post message to webview. ${(err as Error).message}`);
+        },
+      );
+    }
+  }
+
+  /**
    * Restores the contents of a webview from its persisted state.
    * @param panel webview panel being restored
    * @param state persisted state to restore from

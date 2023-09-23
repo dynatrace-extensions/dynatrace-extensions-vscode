@@ -7,8 +7,8 @@ import {
   RadioGroup,
   TextInput,
 } from "@dynatrace/strato-components-preview";
-import { AcceptIcon } from "@dynatrace/strato-icons";
 import React, { useState } from "react";
+import { useForm } from "react-hook-form";
 import { EecType, OsType, RemoteTarget, SimulatorPanelData } from "src/app/interfaces/simulator";
 
 interface TargetRegistrationFormProps {
@@ -41,17 +41,40 @@ export const TargetRegistrationForm = ({
       eecType: eecType,
       osType: osType,
     };
-    setPanelData(prevValue => ({
-      dataType: prevValue.dataType,
-      data: {
-        targets: [...prevValue.data.targets, remoteTarget],
-        summaries: prevValue.data.summaries,
-        status: prevValue.data.status,
-      },
-    }));
+
+    setPanelData(prevValue => {
+      for (const target of prevValue.data.targets) {
+        if (remoteTarget.name == target.name) {
+          console.log("Duplicate name");
+
+          return prevValue;
+        }
+      }
+      return {
+        dataType: prevValue.dataType,
+        data: {
+          targets: [...prevValue.data.targets, remoteTarget],
+          summaries: prevValue.data.summaries,
+          status: prevValue.data.status,
+        },
+      };
+    });
 
     return remoteTarget;
   };
+
+  // Address validation
+  type AddressForm = {
+    address: string | null;
+  };
+
+  const {
+    register,
+    setValue,
+    formState: { errors },
+  } = useForm<AddressForm>({
+    mode: "all",
+  });
 
   return (
     <Flex flexDirection='column'>
@@ -65,7 +88,32 @@ export const TargetRegistrationForm = ({
       </FormField>
       <FieldSet legend='Target info'>
         <FormField label='Address' required={true}>
-          <TextInput placeholder='192.168.0.1' value={address} onChange={setAddress} />
+          <TextInput
+            placeholder='192.168.0.1'
+            controlState={{
+              state: errors.address ? "error" : "valid",
+              hint: errors.address?.message ?? "Please enter a valid IP address or hostname",
+            }}
+            value={address}
+            {...register("address", {
+              required: {
+                value: true,
+                message: "Please enter a address.",
+              },
+              pattern: {
+                value:
+                  /^(?:(?:(?!-)[A-Za-z0-9-]{1,63}(?<!-)\.)+(?!-)[A-Za-z0-9-]{1,63}(?<!-))$|^((25[0-5]|2[0-4][0-9]|[01]?[0-9][0-9]?)\.){3}(25[0-5]|2[0-4][0-9]|[01]?[0-9][0-9]?)$/,
+                message: "Please enter a valid IP address or hostname",
+              },
+            })}
+            // value={address}
+
+            // onChange={setAddress} />
+            onChange={value => {
+              setAddress(value);
+              setValue("address", value, { shouldValidate: true });
+            }}
+          />
         </FormField>
         <FormField label='Username' required={true}>
           <TextInput placeholder='Admin' value={username} onChange={setUsername} />
@@ -104,14 +152,11 @@ export const TargetRegistrationForm = ({
           </Flex>
         </Flex>
       </FieldSet>
-      <Button
-        data-testid='open-modal-button'
-        color='primary'
-        variant='accent'
-        onClick={() => onFormSubmit()}
-      >
-        <Button.Prefix>{<AcceptIcon />}</Button.Prefix>Submit
-      </Button>
+      <Flex paddingTop={32}>
+        <Button type='submit' variant='emphasized' color='success' onClick={onFormSubmit}>
+          Submit
+        </Button>
+      </Flex>
     </Flex>
   );
 };

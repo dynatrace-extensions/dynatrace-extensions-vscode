@@ -8,11 +8,25 @@ import {
   TableColumn,
   TitleBar,
 } from "@dynatrace/strato-components-preview";
-import { ActionIcon, PauseIcon, PlayIcon, RefreshIcon } from "@dynatrace/strato-icons";
+import { Colors } from "@dynatrace/strato-design-tokens";
+import {
+  ActionIcon,
+  DescriptionIcon,
+  PauseIcon,
+  PlayIcon,
+  RefreshIcon,
+} from "@dynatrace/strato-icons";
 import React from "react";
-import { SimulatorPanelData } from "src/app/interfaces/simulator";
+import { ExecutionSummary, SimulatorPanelData } from "src/app/interfaces/simulator";
 
 const tableColumns: TableColumn[] = [
+  {
+    header: "Workspace",
+    accessor: "workspace",
+    autoWidth: true,
+    ratioWidth: 1,
+    columnType: "text",
+  },
   {
     header: "Location",
     accessor: "location",
@@ -47,6 +61,43 @@ const tableColumns: TableColumn[] = [
     autoWidth: true,
     ratioWidth: 1,
     columnType: "text",
+    thresholds: [
+      {
+        value: "true",
+        comparator: "equal-to",
+        color: Colors.Charts.Apdex.Excellent.Default,
+      },
+      {
+        value: "false",
+        comparator: "equal-to",
+        color: Colors.Charts.Apdex.Unacceptable.Default,
+      },
+    ],
+  },
+  {
+    header: "",
+    id: "actions",
+    autoWidth: true,
+    ratioWidth: 1,
+    cell: ({ row }) => {
+      const fileUri = {
+        scheme: "file",
+        path: (row.original as ExecutionSummary).logPath,
+        authority: "",
+      };
+      const args = [JSON.stringify(fileUri)];
+      return (
+        <Button
+          as={Link}
+          style={{ textDecoration: "none" }}
+          href={`command:dynatrace-extensions.simulator.readLog?${encodeURIComponent(
+            JSON.stringify(args),
+          )}`}
+        >
+          <Button.Prefix>{<DescriptionIcon />}</Button.Prefix>
+        </Button>
+      );
+    },
   },
 ];
 

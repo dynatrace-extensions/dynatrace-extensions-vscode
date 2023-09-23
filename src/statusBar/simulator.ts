@@ -1,5 +1,5 @@
 import { ChildProcess, SpawnOptions, spawn } from "child_process";
-import { existsSync, mkdirSync, writeFileSync } from "fs";
+import { existsSync, mkdirSync, readFileSync, writeFileSync } from "fs";
 import * as path from "path";
 import pidtree = require("pidtree");
 import * as vscode from "vscode";
@@ -34,6 +34,7 @@ const SIMULATOR_START_CMD = "dynatrace-extensions.simulator.start";
 const SIMULATOR_STOP_CMD = "dynatrace-extensions.simulator.stop";
 const SIMULATOR_CHECK_READY_CMD = "dynatrace-extensions.simulator.checkReady";
 const SIMULATOR_OPEN_UI_CMD = "dynatrace-extensions.simulator.openUI";
+const SIMULATOR_READ_LOG_CMD = "dynatrace-extensions.simulator.readLog";
 const SIMULATOR_PANEL_DATA_TYPE = "SIMULATOR_DATA";
 
 /**
@@ -54,6 +55,10 @@ export class SimulatorManager extends CachedDataConsumer {
   private readonly statusBar: vscode.StatusBarItem;
   private readonly panelManager: WebviewPanelManager;
 
+  /**
+   * @param context - extension context
+   * @param panelManager - webview panel manager
+   */
   constructor(context: vscode.ExtensionContext, panelManager: WebviewPanelManager) {
     super(); // Data cache access
     this.url = "file://CONSOLE";
@@ -76,6 +81,9 @@ export class SimulatorManager extends CachedDataConsumer {
     vscode.commands.registerCommand(SIMULATOR_STOP_CMD, () => this.stop());
     vscode.commands.registerCommand(SIMULATOR_CHECK_READY_CMD, () => this.isReady());
     vscode.commands.registerCommand(SIMULATOR_OPEN_UI_CMD, () => this.openUI());
+    vscode.commands.registerCommand(SIMULATOR_READ_LOG_CMD, (logPath: string) =>
+      this.readLog(logPath),
+    );
   }
 
   /**
@@ -90,19 +98,17 @@ export class SimulatorManager extends CachedDataConsumer {
       case "READY":
         this.statusBar.text = "$(debug-start) Simulate extension";
         this.statusBar.tooltip = "Click to start simulating your extension";
-        // this.statusBar.command = SIMULATOR_START_CMD;
         break;
       case "RUNNING":
         this.statusBar.text = "$(debug-stop) Simulate extension";
         this.statusBar.tooltip = "Click to stop the current simulation";
-        // this.statusBar.command = SIMULATOR_STOP_CMD;
         break;
       case "NOTREADY":
         this.statusBar.text = "$(warning) Cannot simulate extension";
         this.statusBar.tooltip = message ?? "One or more checks failed. Click to check again.";
-        // this.statusBar.command = SIMULATOR_CHECK_READY_CMD;
         break;
     }
+    this.openUI();
     this.statusBar.show();
   }
 
@@ -206,6 +212,7 @@ export class SimulatorManager extends CachedDataConsumer {
       "logs",
       `${startTime.toISOString().replace(/:/g, "-")}_simulator.log`,
     );
+    const workspace = vscode.workspace.workspaceFolders[0].name;
     this.simulatorProcess = spawn(command, options);
 
     this.outputChannel.appendLine(
@@ -238,9 +245,15 @@ export class SimulatorManager extends CachedDataConsumer {
 
     this.simulatorProcess.on("close", (code, signal) => {
       const duration = Math.round((new Date().getTime() - startTime.getTime()) / 1000);
-      registerSimulatorSummary(this.context, { ...staticDetails, startTime, duration, success } as
-        | LocalExecutionSummary
-        | RemoteExecutionSummary);
+      registerSimulatorSummary(this.context, {
+        ...staticDetails,
+        startTime,
+        duration,
+        success,
+        logPath: logFilePath,
+        workspace,
+      } as LocalExecutionSummary | RemoteExecutionSummary);
+      this.openUI();
       this.outputChannel.appendLine(
         `Simulator process closed with code ${code ?? signal.toString()}`,
       );
@@ -472,5 +485,18 @@ export class SimulatorManager extends CachedDataConsumer {
         status: this.simulatorStatus,
       },
     } as SimulatorPanelData);
+  }
+
+  private readLog(logPath: string) {
+    const logFilePath = vscode.Uri.from(
+      JSON.parse(logPath) as { scheme: string; path: string; authority: string },
+    );
+
+    const logContent = readFileSync(logFilePath.fsPath).toString();
+
+    this.panelManager.postMessage(REGISTERED_PANELS.SIMULATOR_UI, {
+      messageType: "openLog",
+      data: logContent,
+    });
   }
 }

@@ -86,7 +86,9 @@ export const SimulatorTargets = ({ panelData, setPanelData }: SimulatorTargetsPr
       </Modal>
 
       <Heading level={2}>Configured Remote Endpoints</Heading>
-      <DataTable columns={tableColumns} data={panelData.data.targets} fullWidth />
+      <DataTable columns={tableColumns} data={panelData.data.targets} fullWidth>
+        <DataTable.EmptyState>{'Click "Add" to create a remote target.'}</DataTable.EmptyState>
+      </DataTable>
     </Flex>
   );
 };
