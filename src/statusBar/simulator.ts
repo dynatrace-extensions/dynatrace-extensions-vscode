@@ -13,15 +13,18 @@ import {
   SimulatorPanelData,
   SimulatorStatus,
 } from "../interfaces/simulator";
+import { ToastOptions } from "../interfaces/webview";
 import { loopSafeWait, showMessage } from "../utils/code";
 import { CachedDataConsumer } from "../utils/dataCaching";
 import { getDatasourceName } from "../utils/extensionParsing";
 import {
   cleanUpSimulatorLogs,
+  deleteSimulatorTarget,
   getExtensionFilePath,
   getSimulatorSummaries,
   getSimulatorTargets,
   registerSimulatorSummary,
+  registerSimulatorTarget,
 } from "../utils/fileSystem";
 import {
   canSimulateDatasource,
@@ -36,6 +39,8 @@ const SIMULATOR_STOP_CMD = "dynatrace-extensions.simulator.stop";
 const SIMULATOR_CHECK_READY_CMD = "dynatrace-extensions.simulator.checkReady";
 const SIMULATOR_OPEN_UI_CMD = "dynatrace-extensions.simulator.openUI";
 const SIMULATOR_READ_LOG_CMD = "dynatrace-extensions.simulator.readLog";
+const SIMULATOR_ADD_TARGERT_CMD = "dynatrace-extensions.simulator.addTarget";
+const SIMULATOR_DELETE_TARGERT_CMD = "dynatrace-extensions.simulator.deleteTarget";
 const SIMULATOR_PANEL_DATA_TYPE = "SIMULATOR_DATA";
 
 /**
@@ -88,9 +93,54 @@ export class SimulatorManager extends CachedDataConsumer {
     vscode.commands.registerCommand(SIMULATOR_READ_LOG_CMD, (logPath: string) =>
       this.readLog(logPath),
     );
+    vscode.commands.registerCommand(SIMULATOR_ADD_TARGERT_CMD, (target: RemoteTarget) =>
+      this.addTarget(target),
+    );
+    vscode.commands.registerCommand(SIMULATOR_DELETE_TARGERT_CMD, (target: RemoteTarget) =>
+      this.deleteTarget(target),
+    );
   }
 
   /**
+   * Deletes a remote target from the list stored in global storage.
+   * @param target - target to delete
+   */
+  private deleteTarget(target: RemoteTarget) {
+    // This will always succeed
+    deleteSimulatorTarget(this.context, target);
+    this.panelManager.postMessage(REGISTERED_PANELS.SIMULATOR_UI, {
+      messageType: "showToast",
+      data: {
+        title: "Target deleted",
+        type: "success",
+        role: "status",
+        lifespan: 800,
+      } as ToastOptions,
+    });
+    this.openUI();
+  }
+
+  /**
+   * Adds a remote target to the list stored in global storage.
+   * @param target - target to register
+   */
+  private addTarget(target: RemoteTarget) {
+    registerSimulatorTarget(this.context, target);
+    this.panelManager.postMessage(REGISTERED_PANELS.SIMULATOR_UI, {
+      messageType: "showToast",
+      data: {
+        title: "Target registered",
+        type: "success",
+        role: "status",
+        lifespan: 800,
+      } as ToastOptions,
+    });
+    this.openUI();
+  }
+
+  /**
+   * TODO: Review and delete or merge with other function
+   * ----
    * Updates the status bar with the current simulator status.
    * @param status - simulator status
    * @param message - optional message to display in the tooltip

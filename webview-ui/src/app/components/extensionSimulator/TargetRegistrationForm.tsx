@@ -9,29 +9,24 @@ import {
   TextInput,
   showToast,
 } from "@dynatrace/strato-components-preview";
-import React, { useState } from "react";
+import React, { useEffect, useState } from "react";
 import { useForm } from "react-hook-form";
 import { EecType, OsType, RemoteTarget } from "src/app/interfaces/simulator";
 
 interface TargetRegistrationFormProps {
   modalOpen: boolean;
   handleCloseModal: () => void;
+  nameIsUnique: (name: string) => boolean;
   onSubmit: (target: RemoteTarget) => void;
+  editingTarget?: RemoteTarget;
 }
-
-type RemoteTargetForm = {
-  name: string;
-  address: string;
-  osType: OsType;
-  eecType: EecType;
-  username: string;
-  privateKey: string;
-};
 
 export const TargetRegistrationForm = ({
   handleCloseModal,
   modalOpen,
   onSubmit,
+  nameIsUnique,
+  editingTarget,
 }: TargetRegistrationFormProps) => {
   const [targetName, setTargetName] = useState("");
   const [address, setAddress] = useState("");
@@ -40,23 +35,43 @@ export const TargetRegistrationForm = ({
   const [eecType, setEecType] = useState<EecType>("ACTIVEGATE");
   const [osType, setOsType] = useState<OsType>("LINUX");
 
+  useEffect(() => {
+    if (editingTarget) {
+      setTargetName(editingTarget.name);
+      setAddress(editingTarget.address);
+      setUsername(editingTarget.username);
+      setPrivateKey(editingTarget.privateKey);
+      setEecType(editingTarget.eecType);
+      setOsType(editingTarget.osType);
+    }
+  }, [editingTarget]);
+
   const {
     register,
     handleSubmit,
     setValue,
     formState: { errors },
-  } = useForm<RemoteTargetForm>({ mode: "all" });
+  } = useForm<RemoteTarget>({ mode: "all" });
 
   const createTarget = (): [RemoteTarget | undefined, string] => {
+    const resolvedName = targetName || address;
+
     if ([address, username, privateKey].includes("")) {
       return [undefined, "Not all fields are filled in"];
+    }
+
+    if (!editingTarget && !nameIsUnique(resolvedName)) {
+      return [
+        undefined,
+        `Target ${resolvedName} already exists. Edit the existing entry or choose a different name`,
+      ];
     }
 
     // TODO: Check if reachable?
 
     return [
       {
-        name: targetName === "" ? address : targetName,
+        name: resolvedName,
         address,
         osType: osType,
         eecType: eecType,
@@ -131,7 +146,8 @@ export const TargetRegistrationForm = ({
                     message: "Please enter an address.",
                   },
                   pattern: {
-                    value: /^(?:[a-z-.0-9A-Z]+|((25[0-5]|(2[0-4]|1\d|[1-9]|)\d)\.?\b){4})$/,
+                    value:
+                      /^(?:(?:25[0-5]|2[0-4][0-9]|[01]?[0-9][0-9]?)\.){3}(?:25[0-5]|2[0-4][0-9]|[01]?[0-9][0-9]?)$|^(([a-zA-Z0-9]|[a-zA-Z0-9][a-zA-Z0-9-]*[a-zA-Z0-9])\.)+([A-Za-z]|[A-Za-z][A-Za-z0-9-]*[A-Za-z0-9])$/,
                     message: "Must be a valid IP address or hostname",
                   },
                 })}

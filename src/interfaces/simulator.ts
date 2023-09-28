@@ -1,4 +1,4 @@
-import { PanelData } from "../webviews/webviewPanel";
+import { PanelData } from "./webview";
 
 export type EecType = "ONEAGENT" | "ACTIVEGATE";
 export type OsType = "LINUX" | "WINDOWS";

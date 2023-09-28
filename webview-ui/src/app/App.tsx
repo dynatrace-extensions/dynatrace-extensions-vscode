@@ -1,12 +1,24 @@
-import { CodeSnippet, Modal, Page, ToastContainer } from "@dynatrace/strato-components-preview";
+import {
+  CodeSnippet,
+  Modal,
+  Page,
+  ToastOptions,
+  showToast,
+} from "@dynatrace/strato-components-preview";
 import React, { useEffect, useState } from "react";
 import { EmptyState } from "./components/EmptyState";
 import { ExtensionSimulator } from "./components/panels/ExtensionSimulator";
 import { MetricResultsPanel } from "./components/panels/MetricResultsPanel";
 import { WmiResultPanel } from "./components/panels/WmiResultPanel";
+import {
+  EMPTY_STATE_DATA_TYPE,
+  METRIC_RESULTS_DATA_TYPE,
+  SIMULATOR_DATA_TYPE,
+  WMI_RESULT_DATA_TYPE,
+} from "./constants/constants";
 import { PanelData } from "./interfaces/general";
 import { MetricSeriesCollection } from "./interfaces/metricResultsPanel";
-import { SimulatorPanelData } from "./interfaces/simulator";
+import { SimulatorData } from "./interfaces/simulator";
 import { WebviewApi } from "./interfaces/vscode";
 import { WmiQueryResult } from "./interfaces/wmiResultPanel";
 
@@ -16,10 +28,28 @@ interface AppProps {
   data: unknown;
 }
 
-interface UpdateDataEvent {
+interface WebviewEvent {
   messageType: string;
-  data: PanelData | unknown;
+  data: PanelData | ToastOptions | unknown;
 }
+
+/** The actual component getting displayed based on the data type */
+const WebviewPanel = ({ panelData }: { panelData: PanelData }) => {
+  const { dataType, data } = panelData;
+
+  switch (dataType) {
+    case EMPTY_STATE_DATA_TYPE:
+      return <EmptyState />;
+    case METRIC_RESULTS_DATA_TYPE:
+      return <MetricResultsPanel data={data as MetricSeriesCollection[]} />;
+    case WMI_RESULT_DATA_TYPE:
+      return <WmiResultPanel data={data as WmiQueryResult} />;
+    case SIMULATOR_DATA_TYPE:
+      return <ExtensionSimulator data={data as SimulatorData} />;
+    default:
+      return <EmptyState />;
+  }
+};
 
 export const App = ({ vscode, dataType, data }: AppProps) => {
   const [panelData, setPanelData] = useState<PanelData>(vscode.getState() ?? { dataType, data });
@@ -27,15 +57,19 @@ export const App = ({ vscode, dataType, data }: AppProps) => {
   const [modalContent, setModalContent] = useState("");
 
   // Handles messages coming from the extension
-  const handleMessage = (event: MessageEvent<UpdateDataEvent>) => {
+  const handleMessage = (event: MessageEvent<WebviewEvent>) => {
     const { messageType, data: messageData } = event.data;
+
+    console.log("MESSAGE RECEIVED: ", messageType, messageData);
 
     switch (messageType) {
       case "updateData":
         setPanelData(messageData as PanelData);
         break;
+      case "showToast":
+        showToast(messageData as ToastOptions);
+        break;
       case "openLog":
-        console.log(messageData);
         setModalContent((messageData as { logContent: string }).logContent);
         setModalOpen(true);
         break;
@@ -56,40 +90,21 @@ export const App = ({ vscode, dataType, data }: AppProps) => {
   }, []);
 
   return (
-    <>
-      <Page>
-        <Page.Main>
-          {dataType === "EMPTY_STATE" && <EmptyState />}
-          {dataType === "METRIC_RESULTS" && (
-            <MetricResultsPanel data={panelData.data as MetricSeriesCollection[]} />
-          )}
-          {dataType === "WMI_RESULT" && <WmiResultPanel data={panelData.data as WmiQueryResult} />}
-          {dataType === "SIMULATOR_DATA" && (
-            <ExtensionSimulator
-              panelData={panelData as SimulatorPanelData}
-              setPanelData={
-                setPanelData as (
-                  newData:
-                    | SimulatorPanelData
-                    | ((prevValue: SimulatorPanelData) => SimulatorPanelData),
-                ) => void
-              }
-            />
-          )}
-        </Page.Main>
-        <Modal
-          title='Simulation log'
-          size='large'
-          show={modalOpen}
-          onDismiss={() => setModalOpen(false)}
-        >
-          <CodeSnippet language='bash' showLineNumbers={false}>
-            {modalContent}
-          </CodeSnippet>
-        </Modal>
-      </Page>
-      <ToastContainer />
-    </>
+    <Page>
+      <Page.Main>
+        <WebviewPanel panelData={panelData} />
+      </Page.Main>
+      <Modal
+        title='Simulation log'
+        size='large'
+        show={modalOpen}
+        onDismiss={() => setModalOpen(false)}
+      >
+        <CodeSnippet language='bash' showLineNumbers={false}>
+          {modalContent}
+        </CodeSnippet>
+      </Modal>
+    </Page>
   );
 };
 

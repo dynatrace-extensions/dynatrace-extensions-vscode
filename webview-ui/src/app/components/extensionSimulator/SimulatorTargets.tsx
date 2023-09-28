@@ -6,105 +6,89 @@ import {
   Heading,
   TableColumn,
   TitleBar,
-  showToast,
 } from "@dynatrace/strato-components-preview";
 import { PlusIcon, EditIcon, DeleteIcon, IntegrationsIcon } from "@dynatrace/strato-icons";
 import React, { useState } from "react";
-import { RemoteTarget, SimulatorPanelData } from "src/app/interfaces/simulator";
+import {
+  SIMULATOR_ADD_TARGERT_CMD,
+  SIMULATOR_DELETE_TARGERT_CMD,
+} from "src/app/constants/constants";
+import { RemoteTarget } from "src/app/interfaces/simulator";
+import { triggerCommand } from "src/app/utils/app-utils";
 import { TargetRegistrationForm } from "./TargetRegistrationForm";
-
-const tableColumns: TableColumn[] = [
-  {
-    header: "Name",
-    accessor: "name",
-    autoWidth: true,
-    ratioWidth: 1,
-    columnType: "text",
-  },
-  {
-    header: "Username",
-    accessor: "username",
-    autoWidth: true,
-    ratioWidth: 1,
-    columnType: "text",
-  },
-  {
-    header: "Address",
-    accessor: "address",
-    autoWidth: true,
-    ratioWidth: 1,
-    columnType: "text",
-  },
-  {
-    header: "Operating System",
-    accessor: "osType",
-    autoWidth: true,
-    ratioWidth: 1,
-    columnType: "text",
-  },
-  {
-    header: "",
-    id: "actions",
-    autoWidth: true,
-    ratioWidth: 1,
-    cell: ({ row }) => {
-      return (
-        <Flex gap={4}>
-          <Button onClick={() => console.log("Edit")}>
-            <Button.Prefix>
-              <EditIcon />
-            </Button.Prefix>
-          </Button>
-          <Button onClick={() => console.log("Delete")}>
-            <Button.Prefix>
-              <DeleteIcon />
-            </Button.Prefix>
-          </Button>
-        </Flex>
-      );
-    },
-  },
-];
 
 interface SimulatorTargetsProps {
   targets: RemoteTarget[];
-  setPanelData: (
-    newData: SimulatorPanelData | ((prevValue: SimulatorPanelData) => SimulatorPanelData),
-  ) => void;
 }
 
-export const SimulatorTargets = ({ targets, setPanelData }: SimulatorTargetsProps) => {
+export const SimulatorTargets = ({ targets }: SimulatorTargetsProps) => {
   const [modalOpen, setModalOpen] = useState(false);
+  const [editingTarget, setEditingTarget] = useState<RemoteTarget | undefined>(undefined);
 
-  const handleOpenModal = () => {
-    setModalOpen(true);
-  };
+  const handleOpenModal = () => setModalOpen(true);
   const handleCloseModal = () => {
+    setEditingTarget(undefined);
     setModalOpen(false);
   };
-
-  const addTarget = (target: RemoteTarget) => {
-    if (targets.findIndex(t => t.name === target.name) >= 0) {
-      showToast({
-        type: "critical",
-        role: "alert",
-        title: "Could not register target",
-        message: `A target with name ${target.name} already exists`,
-        lifespan: 3000,
-      });
-    } else {
-      setPanelData(prevValue => {
-        return {
-          dataType: prevValue.dataType,
-          data: {
-            targets: [...prevValue.data.targets, target],
-            summaries: prevValue.data.summaries,
-            status: prevValue.data.status,
-          },
-        };
-      });
-    }
+  const handleEditTarget = (target: RemoteTarget) => {
+    setEditingTarget(target);
+    handleOpenModal();
   };
+  const addTarget = (target: RemoteTarget) => triggerCommand(SIMULATOR_ADD_TARGERT_CMD, target);
+  const nameIsUnique = (name: string) => targets.findIndex(t => t.name === name) < 0;
+
+  const tableColumns: TableColumn[] = [
+    {
+      header: "Name",
+      accessor: "name",
+      autoWidth: true,
+      ratioWidth: 1,
+      columnType: "text",
+    },
+    {
+      header: "Username",
+      accessor: "username",
+      autoWidth: true,
+      ratioWidth: 1,
+      columnType: "text",
+    },
+    {
+      header: "Address",
+      accessor: "address",
+      autoWidth: true,
+      ratioWidth: 1,
+      columnType: "text",
+    },
+    {
+      header: "Operating System",
+      accessor: "osType",
+      autoWidth: true,
+      ratioWidth: 1,
+      columnType: "text",
+    },
+    {
+      header: "",
+      id: "actions",
+      autoWidth: true,
+      ratioWidth: 1,
+      cell: ({ row }) => {
+        return (
+          <Flex gap={4}>
+            <Button onClick={() => handleEditTarget(row.original as RemoteTarget)}>
+              <Button.Prefix>
+                <EditIcon />
+              </Button.Prefix>
+            </Button>
+            <Button onClick={() => triggerCommand(SIMULATOR_DELETE_TARGERT_CMD, row.original)}>
+              <Button.Prefix>
+                <DeleteIcon />
+              </Button.Prefix>
+            </Button>
+          </Flex>
+        );
+      },
+    },
+  ];
 
   return (
     <>
@@ -119,7 +103,7 @@ export const SimulatorTargets = ({ targets, setPanelData }: SimulatorTargetsProp
           </TitleBar.Prefix>
           <TitleBar.Suffix>
             <Flex gap={4}>
-              <Button onClick={handleOpenModal} variant='accent' color='primary'>
+              <Button onClick={() => handleOpenModal()} variant='accent' color='primary'>
                 <Button.Prefix>{<PlusIcon />}</Button.Prefix>Add
               </Button>
             </Flex>
@@ -134,6 +118,7 @@ export const SimulatorTargets = ({ targets, setPanelData }: SimulatorTargetsProp
             <DataTable.Pagination defaultPageSize={5} />
           </DataTable>
         </Flex>
+        <br />
         <Flex flexDirection='column'>
           <Heading level={2}>Registered OneAgents</Heading>
           <DataTable columns={tableColumns} data={targets.filter(t => t.eecType === "ONEAGENT")}>
@@ -148,6 +133,8 @@ export const SimulatorTargets = ({ targets, setPanelData }: SimulatorTargetsProp
         modalOpen={modalOpen}
         handleCloseModal={handleCloseModal}
         onSubmit={addTarget}
+        nameIsUnique={nameIsUnique}
+        editingTarget={editingTarget}
       />
     </>
   );

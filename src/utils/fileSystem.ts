@@ -381,6 +381,40 @@ export function registerSimulatorTargets(
 }
 
 /**
+ * Registers a list of targets for the extension simulator in the global storage.
+ * @param context - VSCode Extension Context
+ * @param targets - the targets to write
+ */
+export function registerSimulatorTarget(context: vscode.ExtensionContext, target: RemoteTarget) {
+  const targetsJson = path.join(context.globalStorageUri.fsPath, "targets.json");
+  const currentTargets = JSON.parse(readFileSync(targetsJson).toString()) as RemoteTarget[];
+
+  // If target already exists, update the details
+  const foundIdx = currentTargets.findIndex(t => t.name === target.name);
+  if (foundIdx >= 0) {
+    currentTargets[foundIdx] = target;
+  } else {
+    currentTargets.push(target);
+  }
+
+  writeFileSync(targetsJson, JSON.stringify(currentTargets));
+}
+
+/**
+ * Deletes a target from the extension's global storage.
+ * @param context - VSCode Extension Context
+ * @param target - the target to delete
+ */
+export function deleteSimulatorTarget(context: vscode.ExtensionContext, target: RemoteTarget) {
+  const targetsJson = path.join(context.globalStorageUri.fsPath, "targets.json");
+  const currentTargets = JSON.parse(readFileSync(targetsJson).toString()) as RemoteTarget[];
+
+  const newTargets = currentTargets.filter(t => t.name !== target.name);
+
+  writeFileSync(targetsJson, JSON.stringify(newTargets));
+}
+
+/**
  * Fetches all extension simulator summaries from the global storage.
  * @param context - VSCode Extension Context
  * @returns - all targets

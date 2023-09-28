@@ -18,8 +18,9 @@ import {
   RefreshIcon,
   StopIcon,
 } from "@dynatrace/strato-icons";
-import React from "react";
-import { ExecutionSummary, SimulatorStatus } from "src/app/interfaces/simulator";
+import React, { useState } from "react";
+import { ExecutionSummary, RemoteTarget, SimulatorStatus } from "src/app/interfaces/simulator";
+import { NewExecutionForm } from "./NewExecutionForm";
 
 const tableColumns: TableColumn[] = [
   {
@@ -106,96 +107,116 @@ const tableColumns: TableColumn[] = [
 interface SimulatorExecutionsProps {
   summaries: ExecutionSummary[];
   status: SimulatorStatus;
+  targets: RemoteTarget[];
 }
 
-export const SimulatorExecutions = ({ summaries, status }: SimulatorExecutionsProps) => {
-  const getSimulatorCommandUri = (simulatorStatus: SimulatorStatus) => {
-    switch (simulatorStatus) {
-      case "READY":
-        return "command:dynatrace-extensions.simulator.start";
-      case "RUNNING":
-        return "command:dynatrace-extensions.simulator.stop";
-      case "NOTREADY":
-        return "command:dynatrace-extensions.simulator.checkReady";
-    }
-  };
+const SimulatorButton = ({
+  simulatorStatus,
+  handleOpenModal,
+}: {
+  simulatorStatus: SimulatorStatus;
+  handleOpenModal: () => void;
+}) => {
+  switch (simulatorStatus) {
+    case "RUNNING":
+      return (
+        <Button
+          as={Link}
+          style={{ textDecoration: "none" }}
+          variant='accent'
+          color='primary'
+          href='command:dynatrace-extensions.simulator.stop'
+        >
+          <Button.Prefix>
+            <StopIcon />
+          </Button.Prefix>
+          Stop
+        </Button>
+      );
+    case "READY":
+      return (
+        <Button onClick={handleOpenModal} variant='accent' color='primary'>
+          <Button.Prefix>
+            <PlayIcon />
+          </Button.Prefix>
+          Start
+        </Button>
+      );
+    case "NOTREADY":
+      return (
+        <Button
+          as={Link}
+          style={{ textDecoration: "none" }}
+          variant='accent'
+          color='primary'
+          href='command:dynatrace-extensions.simulator.checkReady'
+        >
+          <Button.Prefix>
+            <RefreshIcon />
+          </Button.Prefix>
+          Check again
+        </Button>
+      );
+    default:
+      return <></>;
+  }
+};
 
-  const SimulatorButton = ({ simulatorStatus }: { simulatorStatus: SimulatorStatus }) => {
-    const PrefixIcon = () => {
-      switch (simulatorStatus) {
-        case "READY":
-          return <PlayIcon />;
-        case "RUNNING":
-          return <StopIcon />;
-        case "NOTREADY":
-          return <RefreshIcon />;
-      }
-    };
-    const buttonText = (() => {
-      switch (simulatorStatus) {
-        case "READY":
-          return "Start";
-        case "RUNNING":
-          return "Stop";
-        case "NOTREADY":
-          return "Check again";
-      }
-    })();
-    return (
-      <Button
-        as={Link}
-        style={{ textDecoration: "none" }}
-        href={getSimulatorCommandUri(simulatorStatus)}
-        variant='emphasized'
-        color='primary'
-      >
-        <Button.Prefix>{<PrefixIcon />}</Button.Prefix>
-        {buttonText}
-      </Button>
-    );
-  };
+export const SimulatorExecutions = ({ summaries, status, targets }: SimulatorExecutionsProps) => {
+  const [modalOpen, setModalOpen] = useState(false);
+
+  const handleOpenModal = () => setModalOpen(true);
+  const handleCloseModal = () => setModalOpen(false);
 
   return (
-    <Flex flexDirection='column' gap={16} padding={32}>
-      <TitleBar>
-        <TitleBar.Title>Simulator executions</TitleBar.Title>
-        <TitleBar.Subtitle>
-          Browse the results of your previous runs and start new simulations
-        </TitleBar.Subtitle>
-        <TitleBar.Prefix>
-          <Container as={Flex}>
-            <ActionIcon size='large' />
-          </Container>
-        </TitleBar.Prefix>
-        <TitleBar.Suffix>
-          <SimulatorButton simulatorStatus={status} />
-        </TitleBar.Suffix>
-      </TitleBar>
-      {status === "RUNNING" && (
-        <ProgressBar>
-          <ProgressBar.Label>Simulating extension...</ProgressBar.Label>
-          <ProgressBar.Icon>
-            <EpicIcon />
-          </ProgressBar.Icon>
-        </ProgressBar>
-      )}
-      <Flex flexDirection='column'>
-        <Heading level={2}>Simulator execution history</Heading>
-        <DataTable
-          columns={tableColumns}
-          data={summaries.sort((a, b) => {
-            if (typeof a.startTime === "string") {
-              return new Date(b.startTime).getTime() - new Date(a.startTime).getTime();
-            }
-            return b.startTime.getTime() - a.startTime.getTime();
-          })}
-        >
-          <DataTable.EmptyState>
-            {'Click "Start" to start your first simulation'}
-          </DataTable.EmptyState>
-          <DataTable.Pagination defaultPageSize={5} />
-        </DataTable>
+    <>
+      <Flex flexDirection='column' gap={16} padding={32}>
+        <TitleBar>
+          <TitleBar.Title>Simulator executions</TitleBar.Title>
+          <TitleBar.Subtitle>
+            Browse the results of your previous runs and start new simulations
+          </TitleBar.Subtitle>
+          <TitleBar.Prefix>
+            <Container as={Flex}>
+              <ActionIcon size='large' />
+            </Container>
+          </TitleBar.Prefix>
+          <TitleBar.Suffix>
+            <SimulatorButton simulatorStatus={status} handleOpenModal={handleOpenModal} />
+          </TitleBar.Suffix>
+        </TitleBar>
+        {status === "RUNNING" && (
+          <ProgressBar>
+            <ProgressBar.Label>Simulating extension...</ProgressBar.Label>
+            <ProgressBar.Icon>
+              <EpicIcon />
+            </ProgressBar.Icon>
+          </ProgressBar>
+        )}
+        <Flex flexDirection='column'>
+          <Heading level={2}>Simulator execution history</Heading>
+          <DataTable
+            columns={tableColumns}
+            data={summaries.sort((a, b) => {
+              if (typeof a.startTime === "string") {
+                return new Date(b.startTime).getTime() - new Date(a.startTime).getTime();
+              }
+              return b.startTime.getTime() - a.startTime.getTime();
+            })}
+          >
+            <DataTable.EmptyState>
+              {'Click "Start" to start your first simulation'}
+            </DataTable.EmptyState>
+            <DataTable.Pagination defaultPageSize={10} />
+          </DataTable>
+        </Flex>
       </Flex>
-    </Flex>
+      <NewExecutionForm
+        modalOpen={modalOpen}
+        handleCloseModal={handleCloseModal}
+        onSubmit={() => {}}
+        targets={targets}
+      />
+    </>
   );
 };

@@ -15,6 +15,7 @@
  */
 
 import * as vscode from "vscode";
+import { PanelData, WebviewMessage } from "../interfaces/webview";
 
 /**
  * Registered viewType (id) values for known webivew panels.
@@ -49,13 +50,6 @@ function getNonce() {
  */
 function getColumn() {
   return vscode.window.activeTextEditor ? vscode.ViewColumn.Beside : vscode.ViewColumn.One;
-}
-
-export interface PanelData {
-  // Used to match component on the React side
-  dataType: string;
-  // Holds actual data the panel works with
-  data: unknown;
 }
 
 /**
@@ -209,7 +203,7 @@ export class WebviewPanelManager implements vscode.WebviewPanelSerializer {
    * @param viewType
    * @param message
    */
-  public postMessage(viewType: REGISTERED_PANELS, message: unknown) {
+  public postMessage(viewType: REGISTERED_PANELS, message: WebviewMessage) {
     if (this.currentPanels.has(viewType)) {
       const existingPanel = this.currentPanels.get(viewType);
       existingPanel.webview.postMessage(message).then(

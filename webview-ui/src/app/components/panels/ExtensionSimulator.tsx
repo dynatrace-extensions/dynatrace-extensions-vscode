@@ -1,19 +1,16 @@
 import { AppHeader } from "@dynatrace/strato-components-preview";
 import React, { useState } from "react";
-import { SimulatorPanelData } from "src/app/interfaces/simulator";
+import { SimulatorData } from "src/app/interfaces/simulator";
 import { SimulatorExecutions } from "../extensionSimulator/SimulatorExecutions";
 import { SimulatorTargets } from "../extensionSimulator/SimulatorTargets";
 
 interface ExtensionSimulatorProps {
-  panelData: SimulatorPanelData;
-  setPanelData: (
-    newData: SimulatorPanelData | ((prevValue: SimulatorPanelData) => SimulatorPanelData),
-  ) => void;
+  data: SimulatorData;
 }
 
-export const ExtensionSimulator = ({ panelData, setPanelData }: ExtensionSimulatorProps) => {
+export const ExtensionSimulator = ({ data }: ExtensionSimulatorProps) => {
   const [page, setPage] = useState("executions");
-  const { targets, summaries, status } = panelData.data;
+  const { targets, summaries, status } = data;
 
   const handleExecutionsClick = () => {
     setPage("executions");
@@ -36,8 +33,10 @@ export const ExtensionSimulator = ({ panelData, setPanelData }: ExtensionSimulat
           </AppHeader.NavItem>
         </AppHeader.NavItems>
       </AppHeader>
-      {page === "targets" && <SimulatorTargets targets={targets} setPanelData={setPanelData} />}
-      {page === "executions" && <SimulatorExecutions summaries={summaries} status={status} />}
+      {page === "targets" && <SimulatorTargets targets={targets} />}
+      {page === "executions" && (
+        <SimulatorExecutions summaries={summaries} status={status} targets={targets} />
+      )}
     </>
   );
 };
