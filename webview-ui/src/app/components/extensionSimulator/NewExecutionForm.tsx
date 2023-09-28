@@ -13,30 +13,18 @@ import {
   SelectedKeys,
   Switch,
   Button,
+  ProgressCircle,
 } from "@dynatrace/strato-components-preview";
 import { WarningIcon } from "@dynatrace/strato-icons";
-import React, { useState } from "react";
+import React, { useEffect, useState } from "react";
 import { UseFormRegister, useForm } from "react-hook-form";
 import {
   EecType,
   RemoteTarget,
   SimulationConfig,
   SimulationLocation,
+  SimulatorStatus,
 } from "src/app/interfaces/simulator";
-
-interface NewExecutionFormProps {
-  modalOpen: boolean;
-  handleCloseModal: () => void;
-  onSubmit: (config: SimulationConfig) => void;
-  targets: RemoteTarget[];
-}
-
-type ExecutionForm = {
-  location: SimulationLocation;
-  eecType: EecType;
-  target?: string;
-  sendMetrics: boolean;
-};
 
 interface RemoteTargetsFieldSetProps {
   targets: RemoteTarget[];
@@ -86,16 +74,45 @@ const RemoteTargetsFieldSet = ({
   );
 };
 
+type ExecutionForm = {
+  location: SimulationLocation;
+  eecType: EecType;
+  target?: string;
+  sendMetrics: boolean;
+};
+
+interface NewExecutionFormProps {
+  modalOpen: boolean;
+  handleCloseModal: () => void;
+  onSubmit: (config: SimulationConfig) => void;
+  targets: RemoteTarget[];
+  currentConfig?: SimulationConfig;
+  simulatorStatus: SimulatorStatus;
+  simulatorStatusMessage: string;
+}
+
 export const NewExecutionForm = ({
   modalOpen,
   handleCloseModal,
   onSubmit,
   targets,
+  currentConfig,
+  simulatorStatus,
+  simulatorStatusMessage,
 }: NewExecutionFormProps) => {
   const [location, setLocation] = useState<SimulationLocation>("LOCAL");
   const [eecType, setEecType] = useState<EecType>("ONEAGENT");
   const [target, setTarget] = useState<SelectedKeys | null>(null);
   const [sendMetrics, setSendMetrics] = useState(false);
+
+  useEffect(() => {
+    if (currentConfig) {
+      setLocation(currentConfig.location);
+      setEecType(currentConfig.eecType);
+      setTarget(currentConfig.target ? [currentConfig.target.name] : null);
+      setSendMetrics(currentConfig.sendMetrics);
+    }
+  }, [currentConfig]);
 
   const {
     register,
@@ -136,14 +153,14 @@ export const NewExecutionForm = ({
         message: errorMessage,
         type: "critical",
         role: "alert",
-        lifespan: 3000,
+        lifespan: 1500,
       });
       return;
     }
 
     onSubmit(config);
-    clearForm();
-    handleCloseModal();
+    // clearForm();
+    // handleCloseModal();
   };
 
   return (
@@ -164,19 +181,19 @@ export const NewExecutionForm = ({
             </Switch>
           </FieldSet>
           <FieldSet legend='Execution details' name='execution-details'>
-            <FormField label='Location' required>
-              <RadioGroup
-                value={location}
-                onChange={value => {
-                  setLocation(value as SimulationLocation);
-                  setValue("location", value as SimulationLocation, { shouldValidate: false });
-                }}
-              >
-                <Radio value='LOCAL'>Local machine</Radio>
-                <Radio value='REMOTE'>Remote target</Radio>
-              </RadioGroup>
-            </FormField>
             <Flex gap={32}>
+              <FormField label='Location' required>
+                <RadioGroup
+                  value={location}
+                  onChange={value => {
+                    setLocation(value as SimulationLocation);
+                    setValue("location", value as SimulationLocation, { shouldValidate: false });
+                  }}
+                >
+                  <Radio value='LOCAL'>Local machine</Radio>
+                  <Radio value='REMOTE'>Remote target</Radio>
+                </RadioGroup>
+              </FormField>
               <FormField label='EEC' required>
                 <RadioGroup
                   value={eecType}
@@ -211,10 +228,19 @@ export const NewExecutionForm = ({
               />
             </FieldSet>
           )}
-          <Flex paddingTop={16}>
+          {simulatorStatus === "NOTREADY" && (
+            <Container variant='default' color='critical'>
+              <Flex gap={12} alignItems='center'>
+                <WarningIcon size='large' />
+                <Text>{simulatorStatusMessage}</Text>
+              </Flex>
+            </Container>
+          )}
+          <Flex paddingTop={16} gap={8} alignItems='center'>
             <Button type='submit' variant='accent' color='primary'>
-              Start simulation
+              {simulatorStatus === "READY" ? "Start simulation" : "Check configuration"}
             </Button>
+            {simulatorStatus === "CHECKING" && <ProgressCircle size='small' />}
           </Flex>
         </Flex>
       </form>

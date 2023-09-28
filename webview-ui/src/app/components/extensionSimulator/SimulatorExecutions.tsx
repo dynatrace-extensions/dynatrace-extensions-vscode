@@ -6,21 +6,33 @@ import {
   Heading,
   Link,
   ProgressBar,
+  ProgressCircle,
   TableColumn,
   TitleBar,
+  Tooltip,
 } from "@dynatrace/strato-components-preview";
 import { Colors } from "@dynatrace/strato-design-tokens";
 import {
   ActionIcon,
   DescriptionIcon,
+  EditIcon,
   EpicIcon,
   PlayIcon,
-  RefreshIcon,
   StopIcon,
 } from "@dynatrace/strato-icons";
 import React, { useState } from "react";
-import { SIMULATOR_READ_LOG_CMD } from "src/app/constants/constants";
-import { ExecutionSummary, RemoteTarget, SimulatorStatus } from "src/app/interfaces/simulator";
+import {
+  SIMULATOR_CHECK_READY_CMD,
+  SIMULATOR_READ_LOG_CMD,
+  SIMULATOR_STOP_CMD,
+} from "src/app/constants/constants";
+import {
+  ExecutionSummary,
+  SimulationConfig,
+  SimulatorData,
+  SimulatorStatus,
+} from "src/app/interfaces/simulator";
+import { triggerCommand } from "src/app/utils/app-utils";
 import { NewExecutionForm } from "./NewExecutionForm";
 
 const tableColumns: TableColumn[] = [
@@ -103,12 +115,6 @@ const tableColumns: TableColumn[] = [
   },
 ];
 
-interface SimulatorExecutionsProps {
-  summaries: ExecutionSummary[];
-  status: SimulatorStatus;
-  targets: RemoteTarget[];
-}
-
 const SimulatorButton = ({
   simulatorStatus,
   handleOpenModal,
@@ -119,13 +125,7 @@ const SimulatorButton = ({
   switch (simulatorStatus) {
     case "RUNNING":
       return (
-        <Button
-          as={Link}
-          style={{ textDecoration: "none" }}
-          variant='accent'
-          color='primary'
-          href='command:dynatrace-extensions.simulator.stop'
-        >
+        <Button onClick={() => triggerCommand(SIMULATOR_STOP_CMD)} variant='accent' color='primary'>
           <Button.Prefix>
             <StopIcon />
           </Button.Prefix>
@@ -133,27 +133,18 @@ const SimulatorButton = ({
         </Button>
       );
     case "READY":
-      return (
-        <Button onClick={handleOpenModal} variant='accent' color='primary'>
-          <Button.Prefix>
-            <PlayIcon />
-          </Button.Prefix>
-          Start
-        </Button>
-      );
     case "NOTREADY":
       return (
-        <Button
-          as={Link}
-          style={{ textDecoration: "none" }}
-          variant='accent'
-          color='primary'
-          href='command:dynatrace-extensions.simulator.checkReady'
-        >
-          <Button.Prefix>
-            <RefreshIcon />
-          </Button.Prefix>
-          Check again
+        <Button onClick={handleOpenModal} variant='accent' color='primary'>
+          <Button.Prefix>{simulatorStatus === "READY" ? <PlayIcon /> : <EditIcon />}</Button.Prefix>
+          {simulatorStatus === "READY" ? "Start" : "Edit config"}
+        </Button>
+      );
+    case "CHECKING":
+      return (
+        <Button variant='accent' color='primary' disabled={true}>
+          <ProgressCircle size='small' />
+          Checking
         </Button>
       );
     default:
@@ -161,11 +152,21 @@ const SimulatorButton = ({
   }
 };
 
-export const SimulatorExecutions = ({ summaries, status, targets }: SimulatorExecutionsProps) => {
+export const SimulatorExecutions = ({
+  summaries,
+  status,
+  statusMessage,
+  targets,
+}: SimulatorData) => {
   const [modalOpen, setModalOpen] = useState(false);
+  const [currentConfig, setCurrentConfig] = useState<SimulationConfig | undefined>(undefined);
 
   const handleOpenModal = () => setModalOpen(true);
   const handleCloseModal = () => setModalOpen(false);
+  const handleConfigSubmission = (config: SimulationConfig) => {
+    setCurrentConfig(config);
+    triggerCommand(SIMULATOR_CHECK_READY_CMD, config);
+  };
 
   return (
     <>
@@ -181,7 +182,9 @@ export const SimulatorExecutions = ({ summaries, status, targets }: SimulatorExe
             </Container>
           </TitleBar.Prefix>
           <TitleBar.Suffix>
-            <SimulatorButton simulatorStatus={status} handleOpenModal={handleOpenModal} />
+            <Tooltip text={statusMessage} disabled={statusMessage === ""} delay='none'>
+              <SimulatorButton simulatorStatus={status} handleOpenModal={handleOpenModal} />
+            </Tooltip>
           </TitleBar.Suffix>
         </TitleBar>
         {status === "RUNNING" && (
@@ -213,8 +216,11 @@ export const SimulatorExecutions = ({ summaries, status, targets }: SimulatorExe
       <NewExecutionForm
         modalOpen={modalOpen}
         handleCloseModal={handleCloseModal}
-        onSubmit={() => {}}
+        onSubmit={handleConfigSubmission}
         targets={targets}
+        currentConfig={currentConfig}
+        simulatorStatus={status}
+        simulatorStatusMessage={statusMessage}
       />
     </>
   );

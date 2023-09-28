@@ -10,7 +10,7 @@ interface ExtensionSimulatorProps {
 
 export const ExtensionSimulator = ({ data }: ExtensionSimulatorProps) => {
   const [page, setPage] = useState("executions");
-  const { targets, summaries, status } = data;
+  const { targets } = data;
 
   const handleExecutionsClick = () => {
     setPage("executions");
@@ -34,9 +34,7 @@ export const ExtensionSimulator = ({ data }: ExtensionSimulatorProps) => {
         </AppHeader.NavItems>
       </AppHeader>
       {page === "targets" && <SimulatorTargets targets={targets} />}
-      {page === "executions" && (
-        <SimulatorExecutions summaries={summaries} status={status} targets={targets} />
-      )}
+      {page === "executions" && <SimulatorExecutions {...data} />}
     </>
   );
 };

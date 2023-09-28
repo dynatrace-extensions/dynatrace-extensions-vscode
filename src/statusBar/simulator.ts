@@ -50,6 +50,7 @@ const SIMULATOR_PANEL_DATA_TYPE = "SIMULATOR_DATA";
 export class SimulatorManager extends CachedDataConsumer {
   private simulatorProcess: ChildProcess | undefined;
   private simulatorStatus: SimulatorStatus;
+  private simulatorStatusMessage: string;
   private idToken: string;
   private url: string;
   private localOs: OsType;
@@ -86,15 +87,18 @@ export class SimulatorManager extends CachedDataConsumer {
     });
     vscode.commands.registerCommand(SIMULATOR_STOP_CMD, () => this.stop());
     vscode.commands.registerCommand(SIMULATOR_CHECK_READY_CMD, (config?: SimulationConfig) => {
-      const [ready, errorMessage] = config
+      // Let the panel know check is in progress
+      this.simulatorStatus = "CHECKING";
+      this.refreshUI();
+
+      // Do actual check
+      const [status, statusMessage] = config
         ? this.checkSimulationConfig(config.location, config.eecType, config.target)
         : this.checkSimulationConfig();
-      if (ready) {
-        this.simulatorStatus = "READY";
-      } else {
-        this.simulatorStatus = "NOTREADY";
-        showMessage("error", `Cannot start simulation: ${errorMessage}`);
-      }
+
+      // Let the panel know the check result
+      this.simulatorStatus = status;
+      this.simulatorStatusMessage = statusMessage;
       this.refreshUI();
     });
     vscode.commands.registerCommand(SIMULATOR_OPEN_UI_CMD, () => this.refreshUI());
@@ -164,43 +168,43 @@ export class SimulatorManager extends CachedDataConsumer {
     location?: SimulationLocation,
     eecType?: EecType,
     target?: RemoteTarget,
-  ): [boolean, string] {
+  ): [SimulatorStatus, string] {
     // Check extension has datasource
     const datasourceName = getDatasourceName(this.parsedExtension);
     if (datasourceName === "unsupported") {
-      return [false, "Extension does not have a supported datasource"];
+      return ["NOTREADY", "Extension does not have a supported datasource"];
     }
     // Check extension file exists
     const extensionFile = getExtensionFilePath();
     if (!extensionFile) {
-      return [false, "Could not detect extension manifest file"];
+      return ["NOTREADY", "Could not detect extension manifest file"];
     } else {
       this.extensionFile = extensionFile;
     }
     // Check activation file exists
-    if (!vscode.workspace.workspaceFolders) return [false, "No workspace open"];
+    if (!vscode.workspace.workspaceFolders) return ["NOTREADY", "No workspace open"];
     const activationFile = path.join(
       vscode.workspace.workspaceFolders[0].uri.fsPath,
       "config",
       "simulator.json",
     );
     if (!existsSync(activationFile)) {
-      return [false, 'Could not detect config file "simulator.json"'];
+      return ["NOTREADY", 'Could not detect config file "simulator.json"'];
     } else {
       this.activationFile = activationFile;
     }
 
     // LOCAL Simulation checks
     if (location === "LOCAL") {
-      if (!eecType) return [false, "No EEC type selected"];
+      if (!eecType) return ["NOTREADY", "No EEC type selected"];
       // Check we can simulate this DS on local OS
       if (!canSimulateDatasource(this.localOs, eecType, datasourceName)) {
-        return [false, `Datasource ${datasourceName} cannot be simulated on this OS`];
+        return ["NOTREADY", `Datasource ${datasourceName} cannot be simulated on this OS`];
       }
       // Check binary exists
       const datasourcePath = getDatasourcePath(this.localOs, eecType, datasourceName);
       if (!existsSync(datasourcePath)) {
-        return [false, `Could not find datasource executable at ${datasourcePath}`];
+        return ["NOTREADY", `Could not find datasource executable at ${datasourcePath}`];
       } else {
         this.datasourceDir = getDatasourceDir(this.localOs, eecType, datasourceName);
         this.datasourceExe = getDatasourceExe(this.localOs, eecType, datasourceName);
@@ -209,10 +213,10 @@ export class SimulatorManager extends CachedDataConsumer {
 
     // REMOTE Simulation checks
     if (location === "REMOTE") {
-      if (!target) return [false, "No target given for remote simulation"];
+      if (!target) return ["NOTREADY", "No target given for remote simulation"];
       // Check we can simulate this DS on remote OS
       if (!canSimulateDatasource(target.osType, target.eecType, datasourceName)) {
-        return [false, `Datasource ${datasourceName} cannot be simulated on ${target.osType}`];
+        return ["NOTREADY", `Datasource ${datasourceName} cannot be simulated on ${target.osType}`];
       } else {
         this.datasourceDir = getDatasourceDir(target.osType, target.eecType, datasourceName);
         this.datasourceExe = getDatasourceExe(target.osType, target.eecType, datasourceName);
@@ -220,7 +224,7 @@ export class SimulatorManager extends CachedDataConsumer {
     }
 
     // At this point, simulator is ready
-    return [true, ""];
+    return ["READY", ""];
   }
 
   /**
@@ -398,7 +402,7 @@ export class SimulatorManager extends CachedDataConsumer {
   /**
    * Performs all the necessary cleanup when the simulator is stopped.
    */
-  private stop() {
+  public stop() {
     try {
       if (this.simulatorProcess) {
         // Datasource is detached from main process, so we need to kill the entire process tree
@@ -437,6 +441,7 @@ export class SimulatorManager extends CachedDataConsumer {
         targets: getSimulatorTargets(this.context),
         summaries: getSimulatorSummaries(this.context),
         status: this.simulatorStatus,
+        statusMessage: this.simulatorStatusMessage,
       },
     } as SimulatorPanelData);
   }

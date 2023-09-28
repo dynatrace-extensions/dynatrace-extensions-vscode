@@ -70,6 +70,8 @@ import {
 } from "./utils/fileSystem";
 import { REGISTERED_PANELS, WebviewPanelManager } from "./webviews/webviewPanel";
 
+let simulatorManager: SimulatorManager;
+
 /**
  * Registers Completion Providers for this extension.
  * This is so that all providers can be created in one function, keeping the activation function more tidy.
@@ -607,7 +609,7 @@ export async function activate(context: vscode.ExtensionContext) {
   await cachedData.initialize();
   const webviewPanelManager = new WebviewPanelManager(context.extensionUri);
   const extensionsTreeViewProvider = new ExtensionsTreeDataProvider(context);
-  const simulatorManager = new SimulatorManager(context, webviewPanelManager);
+  simulatorManager = new SimulatorManager(context, webviewPanelManager);
   const metricLensProvider = new SelectorCodeLensProvider(
     "metricSelector:",
     "metricSelectorsCodeLens",
@@ -839,8 +841,11 @@ export async function activate(context: vscode.ExtensionContext) {
 
 /**
  * Performs any kind of necessary clean up.
- * Automatically called when the extension was deactivated (e.g. end of command).
+ * Automatically called when the extension was deactivated.
  */
 export function deactivate() {
   console.log("DYNATRACE EXTENSIONS - DEACTIVATED");
+
+  // Kill any simulator processes left running
+  simulatorManager.stop();
 }

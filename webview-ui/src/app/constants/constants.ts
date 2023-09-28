@@ -8,3 +8,6 @@ export const SIMULATOR_DATA_TYPE = "SIMULATOR_DATA";
 export const SIMULATOR_ADD_TARGERT_CMD = "dynatrace-extensions.simulator.addTarget";
 export const SIMULATOR_DELETE_TARGERT_CMD = "dynatrace-extensions.simulator.deleteTarget";
 export const SIMULATOR_READ_LOG_CMD = "dynatrace-extensions.simulator.readLog";
+export const SIMULATOR_CHECK_READY_CMD = "dynatrace-extensions.simulator.checkReady";
+export const SIMULATOR_START_CMD = "dynatrace-extensions.simulator.start";
+export const SIMULATOR_STOP_CMD = "dynatrace-extensions.simulator.stop";
