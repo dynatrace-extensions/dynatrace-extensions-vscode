@@ -651,8 +651,11 @@ export async function activate(context: vscode.ExtensionContext) {
     wmiStatuses: [wmiLensProvider],
   });
 
-  // Subscribers can now access cached data
-  simulatorManager.isReady(false);
+  // The check for the simulator's initial status (must happen once cached data is available)
+  vscode.commands.executeCommand("dynatrace-extensions.simulator.checkReady").then(
+    () => {},
+    err => console.log(`Error while checking simulator status: ${(err as Error).message}`),
+  );
 
   // Perform all feature registrations
   context.subscriptions.push(

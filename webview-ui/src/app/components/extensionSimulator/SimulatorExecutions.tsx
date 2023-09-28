@@ -19,6 +19,7 @@ import {
   StopIcon,
 } from "@dynatrace/strato-icons";
 import React, { useState } from "react";
+import { SIMULATOR_READ_LOG_CMD } from "src/app/constants/constants";
 import { ExecutionSummary, RemoteTarget, SimulatorStatus } from "src/app/interfaces/simulator";
 import { NewExecutionForm } from "./NewExecutionForm";
 
@@ -93,9 +94,7 @@ const tableColumns: TableColumn[] = [
         <Button
           as={Link}
           style={{ textDecoration: "none" }}
-          href={`command:dynatrace-extensions.simulator.readLog?${encodeURIComponent(
-            JSON.stringify(args),
-          )}`}
+          href={`command:${SIMULATOR_READ_LOG_CMD}?${encodeURIComponent(JSON.stringify(args))}`}
         >
           <Button.Prefix>{<DescriptionIcon />}</Button.Prefix>
         </Button>

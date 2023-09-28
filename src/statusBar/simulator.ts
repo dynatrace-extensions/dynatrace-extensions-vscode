@@ -9,6 +9,7 @@ import {
   OsType,
   RemoteExecutionSummary,
   RemoteTarget,
+  SimulationConfig,
   SimulationLocation,
   SimulatorPanelData,
   SimulatorStatus,
@@ -37,7 +38,7 @@ import { REGISTERED_PANELS, WebviewPanelManager } from "../webviews/webviewPanel
 const SIMULATOR_START_CMD = "dynatrace-extensions.simulator.start";
 const SIMULATOR_STOP_CMD = "dynatrace-extensions.simulator.stop";
 const SIMULATOR_CHECK_READY_CMD = "dynatrace-extensions.simulator.checkReady";
-const SIMULATOR_OPEN_UI_CMD = "dynatrace-extensions.simulator.openUI";
+const SIMULATOR_OPEN_UI_CMD = "dynatrace-extensions.simulator.refreshUI";
 const SIMULATOR_READ_LOG_CMD = "dynatrace-extensions.simulator.readLog";
 const SIMULATOR_ADD_TARGERT_CMD = "dynatrace-extensions.simulator.addTarget";
 const SIMULATOR_DELETE_TARGERT_CMD = "dynatrace-extensions.simulator.deleteTarget";
@@ -76,20 +77,27 @@ export class SimulatorManager extends CachedDataConsumer {
     // Initial clean-up of files
     cleanUpSimulatorLogs(context);
 
-    // Create staus bar and hide it
-    this.statusBar = vscode.window.createStatusBarItem(vscode.StatusBarAlignment.Left, 0);
-    this.statusBar.hide();
-
     // Create the output channel for logs
     this.outputChannel = vscode.window.createOutputChannel("Extension simulator", "log");
 
     // Register commands
-    vscode.commands.registerCommand(SIMULATOR_START_CMD, async () => {
-      await this.start();
+    vscode.commands.registerCommand(SIMULATOR_START_CMD, async (config: SimulationConfig) => {
+      await this.start(config);
     });
     vscode.commands.registerCommand(SIMULATOR_STOP_CMD, () => this.stop());
-    vscode.commands.registerCommand(SIMULATOR_CHECK_READY_CMD, () => this.isReady());
-    vscode.commands.registerCommand(SIMULATOR_OPEN_UI_CMD, () => this.openUI());
+    vscode.commands.registerCommand(SIMULATOR_CHECK_READY_CMD, (config?: SimulationConfig) => {
+      const [ready, errorMessage] = config
+        ? this.checkSimulationConfig(config.location, config.eecType, config.target)
+        : this.checkSimulationConfig();
+      if (ready) {
+        this.simulatorStatus = "READY";
+      } else {
+        this.simulatorStatus = "NOTREADY";
+        showMessage("error", `Cannot start simulation: ${errorMessage}`);
+      }
+      this.refreshUI();
+    });
+    vscode.commands.registerCommand(SIMULATOR_OPEN_UI_CMD, () => this.refreshUI());
     vscode.commands.registerCommand(SIMULATOR_READ_LOG_CMD, (logPath: string) =>
       this.readLog(logPath),
     );
@@ -99,6 +107,13 @@ export class SimulatorManager extends CachedDataConsumer {
     vscode.commands.registerCommand(SIMULATOR_DELETE_TARGERT_CMD, (target: RemoteTarget) =>
       this.deleteTarget(target),
     );
+
+    // Create the status bar and show it
+    this.statusBar = vscode.window.createStatusBarItem(vscode.StatusBarAlignment.Left, 0);
+    this.statusBar.command = SIMULATOR_OPEN_UI_CMD;
+    this.statusBar.text = "Extension simulator";
+    this.statusBar.tooltip = "Click to open";
+    this.statusBar.show();
   }
 
   /**
@@ -117,7 +132,7 @@ export class SimulatorManager extends CachedDataConsumer {
         lifespan: 800,
       } as ToastOptions,
     });
-    this.openUI();
+    this.refreshUI();
   }
 
   /**
@@ -135,99 +150,57 @@ export class SimulatorManager extends CachedDataConsumer {
         lifespan: 800,
       } as ToastOptions,
     });
-    this.openUI();
+    this.refreshUI();
   }
 
   /**
-   * TODO: Review and delete or merge with other function
-   * ----
-   * Updates the status bar with the current simulator status.
-   * @param status - simulator status
-   * @param message - optional message to display in the tooltip
-   */
-  private updateStatusBarDetails(
-    status: SimulatorStatus,
-    message?: string,
-    openUI: boolean = true,
-  ) {
-    this.simulatorStatus = status;
-    this.statusBar.command = SIMULATOR_OPEN_UI_CMD;
-    this.statusBar.text = "Extension simulator";
-    this.statusBar.tooltip = "Click to open";
-    if (openUI) this.openUI();
-    this.statusBar.show();
-  }
-
-  /**
-   * Checks if the simulator is ready to start.
+   * Checks if current simulation configuration can be run.
    * @param location - simulation location
    * @param eecType - eec type
    * @param target - remote target
    * @returns true if simulator is ready, false otherwise
    */
-  public isReady(
-    openUI: boolean = true,
+  public checkSimulationConfig(
     location?: SimulationLocation,
     eecType?: EecType,
     target?: RemoteTarget,
-  ) {
+  ): [boolean, string] {
     // Check extension has datasource
     const datasourceName = getDatasourceName(this.parsedExtension);
     if (datasourceName === "unsupported") {
-      this.updateStatusBarDetails(
-        "NOTREADY",
-        "Extension does not have a supported datasource",
-        openUI,
-      );
-      return false;
+      return [false, "Extension does not have a supported datasource"];
     }
     // Check extension file exists
     const extensionFile = getExtensionFilePath();
     if (!extensionFile) {
-      this.updateStatusBarDetails("NOTREADY", "Could not detect extension manifest file", openUI);
-      return false;
+      return [false, "Could not detect extension manifest file"];
     } else {
       this.extensionFile = extensionFile;
     }
     // Check activation file exists
-    if (!vscode.workspace.workspaceFolders) return false;
+    if (!vscode.workspace.workspaceFolders) return [false, "No workspace open"];
     const activationFile = path.join(
       vscode.workspace.workspaceFolders[0].uri.fsPath,
       "config",
       "simulator.json",
     );
     if (!existsSync(activationFile)) {
-      this.updateStatusBarDetails(
-        "NOTREADY",
-        'Could not detect config file "simulator.json"',
-        openUI,
-      );
-      return false;
+      return [false, 'Could not detect config file "simulator.json"'];
     } else {
       this.activationFile = activationFile;
     }
 
     // LOCAL Simulation checks
     if (location === "LOCAL") {
-      if (!eecType) return false;
+      if (!eecType) return [false, "No EEC type selected"];
       // Check we can simulate this DS on local OS
       if (!canSimulateDatasource(this.localOs, eecType, datasourceName)) {
-        this.updateStatusBarDetails(
-          "NOTREADY",
-          `Datasource ${datasourceName} cannot be simulated on this OS`,
-          openUI,
-        );
-        return false;
+        return [false, `Datasource ${datasourceName} cannot be simulated on this OS`];
       }
       // Check binary exists
       const datasourcePath = getDatasourcePath(this.localOs, eecType, datasourceName);
       if (!existsSync(datasourcePath)) {
-        this.updateStatusBarDetails(
-          "NOTREADY",
-          `Could not find datasource executable at ${datasourcePath}`,
-          openUI,
-        );
-        return false;
+        return [false, `Could not find datasource executable at ${datasourcePath}`];
       } else {
         this.datasourceDir = getDatasourceDir(this.localOs, eecType, datasourceName);
         this.datasourceExe = getDatasourceExe(this.localOs, eecType, datasourceName);
@@ -236,15 +209,10 @@ export class SimulatorManager extends CachedDataConsumer {
 
     // REMOTE Simulation checks
     if (location === "REMOTE") {
-      if (!target) return false;
+      if (!target) return [false, "No target given for remote simulation"];
       // Check we can simulate this DS on remote OS
       if (!canSimulateDatasource(target.osType, target.eecType, datasourceName)) {
-        this.updateStatusBarDetails(
-          "NOTREADY",
-          `Datasource ${datasourceName} cannot be simulated on ${target.osType}`,
-          openUI,
-        );
-        return false;
+        return [false, `Datasource ${datasourceName} cannot be simulated on ${target.osType}`];
       } else {
         this.datasourceDir = getDatasourceDir(target.osType, target.eecType, datasourceName);
         this.datasourceExe = getDatasourceExe(target.osType, target.eecType, datasourceName);
@@ -252,8 +220,7 @@ export class SimulatorManager extends CachedDataConsumer {
     }
 
     // At this point, simulator is ready
-    this.updateStatusBarDetails("READY", undefined, openUI);
-    return true;
+    return [true, ""];
   }
 
   /**
@@ -317,7 +284,7 @@ export class SimulatorManager extends CachedDataConsumer {
         logPath: logFilePath,
         workspace,
       } as LocalExecutionSummary | RemoteExecutionSummary);
-      this.openUI();
+      this.refreshUI();
       this.outputChannel.appendLine(
         `Simulator process closed with code ${code ?? signal.toString()}`,
       );
@@ -398,116 +365,33 @@ export class SimulatorManager extends CachedDataConsumer {
     this.createProcess({ location: "REMOTE", target: target.name }, command, {
       shell: process.platform === "win32" ? "powershell.exe" : "/bin/sh",
     });
-
-    this.updateStatusBarDetails("RUNNING");
   }
 
   /**
-   * Starts the main user flow for the simulator.
+   * Starts simulating the extension based on the given configuration
    */
-  private async start() {
-    // Simulation location
-    const locationChoice = await vscode.window.showQuickPick(
-      [
-        {
-          label: "Local",
-          value: "LOCAL",
-          description: "Simulate the extension on your local machine",
-        },
-        {
-          label: "Remote",
-          value: "REMOTE",
-          description: "Simulate the extension remotely on a OneAgent or ActiveGate",
-        },
-      ],
-      {
-        canPickMany: false,
-        title: "Where will the simulation run?",
-        ignoreFocusOut: true,
-      },
-    );
-    if (!locationChoice) {
-      showMessage("error", "No location selected");
-      return;
-    }
+  private async start(config: SimulationConfig) {
+    const { location, target } = config;
 
-    // EEC type
-    const eecChoice = await vscode.window.showQuickPick(
-      [
-        {
-          label: "ActiveGate",
-          value: "ACTIVEGATE",
-          description: "Simulate the extension on an ActiveGate",
-        },
-        {
-          label: "OneAgent",
-          value: "ONEAGENT",
-          description: "Simulate the extension on a OneAgent",
-        },
-      ],
-      {
-        canPickMany: false,
-        title: "Which component will run the simulation?",
-        ignoreFocusOut: true,
-      },
-    );
-    if (!eecChoice) {
-      showMessage("error", "No component selected");
-      return;
+    // Create log folder if it doesn't exist
+    const logsDir = path.join(vscode.workspace.workspaceFolders[0].uri.fsPath, "logs");
+    if (!existsSync(logsDir)) {
+      mkdirSync(logsDir);
     }
-
-    // Remote target
-    let target: RemoteTarget;
-    if (locationChoice.value === "REMOTE") {
-      const targetChoice = await vscode.window.showQuickPick(
-        getSimulatorTargets(this.context).map(t => ({
-          label: `${t.name} (${t.username}@${t.address})`,
-          value: t,
-        })),
-        {
-          canPickMany: false,
-          title: "Which remote target will run the simulation?",
-          ignoreFocusOut: true,
-        },
-      );
-      if (!targetChoice) {
-        showMessage("error", "No target selected");
-        return;
-      } else {
-        target = targetChoice.value;
+    // Start the simulation
+    try {
+      switch (location) {
+        case "LOCAL":
+          this.startLocally();
+          break;
+        case "REMOTE":
+          await this.startRemotely(target);
+          break;
       }
-    }
-
-    // Check simulator is ready for selected choice and start simulation
-    if (
-      this.isReady(
-        true,
-        locationChoice.value as SimulationLocation,
-        eecChoice.value as EecType,
-        target,
-      )
-    ) {
-      // Create log folder if it doesn't exist
-      const logsDir = path.join(vscode.workspace.workspaceFolders[0].uri.fsPath, "logs");
-      if (!existsSync(logsDir)) {
-        mkdirSync(logsDir);
-      }
-      // Start the simulation
-      try {
-        switch (locationChoice.value) {
-          case "LOCAL":
-            this.startLocally();
-            break;
-          case "REMOTE":
-            await this.startRemotely(target);
-            break;
-        }
-        this.updateStatusBarDetails("RUNNING");
-      } catch (err) {
-        showMessage("error", `Error starting the simulation ${(err as Error).message}`);
-      }
-    } else {
-      showMessage("warn", "Cannot simulate extension, check status bar for details");
+      this.simulatorStatus = "RUNNING";
+      this.refreshUI();
+    } catch (err) {
+      showMessage("error", `Error starting the simulation ${(err as Error).message}`);
     }
   }
 
@@ -541,11 +425,12 @@ export class SimulatorManager extends CachedDataConsumer {
     } catch (err) {
       showMessage("error", `Error stopping the simulation ${(err as Error).message}`);
     } finally {
-      this.updateStatusBarDetails("READY");
+      this.simulatorStatus = "READY";
+      this.refreshUI();
     }
   }
 
-  private openUI() {
+  private refreshUI() {
     this.panelManager.render(REGISTERED_PANELS.SIMULATOR_UI, "Extension Simulator", {
       dataType: SIMULATOR_PANEL_DATA_TYPE,
       data: {

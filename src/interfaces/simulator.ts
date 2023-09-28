@@ -5,6 +5,13 @@ export type OsType = "LINUX" | "WINDOWS";
 export type SimulationLocation = "LOCAL" | "REMOTE";
 export type SimulatorStatus = "READY" | "RUNNING" | "NOTREADY";
 
+export interface SimulationConfig {
+  location: SimulationLocation;
+  eecType: EecType;
+  target?: RemoteTarget;
+  sendMetrics: boolean;
+}
+
 export interface SimulatorPanelData extends PanelData {
   dataType: "SIMULATOR_DATA";
   data: {
