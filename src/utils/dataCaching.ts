@@ -172,8 +172,8 @@ export class CachedData {
       subscriber.next(initialManifestContent);
 
       // And then, on every doc change
-      const manifestFilePath = getExtensionFilePath();
       vscode.workspace.onDidChangeTextDocument(change => {
+        const manifestFilePath = getExtensionFilePath();
         if (path.resolve(change.document.fileName) === path.resolve(manifestFilePath)) {
           subscriber.next(change.document.getText());
         }
