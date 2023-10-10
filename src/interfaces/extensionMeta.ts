@@ -28,6 +28,15 @@ export type DatasourceName =
   | "python"
   | "unsupported";
 
+export type DetailInjectionCardType =
+  | "ENTITIES_LIST"
+  | "CHART_GROUP"
+  | "MESSAGE"
+  | "LOGS"
+  | "EVENTS"
+  | "METRIC_TABLE"
+  | "INJECTIONS";
+
 interface TopologyStub {
   types?: TopologyType[];
   relationships?: RelationshipStub[];
@@ -63,12 +72,12 @@ interface RelationshipStub {
   }[];
 }
 
-interface DimensionStub {
+export interface DimensionStub {
   key: string;
   value: string;
   filter?: string;
 }
-interface MetricStub {
+export interface MetricStub {
   key: string;
   value: string;
   type?: string;
@@ -82,7 +91,9 @@ export interface DatasourceGroup {
   subgroups?: SubGroup[];
 }
 
-interface SubGroup extends DatasourceGroup {
+interface SubGroup {
+  featureSet?: string;
+  dimensions?: DimensionStub[];
   metrics: MetricStub[];
 }
 
@@ -127,6 +138,7 @@ export interface MetricMetadata {
     tags?: string[];
     sourceEntityType?: string;
   };
+  query?: string;
 }
 
 interface VarStub {
@@ -151,14 +163,8 @@ interface ListScreenCard {
 interface DetailsScreenCard {
   key: string;
   entitySelectorTemplate?: string;
-  type:
-    | "ENTITIES_LIST"
-    | "CHART_GROUP"
-    | "MESSAGE"
-    | "LOGS"
-    | "EVENTS"
-    | "METRIC_TABLE"
-    | "INJECTIONS";
+  conditions?: string[];
+  type: DetailInjectionCardType;
 }
 
 interface DetailsSettings {
@@ -168,7 +174,7 @@ interface DetailsSettings {
   };
 }
 
-interface ScreenStub {
+export interface ScreenStub {
   entityType: string;
   propertiesCard?: PropertiesCard;
   listSettings?: ListSettings;
@@ -260,25 +266,58 @@ interface CustomColumn {
   };
 }
 
-interface MetricTableCardStub {
-  key: string;
-  displayName?: string;
-}
-
-interface ChartsCardStub {
+export interface MetricTableCardStub {
   key: string;
   displayName?: string;
   charts: ChartStub[];
+  displayCharts?: boolean;
+  pageSize?: number;
+  hideEmptyCharts?: boolean;
+  numberOfVisibleCharts?: number;
+  enableDetailsExpandability?: boolean;
 }
 
-interface ChartStub {
+export interface ChartsCardStub {
+  key: string;
+  displayName?: string;
+  numberOfVisibleCharts?: number;
+  chartsInRow?: number;
+  mode?: string;
+  hideEmptyCharts?: boolean;
+  charts: ChartStub[];
+}
+
+export interface ChartStub {
+  displayName?: string;
+  visualizationType: string;
   graphChartConfig?: GraphConfigStub;
   pieChartConfig?: SingleMetricConfig;
   singleValueConfig?: SingleMetricConfig;
 }
 
-interface GraphConfigStub {
-  metrics: { metricSelector: string }[];
+export interface ChartMetricVisualization {
+  displayName?: string;
+  themeColor?: string;
+  seriesType?: "LINE" | "AREA" | "COLUMN";
+}
+
+export interface ChartMetric {
+  metricSelector: string;
+  metricSelectorDetailed?: string;
+  metricSelectorSort?: string;
+  visualization?: ChartMetricVisualization;
+  yAxisKey?: string;
+}
+
+export interface GraphConfigStub {
+  metrics: ChartMetric[];
+  visualization?: ChartMetricVisualization;
+  stacked?: boolean;
+  yAxes?: {
+    key: string;
+    position: "RIGHT" | "LEFT";
+    visible: boolean;
+  }[];
 }
 
 interface SingleMetricConfig {
@@ -289,6 +328,9 @@ export interface ExtensionStub {
   name: string;
   version: string;
   minDynatraceVersion: string;
+  author: {
+    name: string;
+  };
   alerts?: { path: string }[];
   dashboards?: { path: string }[];
   snmp?: SnmpGroup[];
@@ -302,6 +344,7 @@ export interface ExtensionStub {
   sqlServer?: DatasourceGroup[];
   sqlSnowflake?: DatasourceGroup[];
   python?: PythonDatasource;
+  jmx?: { groups: JMXGroup[] };
   metrics?: MetricMetadata[];
   topology?: TopologyStub;
   vars?: VarStub[];
@@ -322,20 +365,7 @@ interface PythonDatasource {
   };
 }
 
-export interface JMXExtensionV2 {
-  name: string;
-  version: string;
-  minDynatraceVersion: string;
-  author: {
-    name: string;
-  };
-  jmx?: {
-    groups: JMXGroup[];
-  };
-  metrics?: MetricMetadata[];
-}
-
-interface JMXGroup extends DatasourceGroup {
+export interface JMXGroup extends DatasourceGroup {
   group: string;
   subgroups: JMXSubGroup[];
 }
@@ -351,18 +381,45 @@ interface JMXFilter {
   filter: string;
 }
 
+export interface V1UI {
+  charts?: ChartDto[];
+  keycharts?: ChartDto[];
+}
+
 export interface JMXExtensionV1 {
   name: string;
   metricGroup?: string;
   version: string;
   type: string;
   metrics: MetricDto[];
+  technologies?: string[];
+  ui?: V1UI;
+}
+
+interface SeriesDto {
+  key: string;
+  color?: string;
+  displayname?: string;
+  aggregation?: string;
+  mergeaggregation?: string;
+  dimensions?: string[];
+  seriestype?: "LINE" | "AREA" | "BAR";
+  stacked?: boolean;
+  rightaxis?: boolean;
+  unit?: string;
+}
+
+export interface ChartDto {
+  group: string;
+  title: string;
+  description?: string;
+  series: SeriesDto[];
 }
 
 export interface MetricDto {
   timeseries: TimeseriesDto;
   source: SourceDto;
-  entity: string;
+  entity?: string;
 }
 
 export interface TimeseriesDto {
