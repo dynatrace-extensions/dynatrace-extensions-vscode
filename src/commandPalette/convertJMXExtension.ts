@@ -366,7 +366,7 @@ function convertV1MetricsToMetadata(
             sourceEntityType: entity ?? "process_group_instance",
             tags: ["JMX"],
           },
-          query: `${timeseries.key}:${source.aggregation?.toLowerCase() ?? "auto"}:rate(1s)`,
+          query: `${timeseries.key}:${source.aggregation?.toLowerCase() ?? "auto"}/(10)`,
         });
       }
     }
@@ -439,15 +439,15 @@ function convertV1MetricsToSubgroups(
 
 /**
  * Converts the v1 UI definition to a Unified Analysis screens definition.
- * If a technology was detected, the screens will be injected into the PGI entity.
- * Otherwise < I HAVEN'T DECIDED YET > (TODO)
+ * The user can choose to create a JMX metrics card on the Host screen.
+ * If a technology was selected previously, the cards will automatically be injected into the PGI entity.
  * @param ui plugin.json ui definition
  * @param extensionName new name of the extension
  * @param technology selected technology or "UNKNOWN"
  * @param metricKeyMap map of converted metric and dimension keys (see {@link createMetricKeyMap})
  * @returns list of screens created
  */
-function convertV1UiToScreens(
+async function convertV1UiToScreens(
   ui: V1UI,
   extensionName: string,
   technology: string,
@@ -523,7 +523,7 @@ function convertV1UiToScreens(
         }
       });
 
-    // Create UA Screens with PGI Injections
+    // Create UA Screen with PGI Injections
     screens.push({
       entityType: "PROCESS_GROUP_INSTANCE",
       detailsInjections: [
@@ -553,6 +553,43 @@ function convertV1UiToScreens(
       }),
     });
   }
+
+  const createHostInjection = await vscode.window.showQuickPick(["Yes", "No"], {
+    canPickMany: false,
+    ignoreFocusOut: true,
+    title: "Visualize your data",
+    placeHolder: "Show this JMX data on the Host details page?",
+  });
+
+  if (createHostInjection === "Yes") {
+    // We want to minimize screen impact, so add everything in 1 card
+    const chartsCard: ChartsCardStub = {
+      key: "chartgroup-jmx-metrics",
+      displayName: `JMX Metrics (${extensionName})`,
+      numberOfVisibleCharts: 3,
+      chartsInRow: 3,
+      mode: "NORMAL",
+      hideEmptyCharts: true,
+      charts: ui.charts.map(uiChart => convertV1Chart(uiChart, metricKeyMap)),
+    };
+    chartsCard.numberOfVisibleCharts = Math.min(3, chartsCard.charts.length);
+    chartsCard.chartsInRow = Math.min(3, chartsCard.charts.length);
+    // Create UA Screen with Host Injection
+    screens.push({
+      entityType: "HOST",
+      detailsInjections: [
+        {
+          type: "CHART_GROUP" as DetailInjectionCardType,
+          key: chartsCard.key,
+          conditions: [
+            `extensionConfigured|extensionId=custom:${extensionName}|activatedOnHost=true`,
+          ],
+        },
+      ],
+      chartsCards: [chartsCard],
+    });
+  }
+
   return screens;
 }
 
@@ -599,7 +636,7 @@ async function convertJMXExtensionToV2(jmxV1Extension: JMXExtensionV1): Promise<
   }
   // Screens
   const screens = jmxV1Extension.ui
-    ? convertV1UiToScreens(jmxV1Extension.ui, extensionName, technology, metricKeyMap)
+    ? await convertV1UiToScreens(jmxV1Extension.ui, extensionName, technology, metricKeyMap)
     : [];
   if (screens.length > 0) {
     jmxV2Extension.screens = screens;
