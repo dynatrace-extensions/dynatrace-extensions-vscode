@@ -569,10 +569,11 @@ async function convertV1UiToScreens(
   });
 
   if (createHostInjection === "Yes") {
-    // METRIC TABLE OPTION
+    // Create a unique card key
     const cardKey = `metrictable-jmx-${extensionName
       .replace(/[^a-zA-Z0-9_-]/g, "_")
       .replace(/_+/g, "_")}`;
+    // Create the card adding all charts available
     const metricTableCard: MetricTableCardStub = {
       key: cardKey,
       displayName: `JMX Metrics (${extensionName})`,
@@ -600,35 +601,6 @@ async function convertV1UiToScreens(
       ],
       metricTableCards: [metricTableCard],
     });
-    // CHART GROUP OPTION:
-    //   // We want to minimize screen impact, so add everything in 1 card
-    //   const chartsCard: ChartsCardStub = {
-    //     key: "chartgroup-jmx-metrics",
-    //     displayName: `JMX Metrics (${extensionName})`,
-    //     numberOfVisibleCharts: 3,
-    //     chartsInRow: 3,
-    //     mode: "NORMAL",
-    //     hideEmptyCharts: true,
-    //     charts: uiCharts.map(uiChart => convertV1Chart(uiChart, metricKeyMap)),
-    //   };
-    //   chartsCard.numberOfVisibleCharts = Math.min(3, chartsCard.charts.length);
-    //   chartsCard.chartsInRow = Math.min(3, chartsCard.charts.length);
-    //   // Create UA Screen with Host Injection
-    //   screens.push({
-    //     entityType: "HOST",
-    //     detailsInjections: [
-    //       {
-    //         type: "CHART_GROUP" as DetailInjectionCardType,
-    //         key: chartsCard.key,
-    //         conditions: [
-    /*             eslint-disable-next-line no-secrets/no-secrets                             */
-    //           `extensionConfigured|extensionId=custom:${extensionName}|activatedOnHost=true`,
-    //         ],
-    //       },
-    //     ],
-    //     chartsCards: [chartsCard],
-    //   });
-    // }
 
     return screens;
   }
