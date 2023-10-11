@@ -138,7 +138,9 @@ export interface MetricMetadata {
     tags?: string[];
     sourceEntityType?: string;
   };
-  query?: string;
+  query?: {
+    metricSelector: string;
+  };
 }
 
 interface VarStub {
@@ -295,10 +297,12 @@ export interface ChartStub {
   singleValueConfig?: SingleMetricConfig;
 }
 
+export type MetricVisualizationType = "LINE" | "AREA" | "COLUMN";
+
 export interface ChartMetricVisualization {
   displayName?: string;
   themeColor?: string;
-  seriesType?: "LINE" | "AREA" | "COLUMN";
+  seriesType?: MetricVisualizationType;
 }
 
 export interface ChartMetric {
@@ -403,7 +407,7 @@ interface SeriesDto {
   aggregation?: string;
   mergeaggregation?: string;
   dimensions?: string[];
-  seriestype?: "LINE" | "AREA" | "BAR";
+  seriestype?: "line" | "area" | "bar" | "LINE" | "AREA" | "BAR" | "Line" | "Area" | "Bar";
   stacked?: boolean;
   rightaxis?: boolean;
   unit?: string;

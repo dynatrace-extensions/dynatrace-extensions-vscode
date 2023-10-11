@@ -35,6 +35,7 @@ import {
   MetricMetadata,
   MetricStub,
   MetricTableCardStub,
+  MetricVisualizationType,
   ScreenStub,
   SourceDto,
   V1UI,
@@ -277,7 +278,7 @@ function convertV1Chart(
       metrics: v1Chart.series.map(series => {
         const visualization: ChartMetricVisualization = {};
         const metricSelector = `${metricKeyMap.get(series.key).key}:splitBy(${
-          detailedSelectors ? "" : "dt.entity.process_group_instance"
+          detailedSelectors ? "" : '"dt.entity.process_group_instance"'
         })`;
         const chartMetric: ChartMetric = { metricSelector };
         // Create detailed selectors
@@ -306,7 +307,10 @@ function convertV1Chart(
           visualization.displayName = series.displayname;
         }
         if (series.seriestype) {
-          visualization.seriesType = series.seriestype === "BAR" ? "COLUMN" : series.seriestype;
+          const seriesType = series.seriestype.toUpperCase();
+          visualization.seriesType = (
+            seriesType === "BAR" ? "COLUMN" : seriesType
+          ) as MetricVisualizationType;
         }
         // Only add visualization if it has any details
         if (Object.keys(visualization).length > 0) {
@@ -363,10 +367,13 @@ function convertV1MetricsToMetadata(
             displayName: `${timeseries.displayname} (per second)`,
             description: `${timeseries.displayname} expressed as a rate per second`,
             unit: timeseries.unit === "Count" ? "PerSecond" : `${timeseries.unit}PerSecond`,
-            sourceEntityType: entity ?? "process_group_instance",
             tags: ["JMX"],
           },
-          query: `${timeseries.key}:${source.aggregation?.toLowerCase() ?? "auto"}/(10)`,
+          query: {
+            metricSelector: `${metricKeyMap.get(timeseries.key).key}:${
+              source.aggregation?.toLowerCase() ?? "auto"
+            } / (10)`,
+          },
         });
       }
     }
