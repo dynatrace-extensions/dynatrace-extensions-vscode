@@ -261,12 +261,14 @@ function extractDimensions(metricSource: SourceDto): DimensionStub[] {
  * @param v1Chart the v1 chart definition
  * @param metricKeyMap a map of converted metric and dimension keys (see {@link createMetricKeyMap})
  * @param detailedSelectors if true, adds an additional `metricSelectorDetailed` to the metric definition
+ * @param customDimensions if provided, uses these dimensions instead of the ones from the metricKeyMap
  * @returns converted chart
  */
 function convertV1Chart(
   v1Chart: ChartDto,
   metricKeyMap: Map<string, { key: string; dimensions: string[] }>,
   detailedSelectors: boolean = false,
+  customDimensions?: string[],
 ): ChartStub {
   // Need to know in advance if Y axes will be split
   const splitYAxes = v1Chart.series.some(s => s.rightaxis);
@@ -283,9 +285,8 @@ function convertV1Chart(
         const chartMetric: ChartMetric = { metricSelector };
         // Create detailed selectors
         if (detailedSelectors) {
-          const dimensionSplits = metricKeyMap
-            .get(series.key)
-            .dimensions.map(d => `"${d}"`)
+          const dimensionSplits = (customDimensions ?? metricKeyMap.get(series.key).dimensions)
+            .map(d => `"${d}"`)
             .join(",");
           chartMetric.metricSelectorSort = `${
             metricKeyMap.get(series.key).key
@@ -370,9 +371,7 @@ function convertV1MetricsToMetadata(
             tags: ["JMX"],
           },
           query: {
-            metricSelector: `${metricKeyMap.get(timeseries.key).key}:${
-              source.aggregation?.toLowerCase() ?? "auto"
-            } / (10)`,
+            metricSelector: `${metricKeyMap.get(timeseries.key).key} / (10)`,
           },
         });
       }
@@ -461,6 +460,7 @@ async function convertV1UiToScreens(
   metricKeyMap: Map<string, { key: string; dimensions: string[] }>,
 ) {
   const screens: ScreenStub[] = [];
+  const uiCharts = [...(ui.charts ?? []), ...(ui.keycharts ?? [])];
 
   // If a technology was selected, generate PGI injections
   if (technology !== "UNKNOWN") {
@@ -473,8 +473,8 @@ async function convertV1UiToScreens(
 
     // Create chart groups
     const chartsCards: ChartsCardStub[] = [];
-    ui.charts
-      ?.filter(uiChart =>
+    uiCharts
+      .filter(uiChart =>
         // If at least some of the metrics don't have dimensions, chart groups are better
         uiChart.series.some(s => metricKeyMap.get(s.key).dimensions.length === 0),
       )
@@ -502,8 +502,8 @@ async function convertV1UiToScreens(
 
     // Create metric table cards
     const metricTableCards: MetricTableCardStub[] = [];
-    ui.charts
-      ?.filter(uiChart =>
+    uiCharts
+      .filter(uiChart =>
         // If all metrics have dimensions, metric tables are better
         uiChart.series.every(s => metricKeyMap.get(s.key).dimensions.length > 0),
       )
@@ -513,7 +513,7 @@ async function convertV1UiToScreens(
         const cardIdx = metricTableCards.findIndex(c => c.key === cardKey);
         // If there's already a card for this group, add the chart to it
         if (cardIdx >= 0) {
-          chartsCards[cardIdx].charts.push(convertV1Chart(uiChart, metricKeyMap, true));
+          metricTableCards[cardIdx].charts.push(convertV1Chart(uiChart, metricKeyMap, true));
         }
         // Otherwise, create a new card
         else {
@@ -569,35 +569,69 @@ async function convertV1UiToScreens(
   });
 
   if (createHostInjection === "Yes") {
-    // We want to minimize screen impact, so add everything in 1 card
-    const chartsCard: ChartsCardStub = {
-      key: "chartgroup-jmx-metrics",
+    // METRIC TABLE OPTION
+    const cardKey = `metrictable-jmx-${extensionName
+      .replace(/[^a-zA-Z0-9_-]/g, "_")
+      .replace(/_+/g, "_")}`;
+    const metricTableCard: MetricTableCardStub = {
+      key: cardKey,
       displayName: `JMX Metrics (${extensionName})`,
+      pageSize: 5,
       numberOfVisibleCharts: 3,
-      chartsInRow: 3,
-      mode: "NORMAL",
       hideEmptyCharts: true,
-      charts: ui.charts.map(uiChart => convertV1Chart(uiChart, metricKeyMap)),
+      displayCharts: true,
+      enableDetailsExpandability: true,
+      charts: uiCharts.map(uiChart =>
+        convertV1Chart(uiChart, metricKeyMap, true, ["dt.entity.process_group_instance"]),
+      ),
     };
-    chartsCard.numberOfVisibleCharts = Math.min(3, chartsCard.charts.length);
-    chartsCard.chartsInRow = Math.min(3, chartsCard.charts.length);
+    metricTableCard.numberOfVisibleCharts = Math.min(3, metricTableCard.charts.length);
     // Create UA Screen with Host Injection
     screens.push({
       entityType: "HOST",
       detailsInjections: [
         {
-          type: "CHART_GROUP" as DetailInjectionCardType,
-          key: chartsCard.key,
+          type: "METRIC_TABLE" as DetailInjectionCardType,
+          key: cardKey,
           conditions: [
             `extensionConfigured|extensionId=custom:${extensionName}|activatedOnHost=true`,
           ],
         },
       ],
-      chartsCards: [chartsCard],
+      metricTableCards: [metricTableCard],
     });
-  }
+    // CHART GROUP OPTION:
+    //   // We want to minimize screen impact, so add everything in 1 card
+    //   const chartsCard: ChartsCardStub = {
+    //     key: "chartgroup-jmx-metrics",
+    //     displayName: `JMX Metrics (${extensionName})`,
+    //     numberOfVisibleCharts: 3,
+    //     chartsInRow: 3,
+    //     mode: "NORMAL",
+    //     hideEmptyCharts: true,
+    //     charts: uiCharts.map(uiChart => convertV1Chart(uiChart, metricKeyMap)),
+    //   };
+    //   chartsCard.numberOfVisibleCharts = Math.min(3, chartsCard.charts.length);
+    //   chartsCard.chartsInRow = Math.min(3, chartsCard.charts.length);
+    //   // Create UA Screen with Host Injection
+    //   screens.push({
+    //     entityType: "HOST",
+    //     detailsInjections: [
+    //       {
+    //         type: "CHART_GROUP" as DetailInjectionCardType,
+    //         key: chartsCard.key,
+    //         conditions: [
+    /*             eslint-disable-next-line no-secrets/no-secrets                             */
+    //           `extensionConfigured|extensionId=custom:${extensionName}|activatedOnHost=true`,
+    //         ],
+    //       },
+    //     ],
+    //     chartsCards: [chartsCard],
+    //   });
+    // }
 
-  return screens;
+    return screens;
+  }
 }
 
 /**
