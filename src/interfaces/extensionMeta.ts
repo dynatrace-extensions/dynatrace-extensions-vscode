@@ -429,7 +429,7 @@ export interface MetricDto {
 export interface TimeseriesDto {
   key: string;
   unit: string;
-  displayname: string;
+  displayname?: string;
   dimensions: string[];
 }
 

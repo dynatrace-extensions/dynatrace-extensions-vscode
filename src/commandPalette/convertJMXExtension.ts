@@ -349,12 +349,13 @@ function convertV1MetricsToMetadata(
   // Parse metrics from v1 extension, extracting into the v2 format
   metrics.forEach(({ timeseries, source, entity }) => {
     if (metadata.findIndex(m => m.key === timeseries.key) === -1) {
+      const newMetricName = timeseries.displayname ?? timeseries.key;
       // Extract metric metadata
       metadata.push({
         key: metricKeyMap.get(timeseries.key).key,
         metadata: {
-          displayName: timeseries.displayname,
-          description: timeseries.displayname,
+          displayName: newMetricName,
+          description: newMetricName,
           unit: timeseries.unit,
           sourceEntityType: entity ?? "process_group_instance",
           tags: ["JMX"],
@@ -365,8 +366,8 @@ function convertV1MetricsToMetadata(
         metadata.push({
           key: `func:${metricKeyMap.get(timeseries.key).key}_persec`,
           metadata: {
-            displayName: `${timeseries.displayname} (per second)`,
-            description: `${timeseries.displayname} expressed as a rate per second`,
+            displayName: `${newMetricName} (per second)`,
+            description: `${newMetricName} expressed as a rate per second`,
             unit: timeseries.unit === "Count" ? "PerSecond" : `${timeseries.unit}PerSecond`,
             tags: ["JMX"],
           },

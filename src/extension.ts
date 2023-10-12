@@ -14,6 +14,7 @@
   limitations under the  License.
  */
 
+import path = require("path");
 import * as vscode from "vscode";
 import { PrometheusActionProvider } from "./codeActions/prometheus";
 import { SnippetGenerator } from "./codeActions/snippetGenerator";
@@ -63,6 +64,7 @@ import { CachedData } from "./utils/dataCaching";
 import {
   getAllEnvironments,
   getAllWorkspaces,
+  getExtensionWorkspaceDir,
   initGlobalStorage,
   initWorkspaceStorage,
   migrateFromLegacyExtension,
@@ -270,7 +272,18 @@ function registerCommandPaletteCommands(
     vscode.commands.registerCommand(
       "dynatrace-extensions.convertJmxExtension",
       async (outputPath?: string) => {
-        await convertJMXExtension(await tenantsProvider.getDynatraceClient(), outputPath);
+        // Unless explicitly specified, try to detect output path
+        if (!outputPath) {
+          const extensionDir = getExtensionWorkspaceDir();
+          if (extensionDir) {
+            await convertJMXExtension(
+              await tenantsProvider.getDynatraceClient(),
+              path.resolve(extensionDir, "extension.yaml"),
+            );
+          }
+        } else {
+          await convertJMXExtension(await tenantsProvider.getDynatraceClient(), outputPath);
+        }
       },
     ),
     // Create monitoring configuration files
