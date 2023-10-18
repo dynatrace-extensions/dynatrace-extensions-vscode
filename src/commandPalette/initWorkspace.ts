@@ -22,6 +22,7 @@ import * as vscode from "vscode";
 import { Dynatrace } from "../dynatrace-api/dynatrace";
 import { showMessage } from "../utils/code";
 import { checkDtSdkPresent, checkSettings, checkUrlReachable } from "../utils/conditionCheckers";
+import { CachedData } from "../utils/dataCaching";
 import {
   getExtensionFilePath,
   initWorkspaceStorage,
@@ -207,12 +208,14 @@ async function defaultExtensionSetup(schemaVersion: string, rootPath: string) {
  * finally creates some basic artifacts that should form the base of the project.
  * Types of projects currently supported - new extension stub, new python extension,
  * conversion from 1.0 JMX extension, or existing extension downloaded from tenant.
+ * @param dataCache instance of cached data
  * @param context VSCode Extension Context
  * @param dt Dynatrace API Client
  * @param callback optional callback function to call once initialization complete
  * @returns
  */
 export async function initWorkspace(
+  dataCache: CachedData,
   context: vscode.ExtensionContext,
   dt: Dynatrace,
   callback?: () => unknown,
@@ -374,6 +377,9 @@ export async function initWorkspace(
             await defaultExtensionSetup(schemaVersion, rootPath);
           }
       }
+
+      // Update parsed extension in the cache
+      dataCache.updateParsedExtension();
 
       // Create or update the .gitignore
       await writeGititnore(projectType === PROJECT_TYPES.pythonExtension);

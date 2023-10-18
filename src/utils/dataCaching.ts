@@ -311,6 +311,20 @@ export class CachedData {
   }
 
   /**
+   * On demand update of the parsed extension manifest.
+   * This is needed when the manifest is modified programatically.
+   */
+  public updateParsedExtension() {
+    const manifestFilePath = getExtensionFilePath();
+    try {
+      const parsedManifest = yaml.parse(readFileSync(manifestFilePath).toString()) as ExtensionStub;
+      this.parsedExtension.next(parsedManifest);
+    } catch {
+      console.log("Error parsing manifest content. Invalid YAML.");
+    }
+  }
+
+  /**
    * On demand update of built-in entity types (TODO: is this really needed? who would trigger it?).
    */
   public updateEntityTypes() {

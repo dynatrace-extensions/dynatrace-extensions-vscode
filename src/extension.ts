@@ -175,7 +175,7 @@ function registerCommandPaletteCommands(
         try {
           const dtClient = await tenantsProvider.getDynatraceClient();
           if (dtClient) {
-            await initWorkspace(context, dtClient, () => {
+            await initWorkspace(cachedData, context, dtClient, () => {
               extensionWorkspacesProvider.refresh();
             });
           }
@@ -277,12 +277,17 @@ function registerCommandPaletteCommands(
           const extensionDir = getExtensionWorkspaceDir();
           if (extensionDir) {
             await convertJMXExtension(
+              cachedData,
               await tenantsProvider.getDynatraceClient(),
               path.resolve(extensionDir, "extension.yaml"),
             );
           }
         } else {
-          await convertJMXExtension(await tenantsProvider.getDynatraceClient(), outputPath);
+          await convertJMXExtension(
+            cachedData,
+            await tenantsProvider.getDynatraceClient(),
+            outputPath,
+          );
         }
       },
     ),

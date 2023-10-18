@@ -41,6 +41,7 @@ import {
   V1UI,
 } from "../interfaces/extensionMeta";
 import { showMessage } from "../utils/code";
+import { CachedData } from "../utils/dataCaching";
 
 const OPTION_LOCAL_FILE: vscode.QuickPickItem = {
   label: "Locally",
@@ -467,7 +468,8 @@ async function convertV1UiToScreens(
   if (technology !== "UNKNOWN") {
     // Prepare conditions
     const injectionConditions: string[] = [
-      `extensionConfigured|extensionId=custom:${extensionName}|activatedOnHost=true`,
+      // eslint-disable-next-line no-secrets/no-secrets
+      `metricAvailable|metric=dsfm:extension.status:filter(and(eq("dt.extension.name","custom:${extensionName}"),in("dt.entity.host", entitySelector("type(host),toRelationships.isProcessOf(entityId($(entityId)))"))))|lastWrittenWithinDays=5`,
       // eslint-disable-next-line no-secrets/no-secrets
       `entityAttribute|softwareTechnologies=${technology}`,
     ];
@@ -596,7 +598,7 @@ async function convertV1UiToScreens(
           type: "METRIC_TABLE" as DetailInjectionCardType,
           key: cardKey,
           conditions: [
-            `extensionConfigured|extensionId=custom:${extensionName}|activatedOnHost=true`,
+            `metricAvailable|metric=dsfm:extension.status:filter(and(eq("dt.extension.name","custom:${extensionName}"),in("dt.entity.host", entitySelector("entityId($(entityId))"))))|lastWrittenWithinDays=5`,
           ],
         },
       ],
@@ -613,10 +615,40 @@ async function convertV1UiToScreens(
  * @returns The converted v2 extension (extension.yaml)
  */
 async function convertJMXExtensionToV2(jmxV1Extension: JMXExtensionV1): Promise<ExtensionStub> {
-  const extensionName = (jmxV1Extension.metricGroup ?? jmxV1Extension.name)
+  let extensionName: string;
+  extensionName = (jmxV1Extension.metricGroup ?? jmxV1Extension.name)
     .toLowerCase() // Name must be lowercase
     .replace(/_/g, ".") // No underscores allowed
     .replace(/^custom\./, ""); // Remove duplication
+
+  // Handle length issues from converted name
+  if (extensionName.length > 43) {
+    const newName = await vscode.window.showInputBox({
+      ignoreFocusOut: true,
+      title: "Choose a new name for your extension",
+      placeHolder: `custom:${extensionName}`,
+      validateInput: value => {
+        if (!value.startsWith("custom:")) {
+          return "Name must start with 'custom:'.";
+        }
+        if (value.length > 50) {
+          return "Name is too long.";
+        }
+        if (!/^[a-z].*$/.test(value)) {
+          return "Name must start with a lowercase letter.";
+        }
+        if (!/^[a-z][a-z0-9]*([-.][a-z0-9]+)*$/.test(value)) {
+          return "Name can only contain lowercase letters, numbers, dots, and dashes.";
+        }
+        return undefined;
+      },
+    });
+    if (!newName) {
+      throw new Error("No extension name provided.");
+    } else {
+      extensionName = newName;
+    }
+  }
 
   // This is the basic JMX V2 Extension
   const jmxV2Extension: ExtensionStub = {
@@ -706,18 +738,21 @@ async function extractJMXv1FromRemote(dt?: Dynatrace): Promise<[JMXExtensionV1, 
   const currentJMXExtensions = currentExtensions.filter(
     extension => extension.type === "JMX" && !extension.id.startsWith("dynatrace."),
   );
-  const jmxExtensionNames = currentJMXExtensions.map(
-    extension => `${extension.id} | ${extension.name}`,
-  );
 
-  const jmxExtensionName = await vscode.window.showQuickPick(jmxExtensionNames, {
-    placeHolder: "Choose a JMX v1 extension",
-    title: "Dynatrace: Convert JMX extension",
-  });
-  if (!jmxExtensionName) return [undefined, "No extension was selected."];
+  const extensionChoice = await vscode.window.showQuickPick(
+    currentJMXExtensions.map(e => ({
+      label: e.name,
+      description: e.id,
+    })),
+    {
+      placeHolder: "Choose a JMX v1 extension",
+      title: "Dynatrace: Convert JMX extension",
+    },
+  );
+  if (!extensionChoice) return [undefined, "No extension was selected."];
 
   // Get the binary of the extension zip file
-  const jmxExtensionId = jmxExtensionName.split(" | ")[0];
+  const jmxExtensionId = extensionChoice.description;
   const binaryData = await dt.extensionsV1.getExtensionBinary(jmxExtensionId);
 
   // Extract the plugin.json file from the zip
@@ -729,10 +764,15 @@ async function extractJMXv1FromRemote(dt?: Dynatrace): Promise<[JMXExtensionV1, 
  * Parses a JMX v1 plugin.json file and produces an equivalent 2.0 extension manifest.
  * The file can be loaded either locally or from a connected tenant and supports both direct
  * file parsing as well as zip browsing.
+ * @param dataCache An instance of the data cache
  * @param dt Dynatrace Client API
  * @param outputPath optional path where to save the manifest
  */
-export async function convertJMXExtension(dt?: Dynatrace, outputPath?: string) {
+export async function convertJMXExtension(
+  dataCache: CachedData,
+  dt?: Dynatrace,
+  outputPath?: string,
+) {
   // User chooses if they want to use a local file or browse from the Dynatrace environment
   const pluginJSONOrigins = [OPTION_LOCAL_FILE, OPTION_DYNATRACE_ENVIRONMENT];
   const pluginJSONOrigin = await vscode.window.showQuickPick(pluginJSONOrigins, {
@@ -758,30 +798,38 @@ export async function convertJMXExtension(dt?: Dynatrace, outputPath?: string) {
   }
 
   // Convert the JMX v1 extension to v2
-  const jmxV2Extension = await convertJMXExtensionToV2(jmxV1Extension);
+  try {
+    const jmxV2Extension = await convertJMXExtensionToV2(jmxV1Extension);
 
-  // Ask the user where they would like to save the file to
-  const options: vscode.SaveDialogOptions = {
-    saveLabel: "Save",
-    title: "Save JMX v2 extension.yaml",
-    filters: {
-      // eslint-disable-next-line @typescript-eslint/naming-convention
-      "JMX v2 extension": ["yaml"],
-    },
-    defaultUri: vscode.Uri.file(`${slugify(jmxV2Extension.name)}.yaml`),
-  };
+    // Ask the user where they would like to save the file to
+    const options: vscode.SaveDialogOptions = {
+      saveLabel: "Save",
+      title: "Save JMX v2 extension.yaml",
+      filters: {
+        // eslint-disable-next-line @typescript-eslint/naming-convention
+        "JMX v2 extension": ["yaml"],
+      },
+      defaultUri: vscode.Uri.file(`${slugify(jmxV2Extension.name)}.yaml`),
+    };
 
-  const extensionYAMLFile =
-    outputPath ?? (await vscode.window.showSaveDialog(options).then(p => p?.fsPath));
-  if (!extensionYAMLFile) {
-    showMessage("error", "No file was selected. Operation cancelled.");
+    const extensionYAMLFile =
+      outputPath ?? (await vscode.window.showSaveDialog(options).then(p => p?.fsPath));
+    if (!extensionYAMLFile) {
+      showMessage("error", "No file was selected. Operation cancelled.");
+      return;
+    }
+    // Save the file as yaml
+    const yamlFileContents = yaml.stringify(jmxV2Extension);
+    writeFileSync(extensionYAMLFile, yamlFileContents);
+
+    // Update the cache
+    dataCache.updateParsedExtension();
+
+    // Open the file
+    const document = await vscode.workspace.openTextDocument(extensionYAMLFile);
+    await vscode.window.showTextDocument(document);
+  } catch (e) {
+    showMessage("error", `Operation failed: ${(e as Error).message}`);
     return;
   }
-  // Save the file as yaml
-  const yamlFileContents = yaml.stringify(jmxV2Extension);
-  writeFileSync(extensionYAMLFile, yamlFileContents);
-
-  // Open the file
-  const document = await vscode.workspace.openTextDocument(extensionYAMLFile);
-  await vscode.window.showTextDocument(document);
 }
