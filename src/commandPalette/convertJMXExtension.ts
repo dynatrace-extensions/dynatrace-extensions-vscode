@@ -634,10 +634,7 @@ async function convertJMXExtensionToV2(jmxV1Extension: JMXExtensionV1): Promise<
         if (value.length > 50) {
           return "Name is too long.";
         }
-        if (!/^[a-z].*$/.test(value)) {
-          return "Name must start with a lowercase letter.";
-        }
-        if (!/^[a-z][a-z0-9]*([-.][a-z0-9]+)*$/.test(value)) {
+        if (!/^custom:[a-z][a-z0-9]*([-.][a-z0-9]+)*$/.test(value)) {
           return "Name can only contain lowercase letters, numbers, dots, and dashes.";
         }
         return undefined;
@@ -646,7 +643,7 @@ async function convertJMXExtensionToV2(jmxV1Extension: JMXExtensionV1): Promise<
     if (!newName) {
       throw new Error("No extension name provided.");
     } else {
-      extensionName = newName;
+      extensionName = newName.split("custom:")[1];
     }
   }
 
