@@ -1,5 +1,13 @@
 # Change Log
 
+## Version 2.3.0 (unreleased)
+
+### 🚀 Improved in this version:
+- [#139 - JMX conversion automation improvements](https://github.com/dynatrace-extensions/dynatrace-extensions-vscode/issues/139)
+    - Check out the [online guide](https://developer.dynatrace.com/extensions-v2/guides/jmx-conversion/) released for this feature
+
+---
+
 ## Version 2.2.1 (15.09.2023)
 
 ### ✨ New in this version:
