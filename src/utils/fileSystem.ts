@@ -18,7 +18,15 @@
  * UTILITIES FOR INTERACTING WITH THE USER'S FILE SYSTEM
  ********************************************************************************/
 
-import { copyFileSync, existsSync, mkdirSync, readFileSync, readdirSync, writeFileSync } from "fs";
+import {
+  copyFileSync,
+  existsSync,
+  mkdirSync,
+  readFileSync,
+  readdirSync,
+  statSync,
+  writeFileSync,
+} from "fs";
 import * as os from "os";
 import * as path from "path";
 import { copySync } from "fs-extra";
@@ -301,6 +309,38 @@ export function getExtensionFilePath(): string | undefined {
     return path.join(workspaceRootPath, matches[0]);
   }
   return undefined;
+}
+
+/**
+ * Searches the known extension workspace path for the extension directory and returns the
+ * found result so long as the extension directory is in the root of the workspace or one
+ * directory deep (e.g. src/extension)
+ * @returns
+ */
+export function getExtensionWorkspaceDir(): string | undefined {
+  const rootPath = vscode.workspace.workspaceFolders?.[0].uri.fsPath;
+  if (!rootPath) return;
+
+  // Look in root
+  const rootEntries = readdirSync(rootPath);
+  if (
+    rootEntries.includes("extension") &&
+    statSync(path.resolve(rootPath, "extension")).isDirectory()
+  ) {
+    return path.resolve(rootPath, "extension");
+  }
+
+  // Look one level deep
+  const rootFolders = rootEntries.filter(f => statSync(path.resolve(rootPath, f)).isDirectory());
+  for (const folder of rootFolders) {
+    const folderEntries = readdirSync(path.resolve(rootPath, folder));
+    if (
+      folderEntries.includes("extension") &&
+      statSync(path.resolve(rootPath, folder, "extension")).isDirectory()
+    ) {
+      return path.resolve(rootPath, folder, "extension");
+    }
+  }
 }
 
 /**

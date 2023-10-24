@@ -170,13 +170,29 @@ export class CachedData {
     // Initial parse of extension manifest
     new Observable(subscriber => {
       subscriber.next(initialManifestContent);
-
-      // And then, on every doc change
-      vscode.workspace.onDidChangeTextDocument(change => {
-        const manifestFilePath = getExtensionFilePath();
-        if (path.resolve(change.document.fileName) === path.resolve(manifestFilePath)) {
-          subscriber.next(change.document.getText());
+      const manifestFilePath = getExtensionFilePath();
+      const pushTextUpdate = (filePath: string, doc: vscode.TextDocument) => {
+        // If manifest didn't exist at activation time, we must detect again
+        if (!filePath) {
+          filePath = getExtensionFilePath();
         }
+        if (path.resolve(doc.fileName) === path.resolve(filePath)) {
+          subscriber.next(doc.getText());
+        }
+      };
+
+      // Given all scenarios, YAML should be updated
+      // On every document change
+      vscode.workspace.onDidChangeTextDocument(change => {
+        pushTextUpdate(manifestFilePath, change.document);
+      });
+      // On every document save
+      vscode.workspace.onDidSaveTextDocument(document => {
+        pushTextUpdate(manifestFilePath, document);
+      });
+      // On every document open
+      vscode.workspace.onDidOpenTextDocument(document => {
+        pushTextUpdate(manifestFilePath, document);
       });
     })
       .pipe(
@@ -291,6 +307,20 @@ export class CachedData {
       }
     } else {
       return [oid, this.snmpData.getValue()[oid]];
+    }
+  }
+
+  /**
+   * On demand update of the parsed extension manifest.
+   * This is needed when the manifest is modified programatically.
+   */
+  public updateParsedExtension() {
+    const manifestFilePath = getExtensionFilePath();
+    try {
+      const parsedManifest = yaml.parse(readFileSync(manifestFilePath).toString()) as ExtensionStub;
+      this.parsedExtension.next(parsedManifest);
+    } catch {
+      console.log("Error parsing manifest content. Invalid YAML.");
     }
   }
 
