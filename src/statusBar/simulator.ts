@@ -11,6 +11,7 @@ import {
   RemoteTarget,
   SimulationConfig,
   SimulationLocation,
+  SimulationSpecs,
   SimulatorPanelData,
   SimulatorStatus,
 } from "../interfaces/simulator";
@@ -49,13 +50,13 @@ const SIMULATOR_PANEL_DATA_TYPE = "SIMULATOR_DATA";
  */
 export class SimulatorManager extends CachedDataConsumer {
   private simulatorProcess: ChildProcess | undefined;
-  private simulatorStatus: SimulatorStatus;
-  private simulatorStatusMessage: string;
+  private simulationSpecs: SimulationSpecs;
   private idToken: string;
   private url: string;
   private localOs: OsType;
   private extensionFile: string;
   private activationFile: string;
+  private datasourceName: string;
   private datasourceDir: string;
   private datasourceExe: string;
   private readonly context: vscode.ExtensionContext;
@@ -74,6 +75,12 @@ export class SimulatorManager extends CachedDataConsumer {
     this.idToken = path.join(context.globalStorageUri.fsPath, "idToken.txt");
     this.localOs = process.platform === "win32" ? "WINDOWS" : "LINUX";
     this.panelManager = panelManager;
+    this.simulationSpecs = {
+      dsSupportsActiveGateEec: false,
+      dsSupportsOneAgentEec: false,
+      localActiveGateDsExists: false,
+      localOneAgentDsExists: false,
+    };
 
     // Initial clean-up of files
     cleanUpSimulatorLogs(context);
@@ -88,18 +95,34 @@ export class SimulatorManager extends CachedDataConsumer {
     vscode.commands.registerCommand(SIMULATOR_STOP_CMD, () => this.stop());
     vscode.commands.registerCommand(SIMULATOR_CHECK_READY_CMD, (config?: SimulationConfig) => {
       // Let the panel know check is in progress
-      this.simulatorStatus = "CHECKING";
-      this.refreshUI();
+      this.refreshUI("CHECKING");
 
-      // Do actual check
-      const [status, statusMessage] = config
-        ? this.checkSimulationConfig(config.location, config.eecType, config.target)
-        : this.checkSimulationConfig();
+      // First check mandatory requirements
+      const [result, failedChecks] = this.checkMantatoryRequirements();
+      if (!result) {
+        this.refreshUI("UNSUPPORTED", undefined, failedChecks);
+        return;
+      }
 
-      // Let the panel know the check result
-      this.simulatorStatus = status;
-      this.simulatorStatusMessage = statusMessage;
-      this.refreshUI();
+      // Check config if given, check further
+      if (config) {
+        const [status, statusMessage] = this.checkSimulationConfig(
+          config.location,
+          config.eecType,
+          config.target,
+        );
+        if (status === "READY") {
+          // Error messaging handled downstream already
+          this.start(config).then(
+            () => {},
+            () => {},
+          );
+        } else {
+          this.refreshUI(status, statusMessage);
+        }
+      } else {
+        this.refreshUI("READY");
+      }
     });
     vscode.commands.registerCommand(SIMULATOR_OPEN_UI_CMD, () => this.refreshUI());
     vscode.commands.registerCommand(SIMULATOR_READ_LOG_CMD, (logPath: string) =>
@@ -158,6 +181,50 @@ export class SimulatorManager extends CachedDataConsumer {
   }
 
   /**
+   * Checks mandatory requirements for simulating any extension.
+   * Without these, there's no point going any further in the process.
+   * @returns tuple of [check result, failed checks]
+   */
+  public checkMantatoryRequirements(): [boolean, string[]] {
+    const failedChecks: string[] = [];
+    // Check extension file exists
+    const extensionFile = getExtensionFilePath();
+    if (!extensionFile) {
+      failedChecks.push("Manifest");
+    } else {
+      this.extensionFile = extensionFile;
+    }
+    // Check extension has datasource
+    const datasourceName = getDatasourceName(this.parsedExtension);
+    if (datasourceName === "unsupported") {
+      failedChecks.push("Datasource");
+    } else {
+      this.datasourceName = datasourceName;
+    }
+    // Check activation file exists
+    if (!vscode.workspace.workspaceFolders) {
+      failedChecks.push("Activation file");
+    } else {
+      const activationFile = path.join(
+        vscode.workspace.workspaceFolders[0].uri.fsPath,
+        "config",
+        "simulator.json",
+      );
+      if (!existsSync(activationFile)) {
+        failedChecks.push("Activation file");
+      } else {
+        this.activationFile = activationFile;
+      }
+    }
+
+    if (failedChecks.length > 0) {
+      return [false, failedChecks];
+    }
+    this.simulationSpecs = this.getSimulationSpecs();
+    return [true, []];
+  }
+
+  /**
    * Checks if current simulation configuration can be run.
    * @param location - simulation location
    * @param eecType - eec type
@@ -165,49 +232,23 @@ export class SimulatorManager extends CachedDataConsumer {
    * @returns true if simulator is ready, false otherwise
    */
   public checkSimulationConfig(
-    location?: SimulationLocation,
-    eecType?: EecType,
+    location: SimulationLocation,
+    eecType: EecType,
     target?: RemoteTarget,
   ): [SimulatorStatus, string] {
-    // Check extension has datasource
-    const datasourceName = getDatasourceName(this.parsedExtension);
-    if (datasourceName === "unsupported") {
-      return ["NOTREADY", "Extension does not have a supported datasource"];
-    }
-    // Check extension file exists
-    const extensionFile = getExtensionFilePath();
-    if (!extensionFile) {
-      return ["NOTREADY", "Could not detect extension manifest file"];
-    } else {
-      this.extensionFile = extensionFile;
-    }
-    // Check activation file exists
-    if (!vscode.workspace.workspaceFolders) return ["NOTREADY", "No workspace open"];
-    const activationFile = path.join(
-      vscode.workspace.workspaceFolders[0].uri.fsPath,
-      "config",
-      "simulator.json",
-    );
-    if (!existsSync(activationFile)) {
-      return ["NOTREADY", 'Could not detect config file "simulator.json"'];
-    } else {
-      this.activationFile = activationFile;
-    }
-
     // LOCAL Simulation checks
     if (location === "LOCAL") {
-      if (!eecType) return ["NOTREADY", "No EEC type selected"];
       // Check we can simulate this DS on local OS
-      if (!canSimulateDatasource(this.localOs, eecType, datasourceName)) {
-        return ["NOTREADY", `Datasource ${datasourceName} cannot be simulated on this OS`];
+      if (!canSimulateDatasource(this.localOs, eecType, this.datasourceName)) {
+        return ["NOTREADY", `Datasource ${this.datasourceName} cannot be simulated on this OS`];
       }
       // Check binary exists
-      const datasourcePath = getDatasourcePath(this.localOs, eecType, datasourceName);
+      const datasourcePath = getDatasourcePath(this.localOs, eecType, this.datasourceName);
       if (!existsSync(datasourcePath)) {
         return ["NOTREADY", `Could not find datasource executable at ${datasourcePath}`];
       } else {
-        this.datasourceDir = getDatasourceDir(this.localOs, eecType, datasourceName);
-        this.datasourceExe = getDatasourceExe(this.localOs, eecType, datasourceName);
+        this.datasourceDir = getDatasourceDir(this.localOs, eecType, this.datasourceName);
+        this.datasourceExe = getDatasourceExe(this.localOs, eecType, this.datasourceName);
       }
     }
 
@@ -215,16 +256,51 @@ export class SimulatorManager extends CachedDataConsumer {
     if (location === "REMOTE") {
       if (!target) return ["NOTREADY", "No target given for remote simulation"];
       // Check we can simulate this DS on remote OS
-      if (!canSimulateDatasource(target.osType, target.eecType, datasourceName)) {
-        return ["NOTREADY", `Datasource ${datasourceName} cannot be simulated on ${target.osType}`];
+      if (!canSimulateDatasource(target.osType, target.eecType, this.datasourceName)) {
+        return [
+          "NOTREADY",
+          `Datasource ${this.datasourceName} cannot be simulated on ${target.osType}`,
+        ];
       } else {
-        this.datasourceDir = getDatasourceDir(target.osType, target.eecType, datasourceName);
-        this.datasourceExe = getDatasourceExe(target.osType, target.eecType, datasourceName);
+        this.datasourceDir = getDatasourceDir(target.osType, target.eecType, this.datasourceName);
+        this.datasourceExe = getDatasourceExe(target.osType, target.eecType, this.datasourceName);
       }
     }
 
     // At this point, simulator is ready
     return ["READY", ""];
+  }
+
+  private getSimulationSpecs(): SimulationSpecs {
+    let localOneAgentDsExists: boolean;
+    try {
+      localOneAgentDsExists = existsSync(
+        getDatasourcePath(this.localOs, "ONEAGENT", this.datasourceName),
+      );
+    } catch {
+      localOneAgentDsExists = false;
+    }
+    let localActiveGateDsExists: boolean;
+    try {
+      localActiveGateDsExists = existsSync(
+        getDatasourcePath(this.localOs, "ACTIVEGATE", this.datasourceName),
+      );
+    } catch {
+      localActiveGateDsExists = false;
+    }
+    const dsSupportsActiveGateEec =
+      canSimulateDatasource("LINUX", "ACTIVEGATE", this.datasourceName) ||
+      canSimulateDatasource("WINDOWS", "ACTIVEGATE", this.datasourceName);
+    const dsSupportsOneAgentEec =
+      canSimulateDatasource("LINUX", "ONEAGENT", this.datasourceName) ||
+      canSimulateDatasource("WINDOWS", "ONEAGENT", this.datasourceName);
+
+    return {
+      localOneAgentDsExists,
+      localActiveGateDsExists,
+      dsSupportsActiveGateEec,
+      dsSupportsOneAgentEec,
+    };
   }
 
   /**
@@ -392,8 +468,7 @@ export class SimulatorManager extends CachedDataConsumer {
           await this.startRemotely(target);
           break;
       }
-      this.simulatorStatus = "RUNNING";
-      this.refreshUI();
+      this.refreshUI("RUNNING");
     } catch (err) {
       showMessage("error", `Error starting the simulation ${(err as Error).message}`);
     }
@@ -429,19 +504,20 @@ export class SimulatorManager extends CachedDataConsumer {
     } catch (err) {
       showMessage("error", `Error stopping the simulation ${(err as Error).message}`);
     } finally {
-      this.simulatorStatus = "READY";
-      this.refreshUI();
+      this.refreshUI("READY");
     }
   }
 
-  private refreshUI() {
+  private refreshUI(status?: SimulatorStatus, statusMessage?: string, failedChecks?: string[]) {
     this.panelManager.render(REGISTERED_PANELS.SIMULATOR_UI, "Extension Simulator", {
       dataType: SIMULATOR_PANEL_DATA_TYPE,
       data: {
         targets: getSimulatorTargets(this.context),
         summaries: getSimulatorSummaries(this.context),
-        status: this.simulatorStatus,
-        statusMessage: this.simulatorStatusMessage,
+        specs: this.simulationSpecs,
+        status,
+        statusMessage,
+        failedChecks: failedChecks ?? [],
       },
     } as SimulatorPanelData);
   }

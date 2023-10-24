@@ -3,7 +3,7 @@ import { PanelData } from "./webview";
 export type EecType = "ONEAGENT" | "ACTIVEGATE";
 export type OsType = "LINUX" | "WINDOWS";
 export type SimulationLocation = "LOCAL" | "REMOTE";
-export type SimulatorStatus = "READY" | "RUNNING" | "NOTREADY" | "CHECKING";
+export type SimulatorStatus = "READY" | "RUNNING" | "NOTREADY" | "UNSUPPORTED" | "CHECKING";
 
 export interface SimulationConfig {
   location: SimulationLocation;
@@ -17,6 +17,15 @@ export interface SimulatorData {
   summaries: (LocalExecutionSummary | RemoteExecutionSummary)[];
   status: SimulatorStatus;
   statusMessage: string;
+  failedChecks: string[];
+  specs: SimulationSpecs;
+}
+
+export interface SimulationSpecs {
+  localOneAgentDsExists: boolean;
+  localActiveGateDsExists: boolean;
+  dsSupportsOneAgentEec: boolean;
+  dsSupportsActiveGateEec: boolean;
 }
 
 export interface SimulatorPanelData extends PanelData {
