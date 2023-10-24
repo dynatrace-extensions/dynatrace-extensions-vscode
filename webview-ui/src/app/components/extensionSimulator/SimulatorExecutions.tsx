@@ -19,8 +19,9 @@ import {
   EpicIcon,
   PlayIcon,
   StopIcon,
+  WarningIcon,
 } from "@dynatrace/strato-icons";
-import React, { useState } from "react";
+import React, { useEffect, useState } from "react";
 import {
   SIMULATOR_CHECK_READY_CMD,
   SIMULATOR_READ_LOG_CMD,
@@ -33,6 +34,7 @@ import {
   SimulatorStatus,
 } from "src/app/interfaces/simulator";
 import { triggerCommand } from "src/app/utils/app-utils";
+import { MandatoryCheckModal } from "./MandatoryCheckModal";
 import { NewExecutionForm } from "./NewExecutionForm";
 
 const tableColumns: TableColumn[] = [
@@ -133,18 +135,37 @@ const SimulatorButton = ({
         </Button>
       );
     case "READY":
+      return (
+        <Button onClick={handleOpenModal} variant='accent' color='primary'>
+          <Button.Prefix>
+            <PlayIcon />
+          </Button.Prefix>
+          Start
+        </Button>
+      );
     case "NOTREADY":
       return (
         <Button onClick={handleOpenModal} variant='accent' color='primary'>
-          <Button.Prefix>{simulatorStatus === "READY" ? <PlayIcon /> : <EditIcon />}</Button.Prefix>
-          {simulatorStatus === "READY" ? "Start" : "Edit config"}
+          <Button.Prefix>
+            <EditIcon />
+          </Button.Prefix>
+          Edit config
         </Button>
       );
     case "CHECKING":
       return (
-        <Button variant='accent' color='primary' disabled={true}>
+        <Button variant='accent' color='primary' disabled>
           <ProgressCircle size='small' />
           Checking
+        </Button>
+      );
+    case "UNSUPPORTED":
+      return (
+        <Button onClick={handleOpenModal} variant='accent' color='primary'>
+          <Button.Prefix>
+            <WarningIcon />
+          </Button.Prefix>
+          Unsupported
         </Button>
       );
     default:
@@ -156,17 +177,36 @@ export const SimulatorExecutions = ({
   summaries,
   status,
   statusMessage,
+  failedChecks,
+  specs,
   targets,
 }: SimulatorData) => {
   const [modalOpen, setModalOpen] = useState(false);
+  const [mandatoryChecks, showMandatoryChecks] = useState(false);
   const [currentConfig, setCurrentConfig] = useState<SimulationConfig | undefined>(undefined);
 
-  const handleOpenModal = () => setModalOpen(true);
-  const handleCloseModal = () => setModalOpen(false);
+  const handleOpenModal = () => {
+    if (failedChecks.length > 0) {
+      // If there are failed mandatory checks, show checks modal
+      showMandatoryChecks(true);
+    } else {
+      // Otherwise, open the config modal
+      setModalOpen(true);
+    }
+  };
   const handleConfigSubmission = (config: SimulationConfig) => {
     setCurrentConfig(config);
     triggerCommand(SIMULATOR_CHECK_READY_CMD, config);
   };
+
+  useEffect(() => {
+    if (status === "RUNNING") {
+      setModalOpen(false);
+      showMandatoryChecks(false);
+    } else if (status === "READY") {
+      showMandatoryChecks(false);
+    }
+  }, [status]);
 
   return (
     <>
@@ -213,14 +253,20 @@ export const SimulatorExecutions = ({
           </DataTable>
         </Flex>
       </Flex>
+      <MandatoryCheckModal
+        modalOpen={mandatoryChecks}
+        setModalOpen={showMandatoryChecks}
+        failedChecks={failedChecks}
+      />
       <NewExecutionForm
         modalOpen={modalOpen}
-        handleCloseModal={handleCloseModal}
+        setModalOpen={setModalOpen}
         onSubmit={handleConfigSubmission}
         targets={targets}
         currentConfig={currentConfig}
         simulatorStatus={status}
         simulatorStatusMessage={statusMessage}
+        specs={specs}
       />
     </>
   );

@@ -23,6 +23,7 @@ import {
   RemoteTarget,
   SimulationConfig,
   SimulationLocation,
+  SimulationSpecs,
   SimulatorStatus,
 } from "src/app/interfaces/simulator";
 
@@ -83,25 +84,31 @@ type ExecutionForm = {
 
 interface NewExecutionFormProps {
   modalOpen: boolean;
-  handleCloseModal: () => void;
+  setModalOpen: (state: boolean) => void;
   onSubmit: (config: SimulationConfig) => void;
   targets: RemoteTarget[];
   currentConfig?: SimulationConfig;
   simulatorStatus: SimulatorStatus;
   simulatorStatusMessage: string;
+  specs: SimulationSpecs;
 }
 
 export const NewExecutionForm = ({
   modalOpen,
-  handleCloseModal,
+  setModalOpen,
   onSubmit,
   targets,
+  specs,
   currentConfig,
   simulatorStatus,
   simulatorStatusMessage,
 }: NewExecutionFormProps) => {
-  const [location, setLocation] = useState<SimulationLocation>("LOCAL");
-  const [eecType, setEecType] = useState<EecType>("ONEAGENT");
+  const [location, setLocation] = useState<SimulationLocation>(
+    !specs.localActiveGateDsExists && !specs.localOneAgentDsExists ? "REMOTE" : "LOCAL",
+  );
+  const [eecType, setEecType] = useState<EecType>(
+    specs.dsSupportsOneAgentEec ? "ONEAGENT" : "ACTIVEGATE",
+  );
   const [target, setTarget] = useState<SelectedKeys | null>(null);
   const [sendMetrics, setSendMetrics] = useState(false);
 
@@ -159,8 +166,6 @@ export const NewExecutionForm = ({
     }
 
     onSubmit(config);
-    // clearForm();
-    // handleCloseModal();
   };
 
   return (
@@ -169,7 +174,7 @@ export const NewExecutionForm = ({
       show={modalOpen}
       onDismiss={() => {
         clearForm();
-        handleCloseModal();
+        setModalOpen(false);
       }}
       size='small'
     >
@@ -190,7 +195,12 @@ export const NewExecutionForm = ({
                     setValue("location", value as SimulationLocation, { shouldValidate: false });
                   }}
                 >
-                  <Radio value='LOCAL'>Local machine</Radio>
+                  <Radio
+                    value='LOCAL'
+                    disabled={!specs.localActiveGateDsExists && !specs.localOneAgentDsExists}
+                  >
+                    Local machine
+                  </Radio>
                   <Radio value='REMOTE'>Remote target</Radio>
                 </RadioGroup>
               </FormField>
@@ -202,8 +212,24 @@ export const NewExecutionForm = ({
                     setValue("eecType", value as EecType, { shouldValidate: false });
                   }}
                 >
-                  <Radio value='ONEAGENT'>OneAgent</Radio>
-                  <Radio value='ACTIVEGATE'>ActiveGate</Radio>
+                  <Radio
+                    value='ONEAGENT'
+                    disabled={
+                      (location === "LOCAL" && !specs.localOneAgentDsExists) ||
+                      !specs.dsSupportsOneAgentEec
+                    }
+                  >
+                    OneAgent
+                  </Radio>
+                  <Radio
+                    value='ACTIVEGATE'
+                    disabled={
+                      (location === "LOCAL" && !specs.localActiveGateDsExists) ||
+                      !specs.dsSupportsActiveGateEec
+                    }
+                  >
+                    ActiveGate
+                  </Radio>
                 </RadioGroup>
               </FormField>
             </Flex>
@@ -238,7 +264,7 @@ export const NewExecutionForm = ({
           )}
           <Flex paddingTop={16} gap={8} alignItems='center'>
             <Button type='submit' variant='accent' color='primary'>
-              {simulatorStatus === "READY" ? "Start simulation" : "Check configuration"}
+              Start simulation
             </Button>
             {simulatorStatus === "CHECKING" && <ProgressCircle size='small' />}
           </Flex>
