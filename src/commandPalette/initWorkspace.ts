@@ -14,14 +14,14 @@
   limitations under the License.
  */
 
-import { existsSync, mkdirSync, readFileSync, readdirSync, renameSync, rmSync } from "fs";
+import { existsSync, mkdirSync, readFileSync, readdirSync, renameSync, rmdirSync } from "fs";
 import * as path from "path";
 import { TextEncoder } from "util";
 import AdmZip = require("adm-zip");
 import * as vscode from "vscode";
 import { Dynatrace } from "../dynatrace-api/dynatrace";
 import { showMessage } from "../utils/code";
-import { checkDtSdkPresent, checkSettings, checkUrlReachable } from "../utils/conditionCheckers";
+import { checkDtSdkPresent, checkSettings } from "../utils/conditionCheckers";
 import { CachedData } from "../utils/dataCaching";
 import {
   getExtensionFilePath,
@@ -54,29 +54,17 @@ const PROJECT_TYPES = {
 
 /**
  * Sets up the workspace for a new Python extension.
- * Checks whether dt-sdk or VPN available, installs dt-sdk if needed, and creates a python
+ * Checks if dt-sdk is available, installs dt-sdk if needed, and creates a python
  * extension.
  * @param rootPath path of the workspace (extension is created in its root)
  * @param tempPath the workspace storage (provided by vscode) for temporary work
  * @returns
  */
 async function pythonExtensionSetup(rootPath: string, tempPath: string) {
-  // Check: dt-sdk or VPN available
-  const artifactoryUrl =
-    "https://artifactory.lab.dynatrace.org/artifactory/api/pypi/pypi-extensions-release/simple";
-  if (!(await checkDtSdkPresent())) {
-    if (await checkUrlReachable(artifactoryUrl)) {
-      await runCommand(
-        `pip install --upgrade dynatrace-extensions-python-sdk --extra-index-url ${artifactoryUrl}`,
-      );
-    } else {
-      showMessage(
-        "error",
-        "The dt-sdk module is not installed and you are not on VPN. " +
-          "Python extension setup is not possible.",
-      );
-      return;
-    }
+  // Check: dt-sdk available?
+  const dtSdkAvailable = await checkDtSdkPresent();
+  if (!dtSdkAvailable) {
+    await runCommand("pip install --upgrade dt-extensions-sdk");
   }
   // Name for the Python extension
   const chosenName =
@@ -97,10 +85,12 @@ async function pythonExtensionSetup(rootPath: string, tempPath: string) {
   // Generate artefacts
   await runCommand(`dt-sdk create -o ${tempPath} ${chosenName}`);
   // Tidy up
+  // TODO - This doesn't work if the workspace is in another drive in Windows.
+  // Can't rename from C: to D: for example
   readdirSync(path.resolve(tempPath, chosenName)).forEach(p =>
     renameSync(path.resolve(tempPath, chosenName, p), path.resolve(rootPath, p)),
   );
-  rmSync(path.resolve(tempPath, chosenName));
+  rmdirSync(path.resolve(tempPath, chosenName));
 }
 
 /**
