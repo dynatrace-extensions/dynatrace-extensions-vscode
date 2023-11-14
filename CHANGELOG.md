@@ -1,5 +1,13 @@
 # Change Log
 
+## Version 2.3.1 (14.11.2023)
+
+### 🪲 Fixed in this version:
+- Cannot disable fast development mode
+- JMX converts metric unit to "PerSecondPerSecond" in rate metric
+
+---
+
 ## Version 2.3.0 (24.10.2023)
 
 ### 🚀 Improved in this version:

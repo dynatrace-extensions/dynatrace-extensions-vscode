@@ -369,7 +369,9 @@ function convertV1MetricsToMetadata(
           metadata: {
             displayName: `${newMetricName} (per second)`,
             description: `${newMetricName} expressed as a rate per second`,
-            unit: timeseries.unit === "Count" ? "PerSecond" : `${timeseries.unit}PerSecond`,
+            unit: ["Count", "PerSecond"].includes(timeseries.unit)
+              ? "PerSecond"
+              : `${timeseries.unit}PerSecond`,
             tags: ["JMX"],
           },
           query: {

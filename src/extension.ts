@@ -402,7 +402,7 @@ function registerFeatureSwitchCommands() {
       () => {
         vscode.workspace
           .getConfiguration()
-          .update("fastDevelopmentMode", false)
+          .update("dynatraceExtensions.fastDevelopmentMode", false)
           .then(undefined, () => {
             console.log("Could not update setting fastDevelopmentMode");
           });
