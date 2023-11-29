@@ -387,7 +387,20 @@
 						"scope": "resource"
 					}
 				}
-			}
+			},
+      {
+        "title": "Python environment",
+        "properties": {
+          "dynatraceExtensions.pythonExtraPlatforms": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            },
+            "description": "A list of extra platforms to build Python wheels for. This setting overwrites the default list of linux_x86_64 and win_amd_64",
+            "scope": "resource"
+          }
+        }
+      }
 		],
 		"menus": {
 			"commandPalette": [

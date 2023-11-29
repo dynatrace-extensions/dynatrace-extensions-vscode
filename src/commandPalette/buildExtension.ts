@@ -157,20 +157,28 @@ function assembleStandard(
 async function assemblePython(
   workspaceStorage: string,
   extensionDir: string,
+  extraPlatforms: string[] | undefined,
   certKeyPath: string,
   envOptions: ExecOptions,
   oc: vscode.OutputChannel,
   cancelToken: vscode.CancellationToken,
 ) {
+  // By default, we add the linux_x86_64 and/or win_amd64 platforms
+  let platformString =
+    process.platform === "win32"
+      ? "-e linux_x86_64"
+      : process.platform === "linux"
+      ? "-e win_amd64"
+      : "-e linux_x86_64 -e win_amd64";
+
+  // The user's configuration can override this
+  if (extraPlatforms && extraPlatforms.length > 0) {
+    platformString = `-e ${extraPlatforms.join(" -e ")}`;
+  }
+
   // Build
   await runCommand(
-    `dt-sdk build -k "${certKeyPath}" "${extensionDir}" -t "${workspaceStorage}" ${
-      process.platform === "win32"
-        ? "-e linux_x86_64"
-        : process.platform === "linux"
-        ? "-e win_amd64"
-        : "-e linux_x86_64 -e win_amd64"
-    }`,
+    `dt-sdk build -k "${certKeyPath}" "${extensionDir}" -t "${workspaceStorage}" ${platformString}`,
     oc,
     cancelToken,
     envOptions,
@@ -440,11 +448,16 @@ export async function buildExtension(
         if (/^python:$/gm.test(extension)) {
           const envOptions = await getPythonVenvOpts();
           const sdkAvailable = await checkDtSdkPresent(oc, cancelToken, envOptions);
+          const extraPlatforms = vscode.workspace
+            .getConfiguration("dynatraceExtensions", null)
+            .get<string[]>("pythonExtraPlatforms");
+
           if (sdkAvailable) {
             // Wait for the packaging to finish
             await assemblePython(
               workspaceStorage,
               path.resolve(extensionDir, ".."),
+              extraPlatforms,
               devCertKey,
               envOptions,
               oc,
