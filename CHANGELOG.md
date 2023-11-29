@@ -8,6 +8,7 @@
 ### 🪲 Fixed in this version:
 - [#146 - Cannot build python extension with custom platforms](https://github.com/dynatrace-extensions/dynatrace-extensions-vscode/issues/146)
 - [#14 - Axios cross-site request forgery vulnerability](https://github.com/dynatrace-extensions/dynatrace-extensions-vscode/security/dependabot/14)
+- [#148 - Python commands use global interpreter instead of virtual environment](https://github.com/dynatrace-extensions/dynatrace-extensions-vscode/issues/148)
 
 ---
 

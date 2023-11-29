@@ -57,5 +57,5 @@ export async function getPythonVenvOpts(): Promise<ExecOptions> {
     env.VIRTUAL_ENV = path.resolve(pythonPath, "..", "..");
   }
 
-  return env;
+  return { env };
 }

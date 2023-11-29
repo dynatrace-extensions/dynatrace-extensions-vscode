@@ -29,6 +29,7 @@ import {
   registerWorkspace,
   writeGititnore,
 } from "../utils/fileSystem";
+import { getPythonVenvOpts } from "../utils/otherExtensions";
 import { runCommand } from "../utils/subprocesses";
 import { loadSchemas } from "./loadSchemas";
 
@@ -60,13 +61,29 @@ const PROJECT_TYPES = {
  * @param tempPath the workspace storage (provided by vscode) for temporary work
  * @returns
  */
-async function pythonExtensionSetup(rootPath: string, tempPath: string) {
+async function pythonExtensionSetup(
+  rootPath: string,
+  tempPath: string,
+  progress: vscode.Progress<{
+    message?: string;
+    increment?: number;
+  }>,
+) {
+  // Get correct python env
+  const envOptions = await getPythonVenvOpts();
   // Check: dt-sdk available?
-  const dtSdkAvailable = await checkDtSdkPresent();
+  const dtSdkAvailable = await checkDtSdkPresent(undefined, undefined, envOptions);
   if (!dtSdkAvailable) {
-    await runCommand("pip install --upgrade dt-extensions-sdk");
+    progress.report({ message: "Installing dependencies. This may take a while." });
+    await runCommand(
+      "pip install --upgrade dt-extensions-sdk[cli]",
+      undefined,
+      undefined,
+      envOptions,
+    );
   }
   // Name for the Python extension
+  progress.report({ message: "Waiting for your input..." });
   const chosenName =
     (await vscode.window.showInputBox({
       title: "Provide a name for your extension",
@@ -83,7 +100,8 @@ async function pythonExtensionSetup(rootPath: string, tempPath: string) {
       },
     })) ?? "my_python_extension";
   // Generate artefacts
-  await runCommand(`dt-sdk create -o ${tempPath} ${chosenName}`);
+  progress.report({ message: "Creating folders and files" });
+  await runCommand(`dt-sdk create -o ${tempPath} ${chosenName}`, undefined, undefined, envOptions);
   // Tidy up
   // TODO - This doesn't work if the workspace is in another drive in Windows.
   // Can't rename from C: to D: for example
@@ -346,7 +364,7 @@ export async function initWorkspace(
       // Setup based on type of project
       switch (projectType) {
         case PROJECT_TYPES.pythonExtension:
-          await pythonExtensionSetup(rootPath, storagePath);
+          await pythonExtensionSetup(rootPath, storagePath, progress);
           break;
         case PROJECT_TYPES.jmxConversion: {
           const extensionDir = path.resolve(rootPath, "extension");
