@@ -1,5 +1,16 @@
 # Change Log
 
+## Version 2.3.2 (29.11.2023)
+
+### ✨ New in this version:
+- [#144 - Allow creation of python extensions outside of VPN](https://github.com/dynatrace-extensions/dynatrace-extensions-vscode/pull/144)
+
+### 🪲 Fixed in this version:
+- [#146 - Cannot build python extension with custom platforms](https://github.com/dynatrace-extensions/dynatrace-extensions-vscode/issues/146)
+- [#14 - Axios cross-site request forgery vulnerability](https://github.com/dynatrace-extensions/dynatrace-extensions-vscode/security/dependabot/14)
+
+---
+
 ## Version 2.3.1 (14.11.2023)
 
 ### 🪲 Fixed in this version:
