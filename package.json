@@ -99,6 +99,11 @@
 				"category": "Dynatrace extensions"
 			},
 			{
+				"command": "dynatrace-extensions.convertPythonExtension",
+				"title": "Convert Python",
+				"category": "Dynatrace extensions"
+			},
+			{
 				"command": "dynatrace-extensions-workspaces.refresh",
 				"title": "Refresh",
 				"icon": "$(refresh)"
@@ -148,11 +153,11 @@
 				"title": "Remove environment",
 				"icon": "$(trash)"
 			},
-      {
-        "command": "dynatrace-extensions-environments.openExtension",
-        "title": "Open in Dynatrace",
-        "icon": "$(link-external)"
-      },
+			{
+				"command": "dynatrace-extensions-environments.openExtension",
+				"title": "Open in Dynatrace",
+				"icon": "$(link-external)"
+			},
 			{
 				"command": "dynatrace-extensions-environments.editConfig",
 				"title": "Edit configuration",
@@ -388,19 +393,19 @@
 					}
 				}
 			},
-      {
-        "title": "Python environment",
-        "properties": {
-          "dynatraceExtensions.pythonExtraPlatforms": {
-            "type": "array",
-            "items": {
-              "type": "string"
-            },
-            "description": "A list of extra platforms to build Python wheels for. This setting overwrites the default list of linux_x86_64 and win_amd_64",
-            "scope": "resource"
-          }
-        }
-      }
+			{
+				"title": "Python environment",
+				"properties": {
+					"dynatraceExtensions.pythonExtraPlatforms": {
+						"type": "array",
+						"items": {
+							"type": "string"
+						},
+						"description": "A list of extra platforms to build Python wheels for. This setting overwrites the default list of linux_x86_64 and win_amd_64",
+						"scope": "resource"
+					}
+				}
+			}
 		],
 		"menus": {
 			"commandPalette": [
@@ -444,10 +449,10 @@
 					"command": "dynatrace-extensions-environments.useEnvironment",
 					"when": "false"
 				},
-        {
-          "command": "dynatrace-extensions-environments.openExtension",
-          "when": "false"
-        },
+				{
+					"command": "dynatrace-extensions-environments.openExtension",
+					"when": "false"
+				},
 				{
 					"command": "dynatrace-extensions-environments.editConfig",
 					"when": "false"
@@ -652,11 +657,11 @@
 					"when": "view == dynatrace-extensions-environments && (viewItem == dynatraceEnvironment || viewItem == currentDynatraceEnvironment)",
 					"group": "inline@3"
 				},
-        {
-          "command": "dynatrace-extensions-environments.openExtension",
-          "when": "view == dynatrace-extensions-environments && viewItem == deployedExtension",
-          "group": "inline@2"
-        },
+				{
+					"command": "dynatrace-extensions-environments.openExtension",
+					"when": "view == dynatrace-extensions-environments && viewItem == deployedExtension",
+					"group": "inline@2"
+				},
 				{
 					"command": "dynatrace-extensions-environments.addConfig",
 					"when": "view == dynatrace-extensions-environments && viewItem == deployedExtension",
@@ -800,6 +805,7 @@
 		"pretest": "npm run compile && npm run lint",
 		"lint": "eslint src --ext ts",
 		"test": "node ./out/src/test/runTest.js",
+		"test:unit": "jest --runInBand --config=jest.config.js",
 		"build": "npm run pretest && npm run vscode:prepublish",
 		"install:all": "npm install && cd webview-ui && npm install",
 		"build:webview": "cd webview-ui && npm run build",
@@ -807,11 +813,13 @@
 	},
 	"devDependencies": {
 		"@babel/plugin-proposal-private-property-in-object": "^7.21.11",
+		"@jest/globals": "^29.7.0",
 		"@lwc/eslint-plugin-lwc": "^1.6.2",
 		"@reactivex/rxjs": "^6.6.7",
 		"@types/adm-zip": "^0.5.0",
 		"@types/fs-extra": "^11.0.1",
 		"@types/glob": "^7.2.0",
+		"@types/jest": "^29.5.11",
 		"@types/mocha": "^9.1.1",
 		"@types/mock-fs": "^4.13.1",
 		"@types/node": "^14.18.43",
@@ -831,10 +839,12 @@
 		"eslint-plugin-no-unsanitized": "^4.0.2",
 		"eslint-plugin-prettier": "^4.2.1",
 		"eslint-plugin-react": "^7.32.2",
-    "semver": ">=7.5.2",
+		"jest": "^29.7.0",
 		"mocha": "^9.2.2",
 		"mock-fs": "^5.1.4",
 		"prettier": "^2.8.8",
+		"semver": ">=7.5.2",
+		"ts-jest": "^29.1.1",
 		"typescript": "^5.0.4"
 	},
 	"dependencies": {

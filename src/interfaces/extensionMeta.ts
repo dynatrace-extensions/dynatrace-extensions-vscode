@@ -390,7 +390,26 @@ export interface V1UI {
   keycharts?: ChartDto[];
 }
 
-export interface JMXExtensionV1 {
+export interface V1ConfigUIProperty {
+  key: string;
+  displayName?: string;
+  displayHint?: string;
+  displayOrder?: number;
+}
+
+export interface V1ConfigUI {
+  displayName?: string;
+  properties?: V1ConfigUIProperty[];
+}
+
+export interface V1Property {
+  key: string;
+  type: "string" | "boolean" | "integer" | "float" | "password" | "json" | "textarea" | "dropdown";
+  defaultValue?: string | number | boolean;
+  dropdownValues?: string[];
+}
+
+export interface ExtensionV1 {
   name: string;
   metricGroup?: string;
   version: string;
@@ -398,6 +417,8 @@ export interface JMXExtensionV1 {
   metrics: MetricDto[];
   technologies?: string[];
   ui?: V1UI;
+  configUI?: V1ConfigUI;
+  properties?: V1Property[];
 }
 
 interface SeriesDto {
@@ -449,4 +470,75 @@ export interface SplittingDto {
   keyProperty: string;
   name: string;
   type: string;
+}
+
+export interface ActivationSchemaObjectType {
+  $ref: string;
+}
+
+export interface ActivationSchemaItem {
+  type: ActivationSchemaObjectType;
+}
+
+export type ActivationSchemaPropertyType =
+  | "boolean"
+  | "integer"
+  | "float"
+  | "local_date"
+  | "local_time"
+  | "local_date_time"
+  | "zoned_date_time"
+  | "time_zone"
+  | "text"
+  | "secret"
+  | "setting"
+  | "list"
+  | "set"
+  | ActivationSchemaObjectType;
+
+export interface ActivationSchemaProperty {
+  type: ActivationSchemaPropertyType;
+  displayName: string;
+  description?: string;
+  items?: ActivationSchemaItem;
+  nullable?: boolean;
+  minItems?: number;
+  maxItems?: number;
+  metaData?: Record<string, string>;
+  subType?: "multiline" | "uri" | "url";
+  default?: string | number | boolean;
+}
+
+export interface ActivationSchemaType {
+  type: string;
+  displayName: string;
+  properties: Record<string, ActivationSchemaProperty>;
+  summaryPattern?: string;
+}
+
+export interface ActivationSchemaEnum {
+  displayName: string;
+  type: "enum";
+  items: {
+    value: string;
+    displayName: string;
+    description?: string;
+  }[];
+}
+
+export interface ActivationSchema {
+  types: Record<string, ActivationSchemaType>;
+  properties: Record<string, ActivationSchemaProperty>;
+  enums?: Record<string, ActivationSchemaEnum>;
+
+  // Just used to make the playground happy
+  dynatrace: "1";
+  description: string;
+  displayName: string;
+  schemaId: string;
+  ownerProductManagement: string;
+  ownerDevelopment: string;
+  maturity: string;
+  allowedScopes: string[];
+  multiObject: boolean;
 }

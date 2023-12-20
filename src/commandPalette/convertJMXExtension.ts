@@ -29,7 +29,7 @@ import {
   DetailInjectionCardType,
   DimensionStub,
   ExtensionStub,
-  JMXExtensionV1,
+  ExtensionV1,
   JMXSubGroup,
   MetricDto,
   MetricMetadata,
@@ -132,7 +132,7 @@ const TECH_OPTIONS = [
  */
 async function extractPluginJSONFromZip(
   binaryData: Buffer | Uint8Array,
-): Promise<[JMXExtensionV1, string]> {
+): Promise<[ExtensionV1, string]> {
   const zip = await jszip.loadAsync(binaryData);
 
   // Find the first ocurrence of plugin.json in the files in the zip
@@ -143,8 +143,8 @@ async function extractPluginJSONFromZip(
   const pluginJsonFileContent = await zip.file(pluginJSONFile)?.async("string");
   if (!pluginJsonFileContent) return [undefined, "Could not extract the plugin.json file."];
 
-  const jmxV1Extension = JSON.parse(pluginJsonFileContent) as JMXExtensionV1;
-  return [jmxV1Extension, ""];
+  const v1Extension = JSON.parse(pluginJsonFileContent) as ExtensionV1;
+  return [v1Extension, ""];
 }
 
 /**
@@ -616,7 +616,7 @@ async function convertV1UiToScreens(
  * @param jmxV1Extension The v1 extension (plugin.json)
  * @returns The converted v2 extension (extension.yaml)
  */
-async function convertJMXExtensionToV2(jmxV1Extension: JMXExtensionV1): Promise<ExtensionStub> {
+async function convertJMXExtensionToV2(jmxV1Extension: ExtensionV1): Promise<ExtensionStub> {
   let extensionName: string;
   extensionName = (jmxV1Extension.metricGroup ?? jmxV1Extension.name)
     .toLowerCase() // Name must be lowercase
@@ -701,62 +701,77 @@ async function convertJMXExtensionToV2(jmxV1Extension: JMXExtensionV1): Promise<
  * content is returned.
  * @returns tuple of extracted json and error message in case of failure
  */
-async function extractJMXv1FromLocal(): Promise<[JMXExtensionV1, string]> {
+export async function extractv1ExtensionFromLocal(): Promise<[ExtensionV1, string]> {
+  // TODO - move this to a shared file, as it is used by Python extensions as well
+
   const options: vscode.OpenDialogOptions = {
     canSelectMany: false,
     openLabel: "Select file",
-    title: "Select JMX extension .zip or plugin.json file",
+    title: "Select extension .zip or plugin.json file",
     filters: {
-      "JMX v1 plugin": ["json", "zip"],
+      "Extension v1 plugin": ["json", "zip"],
     },
   };
   const pluginJSONFile = await vscode.window.showOpenDialog(options);
   if (!pluginJSONFile) return [undefined, "No selection made."];
 
   // If this is a zip file, extract the plugin.json file from it
-  const [jmxV1Extension, errorMessage] = pluginJSONFile[0].fsPath.endsWith(".zip")
+  const [v1Extension, errorMessage] = pluginJSONFile[0].fsPath.endsWith(".zip")
     ? await extractPluginJSONFromZip(readFileSync(pluginJSONFile[0].fsPath))
     : // If this is a json file, just read it
-      [JSON.parse(readFileSync(pluginJSONFile[0].fsPath).toString()) as JMXExtensionV1, ""];
+      [JSON.parse(readFileSync(pluginJSONFile[0].fsPath).toString()) as ExtensionV1, ""];
 
-  return [jmxV1Extension, errorMessage];
+  return [v1Extension, errorMessage];
 }
 
 /**
- * Guides the user to select an existing JMX V1 extension from the connected Dynatrace tenant.
+ * Guides the user to select an existing V1 extension from the connected Dynatrace tenant.
  * Once selected, the extension is unpacked and the plugin.json file is extracted.
  * @param dt Dynatrace Client API
  * @returns tuple of extracted json and error message in case of failure
  */
-async function extractJMXv1FromRemote(dt?: Dynatrace): Promise<[JMXExtensionV1, string]> {
+export async function extractV1FromRemote(
+  extensionType: "JMX" | "Python",
+  dt?: Dynatrace,
+): Promise<[ExtensionV1, string]> {
+  // TODO - move this to a shared file, as it is used by Python extensions as well
+
   if (!dt) return [undefined, "This option requires a Dynatrace environment connection."];
   const currentExtensions = await dt.extensionsV1.getExtensions();
 
-  // We only want JMX custom extensions (not the built-in ones)
+  // We only want filtered custom extensions (not the built-in ones)
   // Dynatrace created extensions cannot be downloaded via the API
-  const currentJMXExtensions = currentExtensions.filter(
-    extension => extension.type === "JMX" && !extension.id.startsWith("dynatrace."),
-  );
+
+  const filterdExtensions = currentExtensions.filter(extension => {
+    if (extensionType === "JMX") {
+      return extension.type === "JMX" && !extension.id.startsWith("dynatrace.");
+    } else {
+      return (
+        extension.type === "ACTIVEGATE" ||
+        (extension.type === "ONEAGENT" && !extension.id.startsWith("dynatrace."))
+      );
+    }
+  });
 
   const extensionChoice = await vscode.window.showQuickPick(
-    currentJMXExtensions.map(e => ({
+    filterdExtensions.map(e => ({
       label: e.name,
       description: e.id,
     })),
     {
-      placeHolder: "Choose a JMX v1 extension",
-      title: "Dynatrace: Convert JMX extension",
+      placeHolder: "Choose a v1 extension",
+      title: "Dynatrace: Convert extension",
     },
   );
   if (!extensionChoice) return [undefined, "No extension was selected."];
 
   // Get the binary of the extension zip file
-  const jmxExtensionId = extensionChoice.description;
-  const binaryData = await dt.extensionsV1.getExtensionBinary(jmxExtensionId);
+  const extensionId = extensionChoice.description;
+  const binaryData = await dt.extensionsV1.getExtensionBinary(extensionId);
 
   // Extract the plugin.json file from the zip
-  const [jmxV1Extension, errorMessage] = await extractPluginJSONFromZip(binaryData);
-  return [jmxV1Extension, errorMessage];
+  const [v1Extension, errorMessage] = await extractPluginJSONFromZip(binaryData);
+  return [v1Extension, errorMessage];
 }
 
 /**
@@ -788,8 +803,8 @@ export async function convertJMXExtension(
 
   const [jmxV1Extension, errorMessage] =
     pluginJSONOrigin.label === OPTION_LOCAL_FILE.label
-      ? await extractJMXv1FromLocal()
-      : await extractJMXv1FromRemote(dt);
+      ? await extractv1ExtensionFromLocal()
+      : await extractV1FromRemote("JMX", dt);
 
   if (errorMessage !== "") {
     showMessage("error", `Operation failed: ${errorMessage}`);
