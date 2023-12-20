@@ -32,8 +32,6 @@ const OPTION_DYNATRACE_ENVIRONMENT: vscode.QuickPickItem = {
   description: "Browse your Dynatrace environment for a Python extension",
 };
 
-
-
 /**
  * Parses a v1 plugin.json file and produces an equivalent 2.0 activationSchema.json.
  * The file can be loaded either locally or from a connected tenant and supports both direct
