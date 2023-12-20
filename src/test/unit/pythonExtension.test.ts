@@ -15,7 +15,7 @@
  */
 
 import { ExtensionV1 } from "../../interfaces/extensionMeta";
-import { convertPluginJsonToActivationSchema } from '../../commandPalette/convertPythonExtension'
+import { convertPluginJsonToActivationSchema } from '../../commandPalette/python/pythonConversion'
 import {describe, expect, test} from '@jest/globals';
 const fs = require('fs');
 const path = require('path');

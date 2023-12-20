@@ -398,8 +398,8 @@ export interface V1ConfigUIProperty {
 }
 
 export interface V1ConfigUI {
-  displayName?: string;
-  properties?: V1ConfigUIProperty[];
+  displayName: string;
+  properties: V1ConfigUIProperty[];
 }
 
 export interface V1Property {
