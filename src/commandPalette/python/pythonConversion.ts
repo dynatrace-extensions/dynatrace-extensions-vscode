@@ -186,5 +186,16 @@ export async function convertPluginJsonToActivationSchema(
   const firstProperty = v1Extension.properties[0].key;
   activationSchema.types.custom_extension.summaryPattern = `${v1Extension.name} - {${firstProperty}}`;
 
+  // If the extension is remote, delete pythonLocal objects
+  // If the extension is local, delete pythonRemote objects
+  const isRemote = v1Extension.name.toLowerCase().startsWith("custom.remote.");
+  if (isRemote) {
+    delete activationSchema.types.pythonLocal;
+    delete activationSchema.properties.pythonLocal;
+  } else {
+    delete activationSchema.types.pythonRemote;
+    delete activationSchema.properties.pythonRemote;
+  }
+
   return activationSchema;
 }

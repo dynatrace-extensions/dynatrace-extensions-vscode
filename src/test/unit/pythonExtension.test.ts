@@ -82,6 +82,10 @@ describe('Python extensions unit tests', () => {
     expect(enums).toBeDefined();
     expect(enums).toHaveProperty('log_level');
     expect(enums.log_level.items).toHaveLength(2);
+
+    // Test remote extension doesn't have pythonLocal
+    expect(converted.types).not.toHaveProperty('pythonLocal');
+    expect(converted.properties).not.toHaveProperty('pythonLocal');
     
   });
   test('test converting real plugin.json files', async () => {
