@@ -6,36 +6,18 @@ import {
   Heading,
   Link,
   ProgressBar,
-  ProgressCircle,
   TableColumn,
   TitleBar,
-  Tooltip,
 } from "@dynatrace/strato-components-preview";
 import { Colors } from "@dynatrace/strato-design-tokens";
-import {
-  ActionIcon,
-  DescriptionIcon,
-  EditIcon,
-  EpicIcon,
-  PlayIcon,
-  StopIcon,
-  WarningIcon,
-} from "@dynatrace/strato-icons";
+import { ActionIcon, DescriptionIcon, EpicIcon } from "@dynatrace/strato-icons";
 import React, { useEffect, useState } from "react";
-import {
-  SIMULATOR_CHECK_READY_CMD,
-  SIMULATOR_READ_LOG_CMD,
-  SIMULATOR_STOP_CMD,
-} from "src/app/constants/constants";
-import {
-  ExecutionSummary,
-  SimulationConfig,
-  SimulatorData,
-  SimulatorStatus,
-} from "src/app/interfaces/simulator";
+import { SIMULATOR_CHECK_READY_CMD, SIMULATOR_READ_LOG_CMD } from "src/app/constants/constants";
+import { ExecutionSummary, SimulationConfig, SimulatorData } from "src/app/interfaces/simulator";
 import { triggerCommand } from "src/app/utils/app-utils";
 import { MandatoryCheckModal } from "./MandatoryCheckModal";
-import { NewExecutionForm } from "./NewExecutionForm";
+import { SettingsForm } from "./SettingsForm";
+import { StateButton, SettingsButton } from "./SimulatorButtons";
 
 const tableColumns: TableColumn[] = [
   {
@@ -117,62 +99,6 @@ const tableColumns: TableColumn[] = [
   },
 ];
 
-const SimulatorButton = ({
-  simulatorStatus,
-  handleOpenModal,
-}: {
-  simulatorStatus: SimulatorStatus;
-  handleOpenModal: () => void;
-}) => {
-  switch (simulatorStatus) {
-    case "RUNNING":
-      return (
-        <Button onClick={() => triggerCommand(SIMULATOR_STOP_CMD)} variant='accent' color='primary'>
-          <Button.Prefix>
-            <StopIcon />
-          </Button.Prefix>
-          Stop
-        </Button>
-      );
-    case "READY":
-      return (
-        <Button onClick={handleOpenModal} variant='accent' color='primary'>
-          <Button.Prefix>
-            <PlayIcon />
-          </Button.Prefix>
-          Start
-        </Button>
-      );
-    case "NOTREADY":
-      return (
-        <Button onClick={handleOpenModal} variant='accent' color='primary'>
-          <Button.Prefix>
-            <EditIcon />
-          </Button.Prefix>
-          Edit config
-        </Button>
-      );
-    case "CHECKING":
-      return (
-        <Button variant='accent' color='primary' disabled>
-          <ProgressCircle size='small' />
-          Checking
-        </Button>
-      );
-    case "UNSUPPORTED":
-      return (
-        <Button onClick={handleOpenModal} variant='accent' color='primary'>
-          <Button.Prefix>
-            <WarningIcon />
-          </Button.Prefix>
-          Unsupported
-        </Button>
-      );
-    default:
-      return <></>;
-  }
-};
-
 export const SimulatorExecutions = ({
   summaries,
   status,
@@ -181,30 +107,22 @@ export const SimulatorExecutions = ({
   specs,
   targets,
 }: SimulatorData) => {
-  const [modalOpen, setModalOpen] = useState(false);
-  const [mandatoryChecks, showMandatoryChecks] = useState(false);
+  const [settingsModal, showSettingsModal] = useState(false);
+  const [mandatoryChecks, showMandatoryChecksModal] = useState(false);
   const [currentConfig, setCurrentConfig] = useState<SimulationConfig | undefined>(undefined);
 
-  const handleOpenModal = () => {
-    if (failedChecks.length > 0) {
-      // If there are failed mandatory checks, show checks modal
-      showMandatoryChecks(true);
-    } else {
-      // Otherwise, open the config modal
-      setModalOpen(true);
-    }
-  };
   const handleConfigSubmission = (config: SimulationConfig) => {
     setCurrentConfig(config);
-    triggerCommand(SIMULATOR_CHECK_READY_CMD, config);
+    showSettingsModal(false);
+    triggerCommand(SIMULATOR_CHECK_READY_CMD, true, config);
   };
 
   useEffect(() => {
     if (status === "RUNNING") {
-      setModalOpen(false);
-      showMandatoryChecks(false);
+      showSettingsModal(false);
+      showMandatoryChecksModal(false);
     } else if (status === "READY") {
-      showMandatoryChecks(false);
+      showMandatoryChecksModal(false);
     }
   }, [status]);
 
@@ -222,9 +140,15 @@ export const SimulatorExecutions = ({
             </Container>
           </TitleBar.Prefix>
           <TitleBar.Suffix>
-            <Tooltip text={statusMessage} disabled={statusMessage === ""} delay='none'>
-              <SimulatorButton simulatorStatus={status} handleOpenModal={handleOpenModal} />
-            </Tooltip>
+            <Flex gap={4}>
+              <StateButton
+                currentConfig={currentConfig}
+                simulatorStatus={status}
+                showSettings={showSettingsModal}
+                showMandatoryChecks={showMandatoryChecksModal}
+              />
+              <SettingsButton showSettings={showSettingsModal} />
+            </Flex>
           </TitleBar.Suffix>
         </TitleBar>
         {status === "RUNNING" && (
@@ -255,12 +179,12 @@ export const SimulatorExecutions = ({
       </Flex>
       <MandatoryCheckModal
         modalOpen={mandatoryChecks}
-        setModalOpen={showMandatoryChecks}
+        setModalOpen={showMandatoryChecksModal}
         failedChecks={failedChecks}
       />
-      <NewExecutionForm
-        modalOpen={modalOpen}
-        setModalOpen={setModalOpen}
+      <SettingsForm
+        modalOpen={settingsModal}
+        setModalOpen={showSettingsModal}
         onSubmit={handleConfigSubmission}
         targets={targets}
         currentConfig={currentConfig}

@@ -13,7 +13,6 @@ import {
   SelectedKeys,
   Switch,
   Button,
-  ProgressCircle,
 } from "@dynatrace/strato-components-preview";
 import { WarningIcon } from "@dynatrace/strato-icons";
 import React, { useEffect, useState } from "react";
@@ -82,7 +81,7 @@ type ExecutionForm = {
   sendMetrics: boolean;
 };
 
-interface NewExecutionFormProps {
+interface SettingsFormProps {
   modalOpen: boolean;
   setModalOpen: (state: boolean) => void;
   onSubmit: (config: SimulationConfig) => void;
@@ -93,7 +92,7 @@ interface NewExecutionFormProps {
   specs: SimulationSpecs;
 }
 
-export const NewExecutionForm = ({
+export const SettingsForm = ({
   modalOpen,
   setModalOpen,
   onSubmit,
@@ -102,7 +101,7 @@ export const NewExecutionForm = ({
   currentConfig,
   simulatorStatus,
   simulatorStatusMessage,
-}: NewExecutionFormProps) => {
+}: SettingsFormProps) => {
   const [location, setLocation] = useState<SimulationLocation>(
     !specs.localActiveGateDsExists && !specs.localOneAgentDsExists ? "REMOTE" : "LOCAL",
   );
@@ -129,7 +128,7 @@ export const NewExecutionForm = ({
   } = useForm<ExecutionForm>({ mode: "all" });
 
   const createConfig = (): [SimulationConfig | undefined, string] => {
-    if (location === "REMOTE" && target?.[0] === "") {
+    if (location === "REMOTE" && (target === null || target[0] === "")) {
       return [undefined, "Must select a target for remote simulation"];
     }
 
@@ -170,12 +169,9 @@ export const NewExecutionForm = ({
 
   return (
     <Modal
-      title='Start a new simulation'
+      title='Simulator settings'
       show={modalOpen}
-      onDismiss={() => {
-        clearForm();
-        setModalOpen(false);
-      }}
+      onDismiss={() => setModalOpen(false)}
       size='small'
     >
       <form onSubmit={handleSubmit(handleSubmitClick)} onReset={() => clearForm()} noValidate>
@@ -256,17 +252,16 @@ export const NewExecutionForm = ({
           )}
           {simulatorStatus === "NOTREADY" && (
             <Container variant='default' color='critical'>
-              <Flex gap={12} alignItems='center'>
-                <WarningIcon size='large' />
+              <Flex gap={12}>
+                <WarningIcon />
                 <Text>{simulatorStatusMessage}</Text>
               </Flex>
             </Container>
           )}
           <Flex paddingTop={16} gap={8} alignItems='center'>
             <Button type='submit' variant='accent' color='primary'>
-              Start simulation
+              Save
             </Button>
-            {simulatorStatus === "CHECKING" && <ProgressCircle size='small' />}
           </Flex>
         </Flex>
       </form>
