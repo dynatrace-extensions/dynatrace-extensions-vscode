@@ -1,4 +1,4 @@
-import { ChildProcess, SpawnOptions, spawn } from "child_process";
+import { ChildProcess, ExecOptions, SpawnOptions, spawn } from "child_process";
 import { existsSync, mkdirSync, readFileSync, writeFileSync } from "fs";
 import * as path from "path";
 import pidtree = require("pidtree");
@@ -17,17 +17,20 @@ import {
 } from "../interfaces/simulator";
 import { ToastOptions } from "../interfaces/webview";
 import { loopSafeWait, showMessage } from "../utils/code";
+import { checkDtSdkPresent } from "../utils/conditionCheckers";
 import { CachedDataConsumer } from "../utils/dataCaching";
 import { getDatasourceName } from "../utils/extensionParsing";
 import {
   cleanUpSimulatorLogs,
   deleteSimulatorTarget,
   getExtensionFilePath,
+  getExtensionWorkspaceDir,
   getSimulatorSummaries,
   getSimulatorTargets,
   registerSimulatorSummary,
   registerSimulatorTarget,
 } from "../utils/fileSystem";
+import { getPythonVenvOpts } from "../utils/otherExtensions";
 import {
   canSimulateDatasource,
   getDatasourceDir,
@@ -59,6 +62,7 @@ export class SimulatorManager extends CachedDataConsumer {
   private datasourceName: string;
   private datasourceDir: string;
   private datasourceExe: string;
+  private pyEnvOptions: ExecOptions;
   private simulatorStatus: SimulatorStatus;
   private readonly context: vscode.ExtensionContext;
   private readonly outputChannel: vscode.OutputChannel;
@@ -77,6 +81,7 @@ export class SimulatorManager extends CachedDataConsumer {
     this.localOs = process.platform === "win32" ? "WINDOWS" : "LINUX";
     this.panelManager = panelManager;
     this.simulationSpecs = {
+      isPython: false,
       dsSupportsActiveGateEec: false,
       dsSupportsOneAgentEec: false,
       localActiveGateDsExists: false,
@@ -109,12 +114,17 @@ export class SimulatorManager extends CachedDataConsumer {
 
         // Check config if given, check further
         if (config) {
-          const [status, statusMessage] = this.checkSimulationConfig(
-            config.location,
-            config.eecType,
-            config.target,
+          this.checkSimulationConfig(config.location, config.eecType, config.target).then(
+            ([status, statusMessage]) => {
+              this.refreshUI(showUI, status, statusMessage);
+            },
+            err =>
+              this.refreshUI(
+                showUI,
+                "NOTREADY",
+                `Error checking configuration: ${(err as Error).message}`,
+              ),
           );
-          this.refreshUI(showUI, status, statusMessage);
           return;
         }
 
@@ -202,15 +212,26 @@ export class SimulatorManager extends CachedDataConsumer {
     if (!vscode.workspace.workspaceFolders) {
       failedChecks.push("Activation file");
     } else {
-      const activationFile = path.join(
-        vscode.workspace.workspaceFolders[0].uri.fsPath,
-        "config",
-        "simulator.json",
+      // Any extension can use the "simulator.json"
+      const activationFile = path.resolve(
+        path.join(vscode.workspace.workspaceFolders[0].uri.fsPath, "config", "simulator.json"),
       );
-      if (!existsSync(activationFile)) {
-        failedChecks.push("Activation file");
-      } else {
+      if (existsSync(activationFile)) {
         this.activationFile = activationFile;
+      } else {
+        // Python extensions may use "activation.json" as alternative
+        if (datasourceName === "python") {
+          const pyActivation = path.resolve(
+            path.join(path.resolve(getExtensionWorkspaceDir(), ".."), "activation.json"),
+          );
+          if (existsSync(pyActivation)) {
+            this.activationFile = pyActivation;
+          } else {
+            failedChecks.push("Activation file");
+          }
+        } else {
+          failedChecks.push("Activation file");
+        }
       }
     }
 
@@ -230,29 +251,55 @@ export class SimulatorManager extends CachedDataConsumer {
    * @param target - remote target
    * @returns true if simulator is ready, false otherwise
    */
-  public checkSimulationConfig(
+  public async checkSimulationConfig(
     location: SimulationLocation,
     eecType: EecType,
     target?: RemoteTarget,
-  ): [SimulatorStatus, string] {
+  ): Promise<[SimulatorStatus, string]> {
     // LOCAL Simulation checks
     if (location === "LOCAL") {
-      // Check we can simulate this DS on local OS
-      if (!canSimulateDatasource(this.localOs, eecType, this.datasourceName)) {
-        return ["NOTREADY", `Datasource ${this.datasourceName} cannot be simulated on this OS`];
-      }
-      // Check binary exists
-      const datasourcePath = getDatasourcePath(this.localOs, eecType, this.datasourceName);
-      if (!existsSync(datasourcePath)) {
-        return ["NOTREADY", `Could not find datasource executable at ${datasourcePath}`];
+      // For python, we only need to check the SDK is available
+      if (this.datasourceName === "python") {
+        const [pyStat, pyMsg] = await getPythonVenvOpts().then(
+          envOptions => {
+            this.pyEnvOptions = envOptions;
+            return checkDtSdkPresent(undefined, undefined, envOptions).then(
+              sdkAvailable => {
+                if (!sdkAvailable) {
+                  return ["NOTREADY", "Python SDK not found"];
+                } else {
+                  return ["READY", ""];
+                }
+              },
+              err => ["NOTREADY", `Error checking for Python SDK: ${(err as Error).message}`],
+            );
+          },
+          err => ["NOTREADY", `Error checking for Python SDK: ${(err as Error).message}`],
+        );
+        if (pyStat === "NOTREADY") {
+          return [pyStat, pyMsg];
+        }
       } else {
-        this.datasourceDir = getDatasourceDir(this.localOs, eecType, this.datasourceName);
-        this.datasourceExe = getDatasourceExe(this.localOs, eecType, this.datasourceName);
+        // Check we can simulate this DS on local OS
+        if (!canSimulateDatasource(this.localOs, eecType, this.datasourceName)) {
+          return ["NOTREADY", `Datasource ${this.datasourceName} cannot be simulated on this OS`];
+        }
+        // Check binary exists
+        const datasourcePath = getDatasourcePath(this.localOs, eecType, this.datasourceName);
+        if (!existsSync(datasourcePath)) {
+          return ["NOTREADY", `Could not find datasource executable at ${datasourcePath}`];
+        } else {
+          this.datasourceDir = getDatasourceDir(this.localOs, eecType, this.datasourceName);
+          this.datasourceExe = getDatasourceExe(this.localOs, eecType, this.datasourceName);
+        }
       }
     }
 
     // REMOTE Simulation checks
     if (location === "REMOTE") {
+      if (this.datasourceName === "python") {
+        return ["NOTREADY", "Python datasource can only be simulated on local machine"];
+      }
       if (!target) return ["NOTREADY", "No target given for remote simulation"];
       // Check we can simulate this DS on remote OS
       if (!canSimulateDatasource(target.osType, target.eecType, this.datasourceName)) {
@@ -271,21 +318,30 @@ export class SimulatorManager extends CachedDataConsumer {
   }
 
   private getSimulationSpecs(): SimulationSpecs {
+    const isPython = this.datasourceName === "python";
     let localOneAgentDsExists: boolean;
-    try {
-      localOneAgentDsExists = existsSync(
-        getDatasourcePath(this.localOs, "ONEAGENT", this.datasourceName),
-      );
-    } catch {
-      localOneAgentDsExists = false;
+    if (isPython) {
+      localOneAgentDsExists = true;
+    } else {
+      try {
+        localOneAgentDsExists = existsSync(
+          getDatasourcePath(this.localOs, "ONEAGENT", this.datasourceName),
+        );
+      } catch {
+        localOneAgentDsExists = false;
+      }
     }
     let localActiveGateDsExists: boolean;
-    try {
-      localActiveGateDsExists = existsSync(
-        getDatasourcePath(this.localOs, "ACTIVEGATE", this.datasourceName),
-      );
-    } catch {
-      localActiveGateDsExists = false;
+    if (isPython) {
+      localActiveGateDsExists = true;
+    } else {
+      try {
+        localActiveGateDsExists = existsSync(
+          getDatasourcePath(this.localOs, "ACTIVEGATE", this.datasourceName),
+        );
+      } catch {
+        localActiveGateDsExists = false;
+      }
     }
     const dsSupportsActiveGateEec =
       canSimulateDatasource("LINUX", "ACTIVEGATE", this.datasourceName) ||
@@ -295,6 +351,7 @@ export class SimulatorManager extends CachedDataConsumer {
       canSimulateDatasource("WINDOWS", "ONEAGENT", this.datasourceName);
 
     return {
+      isPython,
       localOneAgentDsExists,
       localActiveGateDsExists,
       dsSupportsActiveGateEec,
@@ -376,19 +433,26 @@ export class SimulatorManager extends CachedDataConsumer {
    */
   private startLocally() {
     const command =
-      `.${path.sep}${this.datasourceExe} --url "${this.url}"  --idtoken "${this.idToken}" ` +
-      `--extConfig "file://${this.extensionFile}" --userConfig "file://${this.activationFile}"`;
+      this.datasourceName === "python"
+        ? `dt-sdk run --activation-config "${this.activationFile}"`
+        : `.${path.sep}${this.datasourceExe} --url "${this.url}"  --idtoken "${this.idToken}" ` +
+          `--extConfig "file://${this.extensionFile}" --userConfig "file://${this.activationFile}"`;
+    const cwd =
+      this.datasourceName === "python"
+        ? path.resolve(getExtensionWorkspaceDir(), "..")
+        : this.datasourceDir;
+    const shell = process.platform === "win32" ? "powershell.exe" : "/bin/bash";
 
     // Initial message before starting the process
     this.outputChannel.replace("Starting simulation...\n");
     this.outputChannel.show();
     this.outputChannel.appendLine(`Running command: ${command}\n`);
 
+    const execOptions: SpawnOptions =
+      this.datasourceName === "python" ? { cwd, shell, ...this.pyEnvOptions } : { shell, cwd };
+
     // Create the process
-    this.createProcess({ location: "LOCAL" }, command, {
-      shell: process.platform === "win32" ? "powershell.exe" : "/bin/bash",
-      cwd: this.datasourceDir,
-    });
+    this.createProcess({ location: "LOCAL" }, command, execOptions);
   }
 
   /**

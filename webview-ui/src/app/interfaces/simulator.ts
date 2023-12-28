@@ -22,6 +22,7 @@ export interface SimulatorData {
 }
 
 export interface SimulationSpecs {
+  isPython: boolean;
   localOneAgentDsExists: boolean;
   localActiveGateDsExists: boolean;
   dsSupportsOneAgentEec: boolean;

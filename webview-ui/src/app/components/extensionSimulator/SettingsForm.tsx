@@ -193,11 +193,19 @@ export const SettingsForm = ({
                 >
                   <Radio
                     value='LOCAL'
-                    disabled={!specs.localActiveGateDsExists && !specs.localOneAgentDsExists}
+                    disabled={
+                      !(
+                        specs.isPython ||
+                        specs.localActiveGateDsExists ||
+                        specs.localOneAgentDsExists
+                      )
+                    }
                   >
                     Local machine
                   </Radio>
-                  <Radio value='REMOTE'>Remote target</Radio>
+                  <Radio value='REMOTE' disabled={specs.isPython}>
+                    Remote target
+                  </Radio>
                 </RadioGroup>
               </FormField>
               <FormField label='EEC' required>
