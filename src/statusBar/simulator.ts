@@ -59,6 +59,7 @@ export class SimulatorManager extends CachedDataConsumer {
   private datasourceName: string;
   private datasourceDir: string;
   private datasourceExe: string;
+  private simulatorStatus: SimulatorStatus;
   private readonly context: vscode.ExtensionContext;
   private readonly outputChannel: vscode.OutputChannel;
   private readonly statusBar: vscode.StatusBarItem;
@@ -113,18 +114,8 @@ export class SimulatorManager extends CachedDataConsumer {
             config.eecType,
             config.target,
           );
-          // NOTE: Why are we starting already (?)
-          if (status === "READY") {
-            // Error messaging handled downstream already
-            this.start(config).then(
-              () => {},
-              () => {},
-            );
-            return;
-          } else {
-            this.refreshUI(showUI, status, statusMessage);
-            return;
-          }
+          this.refreshUI(showUI, status, statusMessage);
+          return;
         }
 
         this.refreshUI(showUI, "READY");
@@ -224,9 +215,11 @@ export class SimulatorManager extends CachedDataConsumer {
     }
 
     if (failedChecks.length > 0) {
+      this.simulatorStatus = "UNSUPPORTED";
       return [false, failedChecks];
     }
     this.simulationSpecs = this.getSimulationSpecs();
+    this.simulatorStatus = "READY";
     return [true, []];
   }
 
@@ -526,7 +519,7 @@ export class SimulatorManager extends CachedDataConsumer {
         targets: getSimulatorTargets(this.context),
         summaries: getSimulatorSummaries(this.context),
         specs: this.simulationSpecs,
-        status,
+        status: status ?? this.simulatorStatus,
         statusMessage,
         failedChecks: failedChecks ?? [],
       },
