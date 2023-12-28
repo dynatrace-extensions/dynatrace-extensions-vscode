@@ -14,20 +14,22 @@
   limitations under the License.
  */
 
-import { existsSync, mkdirSync, readFileSync, readdirSync, renameSync, rmSync } from "fs";
+import { existsSync, mkdirSync, readFileSync, readdirSync, renameSync, rmdirSync } from "fs";
 import * as path from "path";
 import { TextEncoder } from "util";
 import AdmZip = require("adm-zip");
 import * as vscode from "vscode";
 import { Dynatrace } from "../dynatrace-api/dynatrace";
 import { showMessage } from "../utils/code";
-import { checkDtSdkPresent, checkSettings, checkUrlReachable } from "../utils/conditionCheckers";
+import { checkDtSdkPresent, checkSettings } from "../utils/conditionCheckers";
+import { CachedData } from "../utils/dataCaching";
 import {
   getExtensionFilePath,
   initWorkspaceStorage,
   registerWorkspace,
   writeGititnore,
 } from "../utils/fileSystem";
+import { getPythonVenvOpts } from "../utils/otherExtensions";
 import { runCommand } from "../utils/subprocesses";
 import { loadSchemas } from "./loadSchemas";
 
@@ -53,31 +55,35 @@ const PROJECT_TYPES = {
 
 /**
  * Sets up the workspace for a new Python extension.
- * Checks whether dt-sdk or VPN available, installs dt-sdk if needed, and creates a python
+ * Checks if dt-sdk is available, installs dt-sdk if needed, and creates a python
  * extension.
  * @param rootPath path of the workspace (extension is created in its root)
  * @param tempPath the workspace storage (provided by vscode) for temporary work
  * @returns
  */
-async function pythonExtensionSetup(rootPath: string, tempPath: string) {
-  // Check: dt-sdk or VPN available
-  const artifactoryUrl =
-    "https://artifactory.lab.dynatrace.org/artifactory/api/pypi/pypi-extensions-release/simple";
-  if (!(await checkDtSdkPresent())) {
-    if (await checkUrlReachable(artifactoryUrl)) {
-      await runCommand(
-        `pip install --upgrade dynatrace-extensions-python-sdk --extra-index-url ${artifactoryUrl}`,
-      );
-    } else {
-      showMessage(
-        "error",
-        "The dt-sdk module is not installed and you are not on VPN. " +
-          "Python extension setup is not possible.",
-      );
-      return;
-    }
+async function pythonExtensionSetup(
+  rootPath: string,
+  tempPath: string,
+  progress: vscode.Progress<{
+    message?: string;
+    increment?: number;
+  }>,
+) {
+  // Get correct python env
+  const envOptions = await getPythonVenvOpts();
+  // Check: dt-sdk available?
+  const dtSdkAvailable = await checkDtSdkPresent(undefined, undefined, envOptions);
+  if (!dtSdkAvailable) {
+    progress.report({ message: "Installing dependencies. This may take a while." });
+    await runCommand(
+      "pip install --upgrade dt-extensions-sdk[cli]",
+      undefined,
+      undefined,
+      envOptions,
+    );
   }
   // Name for the Python extension
+  progress.report({ message: "Waiting for your input..." });
   const chosenName =
     (await vscode.window.showInputBox({
       title: "Provide a name for your extension",
@@ -94,12 +100,15 @@ async function pythonExtensionSetup(rootPath: string, tempPath: string) {
       },
     })) ?? "my_python_extension";
   // Generate artefacts
-  await runCommand(`dt-sdk create -o ${tempPath} ${chosenName}`);
+  progress.report({ message: "Creating folders and files" });
+  await runCommand(`dt-sdk create -o ${tempPath} ${chosenName}`, undefined, undefined, envOptions);
   // Tidy up
+  // TODO - This doesn't work if the workspace is in another drive in Windows.
+  // Can't rename from C: to D: for example
   readdirSync(path.resolve(tempPath, chosenName)).forEach(p =>
     renameSync(path.resolve(tempPath, chosenName, p), path.resolve(rootPath, p)),
   );
-  rmSync(path.resolve(tempPath, chosenName));
+  rmdirSync(path.resolve(tempPath, chosenName));
 }
 
 /**
@@ -207,12 +216,14 @@ async function defaultExtensionSetup(schemaVersion: string, rootPath: string) {
  * finally creates some basic artifacts that should form the base of the project.
  * Types of projects currently supported - new extension stub, new python extension,
  * conversion from 1.0 JMX extension, or existing extension downloaded from tenant.
+ * @param dataCache instance of cached data
  * @param context VSCode Extension Context
  * @param dt Dynatrace API Client
  * @param callback optional callback function to call once initialization complete
  * @returns
  */
 export async function initWorkspace(
+  dataCache: CachedData,
   context: vscode.ExtensionContext,
   dt: Dynatrace,
   callback?: () => unknown,
@@ -353,7 +364,7 @@ export async function initWorkspace(
       // Setup based on type of project
       switch (projectType) {
         case PROJECT_TYPES.pythonExtension:
-          await pythonExtensionSetup(rootPath, storagePath);
+          await pythonExtensionSetup(rootPath, storagePath, progress);
           break;
         case PROJECT_TYPES.jmxConversion: {
           const extensionDir = path.resolve(rootPath, "extension");
@@ -374,6 +385,9 @@ export async function initWorkspace(
             await defaultExtensionSetup(schemaVersion, rootPath);
           }
       }
+
+      // Update parsed extension in the cache
+      dataCache.updateParsedExtension();
 
       // Create or update the .gitignore
       await writeGititnore(projectType === PROJECT_TYPES.pythonExtension);

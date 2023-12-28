@@ -1,5 +1,33 @@
 # Change Log
 
+## Version 2.3.2 (29.11.2023)
+
+### ✨ New in this version:
+- [#144 - Allow creation of python extensions outside of VPN](https://github.com/dynatrace-extensions/dynatrace-extensions-vscode/pull/144)
+
+### 🪲 Fixed in this version:
+- [#146 - Cannot build python extension with custom platforms](https://github.com/dynatrace-extensions/dynatrace-extensions-vscode/issues/146)
+- [#14 - Axios cross-site request forgery vulnerability](https://github.com/dynatrace-extensions/dynatrace-extensions-vscode/security/dependabot/14)
+- [#148 - Python commands use global interpreter instead of virtual environment](https://github.com/dynatrace-extensions/dynatrace-extensions-vscode/issues/148)
+
+---
+
+## Version 2.3.1 (14.11.2023)
+
+### 🪲 Fixed in this version:
+- Cannot disable fast development mode
+- JMX converts metric unit to "PerSecondPerSecond" in rate metric
+
+---
+
+## Version 2.3.0 (24.10.2023)
+
+### 🚀 Improved in this version:
+- [#139 - JMX conversion automation improvements](https://github.com/dynatrace-extensions/dynatrace-extensions-vscode/issues/139)
+    - Check out the [online guide](https://developer.dynatrace.com/extensions-v2/dynatrace-extensions-vscode/guides/jmx-conversion/) released for this feature
+
+---
+
 ## Version 2.2.1 (15.09.2023)
 
 ### ✨ New in this version:

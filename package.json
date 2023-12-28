@@ -8,7 +8,7 @@
 		"email": "extensions@dynatrace.com",
 		"url": "https://info.dynatrace.com/global_all_wp_dynatrace_services_platform_extensions_fact_sheet_13656_fulfillment.html"
 	},
-	"version": "2.2.1",
+	"version": "2.3.2",
 	"repository": {
 		"type": "git",
 		"url": "https://github.com/dynatrace-extensions/dynatrace-extensions-vscode.git"
@@ -389,14 +389,29 @@
           "dynatraceExtensions.autoDeleteLogs":{
             "type" :"boolean",
             "description": "Automatically delete simulator log files",
+            "scope": "resouce",
             "order": 1,
             "default": true
           },
           "dynatraceExtensions.maximumSimulatorFiles": {
             "type": "number",
             "description": "Maximum number of log files to keep per workspace. Oldest files are removed first.",
+            "scope": "resource",
             "order": 2,
             "default": 5
+          }
+        }
+      },
+      {
+        "title": "Python environment",
+        "properties": {
+          "dynatraceExtensions.pythonExtraPlatforms": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            },
+            "description": "A list of extra platforms to build Python wheels for. This setting overwrites the default list of linux_x86_64 and win_amd_64",
+            "scope": "resource"
           }
         }
       }
@@ -838,7 +853,7 @@
 	},
 	"dependencies": {
 		"adm-zip": "^0.5.9",
-		"axios": "^0.27.2",
+		"axios": "^1.6.0",
 		"form-data": "^4.0.0",
 		"fs-extra": "^11.1.1",
 		"glob": "^8.0.3",

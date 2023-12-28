@@ -14,6 +14,7 @@
   limitations under the  License.
  */
 
+import path = require("path");
 import * as vscode from "vscode";
 import { PrometheusActionProvider } from "./codeActions/prometheus";
 import { SnippetGenerator } from "./codeActions/snippetGenerator";
@@ -64,6 +65,7 @@ import { CachedData } from "./utils/dataCaching";
 import {
   getAllEnvironments,
   getAllWorkspaces,
+  getExtensionWorkspaceDir,
   initGlobalStorage,
   initWorkspaceStorage,
   migrateFromLegacyExtension,
@@ -176,7 +178,7 @@ function registerCommandPaletteCommands(
         try {
           const dtClient = await tenantsProvider.getDynatraceClient();
           if (dtClient) {
-            await initWorkspace(context, dtClient, () => {
+            await initWorkspace(cachedData, context, dtClient, () => {
               extensionWorkspacesProvider.refresh();
             });
           }
@@ -273,7 +275,23 @@ function registerCommandPaletteCommands(
     vscode.commands.registerCommand(
       "dynatrace-extensions.convertJmxExtension",
       async (outputPath?: string) => {
-        await convertJMXExtension(await tenantsProvider.getDynatraceClient(), outputPath);
+        // Unless explicitly specified, try to detect output path
+        if (!outputPath) {
+          const extensionDir = getExtensionWorkspaceDir();
+          if (extensionDir) {
+            await convertJMXExtension(
+              cachedData,
+              await tenantsProvider.getDynatraceClient(),
+              path.resolve(extensionDir, "extension.yaml"),
+            );
+          }
+        } else {
+          await convertJMXExtension(
+            cachedData,
+            await tenantsProvider.getDynatraceClient(),
+            outputPath,
+          );
+        }
       },
     ),
     // Create monitoring configuration files
@@ -387,7 +405,7 @@ function registerFeatureSwitchCommands() {
       () => {
         vscode.workspace
           .getConfiguration()
-          .update("fastDevelopmentMode", false)
+          .update("dynatraceExtensions.fastDevelopmentMode", false)
           .then(undefined, () => {
             console.log("Could not update setting fastDevelopmentMode");
           });
