@@ -93,38 +93,44 @@ export class SimulatorManager extends CachedDataConsumer {
       await this.start(config);
     });
     vscode.commands.registerCommand(SIMULATOR_STOP_CMD, () => this.stop());
-    vscode.commands.registerCommand(SIMULATOR_CHECK_READY_CMD, (config?: SimulationConfig) => {
-      // Let the panel know check is in progress
-      this.refreshUI("CHECKING");
+    vscode.commands.registerCommand(
+      SIMULATOR_CHECK_READY_CMD,
+      (showUI: boolean = true, config?: SimulationConfig) => {
+        // Let the panel know check is in progress
+        this.refreshUI(showUI, "CHECKING");
 
-      // First check mandatory requirements
-      const [result, failedChecks] = this.checkMantatoryRequirements();
-      if (!result) {
-        this.refreshUI("UNSUPPORTED", undefined, failedChecks);
-        return;
-      }
-
-      // Check config if given, check further
-      if (config) {
-        const [status, statusMessage] = this.checkSimulationConfig(
-          config.location,
-          config.eecType,
-          config.target,
-        );
-        if (status === "READY") {
-          // Error messaging handled downstream already
-          this.start(config).then(
-            () => {},
-            () => {},
-          );
-        } else {
-          this.refreshUI(status, statusMessage);
+        // First check mandatory requirements
+        const [result, failedChecks] = this.checkMantatoryRequirements();
+        if (!result) {
+          this.refreshUI(showUI, "UNSUPPORTED", undefined, failedChecks);
+          return;
         }
-      } else {
-        this.refreshUI("READY");
-      }
-    });
-    vscode.commands.registerCommand(SIMULATOR_OPEN_UI_CMD, () => this.refreshUI());
+
+        // Check config if given, check further
+        if (config) {
+          const [status, statusMessage] = this.checkSimulationConfig(
+            config.location,
+            config.eecType,
+            config.target,
+          );
+          // NOTE: Why are we starting already (?)
+          if (status === "READY") {
+            // Error messaging handled downstream already
+            this.start(config).then(
+              () => {},
+              () => {},
+            );
+            return;
+          } else {
+            this.refreshUI(showUI, status, statusMessage);
+            return;
+          }
+        }
+
+        this.refreshUI(showUI, "READY");
+      },
+    );
+    vscode.commands.registerCommand(SIMULATOR_OPEN_UI_CMD, () => this.refreshUI(true));
     vscode.commands.registerCommand(SIMULATOR_READ_LOG_CMD, (logPath: string) =>
       this.readLog(logPath),
     );
@@ -159,7 +165,7 @@ export class SimulatorManager extends CachedDataConsumer {
         lifespan: 800,
       } as ToastOptions,
     });
-    this.refreshUI();
+    this.refreshUI(true);
   }
 
   /**
@@ -177,7 +183,7 @@ export class SimulatorManager extends CachedDataConsumer {
         lifespan: 800,
       } as ToastOptions,
     });
-    this.refreshUI();
+    this.refreshUI(true);
   }
 
   /**
@@ -364,7 +370,7 @@ export class SimulatorManager extends CachedDataConsumer {
         logPath: logFilePath,
         workspace,
       } as LocalExecutionSummary | RemoteExecutionSummary);
-      this.refreshUI();
+      this.refreshUI(true);
       this.outputChannel.appendLine(
         `Simulator process closed with code ${code ?? signal.toString()}`,
       );
@@ -468,7 +474,7 @@ export class SimulatorManager extends CachedDataConsumer {
           await this.startRemotely(target);
           break;
       }
-      this.refreshUI("RUNNING");
+      this.refreshUI(true, "RUNNING");
     } catch (err) {
       showMessage("error", `Error starting the simulation ${(err as Error).message}`);
     }
@@ -504,12 +510,17 @@ export class SimulatorManager extends CachedDataConsumer {
     } catch (err) {
       showMessage("error", `Error stopping the simulation ${(err as Error).message}`);
     } finally {
-      this.refreshUI("READY");
+      this.refreshUI(true, "READY");
     }
   }
 
-  private refreshUI(status?: SimulatorStatus, statusMessage?: string, failedChecks?: string[]) {
-    this.panelManager.render(REGISTERED_PANELS.SIMULATOR_UI, "Extension Simulator", {
+  private refreshUI(
+    show: boolean,
+    status?: SimulatorStatus,
+    statusMessage?: string,
+    failedChecks?: string[],
+  ) {
+    const panelData: SimulatorPanelData = {
       dataType: SIMULATOR_PANEL_DATA_TYPE,
       data: {
         targets: getSimulatorTargets(this.context),
@@ -519,7 +530,16 @@ export class SimulatorManager extends CachedDataConsumer {
         statusMessage,
         failedChecks: failedChecks ?? [],
       },
-    } as SimulatorPanelData);
+    };
+
+    if (show) {
+      this.panelManager.render(REGISTERED_PANELS.SIMULATOR_UI, "Extension Simulator", panelData);
+    } else {
+      this.panelManager.postMessage(REGISTERED_PANELS.SIMULATOR_UI, {
+        messageType: "updateData",
+        data: panelData,
+      });
+    }
   }
 
   private readLog(logPath: string) {

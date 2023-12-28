@@ -50,7 +50,16 @@ export function canSimulateDatasource(os: OsType, eecType: EecType, dataSource: 
   const DATASOURCES = {
     WINDOWS: {
       ONEAGENT: ["prometheus", "python", "statsd", "wmi"],
-      ACTIVEGATE: ["prometheus", "snmp", "snmptraps", "sqlOracle", "sqlServer", "statsd", "wmi"],
+      ACTIVEGATE: [
+        "prometheus",
+        "snmp",
+        "snmptraps",
+        "sqlOracle",
+        "sqlServer",
+        "statsd",
+        "wmi",
+        "python",
+      ],
     },
     LINUX: {
       ONEAGENT: ["prometheus", "python", "statsd"],

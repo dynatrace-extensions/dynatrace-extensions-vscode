@@ -672,7 +672,7 @@ export async function activate(context: vscode.ExtensionContext) {
   });
 
   // The check for the simulator's initial status (must happen once cached data is available)
-  vscode.commands.executeCommand("dynatrace-extensions.simulator.checkReady").then(
+  vscode.commands.executeCommand("dynatrace-extensions.simulator.checkReady", false).then(
     () => {},
     err => console.log(`Error while checking simulator status: ${(err as Error).message}`),
   );
