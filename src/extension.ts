@@ -29,6 +29,7 @@ import { WmiCompletionProvider } from "./codeCompletions/wmi";
 import { PrometheusCodeLensProvider } from "./codeLens/prometheusScraper";
 import { ScreenLensProvider } from "./codeLens/screenCodeLens";
 import { SelectorCodeLensProvider } from "./codeLens/selectorCodeLens";
+import { SimulatorLensProvider } from "./codeLens/simulatorCodeLens";
 import { SnmpCodeLensProvider } from "./codeLens/snmpCodeLens";
 import { ValidationStatus, runSelector, validateSelector } from "./codeLens/utils/selectorUtils";
 import { runWMIQuery } from "./codeLens/utils/wmiUtils";
@@ -639,6 +640,7 @@ export async function activate(context: vscode.ExtensionContext) {
     cachedData,
   );
   const snippetCodeActionProvider = new SnippetGenerator();
+  const simulatorLensProvider = new SimulatorLensProvider(simulatorManager);
   const screensLensProvider = new ScreenLensProvider(tenantsTreeViewProvider);
   const prometheusLensProvider = new PrometheusCodeLensProvider(cachedData);
   const prometheusActionProvider = new PrometheusActionProvider();
@@ -724,6 +726,8 @@ export async function activate(context: vscode.ExtensionContext) {
     connectionStatusManager.getStatusBarItem(),
     // FastMode Status Bar Item
     fastModeStatus.getStatusBarItem(),
+    // Code Lens for Simulator
+    vscode.languages.registerCodeLensProvider(extension2selector, simulatorLensProvider),
     // Code Lens for Prometheus scraping
     vscode.languages.registerCodeLensProvider(extension2selector, prometheusLensProvider),
     // Code Lens for metric and entity selectors

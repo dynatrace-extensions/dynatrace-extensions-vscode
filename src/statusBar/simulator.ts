@@ -69,19 +69,20 @@ const SIMULATOR_PANEL_DATA_TYPE = "SIMULATOR_DATA";
  * Helper class for managing the Extension Simulator, its UI, and data.
  */
 export class SimulatorManager extends CachedDataConsumer {
+  public datasourceName: string;
+  public simulatorStatus: SimulatorStatus;
+  public currentConfiguration: SimulationConfig;
   private simulatorProcess: ChildProcess | undefined;
   private simulationSpecs: SimulationSpecs;
+  private failedChecks: string[];
   private idToken: string;
   private url: string;
   private localOs: OsType;
   private extensionFile: string;
   private activationFile: string;
-  private datasourceName: string;
   private datasourceDir: string;
   private datasourceExe: string;
-  private currentConfiguration: SimulationConfig;
   private pyEnvOptions: ExecOptions;
-  private simulatorStatus: SimulatorStatus;
   private readonly context: vscode.ExtensionContext;
   private readonly outputChannel: vscode.OutputChannel;
   private readonly statusBar: vscode.StatusBarItem;
@@ -114,9 +115,8 @@ export class SimulatorManager extends CachedDataConsumer {
     this.outputChannel = vscode.window.createOutputChannel("Extension simulator", "log");
 
     // Register commands
-    vscode.commands.registerCommand(SIMULATOR_START_CMD, async (config: SimulationConfig) => {
-      this.currentConfiguration = config;
-      await this.start(config);
+    vscode.commands.registerCommand(SIMULATOR_START_CMD, async (config?: SimulationConfig) => {
+      await this.start(config ?? this.currentConfiguration);
     });
     vscode.commands.registerCommand(SIMULATOR_STOP_CMD, () => this.stop());
     vscode.commands.registerCommand(
@@ -256,13 +256,14 @@ export class SimulatorManager extends CachedDataConsumer {
       }
     }
 
-    if (failedChecks.length > 0) {
-      this.simulatorStatus = "UNSUPPORTED";
-      return [false, failedChecks];
+    // If mandatory checks passed, we can get simulation specs
+    if (failedChecks.length === 0) {
+      this.simulationSpecs = this.getSimulationSpecs();
     }
-    this.simulationSpecs = this.getSimulationSpecs();
-    this.simulatorStatus = "READY";
-    return [true, []];
+
+    this.failedChecks = failedChecks;
+    this.simulatorStatus = failedChecks.length === 0 ? "READY" : "UNSUPPORTED";
+    return [failedChecks.length === 0, this.failedChecks];
   }
 
   /**
@@ -534,7 +535,7 @@ export class SimulatorManager extends CachedDataConsumer {
   /**
    * Starts simulating the extension based on the given configuration
    */
-  private async start(config: SimulationConfig) {
+  public async start(config: SimulationConfig, showUI: boolean = true) {
     const { location, target } = config;
 
     // Create log folder if it doesn't exist
@@ -552,7 +553,7 @@ export class SimulatorManager extends CachedDataConsumer {
           await this.startRemotely(target);
           break;
       }
-      this.refreshUI(true, "RUNNING");
+      this.refreshUI(showUI, "RUNNING");
     } catch (err) {
       showMessage("error", `Error starting the simulation ${(err as Error).message}`);
     }
@@ -561,7 +562,7 @@ export class SimulatorManager extends CachedDataConsumer {
   /**
    * Performs all the necessary cleanup when the simulator is stopped.
    */
-  public stop() {
+  public stop(showUI: boolean = true) {
     try {
       if (this.simulatorProcess) {
         // Datasource is detached from main process, so we need to kill the entire process tree
@@ -588,7 +589,7 @@ export class SimulatorManager extends CachedDataConsumer {
     } catch (err) {
       showMessage("error", `Error stopping the simulation ${(err as Error).message}`);
     } finally {
-      this.refreshUI(true, "READY");
+      this.refreshUI(showUI, "READY");
     }
   }
 
@@ -607,7 +608,7 @@ export class SimulatorManager extends CachedDataConsumer {
         specs: this.simulationSpecs,
         status: status ?? this.simulatorStatus,
         statusMessage,
-        failedChecks: failedChecks ?? [],
+        failedChecks: failedChecks ?? this.failedChecks,
       },
     };
 
