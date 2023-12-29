@@ -16,6 +16,7 @@
 
 import {
   Button,
+  Container,
   FieldSet,
   Flex,
   FormField,
@@ -24,7 +25,10 @@ import {
   RadioGroup,
   TextInput,
   showToast,
+  Text,
+  ExternalLink,
 } from "@dynatrace/strato-components-preview";
+import { WarningIcon } from "@dynatrace/strato-icons";
 import React, { useEffect, useState } from "react";
 import { useForm } from "react-hook-form";
 import { EecType, OsType, RemoteTarget } from "src/app/interfaces/simulator";
@@ -232,6 +236,21 @@ export const TargetRegistrationForm = ({
               />
             </FormField>
           </FieldSet>
+          {osType === "WINDOWS" && (
+            <Container variant='default' color='warning'>
+              <Flex gap={12} alignItems='center'>
+                <WarningIcon size={40} />
+                <Text>
+                  Please ensure that your Windows host has an SSH server available and enabled as
+                  this is not the case by default. This{" "}
+                  <ExternalLink href='https://learn.microsoft.com/en-us/windows-server/administration/openssh/openssh_install_firstuse?tabs=gui'>
+                    Microsoft article
+                  </ExternalLink>{" "}
+                  might useful.
+                </Text>
+              </Flex>
+            </Container>
+          )}
           <Flex paddingTop={16}>
             <Button type='submit' variant='accent' color='primary'>
               Submit
