@@ -63,9 +63,7 @@ export class SimulatorLensProvider implements vscode.CodeLensProvider {
     });
   }
 
-  public provideCodeLenses(
-    document: vscode.TextDocument,
-  ): vscode.ProviderResult<vscode.CodeLens[]> {
+  public async provideCodeLenses(document: vscode.TextDocument): Promise<vscode.CodeLens[]> {
     this.codeLenses = [];
 
     // Find position for the lens
@@ -78,9 +76,18 @@ export class SimulatorLensProvider implements vscode.CodeLensProvider {
 
       // If we don't know the status yet, check if the simulator is ready
       if (this.lastKnownStatus === "UNKNOWN") {
-        const readiness = this.simulator.checkMantatoryRequirements();
-        this.lastKnownStatus = readiness[0] ? "READY" : "NOTREADY";
-        console.log("FAILED CHECKS:", readiness[1]);
+        const readyCheck = this.simulator.checkMantatoryRequirements();
+        if (readyCheck[0]) {
+          this.lastKnownStatus = "READY";
+          const configCheck = await this.simulator.checkSimulationConfig(
+            this.simulator.currentConfiguration.location,
+            this.simulator.currentConfiguration.eecType,
+            this.simulator.currentConfiguration.target,
+          );
+          this.lastKnownStatus = configCheck[0];
+        } else {
+          this.lastKnownStatus = "NOTREADY";
+        }
       }
       // If the simulator is ready, we can display this code lens
       if (this.lastKnownStatus === "READY") {

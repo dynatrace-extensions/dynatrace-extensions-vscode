@@ -115,9 +115,15 @@ export class SimulatorManager extends CachedDataConsumer {
     this.outputChannel = vscode.window.createOutputChannel("Extension simulator", "log");
 
     // Register commands
-    vscode.commands.registerCommand(SIMULATOR_START_CMD, async (config?: SimulationConfig) => {
-      await this.start(config ?? this.currentConfiguration);
-    });
+    vscode.commands.registerCommand(
+      SIMULATOR_START_CMD,
+      async (config?: SimulationConfig, showUI: boolean = true) => {
+        if (config) {
+          this.currentConfiguration = config;
+        }
+        await this.start(config ?? this.currentConfiguration, showUI);
+      },
+    );
     vscode.commands.registerCommand(SIMULATOR_STOP_CMD, () => this.stop());
     vscode.commands.registerCommand(
       SIMULATOR_CHECK_READY_CMD,
@@ -456,7 +462,8 @@ export class SimulatorManager extends CachedDataConsumer {
   private startLocally() {
     const command =
       this.datasourceName === "python"
-        ? `dt-sdk run --activation-config "${this.activationFile}"`
+        ? `dt-sdk run --activation-config "${this.activationFile}"` +
+          (this.currentConfiguration.sendMetrics ? " --local-ingest" : "")
         : `.${path.sep}${this.datasourceExe} --url "${this.url}"  --idtoken "${this.idToken}" ` +
           `--extConfig "file://${this.extensionFile}" --userConfig "file://${this.activationFile}"`;
     const cwd =
