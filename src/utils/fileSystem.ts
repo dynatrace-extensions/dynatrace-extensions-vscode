@@ -322,15 +322,12 @@ export function getSimulatorSummaries(
  * @param context - Extension Context
  */
 export function cleanUpSimulatorLogs(context: vscode.ExtensionContext) {
-  // No clean-up is done if user disabled it
-  const autoDelete = vscode.workspace
-    .getConfiguration("dynatraceExtensions", null)
-    .get<boolean>("autoDeleteLogs");
-  if (!autoDelete) return;
-
   const maxFiles = vscode.workspace
-    .getConfiguration("dynatraceExtensions", null)
-    .get<number>("maximumSimulatorFiles");
+    .getConfiguration("dynatraceExtensions.simulator", null)
+    .get<number>("maximumLogFiles");
+
+  // No clean-up is done if user disabled i
+  if (maxFiles < 0) return;
 
   // Order summaries by workspace
   const newSummaries: ExecutionSummary[] = [];

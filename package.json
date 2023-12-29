@@ -386,19 +386,44 @@
       {
         "title": "Extension simulator",
         "properties": {
-          "dynatraceExtensions.autoDeleteLogs":{
-            "type" :"boolean",
-            "description": "Automatically delete simulator log files",
-            "scope": "resouce",
-            "order": 1,
-            "default": true
-          },
-          "dynatraceExtensions.maximumSimulatorFiles": {
+          "dynatraceExtensions.simulator.maximumLogFiles": {
             "type": "number",
-            "description": "Maximum number of log files to keep per workspace. Oldest files are removed first.",
+            "markdownDescription": "The maximum number of simulator log files to keep (by age) per workspace. Setting this to a negative number will keep all files.\n\n**Note:** This setting applies globally to all workspaces.",
+            "scope": "machine",
+            "order": 1,
+            "default": 5
+          },
+          "dynatraceExtensions.simulator.defaultLocation": {
+            "type": "string",
+            "description": "Where to run extension simulations by default.",
+            "enum": ["LOCAL", "REMOTE"],
+            "enumItemLabels": ["Local machine", "Remote host"],
+            "enumDescriptions": ["Simulates the extension on your local machine", "Simulates the extension on a remote host, via SSH connection"],
             "scope": "resource",
             "order": 2,
-            "default": 5
+            "default": "LOCAL"
+          },
+          "dynatraceExtensions.simulator.remoteTargetName": {
+            "type": "string",
+            "markdownDescription": "The name of a registered remote target host to run the simulations on. Check your registered targets [here](command:dynatrace-extensions.simulator.refreshUI)\n\n**Note:** This is only required if you chose `Remote host` for `#dynatraceExtensions.simulator.defaultLocation#`.",
+            "scope": "resource",
+            "order": 3
+          },
+          "dynatraceExtensions.simulator.defaultEecType": {
+            "type": "string",
+            "markdownDescription": "The type of Extension Execution Controller (EEC) distribution to use as default for simulations. Requires the component to be installed at your chosen location: `#dynatraceExtensions.simulator.defaultLocation#`",
+            "enum": ["ONEAGENT", "ACTIVEGATE"],
+            "enumItemLabels": ["OneAgent", "ActiveGate"],
+            "scope": "resource",
+            "order": 4,
+            "default": "ONEAGENT"
+          },
+          "dynatraceExtensions.simulator.defaultMetricsIngestion": {
+            "type": "boolean",
+            "description": "Whether to enable metrics ingestion for simulations by default.",
+            "scope": "resource",
+            "order": 5,
+            "default": false
           }
         }
       },

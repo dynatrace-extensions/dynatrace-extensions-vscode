@@ -104,12 +104,13 @@ export const SimulatorExecutions = ({
   status,
   statusMessage,
   failedChecks,
+  currentConfiguration,
   specs,
   targets,
 }: SimulatorData) => {
   const [settingsModal, showSettingsModal] = useState(false);
   const [mandatoryChecks, showMandatoryChecksModal] = useState(false);
-  const [currentConfig, setCurrentConfig] = useState<SimulationConfig | undefined>(undefined);
+  const [currentConfig, setCurrentConfig] = useState<SimulationConfig>(currentConfiguration);
 
   const handleConfigSubmission = (config: SimulationConfig) => {
     setCurrentConfig(config);

@@ -1,3 +1,19 @@
+/**
+  Copyright 2022 Dynatrace LLC
+
+  Licensed under the Apache License, Version 2.0 (the "License");
+  you may not use this file except in compliance with the License.
+  You may obtain a copy of the License at
+
+      https://www.apache.org/licenses/LICENSE-2.0
+
+  Unless required by applicable law or agreed to in writing, software
+  distributed under the License is distributed on an "AS IS" BASIS,
+  WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+  See the License for the specific language governing permissions and
+  limitations under the License.
+ */
+
 import { ChildProcess, ExecOptions, SpawnOptions, spawn } from "child_process";
 import { existsSync, mkdirSync, readFileSync, writeFileSync } from "fs";
 import * as path from "path";
@@ -36,6 +52,7 @@ import {
   getDatasourceDir,
   getDatasourceExe,
   getDatasourcePath,
+  loadDefaultSimulationConfig,
 } from "../utils/simulator";
 import { REGISTERED_PANELS, WebviewPanelManager } from "../webviews/webviewPanel";
 
@@ -62,6 +79,7 @@ export class SimulatorManager extends CachedDataConsumer {
   private datasourceName: string;
   private datasourceDir: string;
   private datasourceExe: string;
+  private currentConfiguration: SimulationConfig;
   private pyEnvOptions: ExecOptions;
   private simulatorStatus: SimulatorStatus;
   private readonly context: vscode.ExtensionContext;
@@ -87,6 +105,7 @@ export class SimulatorManager extends CachedDataConsumer {
       localActiveGateDsExists: false,
       localOneAgentDsExists: false,
     };
+    this.currentConfiguration = loadDefaultSimulationConfig(context);
 
     // Initial clean-up of files
     cleanUpSimulatorLogs(context);
@@ -96,6 +115,7 @@ export class SimulatorManager extends CachedDataConsumer {
 
     // Register commands
     vscode.commands.registerCommand(SIMULATOR_START_CMD, async (config: SimulationConfig) => {
+      this.currentConfiguration = config;
       await this.start(config);
     });
     vscode.commands.registerCommand(SIMULATOR_STOP_CMD, () => this.stop());
@@ -114,6 +134,7 @@ export class SimulatorManager extends CachedDataConsumer {
 
         // Check config if given, check further
         if (config) {
+          this.currentConfiguration = config;
           this.checkSimulationConfig(config.location, config.eecType, config.target).then(
             ([status, statusMessage]) => {
               this.refreshUI(showUI, status, statusMessage);
@@ -582,6 +603,7 @@ export class SimulatorManager extends CachedDataConsumer {
       data: {
         targets: getSimulatorTargets(this.context),
         summaries: getSimulatorSummaries(this.context),
+        currentConfiguration: this.currentConfiguration,
         specs: this.simulationSpecs,
         status: status ?? this.simulatorStatus,
         statusMessage,

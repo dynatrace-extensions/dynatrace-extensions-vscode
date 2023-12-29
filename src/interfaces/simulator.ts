@@ -15,6 +15,7 @@ export interface SimulationConfig {
 export interface SimulatorData {
   targets: RemoteTarget[];
   summaries: (LocalExecutionSummary | RemoteExecutionSummary)[];
+  currentConfiguration: SimulationConfig;
   status: SimulatorStatus;
   statusMessage: string;
   failedChecks: string[];

@@ -1,6 +1,30 @@
+/**
+  Copyright 2022 Dynatrace LLC
+
+  Licensed under the Apache License, Version 2.0 (the "License");
+  you may not use this file except in compliance with the License.
+  You may obtain a copy of the License at
+
+      https://www.apache.org/licenses/LICENSE-2.0
+
+  Unless required by applicable law or agreed to in writing, software
+  distributed under the License is distributed on an "AS IS" BASIS,
+  WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+  See the License for the specific language governing permissions and
+  limitations under the License.
+ */
+
 // UTILS Related to simulating extensions
 
-import { EecType, OsType } from "../interfaces/simulator";
+import * as vscode from "vscode";
+import {
+  EecType,
+  OsType,
+  RemoteTarget,
+  SimulationConfig,
+  SimulationLocation,
+} from "../interfaces/simulator";
+import { getSimulatorTargets } from "./fileSystem";
 
 /**
  * Gets the default directory where the specified datasource .exe is located.
@@ -81,4 +105,67 @@ export function canSimulateDatasource(os: OsType, eecType: EecType, dataSource: 
   };
 
   return DATASOURCES[os][eecType].includes(dataSource);
+}
+
+/**
+ * Parses the extension settings and builds a SimulationConfig object that will be used as default
+ * value for any extension simulations. In case of remote locations, some validation is also done
+ * on the specified target host.
+ * @param context {@link vscode.ExtensionContext}
+ * @returns {@link SimulationConfig}
+ */
+export function loadDefaultSimulationConfig(context: vscode.ExtensionContext): SimulationConfig {
+  // A fallback value in case the user's settings are invalid.
+  const fallbackValue: SimulationConfig = {
+    eecType: "ONEAGENT",
+    location: "LOCAL",
+    sendMetrics: false,
+  };
+
+  // Process the user's settings
+  let target: RemoteTarget | undefined;
+  const config = vscode.workspace.getConfiguration("dynatraceExtensions.simulator", null);
+  const defaultLocation = config.get<SimulationLocation>("defaultLocation");
+  const defaultEecType = config.get<EecType>("defaultEecType");
+  const defaultSendMetrics = config.get<boolean>("defaultSendMetrics");
+
+  if (!defaultLocation || !defaultEecType || !defaultSendMetrics) {
+    // This should never happen as these are all enums with defaults.
+    return fallbackValue;
+  }
+
+  // For remote simulation, check the chosen target is valid
+  if (defaultLocation === "REMOTE") {
+    // Target name is required
+    const targetName = config.get<string>("remoteTargetName");
+    if (!targetName || targetName === "") {
+      console.log(
+        "Invalid default simulator configuration: No target name specified for remote simulation",
+      );
+      return fallbackValue;
+    }
+    // Name must match a registered target
+    const registeredTargets = getSimulatorTargets(context).filter(t => t.name === targetName);
+    if (registeredTargets.length === 0) {
+      console.log(
+        `Invalid default simulator configuration: No registered target exists by name "${targetName}"`,
+      );
+      return fallbackValue;
+    }
+    // Target specs must match the EEC Type
+    target = registeredTargets[0];
+    if (target.eecType !== defaultEecType) {
+      console.log(
+        `Invalid default simulator configuration: Target "${targetName}" is not registered with EEC Type of ${defaultEecType}`,
+      );
+      return fallbackValue;
+    }
+  }
+
+  return {
+    eecType: defaultEecType,
+    location: defaultLocation,
+    sendMetrics: defaultSendMetrics,
+    target,
+  };
 }
