@@ -116,5 +116,5 @@
       }
     ]
   },
-  "ignorePatterns": ["out", "dist", "**/*.d.ts", "node_modules", "src/test"]
+  "ignorePatterns": ["out", "dist", "**/*.d.ts", "node_modules", "src/test", "jest.config.js"]
 }
