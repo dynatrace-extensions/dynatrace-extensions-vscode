@@ -36,6 +36,7 @@ import { WmiCodeLensProvider } from "./codeLens/wmiCodeLens";
 import { activateExtension } from "./commandPalette/activateExtension";
 import { buildExtension } from "./commandPalette/buildExtension";
 import { convertJMXExtension } from "./commandPalette/convertJMXExtension";
+import { convertPythonExtension } from "./commandPalette/convertPythonExtension";
 import { createAlert } from "./commandPalette/createAlert";
 import { createMonitoringConfiguration } from "./commandPalette/createConfiguration";
 import { createOverviewDashboard } from "./commandPalette/createDashboard";
@@ -284,6 +285,32 @@ function registerCommandPaletteCommands(
           }
         } else {
           await convertJMXExtension(
+            cachedData,
+            await tenantsProvider.getDynatraceClient(),
+            outputPath,
+          );
+        }
+      },
+    ),
+    // Convert Python extension plugin.json to activationSchema.json
+    vscode.commands.registerCommand(
+      "dynatrace-extensions.convertPythonExtension",
+      async (outputPath?: string) => {
+        // Unless explicitly specified, try to detect output path
+        if (!outputPath) {
+          const extensionDir = getExtensionWorkspaceDir();
+          if (extensionDir) {
+            await convertPythonExtension(
+              cachedData,
+              await tenantsProvider.getDynatraceClient(),
+              path.resolve(extensionDir, "activationSchema.json"),
+            );
+          } else {
+            // No activationSchema.json found
+            await convertPythonExtension(cachedData, await tenantsProvider.getDynatraceClient());
+          }
+        } else {
+          await convertPythonExtension(
             cachedData,
             await tenantsProvider.getDynatraceClient(),
             outputPath,
