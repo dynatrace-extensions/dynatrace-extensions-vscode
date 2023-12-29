@@ -24,6 +24,7 @@ import {
   mkdirSync,
   readFileSync,
   readdirSync,
+  rmSync,
   statSync,
   writeFileSync,
 } from "fs";
@@ -32,6 +33,12 @@ import * as path from "path";
 import { copySync } from "fs-extra";
 import { glob } from "glob";
 import * as vscode from "vscode";
+import {
+  ExecutionSummary,
+  LocalExecutionSummary,
+  RemoteExecutionSummary,
+  RemoteTarget,
+} from "../interfaces/simulator";
 import { DynatraceEnvironmentData, ExtensionWorkspace } from "../interfaces/treeViewData";
 import { showMessage } from "./code";
 
@@ -45,6 +52,9 @@ export function initGlobalStorage(context: vscode.ExtensionContext) {
   const globalStoragePath = context.globalStorageUri.fsPath;
   const extensionWorkspacesJson = path.join(globalStoragePath, "extensionWorkspaces.json");
   const dynatraceEnvironmentsJson = path.join(globalStoragePath, "dynatraceEnvironments.json");
+  const idTokenPath = path.join(globalStoragePath, "idToken.txt");
+  const targetsJson = path.join(globalStoragePath, "targets.json");
+  const summariesJson = path.join(globalStoragePath, "summaries.json");
 
   // Create global storage folder if needed
   if (!existsSync(globalStoragePath)) {
@@ -59,6 +69,21 @@ export function initGlobalStorage(context: vscode.ExtensionContext) {
   // Create environments json if needed
   if (!existsSync(dynatraceEnvironmentsJson)) {
     writeFileSync(dynatraceEnvironmentsJson, "[]");
+  }
+
+  // Create idToken file if needed
+  if (!existsSync(idTokenPath)) {
+    writeFileSync(idTokenPath, "1234");
+  }
+
+  // Create targets json if needed
+  if (!existsSync(targetsJson)) {
+    writeFileSync(targetsJson, "[]");
+  }
+
+  // Create summaries json if needed
+  if (!existsSync(summariesJson)) {
+    writeFileSync(summariesJson, "[]");
   }
 }
 
@@ -251,6 +276,150 @@ export async function removeWorkspace(context: vscode.ExtensionContext, workspac
     "dynatrace-extensions.numWorkspaces",
     workspaces.length - 1,
   );
+}
+
+/**
+ * Writes an extension simulator summary to the global storage.
+ * @param context - VSCode Extension Context
+ * @param summary - the summary to write
+ */
+export function registerSimulatorSummary(
+  context: vscode.ExtensionContext,
+  summary: LocalExecutionSummary | RemoteExecutionSummary,
+) {
+  const summariesJson = path.join(context.globalStorageUri.fsPath, "summaries.json");
+  const summaries = JSON.parse(readFileSync(summariesJson).toString()) as (
+    | LocalExecutionSummary
+    | RemoteExecutionSummary
+  )[];
+  summaries.push(summary);
+  writeFileSync(summariesJson, JSON.stringify(summaries));
+}
+
+/**
+ * Gets all extension simulator summaries from the global storage.
+ * @param context - VSCode Extension Context
+ * @returns all summaries
+ */
+export function getSimulatorSummaries(
+  context: vscode.ExtensionContext,
+): (LocalExecutionSummary | RemoteExecutionSummary)[] {
+  const summariesJson = path.join(context.globalStorageUri.fsPath, "summaries.json");
+  return (
+    JSON.parse(readFileSync(summariesJson).toString()) as Partial<
+      LocalExecutionSummary | RemoteExecutionSummary
+    >[]
+  ).map(s => ({
+    ...s,
+    startTime: new Date(s.startTime),
+  })) as (LocalExecutionSummary | RemoteExecutionSummary)[];
+}
+
+/**
+ * Does some basic clean-up of the simulator log files for the current workspace.
+ * The user can disable the feature and also control the max number of files kept.
+ * The max number of files is not handled per workspace yet.
+ * @param context - Extension Context
+ */
+export function cleanUpSimulatorLogs(context: vscode.ExtensionContext) {
+  const maxFiles = vscode.workspace
+    .getConfiguration("dynatraceExtensions.simulator", null)
+    .get<number>("maximumLogFiles");
+
+  // No clean-up is done if user disabled i
+  if (maxFiles < 0) return;
+
+  // Order summaries by workspace
+  const newSummaries: ExecutionSummary[] = [];
+  const summariesByWorkspace: Record<string, ExecutionSummary[] | undefined> = {};
+  getSimulatorSummaries(context).forEach(s => {
+    if (!summariesByWorkspace[s.workspace]) {
+      summariesByWorkspace[s.workspace] = [];
+    }
+    summariesByWorkspace[s.workspace].push(s);
+  });
+
+  // Keep the summaries based on max number of files, delete the rest
+  Object.values(summariesByWorkspace).forEach(summaryList => {
+    if (summaryList.length <= maxFiles - 1) {
+      newSummaries.push(...summaryList);
+    } else {
+      summaryList
+        .sort((a, b) => b.startTime.getTime() - a.startTime.getTime())
+        .forEach((summary, i) => {
+          if (i < maxFiles - 1) {
+            newSummaries.push(summary);
+          } else {
+            try {
+              rmSync(summary.logPath);
+            } catch (err) {
+              console.log(`Error deleting file "${summary.logPath}": ${(err as Error).message}`);
+            }
+          }
+        });
+    }
+  });
+
+  // Write the new summaries list to disk
+  const summariesPath = path.join(context.globalStorageUri.fsPath, "summaries.json");
+  writeFileSync(summariesPath, JSON.stringify(newSummaries));
+}
+
+/**
+ * Registers a list of targets for the extension simulator in the global storage.
+ * @param context - VSCode Extension Context
+ * @param targets - the targets to write
+ */
+export function registerSimulatorTargets(
+  context: vscode.ExtensionContext,
+  targets: RemoteTarget[],
+) {
+  const targetsJson = path.join(context.globalStorageUri.fsPath, "targets.json");
+  writeFileSync(targetsJson, JSON.stringify(targets));
+}
+
+/**
+ * Registers a list of targets for the extension simulator in the global storage.
+ * @param context - VSCode Extension Context
+ * @param targets - the targets to write
+ */
+export function registerSimulatorTarget(context: vscode.ExtensionContext, target: RemoteTarget) {
+  const targetsJson = path.join(context.globalStorageUri.fsPath, "targets.json");
+  const currentTargets = JSON.parse(readFileSync(targetsJson).toString()) as RemoteTarget[];
+
+  // If target already exists, update the details
+  const foundIdx = currentTargets.findIndex(t => t.name === target.name);
+  if (foundIdx >= 0) {
+    currentTargets[foundIdx] = target;
+  } else {
+    currentTargets.push(target);
+  }
+
+  writeFileSync(targetsJson, JSON.stringify(currentTargets));
+}
+
+/**
+ * Deletes a target from the extension's global storage.
+ * @param context - VSCode Extension Context
+ * @param target - the target to delete
+ */
+export function deleteSimulatorTarget(context: vscode.ExtensionContext, target: RemoteTarget) {
+  const targetsJson = path.join(context.globalStorageUri.fsPath, "targets.json");
+  const currentTargets = JSON.parse(readFileSync(targetsJson).toString()) as RemoteTarget[];
+
+  const newTargets = currentTargets.filter(t => t.name !== target.name);
+
+  writeFileSync(targetsJson, JSON.stringify(newTargets));
+}
+
+/**
+ * Fetches all extension simulator summaries from the global storage.
+ * @param context - VSCode Extension Context
+ * @returns - all targets
+ */
+export function getSimulatorTargets(context: vscode.ExtensionContext): RemoteTarget[] {
+  const targetsJson = path.join(context.globalStorageUri.fsPath, "targets.json");
+  return JSON.parse(readFileSync(targetsJson).toString()) as RemoteTarget[];
 }
 
 /**

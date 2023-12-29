@@ -1,862 +1,917 @@
 {
-	"name": "dynatrace-extensions",
-	"displayName": "Dynatrace Extensions",
-	"description": "Support for Dynatrace Extension 2.0 development",
-	"publisher": "DynatracePlatformExtensions",
-	"author": {
-		"name": "Dynatrace Platform Extensions",
-		"email": "extensions@dynatrace.com",
-		"url": "https://info.dynatrace.com/global_all_wp_dynatrace_services_platform_extensions_fact_sheet_13656_fulfillment.html"
-	},
-	"version": "2.3.2",
-	"repository": {
-		"type": "git",
-		"url": "https://github.com/dynatrace-extensions/dynatrace-extensions-vscode.git"
-	},
-	"engines": {
-		"vscode": "^1.67.0"
-	},
-	"categories": [
-		"Other",
-		"Linters",
-		"Snippets"
-	],
-	"extensionKind": [
-		"workspace"
-	],
-	"extensionDependencies": [
-		"redhat.vscode-yaml"
-	],
-	"icon": "src/assets/icons/logo.png",
-	"galleryBanner": {
-		"color": "#ffffff",
-		"theme": "light"
-	},
-	"activationEvents": [
-		"onStartupFinished"
-	],
-	"main": "./out/main.js",
-	"contributes": {
-		"commands": [
-			{
-				"command": "dynatrace-extensions.demoReactWebview",
-				"title": "Demo React webview",
-				"category": "Dynatrace extensions"
-			},
-			{
-				"command": "dynatrace-extensions.loadSchemas",
-				"title": "Load schemas",
-				"category": "Dynatrace extensions"
-			},
-			{
-				"command": "dynatrace-extensions.initWorkspace",
-				"title": "Initialize workspace",
-				"category": "Dynatrace extensions"
-			},
-			{
-				"command": "dynatrace-extensions.generateCertificates",
-				"title": "Generate certificates",
-				"category": "Dynatrace extensions"
-			},
-			{
-				"command": "dynatrace-extensions.distributeCertificate",
-				"title": "Distribute certificate",
-				"category": "Dynatrace extensions"
-			},
-			{
-				"command": "dynatrace-extensions.createDocumentation",
-				"title": "Create documentation",
-				"category": "Dynatrace extensions"
-			},
-			{
-				"command": "dynatrace-extensions.buildExtension",
-				"title": "Build",
-				"category": "Dynatrace extensions"
-			},
-			{
-				"command": "dynatrace-extensions.uploadExtension",
-				"title": "Upload",
-				"category": "Dynatrace extensions"
-			},
-			{
-				"command": "dynatrace-extensions.activateExtension",
-				"title": "Activate",
-				"category": "Dynatrace extensions"
-			},
-			{
-				"command": "dynatrace-extensions.createDashboard",
-				"title": "Create dashboard",
-				"category": "Dynatrace extensions"
-			},
-			{
-				"command": "dynatrace-extensions.createAlert",
-				"title": "Create alert",
-				"category": "Dynatrace extensions"
-			},
-			{
-				"command": "dynatrace-extensions.convertJmxExtension",
-				"title": "Convert JMX",
-				"category": "Dynatrace extensions"
-			},
-			{
-				"command": "dynatrace-extensions.convertPythonExtension",
-				"title": "Convert Python",
-				"category": "Dynatrace extensions"
-			},
-			{
-				"command": "dynatrace-extensions-workspaces.refresh",
-				"title": "Refresh",
-				"icon": "$(refresh)"
-			},
-			{
-				"command": "dynatrace-extensions-workspaces.addWorkspace",
-				"title": "Add & initialize a workspace",
-				"icon": "$(plus)"
-			},
-			{
-				"command": "dynatrace-extensions-workspaces.deleteWorkspace",
-				"title": "Remove workspace",
-				"icon": "$(trash)"
-			},
-			{
-				"command": "dynatrace-extensions-workspaces.openWorkspace",
-				"title": "Open workspace",
-				"icon": "$(folder-opened)"
-			},
-			{
-				"command": "dynatrace-extensions-workspaces.editExtension",
-				"title": "Open extension in editor",
-				"icon": "$(notebook-open-as-text)"
-			},
-			{
-				"command": "dynatrace-extensions-environments.refresh",
-				"title": "Refresh",
-				"icon": "$(refresh)"
-			},
-			{
-				"command": "dynatrace-extensions-environments.addEnvironment",
-				"title": "Add a tenant",
-				"icon": "$(plus)"
-			},
-			{
-				"command": "dynatrace-extensions-environments.useEnvironment",
-				"title": "Use environment",
-				"icon": "$(plug)"
-			},
-			{
-				"command": "dynatrace-extensions-environments.editEnvironment",
-				"title": "Edit environment",
-				"icon": "$(pencil)"
-			},
-			{
-				"command": "dynatrace-extensions-environments.deleteEnvironment",
-				"title": "Remove environment",
-				"icon": "$(trash)"
-			},
-			{
-				"command": "dynatrace-extensions-environments.openExtension",
-				"title": "Open in Dynatrace",
-				"icon": "$(link-external)"
-			},
-			{
-				"command": "dynatrace-extensions-environments.editConfig",
-				"title": "Edit configuration",
-				"icon": "$(pencil)"
-			},
-			{
-				"command": "dynatrace-extensions-environments.deleteConfig",
-				"title": "Delete configuration",
-				"icon": "$(trash)"
-			},
-			{
-				"command": "dynatrace-extensions-environments.addConfig",
-				"title": "Add configuration",
-				"icon": "$(plus)"
-			},
-			{
-				"command": "dynatrace-extensions-environments.saveConfig",
-				"title": "Save to file",
-				"icon": "$(file-add)"
-			},
-			{
-				"command": "dynatrace-extensions.createMonitoringConfiguration",
-				"title": "Create monitoring configuration",
-				"category": "Dynatrace extensions"
-			},
-			{
-				"command": "dynatrace-extensions-workspaces.enableMetricSelectors",
-				"title": "🔎 Enable metric selector code lens"
-			},
-			{
-				"command": "dynatrace-extensions-workspaces.disableMetricSelectors",
-				"title": "🔎 Disable metric selector code lens"
-			},
-			{
-				"command": "dynatrace-extensions-workspaces.enableEntitySelectors",
-				"title": "🔎 Enable entity selector code lens"
-			},
-			{
-				"command": "dynatrace-extensions-workspaces.disableEntitySelectors",
-				"title": "🔎 Disable entity selector code lens"
-			},
-			{
-				"command": "dynatrace-extensions-workspaces.enableScreenCodelens",
-				"title": "🖥️ Enable screens code lens"
-			},
-			{
-				"command": "dynatrace-extensions-workspaces.disableScreenCodelens",
-				"title": "🖥️ Disable screens code lens"
-			},
-			{
-				"command": "dynatrace-extensions-workspaces.enableWmiCodelens",
-				"title": "🪟 Enable WMI query code lens"
-			},
-			{
-				"command": "dynatrace-extensions-workspaces.disableWmiCodelens",
-				"title": "🪟 Disable WMI query code lens"
-			},
-			{
-				"command": "dynatrace-extensions-workspaces.enableAllDiagnostics",
-				"title": "Enable all diagnostics"
-			},
-			{
-				"command": "dynatrace-extensions-workspaces.disableAllDiagnostics",
-				"title": "Disable all diagnostics"
-			},
-			{
-				"command": "dynatrace-extensions-workspaces.enableMetricKeyDiagnostics",
-				"title": "Enable metric key diagnostics"
-			},
-			{
-				"command": "dynatrace-extensions-workspaces.disableMetricKeyDiagnostics",
-				"title": "Disable metric key diagnostics"
-			},
-			{
-				"command": "dynatrace-extensions-workspaces.enableCardKeyDiagnostics",
-				"title": "Enable card key diagnostics"
-			},
-			{
-				"command": "dynatrace-extensions-workspaces.disableCardKeyDiagnostics",
-				"title": "Disable card key diagnostics"
-			},
-			{
-				"command": "dynatrace-extensions-workspaces.enableSnmpDiagnostics",
-				"title": "Enable SNMP diagnostics"
-			},
-			{
-				"command": "dynatrace-extensions-workspaces.disableSnmpDiagnostics",
-				"title": "Disable SNMP diagnostics"
-			},
-			{
-				"command": "dynatrace-extensions-workspaces.enableNameDiagnostics",
-				"title": "Enable extension name diagnostics"
-			},
-			{
-				"command": "dynatrace-extensions-workspaces.disableNameDiagnostics",
-				"title": "Disable extension name diagnostics"
-			},
-			{
-				"command": "dynatrace-extensions-workspaces.enableFastDevelopment",
-				"title": "🔥 Enable fast development mode"
-			},
-			{
-				"command": "dynatrace-extensions-workspaces.disableFastDevelopment",
-				"title": "🔥 Disable fast development mode"
-			}
-		],
-		"configuration": [
-			{
-				"title": "Behavior",
-				"properties": {
-					"dynatraceExtensions.metricSelectorsCodeLens": {
-						"type": "boolean",
-						"description": "Enable Code Lens functionality around metric selectors",
-						"order": 1,
-						"scope": "resource",
-						"default": true
-					},
-					"dynatraceExtensions.entitySelectorsCodeLens": {
-						"type": "boolean",
-						"description": "Enable Code Lens functionality around entity selectors",
-						"order": 2,
-						"scope": "resource",
-						"default": true
-					},
-					"dynatraceExtensions.wmiCodeLens": {
-						"type": "boolean",
-						"description": "Enable Code Lens functionality around WMI Queries",
-						"order": 3,
-						"scope": "resource",
-						"default": true
-					},
-					"dynatraceExtensions.screenCodeLens": {
-						"type": "boolean",
-						"description": "Enable Code Lens functionality around (unified analysis) screens",
-						"order": 4,
-						"scope": "resource",
-						"default": true
-					},
-					"dynatraceExtensions.fastDevelopmentMode": {
-						"type": "boolean",
-						"description": "When enabled, static extension assets are sent to Dynatrace on every Save, and when you build an extension it will automatically get uploaded and activated immediately.",
-						"order": 5,
-						"scope": "resource",
-						"default": false
-					}
-				}
-			},
-			{
-				"title": "Diagnostics",
-				"properties": {
-					"dynatraceExtensions.diagnostics.all": {
-						"type": "boolean",
-						"description": "When enabled, extension manifest diagnostics are provided for all known issues.",
-						"order": 6,
-						"scope": "resource",
-						"default": true
-					},
-					"dynatraceExtensions.diagnostics.extensionName": {
-						"type": "boolean",
-						"description": "When enabled, extension manifest diagnostics are provided for issues related to the extension name.",
-						"order": 6,
-						"scope": "resource",
-						"default": true
-					},
-					"dynatraceExtensions.diagnostics.metricKeys": {
-						"type": "boolean",
-						"description": "When enabled, extension manifest diagnostics are provided for issues related to keys used for metric definitions.",
-						"order": 6,
-						"scope": "resource",
-						"default": true
-					},
-					"dynatraceExtensions.diagnostics.cardKeys": {
-						"type": "boolean",
-						"description": "When enabled, extension manifest diagnostics are provided for issues related to keys used for screen card definitions.",
-						"order": 6,
-						"scope": "resource",
-						"default": true
-					},
-					"dynatraceExtensions.diagnostics.snmp": {
-						"type": "boolean",
-						"description": "When enabled, extension manifest diagnostics are provided for issues related to keys used for OIDs used in the SNMP datasource definition.",
-						"order": 6,
-						"scope": "resource",
-						"default": true
-					}
-				}
-			},
-			{
-				"title": "Certificates",
-				"properties": {
-					"dynatraceExtensions.developerCertkeyLocation": {
-						"type": "string",
-						"description": "Bring your own: use the developer certificate & key from this location instead of generating new ones",
-						"order": 1,
-						"scope": "resource"
-					},
-					"dynatraceExtensions.rootOrCaCertificateLocation": {
-						"type": "string",
-						"description": "Bring your own: use the root (CA) certificate file at this path instead of generating a new one.",
-						"order": 5,
-						"scope": "resource"
-					},
-					"dynatraceExtensions.certificateCommonName": {
-						"type": "string",
-						"description": "Specifies the common name (CN) attribute of the certificate.",
-						"order": 6,
-						"scope": "resource",
-						"default": "Extension Developer"
-					},
-					"dynatraceExtensions.certificateOrganization": {
-						"type": "string",
-						"description": "Specifies the organization (O) attribute of the certificate.",
-						"order": 7,
-						"scope": "resource"
-					},
-					"dynatraceExtensions.certificateOrganizationUnit": {
-						"type": "string",
-						"description": "Specifies the organization unit (OU) attribute of the certificate.",
-						"order": 8,
-						"scope": "resource"
-					},
-					"dynatraceExtensions.certificateStateOrProvince": {
-						"type": "string",
-						"description": "Specifies the state or province (ST) attribute of the certificate.",
-						"order": 9,
-						"scope": "resource"
-					},
-					"dynatraceExtensions.certificateCountryCode": {
-						"type": "string",
-						"description": "Specifies the country code (C) attribute of the certificate.",
-						"order": 10,
-						"scope": "resource"
-					}
-				}
-			},
-			{
-				"title": "Python environment",
-				"properties": {
-					"dynatraceExtensions.pythonExtraPlatforms": {
-						"type": "array",
-						"items": {
-							"type": "string"
-						},
-						"description": "A list of extra platforms to build Python wheels for. This setting overwrites the default list of linux_x86_64 and win_amd_64",
-						"scope": "resource"
-					}
-				}
-			}
-		],
-		"menus": {
-			"commandPalette": [
-				{
-					"command": "dynatrace-extensions-workspaces.refresh",
-					"when": "false"
-				},
-				{
-					"command": "dynatrace-extensions-workspaces.addWorkspace",
-					"when": "false"
-				},
-				{
-					"command": "dynatrace-extensions-workspaces.openWorkspace",
-					"when": "false"
-				},
-				{
-					"command": "dynatrace-extensions-workspaces.deleteWorkspace",
-					"when": "false"
-				},
-				{
-					"command": "dynatrace-extensions-workspaces.editExtension",
-					"when": "false"
-				},
-				{
-					"command": "dynatrace-extensions-environments.refresh",
-					"when": "false"
-				},
-				{
-					"command": "dynatrace-extensions-environments.addEnvironment",
-					"when": "false"
-				},
-				{
-					"command": "dynatrace-extensions-environments.editEnvironment",
-					"when": "false"
-				},
-				{
-					"command": "dynatrace-extensions-environments.deleteEnvironment",
-					"when": "false"
-				},
-				{
-					"command": "dynatrace-extensions-environments.useEnvironment",
-					"when": "false"
-				},
-				{
-					"command": "dynatrace-extensions-environments.openExtension",
-					"when": "false"
-				},
-				{
-					"command": "dynatrace-extensions-environments.editConfig",
-					"when": "false"
-				},
-				{
-					"command": "dynatrace-extensions-environments.deleteConfig",
-					"when": "false"
-				},
-				{
-					"command": "dynatrace-extensions-environments.addConfig",
-					"when": "false"
-				},
-				{
-					"command": "dynatrace-extensions-environments.saveConfig",
-					"when": "false"
-				},
-				{
-					"command": "dynatrace-extensions-workspaces.enableMetricSelectors",
-					"when": "false"
-				},
-				{
-					"command": "dynatrace-extensions-workspaces.disableMetricSelectors",
-					"when": "false"
-				},
-				{
-					"command": "dynatrace-extensions-workspaces.enableEntitySelectors",
-					"when": "false"
-				},
-				{
-					"command": "dynatrace-extensions-workspaces.enableEntitySelectors",
-					"when": "false"
-				},
-				{
-					"command": "dynatrace-extensions-workspaces.enableScreenCodelens",
-					"when": "false"
-				},
-				{
-					"command": "dynatrace-extensions-workspaces.disableScreenCodelens",
-					"when": "false"
-				},
-				{
-					"command": "dynatrace-extensions-workspaces.enableWmiCodelens",
-					"when": "false"
-				},
-				{
-					"command": "dynatrace-extensions-workspaces.disableWmiCodelens",
-					"when": "false"
-				},
-				{
-					"command": "dynatrace-extensions-workspaces.enableFastDevelopment",
-					"when": "false"
-				},
-				{
-					"command": "dynatrace-extensions-workspaces.disableFastDevelopment",
-					"when": "false"
-				},
-				{
-					"command": "dynatrace-extensions-workspaces.enableNameDiagnostics",
-					"when": "false"
-				},
-				{
-					"command": "dynatrace-extensions-workspaces.disableNameDiagnostics",
-					"when": "false"
-				},
-				{
-					"command": "dynatrace-extensions-workspaces.enableMetricKeyDiagnostics",
-					"when": "false"
-				},
-				{
-					"command": "dynatrace-extensions-workspaces.disableMetricKeyDiagnostics",
-					"when": "false"
-				},
-				{
-					"command": "dynatrace-extensions-workspaces.enableCardKeyDiagnostics",
-					"when": "false"
-				},
-				{
-					"command": "dynatrace-extensions-workspaces.disableCardKeyDiagnostics",
-					"when": "false"
-				},
-				{
-					"command": "dynatrace-extensions-workspaces.enableSnmpDiagnostics",
-					"when": "false"
-				},
-				{
-					"command": "dynatrace-extensions-workspaces.disableSnmpDiagnostics",
-					"when": "false"
-				},
-				{
-					"command": "dynatrace-extensions-workspaces.enableAllDiagnostics",
-					"when": "false"
-				},
-				{
-					"command": "dynatrace-extensions-workspaces.disableAllDiagnostics",
-					"when": "false"
-				}
-			],
-			"view/title": [
-				{
-					"command": "dynatrace-extensions-workspaces.addWorkspace",
-					"when": "view == dynatrace-extensions-workspaces",
-					"group": "navigation"
-				},
-				{
-					"command": "dynatrace-extensions-workspaces.refresh",
-					"when": "view == dynatrace-extensions-workspaces",
-					"group": "navigation"
-				},
-				{
-					"command": "dynatrace-extensions-environments.addEnvironment",
-					"when": "view == dynatrace-extensions-environments",
-					"group": "navigation"
-				},
-				{
-					"command": "dynatrace-extensions-environments.refresh",
-					"when": "view == dynatrace-extensions-environments",
-					"group": "navigation"
-				}
-			],
-			"view/item/context": [
-				{
-					"command": "dynatrace-extensions-workspaces.openWorkspace",
-					"when": "view == dynatrace-extensions-workspaces && viewItem == extensionWorkspace",
-					"group": "inline@1"
-				},
-				{
-					"command": "dynatrace-extensions-workspaces.deleteWorkspace",
-					"when": "view == dynatrace-extensions-workspaces && viewItem == extensionWorkspace",
-					"group": "inline@2"
-				},
-				{
-					"command": "dynatrace-extensions-workspaces.enableMetricSelectors",
-					"when": "view == dynatrace-extensions-workspaces && viewItem == extensionWorkspace && !config.dynatraceExtensions.metricSelectorsCodeLens",
-					"group": "2_workspace@1"
-				},
-				{
-					"command": "dynatrace-extensions-workspaces.disableMetricSelectors",
-					"when": "view == dynatrace-extensions-workspaces && viewItem == extensionWorkspace && config.dynatraceExtensions.metricSelectorsCodeLens",
-					"group": "2_workspace@1"
-				},
-				{
-					"command": "dynatrace-extensions-workspaces.enableEntitySelectors",
-					"when": "view == dynatrace-extensions-workspaces && viewItem == extensionWorkspace && !config.dynatraceExtensions.entitySelectorsCodeLens",
-					"group": "2_workspace@2"
-				},
-				{
-					"command": "dynatrace-extensions-workspaces.disableEntitySelectors",
-					"when": "view == dynatrace-extensions-workspaces && viewItem == extensionWorkspace && config.dynatraceExtensions.entitySelectorsCodeLens",
-					"group": "2_workspace@2"
-				},
-				{
-					"command": "dynatrace-extensions-workspaces.enableWmiCodelens",
-					"when": "view == dynatrace-extensions-workspaces && viewItem == extensionWorkspace && !config.dynatraceExtensions.wmiCodeLens",
-					"group": "2_workspace@3"
-				},
-				{
-					"command": "dynatrace-extensions-workspaces.disableWmiCodelens",
-					"when": "view == dynatrace-extensions-workspaces && viewItem == extensionWorkspace && config.dynatraceExtensions.wmiCodeLens",
-					"group": "2_workspace@3"
-				},
-				{
-					"command": "dynatrace-extensions-workspaces.enableScreenCodelens",
-					"when": "view == dynatrace-extensions-workspaces && viewItem == extensionWorkspace && !config.dynatraceExtensions.screenCodeLens",
-					"group": "2_workspace@4"
-				},
-				{
-					"command": "dynatrace-extensions-workspaces.disableScreenCodelens",
-					"when": "view == dynatrace-extensions-workspaces && viewItem == extensionWorkspace && config.dynatraceExtensions.screenCodeLens",
-					"group": "2_workspace@4"
-				},
-				{
-					"submenu": "dynatrace-extensions.diagnostics-menu",
-					"group": "2_workspace@5"
-				},
-				{
-					"command": "dynatrace-extensions-workspaces.enableFastDevelopment",
-					"when": "view == dynatrace-extensions-workspaces && viewItem == extensionWorkspace && !config.dynatraceExtensions.fastDevelopmentMode",
-					"group": "2_workspace@6"
-				},
-				{
-					"command": "dynatrace-extensions-workspaces.disableFastDevelopment",
-					"when": "view == dynatrace-extensions-workspaces && viewItem == extensionWorkspace && config.dynatraceExtensions.fastDevelopmentMode",
-					"group": "2_workspace@6"
-				},
-				{
-					"command": "dynatrace-extensions-workspaces.editExtension",
-					"when": "view == dynatrace-extensions-workspaces && viewItem == extension",
-					"group": "inline"
-				},
-				{
-					"command": "dynatrace-extensions-environments.useEnvironment",
-					"when": "view == dynatrace-extensions-environments && viewItem == dynatraceEnvironment",
-					"group": "inline@1"
-				},
-				{
-					"command": "dynatrace-extensions-environments.editEnvironment",
-					"when": "view == dynatrace-extensions-environments && (viewItem == dynatraceEnvironment || viewItem == currentDynatraceEnvironment)",
-					"group": "inline@2"
-				},
-				{
-					"command": "dynatrace-extensions-environments.deleteEnvironment",
-					"when": "view == dynatrace-extensions-environments && (viewItem == dynatraceEnvironment || viewItem == currentDynatraceEnvironment)",
-					"group": "inline@3"
-				},
-				{
-					"command": "dynatrace-extensions-environments.openExtension",
-					"when": "view == dynatrace-extensions-environments && viewItem == deployedExtension",
-					"group": "inline@2"
-				},
-				{
-					"command": "dynatrace-extensions-environments.addConfig",
-					"when": "view == dynatrace-extensions-environments && viewItem == deployedExtension",
-					"group": "inline@1"
-				},
-				{
-					"command": "dynatrace-extensions-environments.editConfig",
-					"when": "view == dynatrace-extensions-environments && viewItem == monitoringConfiguration",
-					"group": "inline@1"
-				},
-				{
-					"command": "dynatrace-extensions-environments.deleteConfig",
-					"when": "view == dynatrace-extensions-environments && viewItem == monitoringConfiguration",
-					"group": "inline@2"
-				},
-				{
-					"command": "dynatrace-extensions-environments.saveConfig",
-					"when": "view == dynatrace-extensions-environments && viewItem == monitoringConfiguration",
-					"group": "inline@3"
-				}
-			],
-			"dynatrace-extensions.diagnostics-menu": [
-				{
-					"command": "dynatrace-extensions-workspaces.enableNameDiagnostics",
-					"when": "view == dynatrace-extensions-workspaces && viewItem == extensionWorkspace && !config.dynatraceExtensions.diagnostics.extensionName",
-					"group": "navigation@1"
-				},
-				{
-					"command": "dynatrace-extensions-workspaces.disableNameDiagnostics",
-					"when": "view == dynatrace-extensions-workspaces && viewItem == extensionWorkspace && config.dynatraceExtensions.diagnostics.extensionName",
-					"group": "navigation@1"
-				},
-				{
-					"command": "dynatrace-extensions-workspaces.enableMetricKeyDiagnostics",
-					"when": "view == dynatrace-extensions-workspaces && viewItem == extensionWorkspace && !config.dynatraceExtensions.diagnostics.metricKeys",
-					"group": "navigation@2"
-				},
-				{
-					"command": "dynatrace-extensions-workspaces.disableMetricKeyDiagnostics",
-					"when": "view == dynatrace-extensions-workspaces && viewItem == extensionWorkspace && config.dynatraceExtensions.diagnostics.metricKeys",
-					"group": "navigation@2"
-				},
-				{
-					"command": "dynatrace-extensions-workspaces.enableCardKeyDiagnostics",
-					"when": "view == dynatrace-extensions-workspaces && viewItem == extensionWorkspace && !config.dynatraceExtensions.diagnostics.cardKeys",
-					"group": "navigation@3"
-				},
-				{
-					"command": "dynatrace-extensions-workspaces.disableCardKeyDiagnostics",
-					"when": "view == dynatrace-extensions-workspaces && viewItem == extensionWorkspace && config.dynatraceExtensions.diagnostics.cardKeys",
-					"group": "navigation@3"
-				},
-				{
-					"command": "dynatrace-extensions-workspaces.enableSnmpDiagnostics",
-					"when": "view == dynatrace-extensions-workspaces && viewItem == extensionWorkspace && !config.dynatraceExtensions.diagnostics.snmp",
-					"group": "navigation@4"
-				},
-				{
-					"command": "dynatrace-extensions-workspaces.disableSnmpDiagnostics",
-					"when": "view == dynatrace-extensions-workspaces && viewItem == extensionWorkspace && config.dynatraceExtensions.diagnostics.snmp",
-					"group": "navigation@4"
-				},
-				{
-					"command": "dynatrace-extensions-workspaces.enableAllDiagnostics",
-					"when": "view == dynatrace-extensions-workspaces && viewItem == extensionWorkspace && !config.dynatraceExtensions.diagnostics.all",
-					"group": "navigation@5"
-				},
-				{
-					"command": "dynatrace-extensions-workspaces.disableAllDiagnostics",
-					"when": "view == dynatrace-extensions-workspaces && viewItem == extensionWorkspace && config.dynatraceExtensions.diagnostics.all",
-					"group": "navigation@5"
-				}
-			]
-		},
-		"submenus": [
-			{
-				"label": "🪲 Diagnostics",
-				"id": "dynatrace-extensions.diagnostics-menu"
-			}
-		],
-		"viewsContainers": {
-			"activitybar": [
-				{
-					"id": "dynatrace-extensions2",
-					"title": "Dynatrace Extensions",
-					"icon": "src/assets/icons/dynatrace_extensions.png"
-				}
-			]
-		},
-		"views": {
-			"dynatrace-extensions2": [
-				{
-					"id": "dynatrace-extensions-workspaces",
-					"name": "Extension 2.0 Workspaces"
-				},
-				{
-					"id": "dynatrace-extensions-environments",
-					"name": "Environments"
-				}
-			]
-		},
-		"viewsWelcome": [
-			{
-				"view": "dynatrace-extensions-workspaces",
-				"contents": "Hello. You don't seem to have any extension workspaces initialized.\nStart by opening a folder and running the Initialize Workspace command.\n[Open folder](command:vscode.openFolder)",
-				"when": "workbenchState == empty && dynatrace-extensions.numWorkspaces == 0"
-			},
-			{
-				"view": "dynatrace-extensions-workspaces",
-				"contents": "Hello. You don't seem to have any extension workspaces initialized.\nRun the Initialize Workspace command to initialize your current workspace.\n[Initialize workspace](command:dynatrace-extensions.initWorkspace)\nOr open a different workspace first.\n[Open folder](command:vscode.openFolder)",
-				"when": "workbenchState != empty && dynatrace-extensions.numWorkspaces == 0 && !dynatrace-extensions.extensionWorkspace"
-			},
-			{
-				"view": "dynatrace-extensions-workspaces",
-				"contents": "Hello. You don't seem to have any extension workspaces initialized.\nYou seem to already be in an extensions workspace - want to initialize it now?\n[Initialize workspace](command:dynatrace-extensions.initWorkspace)\nOtherwise, open a different workspace first.\n[Open folder](command:vscode.openFolder)",
-				"when": "workbenchState != empty && dynatrace-extensions.numWorkspaces == 0 && dynatrace-extensions.extensionWorkspace"
-			},
-			{
-				"view": "dynatrace-extensions-environments",
-				"contents": "Hello. You don't have any Dynatrace Environments saved.\nWould you like to add one now?\n[Add environment](command:dynatrace-extensions-environments.addEnvironment)",
-				"when": "dynatrace-extensions.numEnvironments == 0"
-			}
-		],
-		"icons": {
-			"dt-platform": {
-				"description": "Dynatrace platform",
-				"default": {
-					"fontPath": "src/assets/fonts/dt-custom-icons.woff",
-					"fontCharacter": "A"
-				}
-			}
-		}
-	},
-	"scripts": {
-		"vscode:prepublish": "npm run esbuild-base -- --minify",
-		"esbuild-base": "esbuild ./src/extension.ts --bundle --outfile=out/main.js --external:vscode --format=cjs --platform=node",
-		"esbuild": "npm run esbuild-base -- --sourcemap",
-		"esbuild-watch": "npm run esbuild-base -- --sourcemap --watch",
-		"compile": "tsc -p ./",
-		"watch": "tsc -watch -p ./",
-		"pretest": "npm run compile && npm run lint",
-		"lint": "eslint src --ext ts",
-		"test": "node ./out/src/test/runTest.js",
-		"test:unit": "jest --runInBand --config=jest.config.js",
-		"build": "npm run pretest && npm run vscode:prepublish",
-		"install:all": "npm install && cd webview-ui && npm install",
-		"build:webview": "cd webview-ui && npm run build",
-		"build:all": "npm run build:webview && npm run build"
-	},
-	"devDependencies": {
-		"@babel/plugin-proposal-private-property-in-object": "^7.21.11",
-		"@jest/globals": "^29.7.0",
-		"@lwc/eslint-plugin-lwc": "^1.6.2",
-		"@reactivex/rxjs": "^6.6.7",
-		"@types/adm-zip": "^0.5.0",
-		"@types/fs-extra": "^11.0.1",
-		"@types/glob": "^7.2.0",
-		"@types/jest": "^29.5.11",
-		"@types/mocha": "^9.1.1",
-		"@types/mock-fs": "^4.13.1",
-		"@types/node": "^14.18.43",
-		"@types/node-forge": "^1.0.2",
-		"@types/vscode": "^1.67.0",
-		"@typescript-eslint/eslint-plugin": "^5.21.0",
-		"@typescript-eslint/parser": "^5.21.0",
-		"@vscode/test-electron": "^2.1.3",
-		"@vscode/vsce": "^2.19.0",
-		"esbuild": "^0.15.7",
-		"eslint": "^8.44.0",
-		"eslint-config-airbnb-typescript": "^17.0.0",
-		"eslint-config-prettier": "^8.8.0",
-		"eslint-plugin-functional": "^5.0.8",
-		"eslint-plugin-import": "^2.27.5",
-		"eslint-plugin-no-secrets": "^0.8.9",
-		"eslint-plugin-no-unsanitized": "^4.0.2",
-		"eslint-plugin-prettier": "^4.2.1",
-		"eslint-plugin-react": "^7.32.2",
-		"jest": "^29.7.0",
-		"mocha": "^9.2.2",
-		"mock-fs": "^5.1.4",
-		"prettier": "^2.8.8",
-		"semver": ">=7.5.2",
-		"ts-jest": "^29.1.1",
-		"typescript": "^5.0.4"
-	},
-	"dependencies": {
-		"adm-zip": "^0.5.9",
-		"axios": "^1.6.0",
-		"form-data": "^4.0.0",
-		"fs-extra": "^11.1.1",
-		"glob": "^8.0.3",
-		"jszip": "^3.10.1",
-		"node-forge": "^1.3.1",
-		"open": "^8.4.2",
-		"rxjs": "^7.8.1",
-		"yaml": ">=2.2.2"
-	}
+  "name": "dynatrace-extensions",
+  "displayName": "Dynatrace Extensions",
+  "description": "Support for Dynatrace Extension 2.0 development",
+  "publisher": "DynatracePlatformExtensions",
+  "author": {
+    "name": "Dynatrace Platform Extensions",
+    "email": "extensions@dynatrace.com",
+    "url": "https://info.dynatrace.com/global_all_wp_dynatrace_services_platform_extensions_fact_sheet_13656_fulfillment.html"
+  },
+  "version": "2.3.2",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/dynatrace-extensions/dynatrace-extensions-vscode.git"
+  },
+  "engines": {
+    "vscode": "^1.67.0"
+  },
+  "categories": [
+    "Other",
+    "Linters",
+    "Snippets"
+  ],
+  "extensionKind": [
+    "workspace"
+  ],
+  "extensionDependencies": [
+    "redhat.vscode-yaml"
+  ],
+  "icon": "src/assets/icons/logo.png",
+  "galleryBanner": {
+    "color": "#ffffff",
+    "theme": "light"
+  },
+  "activationEvents": [
+    "onStartupFinished"
+  ],
+  "main": "./out/main.js",
+  "contributes": {
+    "commands": [
+      {
+        "command": "dynatrace-extensions.loadSchemas",
+        "title": "Load schemas",
+        "category": "Dynatrace extensions"
+      },
+      {
+        "command": "dynatrace-extensions.initWorkspace",
+        "title": "Initialize workspace",
+        "category": "Dynatrace extensions"
+      },
+      {
+        "command": "dynatrace-extensions.generateCertificates",
+        "title": "Generate certificates",
+        "category": "Dynatrace extensions"
+      },
+      {
+        "command": "dynatrace-extensions.distributeCertificate",
+        "title": "Distribute certificate",
+        "category": "Dynatrace extensions"
+      },
+      {
+        "command": "dynatrace-extensions.createDocumentation",
+        "title": "Create documentation",
+        "category": "Dynatrace extensions"
+      },
+      {
+        "command": "dynatrace-extensions.buildExtension",
+        "title": "Build",
+        "category": "Dynatrace extensions"
+      },
+      {
+        "command": "dynatrace-extensions.uploadExtension",
+        "title": "Upload",
+        "category": "Dynatrace extensions"
+      },
+      {
+        "command": "dynatrace-extensions.activateExtension",
+        "title": "Activate",
+        "category": "Dynatrace extensions"
+      },
+      {
+        "command": "dynatrace-extensions.createDashboard",
+        "title": "Create dashboard",
+        "category": "Dynatrace extensions"
+      },
+      {
+        "command": "dynatrace-extensions.createAlert",
+        "title": "Create alert",
+        "category": "Dynatrace extensions"
+      },
+      {
+        "command": "dynatrace-extensions.convertJmxExtension",
+        "title": "Convert JMX",
+        "category": "Dynatrace extensions"
+      },
+      {
+        "command": "dynatrace-extensions.convertPythonExtension",
+        "title": "Convert Python",
+        "category": "Dynatrace extensions"
+      },
+      {
+        "command": "dynatrace-extensions-workspaces.refresh",
+        "title": "Refresh",
+        "icon": "$(refresh)"
+      },
+      {
+        "command": "dynatrace-extensions-workspaces.addWorkspace",
+        "title": "Add & initialize a workspace",
+        "icon": "$(plus)"
+      },
+      {
+        "command": "dynatrace-extensions-workspaces.deleteWorkspace",
+        "title": "Remove workspace",
+        "icon": "$(trash)"
+      },
+      {
+        "command": "dynatrace-extensions-workspaces.openWorkspace",
+        "title": "Open workspace",
+        "icon": "$(folder-opened)"
+      },
+      {
+        "command": "dynatrace-extensions-workspaces.editExtension",
+        "title": "Open extension in editor",
+        "icon": "$(notebook-open-as-text)"
+      },
+      {
+        "command": "dynatrace-extensions-environments.refresh",
+        "title": "Refresh",
+        "icon": "$(refresh)"
+      },
+      {
+        "command": "dynatrace-extensions-environments.addEnvironment",
+        "title": "Add a tenant",
+        "icon": "$(plus)"
+      },
+      {
+        "command": "dynatrace-extensions-environments.useEnvironment",
+        "title": "Use environment",
+        "icon": "$(plug)"
+      },
+      {
+        "command": "dynatrace-extensions-environments.editEnvironment",
+        "title": "Edit environment",
+        "icon": "$(pencil)"
+      },
+      {
+        "command": "dynatrace-extensions-environments.deleteEnvironment",
+        "title": "Remove environment",
+        "icon": "$(trash)"
+      },
+      {
+        "command": "dynatrace-extensions-environments.openExtension",
+        "title": "Open in Dynatrace",
+        "icon": "$(link-external)"
+      },
+      {
+        "command": "dynatrace-extensions-environments.editConfig",
+        "title": "Edit configuration",
+        "icon": "$(pencil)"
+      },
+      {
+        "command": "dynatrace-extensions-environments.deleteConfig",
+        "title": "Delete configuration",
+        "icon": "$(trash)"
+      },
+      {
+        "command": "dynatrace-extensions-environments.addConfig",
+        "title": "Add configuration",
+        "icon": "$(plus)"
+      },
+      {
+        "command": "dynatrace-extensions-environments.saveConfig",
+        "title": "Save to file",
+        "icon": "$(file-add)"
+      },
+      {
+        "command": "dynatrace-extensions.createMonitoringConfiguration",
+        "title": "Create monitoring configuration",
+        "category": "Dynatrace extensions"
+      },
+      {
+        "command": "dynatrace-extensions-workspaces.enableMetricSelectors",
+        "title": "🔎 Enable metric selector code lens"
+      },
+      {
+        "command": "dynatrace-extensions-workspaces.disableMetricSelectors",
+        "title": "🔎 Disable metric selector code lens"
+      },
+      {
+        "command": "dynatrace-extensions-workspaces.enableEntitySelectors",
+        "title": "🔎 Enable entity selector code lens"
+      },
+      {
+        "command": "dynatrace-extensions-workspaces.disableEntitySelectors",
+        "title": "🔎 Disable entity selector code lens"
+      },
+      {
+        "command": "dynatrace-extensions-workspaces.enableScreenCodelens",
+        "title": "🖥️ Enable screens code lens"
+      },
+      {
+        "command": "dynatrace-extensions-workspaces.disableScreenCodelens",
+        "title": "🖥️ Disable screens code lens"
+      },
+      {
+        "command": "dynatrace-extensions-workspaces.enableWmiCodelens",
+        "title": "🪟 Enable WMI query code lens"
+      },
+      {
+        "command": "dynatrace-extensions-workspaces.disableWmiCodelens",
+        "title": "🪟 Disable WMI query code lens"
+      },
+      {
+        "command": "dynatrace-extensions-workspaces.enableAllDiagnostics",
+        "title": "Enable all diagnostics"
+      },
+      {
+        "command": "dynatrace-extensions-workspaces.disableAllDiagnostics",
+        "title": "Disable all diagnostics"
+      },
+      {
+        "command": "dynatrace-extensions-workspaces.enableMetricKeyDiagnostics",
+        "title": "Enable metric key diagnostics"
+      },
+      {
+        "command": "dynatrace-extensions-workspaces.disableMetricKeyDiagnostics",
+        "title": "Disable metric key diagnostics"
+      },
+      {
+        "command": "dynatrace-extensions-workspaces.enableCardKeyDiagnostics",
+        "title": "Enable card key diagnostics"
+      },
+      {
+        "command": "dynatrace-extensions-workspaces.disableCardKeyDiagnostics",
+        "title": "Disable card key diagnostics"
+      },
+      {
+        "command": "dynatrace-extensions-workspaces.enableSnmpDiagnostics",
+        "title": "Enable SNMP diagnostics"
+      },
+      {
+        "command": "dynatrace-extensions-workspaces.disableSnmpDiagnostics",
+        "title": "Disable SNMP diagnostics"
+      },
+      {
+        "command": "dynatrace-extensions-workspaces.enableNameDiagnostics",
+        "title": "Enable extension name diagnostics"
+      },
+      {
+        "command": "dynatrace-extensions-workspaces.disableNameDiagnostics",
+        "title": "Disable extension name diagnostics"
+      },
+      {
+        "command": "dynatrace-extensions-workspaces.enableFastDevelopment",
+        "title": "🔥 Enable fast development mode"
+      },
+      {
+        "command": "dynatrace-extensions-workspaces.disableFastDevelopment",
+        "title": "🔥 Disable fast development mode"
+      }
+    ],
+    "configuration": [
+      {
+        "title": "Behavior",
+        "properties": {
+          "dynatraceExtensions.metricSelectorsCodeLens": {
+            "type": "boolean",
+            "description": "Enable Code Lens functionality around metric selectors",
+            "order": 1,
+            "scope": "resource",
+            "default": true
+          },
+          "dynatraceExtensions.entitySelectorsCodeLens": {
+            "type": "boolean",
+            "description": "Enable Code Lens functionality around entity selectors",
+            "order": 2,
+            "scope": "resource",
+            "default": true
+          },
+          "dynatraceExtensions.wmiCodeLens": {
+            "type": "boolean",
+            "description": "Enable Code Lens functionality around WMI Queries",
+            "order": 3,
+            "scope": "resource",
+            "default": true
+          },
+          "dynatraceExtensions.screenCodeLens": {
+            "type": "boolean",
+            "description": "Enable Code Lens functionality around (unified analysis) screens",
+            "order": 4,
+            "scope": "resource",
+            "default": true
+          },
+          "dynatraceExtensions.fastDevelopmentMode": {
+            "type": "boolean",
+            "description": "When enabled, static extension assets are sent to Dynatrace on every Save, and when you build an extension it will automatically get uploaded and activated immediately.",
+            "order": 5,
+            "scope": "resource",
+            "default": false
+          }
+        }
+      },
+      {
+        "title": "Diagnostics",
+        "properties": {
+          "dynatraceExtensions.diagnostics.all": {
+            "type": "boolean",
+            "description": "When enabled, extension manifest diagnostics are provided for all known issues.",
+            "order": 6,
+            "scope": "resource",
+            "default": true
+          },
+          "dynatraceExtensions.diagnostics.extensionName": {
+            "type": "boolean",
+            "description": "When enabled, extension manifest diagnostics are provided for issues related to the extension name.",
+            "order": 6,
+            "scope": "resource",
+            "default": true
+          },
+          "dynatraceExtensions.diagnostics.metricKeys": {
+            "type": "boolean",
+            "description": "When enabled, extension manifest diagnostics are provided for issues related to keys used for metric definitions.",
+            "order": 6,
+            "scope": "resource",
+            "default": true
+          },
+          "dynatraceExtensions.diagnostics.cardKeys": {
+            "type": "boolean",
+            "description": "When enabled, extension manifest diagnostics are provided for issues related to keys used for screen card definitions.",
+            "order": 6,
+            "scope": "resource",
+            "default": true
+          },
+          "dynatraceExtensions.diagnostics.snmp": {
+            "type": "boolean",
+            "description": "When enabled, extension manifest diagnostics are provided for issues related to keys used for OIDs used in the SNMP datasource definition.",
+            "order": 6,
+            "scope": "resource",
+            "default": true
+          }
+        }
+      },
+      {
+        "title": "Certificates",
+        "properties": {
+          "dynatraceExtensions.developerCertkeyLocation": {
+            "type": "string",
+            "description": "Bring your own: use the developer certificate & key from this location instead of generating new ones",
+            "order": 1,
+            "scope": "resource"
+          },
+          "dynatraceExtensions.rootOrCaCertificateLocation": {
+            "type": "string",
+            "description": "Bring your own: use the root (CA) certificate file at this path instead of generating a new one.",
+            "order": 5,
+            "scope": "resource"
+          },
+          "dynatraceExtensions.certificateCommonName": {
+            "type": "string",
+            "description": "Specifies the common name (CN) attribute of the certificate.",
+            "order": 6,
+            "scope": "resource",
+            "default": "Extension Developer"
+          },
+          "dynatraceExtensions.certificateOrganization": {
+            "type": "string",
+            "description": "Specifies the organization (O) attribute of the certificate.",
+            "order": 7,
+            "scope": "resource"
+          },
+          "dynatraceExtensions.certificateOrganizationUnit": {
+            "type": "string",
+            "description": "Specifies the organization unit (OU) attribute of the certificate.",
+            "order": 8,
+            "scope": "resource"
+          },
+          "dynatraceExtensions.certificateStateOrProvince": {
+            "type": "string",
+            "description": "Specifies the state or province (ST) attribute of the certificate.",
+            "order": 9,
+            "scope": "resource"
+          },
+          "dynatraceExtensions.certificateCountryCode": {
+            "type": "string",
+            "description": "Specifies the country code (C) attribute of the certificate.",
+            "order": 10,
+            "scope": "resource"
+          }
+        }
+      },
+      {
+        "title": "Extension simulator",
+        "properties": {
+          "dynatraceExtensions.simulator.maximumLogFiles": {
+            "type": "number",
+            "markdownDescription": "The maximum number of simulator log files to keep (by age) per workspace. Setting this to a negative number will keep all files.\n\n**Note:** This setting applies globally to all workspaces.",
+            "scope": "machine",
+            "order": 1,
+            "default": 5
+          },
+          "dynatraceExtensions.simulator.defaultLocation": {
+            "type": "string",
+            "description": "Where to run extension simulations by default.",
+            "enum": [
+              "LOCAL",
+              "REMOTE"
+            ],
+            "enumItemLabels": [
+              "Local machine",
+              "Remote host"
+            ],
+            "enumDescriptions": [
+              "Simulates the extension on your local machine",
+              "Simulates the extension on a remote host, via SSH connection"
+            ],
+            "scope": "resource",
+            "order": 2,
+            "default": "LOCAL"
+          },
+          "dynatraceExtensions.simulator.remoteTargetName": {
+            "type": "string",
+            "markdownDescription": "The name of a registered remote target host to run the simulations on. Check your registered targets [here](command:dynatrace-extensions.simulator.refreshUI)\n\n**Note:** This is only required if you chose `Remote host` for `#dynatraceExtensions.simulator.defaultLocation#`.",
+            "scope": "resource",
+            "order": 3
+          },
+          "dynatraceExtensions.simulator.defaultEecType": {
+            "type": "string",
+            "markdownDescription": "The type of Extension Execution Controller (EEC) distribution to use as default for simulations. Requires the component to be installed at your chosen location: `#dynatraceExtensions.simulator.defaultLocation#`",
+            "enum": [
+              "ONEAGENT",
+              "ACTIVEGATE"
+            ],
+            "enumItemLabels": [
+              "OneAgent",
+              "ActiveGate"
+            ],
+            "scope": "resource",
+            "order": 4,
+            "default": "ONEAGENT"
+          },
+          "dynatraceExtensions.simulator.defaultMetricsIngestion": {
+            "type": "boolean",
+            "description": "Whether to enable metrics ingestion for simulations by default.",
+            "scope": "resource",
+            "order": 5,
+            "default": false
+          }
+        }
+      },
+      {
+        "title": "Python environment",
+        "properties": {
+          "dynatraceExtensions.pythonExtraPlatforms": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            },
+            "description": "A list of extra platforms to build Python wheels for. This setting overwrites the default list of linux_x86_64 and win_amd_64",
+            "scope": "resource"
+          }
+        }
+      }
+    ],
+    "menus": {
+      "commandPalette": [
+        {
+          "command": "dynatrace-extensions-workspaces.refresh",
+          "when": "false"
+        },
+        {
+          "command": "dynatrace-extensions-workspaces.addWorkspace",
+          "when": "false"
+        },
+        {
+          "command": "dynatrace-extensions-workspaces.openWorkspace",
+          "when": "false"
+        },
+        {
+          "command": "dynatrace-extensions-workspaces.deleteWorkspace",
+          "when": "false"
+        },
+        {
+          "command": "dynatrace-extensions-workspaces.editExtension",
+          "when": "false"
+        },
+        {
+          "command": "dynatrace-extensions-environments.refresh",
+          "when": "false"
+        },
+        {
+          "command": "dynatrace-extensions-environments.addEnvironment",
+          "when": "false"
+        },
+        {
+          "command": "dynatrace-extensions-environments.editEnvironment",
+          "when": "false"
+        },
+        {
+          "command": "dynatrace-extensions-environments.deleteEnvironment",
+          "when": "false"
+        },
+        {
+          "command": "dynatrace-extensions-environments.useEnvironment",
+          "when": "false"
+        },
+        {
+          "command": "dynatrace-extensions-environments.openExtension",
+          "when": "false"
+        },
+        {
+          "command": "dynatrace-extensions-environments.editConfig",
+          "when": "false"
+        },
+        {
+          "command": "dynatrace-extensions-environments.deleteConfig",
+          "when": "false"
+        },
+        {
+          "command": "dynatrace-extensions-environments.addConfig",
+          "when": "false"
+        },
+        {
+          "command": "dynatrace-extensions-environments.saveConfig",
+          "when": "false"
+        },
+        {
+          "command": "dynatrace-extensions-workspaces.enableMetricSelectors",
+          "when": "false"
+        },
+        {
+          "command": "dynatrace-extensions-workspaces.disableMetricSelectors",
+          "when": "false"
+        },
+        {
+          "command": "dynatrace-extensions-workspaces.enableEntitySelectors",
+          "when": "false"
+        },
+        {
+          "command": "dynatrace-extensions-workspaces.enableEntitySelectors",
+          "when": "false"
+        },
+        {
+          "command": "dynatrace-extensions-workspaces.enableScreenCodelens",
+          "when": "false"
+        },
+        {
+          "command": "dynatrace-extensions-workspaces.disableScreenCodelens",
+          "when": "false"
+        },
+        {
+          "command": "dynatrace-extensions-workspaces.enableWmiCodelens",
+          "when": "false"
+        },
+        {
+          "command": "dynatrace-extensions-workspaces.disableWmiCodelens",
+          "when": "false"
+        },
+        {
+          "command": "dynatrace-extensions-workspaces.enableFastDevelopment",
+          "when": "false"
+        },
+        {
+          "command": "dynatrace-extensions-workspaces.disableFastDevelopment",
+          "when": "false"
+        },
+        {
+          "command": "dynatrace-extensions-workspaces.enableNameDiagnostics",
+          "when": "false"
+        },
+        {
+          "command": "dynatrace-extensions-workspaces.disableNameDiagnostics",
+          "when": "false"
+        },
+        {
+          "command": "dynatrace-extensions-workspaces.enableMetricKeyDiagnostics",
+          "when": "false"
+        },
+        {
+          "command": "dynatrace-extensions-workspaces.disableMetricKeyDiagnostics",
+          "when": "false"
+        },
+        {
+          "command": "dynatrace-extensions-workspaces.enableCardKeyDiagnostics",
+          "when": "false"
+        },
+        {
+          "command": "dynatrace-extensions-workspaces.disableCardKeyDiagnostics",
+          "when": "false"
+        },
+        {
+          "command": "dynatrace-extensions-workspaces.enableSnmpDiagnostics",
+          "when": "false"
+        },
+        {
+          "command": "dynatrace-extensions-workspaces.disableSnmpDiagnostics",
+          "when": "false"
+        },
+        {
+          "command": "dynatrace-extensions-workspaces.enableAllDiagnostics",
+          "when": "false"
+        },
+        {
+          "command": "dynatrace-extensions-workspaces.disableAllDiagnostics",
+          "when": "false"
+        }
+      ],
+      "view/title": [
+        {
+          "command": "dynatrace-extensions-workspaces.addWorkspace",
+          "when": "view == dynatrace-extensions-workspaces",
+          "group": "navigation"
+        },
+        {
+          "command": "dynatrace-extensions-workspaces.refresh",
+          "when": "view == dynatrace-extensions-workspaces",
+          "group": "navigation"
+        },
+        {
+          "command": "dynatrace-extensions-environments.addEnvironment",
+          "when": "view == dynatrace-extensions-environments",
+          "group": "navigation"
+        },
+        {
+          "command": "dynatrace-extensions-environments.refresh",
+          "when": "view == dynatrace-extensions-environments",
+          "group": "navigation"
+        }
+      ],
+      "view/item/context": [
+        {
+          "command": "dynatrace-extensions-workspaces.openWorkspace",
+          "when": "view == dynatrace-extensions-workspaces && viewItem == extensionWorkspace",
+          "group": "inline@1"
+        },
+        {
+          "command": "dynatrace-extensions-workspaces.deleteWorkspace",
+          "when": "view == dynatrace-extensions-workspaces && viewItem == extensionWorkspace",
+          "group": "inline@2"
+        },
+        {
+          "command": "dynatrace-extensions-workspaces.enableMetricSelectors",
+          "when": "view == dynatrace-extensions-workspaces && viewItem == extensionWorkspace && !config.dynatraceExtensions.metricSelectorsCodeLens",
+          "group": "2_workspace@1"
+        },
+        {
+          "command": "dynatrace-extensions-workspaces.disableMetricSelectors",
+          "when": "view == dynatrace-extensions-workspaces && viewItem == extensionWorkspace && config.dynatraceExtensions.metricSelectorsCodeLens",
+          "group": "2_workspace@1"
+        },
+        {
+          "command": "dynatrace-extensions-workspaces.enableEntitySelectors",
+          "when": "view == dynatrace-extensions-workspaces && viewItem == extensionWorkspace && !config.dynatraceExtensions.entitySelectorsCodeLens",
+          "group": "2_workspace@2"
+        },
+        {
+          "command": "dynatrace-extensions-workspaces.disableEntitySelectors",
+          "when": "view == dynatrace-extensions-workspaces && viewItem == extensionWorkspace && config.dynatraceExtensions.entitySelectorsCodeLens",
+          "group": "2_workspace@2"
+        },
+        {
+          "command": "dynatrace-extensions-workspaces.enableWmiCodelens",
+          "when": "view == dynatrace-extensions-workspaces && viewItem == extensionWorkspace && !config.dynatraceExtensions.wmiCodeLens",
+          "group": "2_workspace@3"
+        },
+        {
+          "command": "dynatrace-extensions-workspaces.disableWmiCodelens",
+          "when": "view == dynatrace-extensions-workspaces && viewItem == extensionWorkspace && config.dynatraceExtensions.wmiCodeLens",
+          "group": "2_workspace@3"
+        },
+        {
+          "command": "dynatrace-extensions-workspaces.enableScreenCodelens",
+          "when": "view == dynatrace-extensions-workspaces && viewItem == extensionWorkspace && !config.dynatraceExtensions.screenCodeLens",
+          "group": "2_workspace@4"
+        },
+        {
+          "command": "dynatrace-extensions-workspaces.disableScreenCodelens",
+          "when": "view == dynatrace-extensions-workspaces && viewItem == extensionWorkspace && config.dynatraceExtensions.screenCodeLens",
+          "group": "2_workspace@4"
+        },
+        {
+          "submenu": "dynatrace-extensions.diagnostics-menu",
+          "group": "2_workspace@5"
+        },
+        {
+          "command": "dynatrace-extensions-workspaces.enableFastDevelopment",
+          "when": "view == dynatrace-extensions-workspaces && viewItem == extensionWorkspace && !config.dynatraceExtensions.fastDevelopmentMode",
+          "group": "2_workspace@6"
+        },
+        {
+          "command": "dynatrace-extensions-workspaces.disableFastDevelopment",
+          "when": "view == dynatrace-extensions-workspaces && viewItem == extensionWorkspace && config.dynatraceExtensions.fastDevelopmentMode",
+          "group": "2_workspace@6"
+        },
+        {
+          "command": "dynatrace-extensions-workspaces.editExtension",
+          "when": "view == dynatrace-extensions-workspaces && viewItem == extension",
+          "group": "inline"
+        },
+        {
+          "command": "dynatrace-extensions-environments.useEnvironment",
+          "when": "view == dynatrace-extensions-environments && viewItem == dynatraceEnvironment",
+          "group": "inline@1"
+        },
+        {
+          "command": "dynatrace-extensions-environments.editEnvironment",
+          "when": "view == dynatrace-extensions-environments && (viewItem == dynatraceEnvironment || viewItem == currentDynatraceEnvironment)",
+          "group": "inline@2"
+        },
+        {
+          "command": "dynatrace-extensions-environments.deleteEnvironment",
+          "when": "view == dynatrace-extensions-environments && (viewItem == dynatraceEnvironment || viewItem == currentDynatraceEnvironment)",
+          "group": "inline@3"
+        },
+        {
+          "command": "dynatrace-extensions-environments.openExtension",
+          "when": "view == dynatrace-extensions-environments && viewItem == deployedExtension",
+          "group": "inline@2"
+        },
+        {
+          "command": "dynatrace-extensions-environments.addConfig",
+          "when": "view == dynatrace-extensions-environments && viewItem == deployedExtension",
+          "group": "inline@1"
+        },
+        {
+          "command": "dynatrace-extensions-environments.editConfig",
+          "when": "view == dynatrace-extensions-environments && viewItem == monitoringConfiguration",
+          "group": "inline@1"
+        },
+        {
+          "command": "dynatrace-extensions-environments.deleteConfig",
+          "when": "view == dynatrace-extensions-environments && viewItem == monitoringConfiguration",
+          "group": "inline@2"
+        },
+        {
+          "command": "dynatrace-extensions-environments.saveConfig",
+          "when": "view == dynatrace-extensions-environments && viewItem == monitoringConfiguration",
+          "group": "inline@3"
+        }
+      ],
+      "dynatrace-extensions.diagnostics-menu": [
+        {
+          "command": "dynatrace-extensions-workspaces.enableNameDiagnostics",
+          "when": "view == dynatrace-extensions-workspaces && viewItem == extensionWorkspace && !config.dynatraceExtensions.diagnostics.extensionName",
+          "group": "navigation@1"
+        },
+        {
+          "command": "dynatrace-extensions-workspaces.disableNameDiagnostics",
+          "when": "view == dynatrace-extensions-workspaces && viewItem == extensionWorkspace && config.dynatraceExtensions.diagnostics.extensionName",
+          "group": "navigation@1"
+        },
+        {
+          "command": "dynatrace-extensions-workspaces.enableMetricKeyDiagnostics",
+          "when": "view == dynatrace-extensions-workspaces && viewItem == extensionWorkspace && !config.dynatraceExtensions.diagnostics.metricKeys",
+          "group": "navigation@2"
+        },
+        {
+          "command": "dynatrace-extensions-workspaces.disableMetricKeyDiagnostics",
+          "when": "view == dynatrace-extensions-workspaces && viewItem == extensionWorkspace && config.dynatraceExtensions.diagnostics.metricKeys",
+          "group": "navigation@2"
+        },
+        {
+          "command": "dynatrace-extensions-workspaces.enableCardKeyDiagnostics",
+          "when": "view == dynatrace-extensions-workspaces && viewItem == extensionWorkspace && !config.dynatraceExtensions.diagnostics.cardKeys",
+          "group": "navigation@3"
+        },
+        {
+          "command": "dynatrace-extensions-workspaces.disableCardKeyDiagnostics",
+          "when": "view == dynatrace-extensions-workspaces && viewItem == extensionWorkspace && config.dynatraceExtensions.diagnostics.cardKeys",
+          "group": "navigation@3"
+        },
+        {
+          "command": "dynatrace-extensions-workspaces.enableSnmpDiagnostics",
+          "when": "view == dynatrace-extensions-workspaces && viewItem == extensionWorkspace && !config.dynatraceExtensions.diagnostics.snmp",
+          "group": "navigation@4"
+        },
+        {
+          "command": "dynatrace-extensions-workspaces.disableSnmpDiagnostics",
+          "when": "view == dynatrace-extensions-workspaces && viewItem == extensionWorkspace && config.dynatraceExtensions.diagnostics.snmp",
+          "group": "navigation@4"
+        },
+        {
+          "command": "dynatrace-extensions-workspaces.enableAllDiagnostics",
+          "when": "view == dynatrace-extensions-workspaces && viewItem == extensionWorkspace && !config.dynatraceExtensions.diagnostics.all",
+          "group": "navigation@5"
+        },
+        {
+          "command": "dynatrace-extensions-workspaces.disableAllDiagnostics",
+          "when": "view == dynatrace-extensions-workspaces && viewItem == extensionWorkspace && config.dynatraceExtensions.diagnostics.all",
+          "group": "navigation@5"
+        }
+      ]
+    },
+    "submenus": [
+      {
+        "label": "🪲 Diagnostics",
+        "id": "dynatrace-extensions.diagnostics-menu"
+      }
+    ],
+    "viewsContainers": {
+      "activitybar": [
+        {
+          "id": "dynatrace-extensions2",
+          "title": "Dynatrace Extensions",
+          "icon": "src/assets/icons/dynatrace_extensions.png"
+        }
+      ]
+    },
+    "views": {
+      "dynatrace-extensions2": [
+        {
+          "id": "dynatrace-extensions-workspaces",
+          "name": "Extension 2.0 Workspaces"
+        },
+        {
+          "id": "dynatrace-extensions-environments",
+          "name": "Environments"
+        }
+      ]
+    },
+    "viewsWelcome": [
+      {
+        "view": "dynatrace-extensions-workspaces",
+        "contents": "Hello. You don't seem to have any extension workspaces initialized.\nStart by opening a folder and running the Initialize Workspace command.\n[Open folder](command:vscode.openFolder)",
+        "when": "workbenchState == empty && dynatrace-extensions.numWorkspaces == 0"
+      },
+      {
+        "view": "dynatrace-extensions-workspaces",
+        "contents": "Hello. You don't seem to have any extension workspaces initialized.\nRun the Initialize Workspace command to initialize your current workspace.\n[Initialize workspace](command:dynatrace-extensions.initWorkspace)\nOr open a different workspace first.\n[Open folder](command:vscode.openFolder)",
+        "when": "workbenchState != empty && dynatrace-extensions.numWorkspaces == 0 && !dynatrace-extensions.extensionWorkspace"
+      },
+      {
+        "view": "dynatrace-extensions-workspaces",
+        "contents": "Hello. You don't seem to have any extension workspaces initialized.\nYou seem to already be in an extensions workspace - want to initialize it now?\n[Initialize workspace](command:dynatrace-extensions.initWorkspace)\nOtherwise, open a different workspace first.\n[Open folder](command:vscode.openFolder)",
+        "when": "workbenchState != empty && dynatrace-extensions.numWorkspaces == 0 && dynatrace-extensions.extensionWorkspace"
+      },
+      {
+        "view": "dynatrace-extensions-environments",
+        "contents": "Hello. You don't have any Dynatrace Environments saved.\nWould you like to add one now?\n[Add environment](command:dynatrace-extensions-environments.addEnvironment)",
+        "when": "dynatrace-extensions.numEnvironments == 0"
+      }
+    ],
+    "icons": {
+      "dt-platform": {
+        "description": "Dynatrace platform",
+        "default": {
+          "fontPath": "src/assets/fonts/dt-custom-icons.woff",
+          "fontCharacter": "A"
+        }
+      }
+    }
+  },
+  "scripts": {
+    "vscode:prepublish": "npm run esbuild-base -- --minify",
+    "esbuild-base": "esbuild ./src/extension.ts --bundle --outfile=out/main.js --external:vscode --format=cjs --platform=node",
+    "esbuild": "npm run esbuild-base -- --sourcemap",
+    "esbuild-watch": "npm run esbuild-base -- --sourcemap --watch",
+    "compile": "tsc -p ./",
+    "watch": "tsc -watch -p ./",
+    "pretest": "npm run compile && npm run lint",
+    "lint": "eslint src --ext ts",
+    "test": "node ./out/src/test/runTest.js",
+    "test:unit": "jest --runInBand --config=jest.config.js",
+    "build": "npm run pretest && npm run vscode:prepublish",
+    "install:all": "npm install && cd webview-ui && npm install",
+    "build:webview": "cd webview-ui && npm run build",
+    "build:all": "npm run build:webview && npm run build"
+  },
+  "devDependencies": {
+    "@babel/plugin-proposal-private-property-in-object": "^7.21.11",
+    "@jest/globals": "^29.7.0",
+    "@lwc/eslint-plugin-lwc": "^1.6.2",
+    "@reactivex/rxjs": "^6.6.7",
+    "@types/adm-zip": "^0.5.0",
+    "@types/fs-extra": "^11.0.1",
+    "@types/glob": "^7.2.0",
+    "@types/jest": "^29.5.11",
+    "@types/mocha": "^9.1.1",
+    "@types/mock-fs": "^4.13.1",
+    "@types/node": "^14.18.43",
+    "@types/node-forge": "^1.0.2",
+    "@types/vscode": "^1.67.0",
+    "@typescript-eslint/eslint-plugin": "^5.21.0",
+    "@typescript-eslint/parser": "^5.21.0",
+    "@vscode/test-electron": "^2.1.3",
+    "@vscode/vsce": "^2.19.0",
+    "esbuild": "^0.15.7",
+    "eslint": "^8.44.0",
+    "eslint-config-airbnb-typescript": "^17.0.0",
+    "eslint-config-prettier": "^8.8.0",
+    "eslint-plugin-functional": "^5.0.8",
+    "eslint-plugin-import": "^2.27.5",
+    "eslint-plugin-no-secrets": "^0.8.9",
+    "eslint-plugin-no-unsanitized": "^4.0.2",
+    "eslint-plugin-prettier": "^4.2.1",
+    "eslint-plugin-react": "^7.32.2",
+    "jest": "^29.7.0",
+    "mocha": "^9.2.2",
+    "mock-fs": "^5.1.4",
+    "prettier": "^2.8.8",
+    "semver": ">=7.5.2",
+    "ts-jest": "^29.1.1",
+    "typescript": "^5.0.4"
+  },
+  "dependencies": {
+    "adm-zip": "^0.5.9",
+    "axios": "^1.6.0",
+    "form-data": "^4.0.0",
+    "fs-extra": "^11.1.1",
+    "glob": "^8.0.3",
+    "jszip": "^3.10.1",
+    "node-forge": "^1.3.1",
+    "open": "^8.4.2",
+    "pidtree": "^0.6.0",
+    "rxjs": "^7.8.1",
+    "yaml": ">=2.2.2"
+  }
 }

@@ -15,6 +15,7 @@
  */
 
 import * as vscode from "vscode";
+import { PanelData, WebviewMessage } from "../interfaces/webview";
 
 /**
  * Registered viewType (id) values for known webivew panels.
@@ -22,6 +23,7 @@ import * as vscode from "vscode";
 export enum REGISTERED_PANELS {
   METRIC_RESULTS = "dynatrace-extensions.MetricResults",
   WMI_RESULTS = "dynatrace-extensions.WmiResults",
+  SIMULATOR_UI = "dynatrace-extensions.SimulatorUI",
 }
 
 /**
@@ -48,13 +50,6 @@ function getNonce() {
  */
 function getColumn() {
   return vscode.window.activeTextEditor ? vscode.ViewColumn.Beside : vscode.ViewColumn.One;
-}
-
-interface PanelData {
-  // Used to match component on the React side
-  dataType: string;
-  // Holds actual data the panel works with
-  data: unknown;
 }
 
 /**
@@ -190,6 +185,7 @@ export class WebviewPanelManager implements vscode.WebviewPanelSerializer {
       // Otherwise, create and show a new one
       const newPanel = vscode.window.createWebviewPanel(viewType, title, getColumn(), {
         enableScripts: true,
+        enableCommandUris: true,
         localResourceRoots: [
           // Enable JS in the webview
           vscode.Uri.joinPath(this.extensionUri, "out"),
@@ -199,6 +195,24 @@ export class WebviewPanelManager implements vscode.WebviewPanelSerializer {
       });
 
       this.setupPanel(viewType, newPanel, data);
+    }
+  }
+
+  /**
+   * Sends a message to the panel using the postMessage API.
+   * @param viewType
+   * @param message
+   */
+  public postMessage(viewType: REGISTERED_PANELS, message: WebviewMessage) {
+    if (this.currentPanels.has(viewType)) {
+      const existingPanel = this.currentPanels.get(viewType);
+      existingPanel.webview.postMessage(message).then(
+        () => {},
+        err => {
+          console.log(err);
+          console.log(`Could not post message to webview. ${(err as Error).message}`);
+        },
+      );
     }
   }
 

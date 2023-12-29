@@ -29,6 +29,7 @@ import { WmiCompletionProvider } from "./codeCompletions/wmi";
 import { PrometheusCodeLensProvider } from "./codeLens/prometheusScraper";
 import { ScreenLensProvider } from "./codeLens/screenCodeLens";
 import { SelectorCodeLensProvider } from "./codeLens/selectorCodeLens";
+import { SimulatorLensProvider } from "./codeLens/simulatorCodeLens";
 import { SnmpCodeLensProvider } from "./codeLens/snmpCodeLens";
 import { ValidationStatus, runSelector, validateSelector } from "./codeLens/utils/selectorUtils";
 import { runWMIQuery } from "./codeLens/utils/wmiUtils";
@@ -51,6 +52,7 @@ import { DiagnosticsProvider } from "./diagnostics/diagnostics";
 import { SnmpHoverProvider } from "./hover/snmpHover";
 import { ConnectionStatusManager } from "./statusBar/connection";
 import { FastModeStatus } from "./statusBar/fastMode";
+import { SimulatorManager } from "./statusBar/simulator";
 import { EnvironmentsTreeDataProvider } from "./treeViews/environmentsTreeView";
 import { ExtensionsTreeDataProvider } from "./treeViews/extensionsTreeView";
 import {
@@ -71,6 +73,8 @@ import {
   migrateFromLegacyExtension,
 } from "./utils/fileSystem";
 import { REGISTERED_PANELS, WebviewPanelManager } from "./webviews/webviewPanel";
+
+let simulatorManager: SimulatorManager;
 
 /**
  * Registers Completion Providers for this extension.
@@ -651,6 +655,7 @@ export async function activate(context: vscode.ExtensionContext) {
   await cachedData.initialize();
   const webviewPanelManager = new WebviewPanelManager(context.extensionUri);
   const extensionsTreeViewProvider = new ExtensionsTreeDataProvider(context);
+  simulatorManager = new SimulatorManager(context, webviewPanelManager);
   const metricLensProvider = new SelectorCodeLensProvider(
     "metricSelector:",
     "metricSelectorsCodeLens",
@@ -662,6 +667,7 @@ export async function activate(context: vscode.ExtensionContext) {
     cachedData,
   );
   const snippetCodeActionProvider = new SnippetGenerator();
+  const simulatorLensProvider = new SimulatorLensProvider(simulatorManager);
   const screensLensProvider = new ScreenLensProvider(tenantsTreeViewProvider);
   const prometheusLensProvider = new PrometheusCodeLensProvider(cachedData);
   const prometheusActionProvider = new PrometheusActionProvider();
@@ -685,6 +691,7 @@ export async function activate(context: vscode.ExtensionContext) {
       metricLensProvider,
       entityLensProvider,
       prometheusActionProvider,
+      simulatorManager,
     ],
     prometheusData: [prometheusLensProvider, prometheusActionProvider],
     snmpData: [snmpActionProvider, diagnosticsProvider, snmpHoverProvider],
@@ -692,6 +699,12 @@ export async function activate(context: vscode.ExtensionContext) {
     wmiData: [wmiLensProvider],
     wmiStatuses: [wmiLensProvider],
   });
+
+  // The check for the simulator's initial status (must happen once cached data is available)
+  vscode.commands.executeCommand("dynatrace-extensions.simulator.checkReady", false).then(
+    () => {},
+    err => console.log(`Error while checking simulator status: ${(err as Error).message}`),
+  );
 
   // Perform all feature registrations
   context.subscriptions.push(
@@ -740,6 +753,8 @@ export async function activate(context: vscode.ExtensionContext) {
     connectionStatusManager.getStatusBarItem(),
     // FastMode Status Bar Item
     fastModeStatus.getStatusBarItem(),
+    // Code Lens for Simulator
+    vscode.languages.registerCodeLensProvider(extension2selector, simulatorLensProvider),
     // Code Lens for Prometheus scraping
     vscode.languages.registerCodeLensProvider(extension2selector, prometheusLensProvider),
     // Code Lens for metric and entity selectors
@@ -875,8 +890,11 @@ export async function activate(context: vscode.ExtensionContext) {
 
 /**
  * Performs any kind of necessary clean up.
- * Automatically called when the extension was deactivated (e.g. end of command).
+ * Automatically called when the extension was deactivated.
  */
 export function deactivate() {
   console.log("DYNATRACE EXTENSIONS - DEACTIVATED");
+
+  // Kill any simulator processes left running
+  simulatorManager.stop();
 }
