@@ -32,7 +32,7 @@ import { ExtensionStub } from "../interfaces/extensionMeta";
 import { EnvironmentsTreeDataProvider } from "../treeViews/environmentsTreeView";
 import { loopSafeWait } from "./code";
 import { getExtensionFilePath, getSnmpMibFiles } from "./fileSystem";
-import { Logger, getLogger } from "./logging";
+import * as logger from "./logging";
 import { fetchOID, MibModuleStore, OidInformation, parseMibFile } from "./snmp";
 
 type CachedDataType =
@@ -94,7 +94,7 @@ type LoadedFile = { name: string; filePath: string };
  * Find the global instance in src/extension.ts
  */
 export class CachedData {
-  private readonly logger: Logger;
+  private readonly logTrace = ["utils", "dataCaching", this.constructor.name];
   private readonly environments: EnvironmentsTreeDataProvider;
   private builtinEntityTypes = new BehaviorSubject<EntityType[]>([]);
   private parsedExtension = new BehaviorSubject<ExtensionStub | undefined>(undefined);
@@ -113,7 +113,6 @@ export class CachedData {
    * @param environments a Dynatrace Environments provider
    */
   constructor(environments: EnvironmentsTreeDataProvider) {
-    this.logger = getLogger("utils", "dataCaching", this.constructor.name);
     this.environments = environments;
   }
 
@@ -284,7 +283,11 @@ export class CachedData {
             return [];
           })
           .catch(err => {
-            this.logger.warn(`Barista not accessible.${(err as Error).message}`);
+            logger.warn(
+              `Barista not accessible.${(err as Error).message}`,
+              ...this.logTrace,
+              "fetchBaristaIcons",
+            );
             return [];
           });
         return publicIcons;
@@ -322,7 +325,11 @@ export class CachedData {
       const parsedManifest = yaml.parse(readFileSync(manifestFilePath).toString()) as ExtensionStub;
       this.parsedExtension.next(parsedManifest);
     } catch {
-      this.logger.error("Error parsing manifest content. Invalid YAML.");
+      logger.error(
+        "Error parsing manifest content. Invalid YAML.",
+        ...this.logTrace,
+        "updateParsedExtension",
+      );
     }
   }
 

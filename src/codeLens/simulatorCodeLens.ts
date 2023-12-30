@@ -16,7 +16,7 @@
 
 import * as vscode from "vscode";
 import { SimulatorManager } from "../statusBar/simulator";
-import { getLogger, Logger } from "../utils/logging";
+import * as logger from "../utils/logging";
 
 const START_COMMAND = "dynatraceExtensions.simulator.codelens.start";
 const STOP_COMMAND = "dynatraceExtensions.simulator.codelens.stop";
@@ -27,7 +27,7 @@ const REFRESH = "dynatraceExtensions.simulator.codelens.refresh";
  * without having to visit the Simulator UI. This action will use the last known configuration or the defaults.
  */
 export class SimulatorLensProvider implements vscode.CodeLensProvider {
-  private readonly logger: Logger;
+  private readonly logTrace = ["codeLens", "simulatorCodeLens", this.constructor.name];
   private codeLenses: vscode.CodeLens[];
   private simulator: SimulatorManager;
   private lastKnownStatus: string;
@@ -38,7 +38,6 @@ export class SimulatorLensProvider implements vscode.CodeLensProvider {
    * @param simulator - instance of {@link SimulatorManager} to control the simulator
    */
   constructor(simulator: SimulatorManager) {
-    this.logger = getLogger("codeLens", "simulatorCodeLens", "SimulatorLensProvider");
     this.simulator = simulator;
     this.codeLenses = [];
     this.lastKnownStatus = "UNKNOWN";
@@ -50,7 +49,7 @@ export class SimulatorLensProvider implements vscode.CodeLensProvider {
           this.lastKnownStatus = "RUNNING";
           this._onDidChangeCodeLenses.fire();
         },
-        err => this.logger.info(err),
+        err => logger.error(err, ...this.logTrace),
       );
     });
     // Stop the simulator and update the last known status

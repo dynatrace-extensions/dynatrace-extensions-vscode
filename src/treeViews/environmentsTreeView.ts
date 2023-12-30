@@ -22,7 +22,7 @@ import { ConnectionStatusManager } from "../statusBar/connection";
 import { showMessage } from "../utils/code";
 import { decryptToken, encryptToken } from "../utils/cryptography";
 import { getAllEnvironments, registerEnvironment } from "../utils/fileSystem";
-import { Logger, getLogger } from "../utils/logging";
+import * as logger from "../utils/logging";
 import {
   addEnvironment,
   editEnvironment,
@@ -198,7 +198,7 @@ export class MonitoringConfiguration extends vscode.TreeItem implements IMonitor
  * Any environment in the list may be used for API-based operations.
  */
 export class EnvironmentsTreeDataProvider implements vscode.TreeDataProvider<EnvironmentsTreeItem> {
-  private readonly logger: Logger;
+  private readonly logTrace = ["treeViews", "environmentsTreeView", this.constructor.name];
   context: vscode.ExtensionContext;
   connectionStatus: ConnectionStatusManager;
   oc: vscode.OutputChannel;
@@ -217,7 +217,6 @@ export class EnvironmentsTreeDataProvider implements vscode.TreeDataProvider<Env
     connectionStatus: ConnectionStatusManager,
     errorChannel: vscode.OutputChannel,
   ) {
-    this.logger = getLogger("treeViews", "environmentsTreeView", this.constructor.name);
     this.context = context;
     this.connectionStatus = connectionStatus;
     this.oc = errorChannel;
@@ -231,7 +230,7 @@ export class EnvironmentsTreeDataProvider implements vscode.TreeDataProvider<Env
           .catch(() => {});
       })
       .catch(err => {
-        this.logger.info((err as Error).message);
+        logger.error((err as Error).message, ...this.logTrace);
       });
     this.registerCommands(context);
   }
@@ -332,8 +331,10 @@ export class EnvironmentsTreeDataProvider implements vscode.TreeDataProvider<Env
       "dynatrace-extensions-environments.openExtension",
       async (extension: DeployedExtension) => {
         await openExtension(extension).catch(err => {
-          this.logger.warn(
+          logger.warn(
             `Couldn't open URL for extension ${extension.id}: ${(err as Error).message}`,
+            ...this.logTrace,
+            "openExtension",
           );
         });
       },

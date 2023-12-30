@@ -19,7 +19,7 @@
  ********************************************************************************/
 
 import * as vscode from "vscode";
-import { getLogger } from "./logging";
+import * as logger from "./logging";
 
 /**
  * Loop-safe function to make use of setTimeout
@@ -35,35 +35,35 @@ export async function loopSafeWait(duration: number) {
  * @param message message to send in notification
  */
 export function showMessage(severity: "info" | "warn" | "error", message: string) {
-  const logger = getLogger("utils", "code", "showMessage");
+  const logTrace = ["utils", "code", "showMessage"];
   switch (severity) {
     case "info":
       vscode.window.showInformationMessage(message).then(
         () => {
-          logger.info(message);
+          logger.info(message, ...logTrace);
         },
         () => {
-          logger.info(`Could not create UI notification about "${message}"`);
+          logger.error(`Could not create UI notification about "${message}"`, ...logTrace);
         },
       );
       break;
     case "warn":
       vscode.window.showWarningMessage(message).then(
         () => {
-          logger.info(message);
+          logger.info(message, ...logTrace);
         },
         () => {
-          logger.info(`Could not create UI notification about "${message}"`);
+          logger.error(`Could not create UI notification about "${message}"`, ...logTrace);
         },
       );
       break;
     case "error":
       vscode.window.showErrorMessage(message).then(
         () => {
-          logger.info(message);
+          logger.info(message, ...logTrace);
         },
         () => {
-          logger.info(`Could not create UI notification about "${message}"`);
+          logger.error(`Could not create UI notification about "${message}"`, ...logTrace);
         },
       );
   }

@@ -26,7 +26,7 @@ import {
   getReferencedCardsMeta,
 } from "../utils/extensionParsing";
 import { getExtensionFilePath } from "../utils/fileSystem";
-import { Logger, getLogger } from "../utils/logging";
+import * as logger from "../utils/logging";
 import { isOidReadable, isTable, oidFromMetriValue, OidInformation } from "../utils/snmp";
 import {
   getBlockItemIndexAtLine,
@@ -62,8 +62,8 @@ import {
  * of an Extensions 2.0 YAML file.
  */
 export class DiagnosticsProvider extends CachedDataProducer {
+  private readonly logTrace = ["diagnostics", "diagnostics", this.constructor.name];
   private readonly collection: vscode.DiagnosticCollection;
-  private readonly logger: Logger;
 
   /**
    * @param context VSCode Extension Context
@@ -71,7 +71,6 @@ export class DiagnosticsProvider extends CachedDataProducer {
    */
   constructor(cachedData: CachedData) {
     super(cachedData);
-    this.logger = getLogger("diagnostics", "diagnostics", "DiagnosticsProvider");
     this.collection = vscode.languages.createDiagnosticCollection("Dynatrace");
   }
 
@@ -129,7 +128,11 @@ export class DiagnosticsProvider extends CachedDataProducer {
       status = false;
     }
 
-    this.logger.info(`Check - diagnostics collection clear? > ${String(status)}`);
+    logger.info(
+      `Check - diagnostics collection clear? > ${String(status)}`,
+      ...this.logTrace,
+      "isValidForBuilding",
+    );
     return status;
   }
 

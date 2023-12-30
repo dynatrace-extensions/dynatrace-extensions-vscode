@@ -22,9 +22,9 @@ import { readFileSync } from "fs";
 import * as path from "path";
 import axios from "axios";
 import { showMessage } from "./code";
-import { getLogger } from "./logging";
+import * as logger from "./logging";
 
-const logger = getLogger("utils", "snmp");
+const logTrace = ["utils", "snmp"];
 
 // URL to online OID Repository
 const BASE_URL = "https://oid-rep.orange-labs.fr/get";
@@ -103,7 +103,8 @@ function processOidData(details: string, oid?: string): OidInformation {
  * @returns metadata info or empty object if not available
  */
 export async function fetchOID(oid: string) {
-  logger.info(`>>> Fetching OID ${oid}`);
+  const fnLogTrace = [...logTrace, "fetchOID"];
+  logger.info(`>>> Fetching OID ${oid}`, ...fnLogTrace);
   return axios
     .get(`${BASE_URL}/${oid}`)
     .then(res => {
@@ -118,7 +119,7 @@ export async function fetchOID(oid: string) {
       return {};
     })
     .catch(err => {
-      logger.info(err);
+      logger.error(err, ...fnLogTrace);
       return {};
     });
 }

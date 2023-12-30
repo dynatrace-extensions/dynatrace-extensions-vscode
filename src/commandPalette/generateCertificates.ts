@@ -19,9 +19,9 @@ import path = require("path");
 import { md, pki, random, util } from "node-forge";
 import * as vscode from "vscode";
 import { showMessage } from "../utils/code";
-import { getLogger } from "../utils/logging";
+import * as logger from "../utils/logging";
 
-const logger = getLogger("commandPalette", "generateCertificates");
+const logTrace = ["commandPalette", "generateCertificates"];
 
 /**
  * Generates a random serial number, valid for X.509 Certificates.
@@ -79,6 +79,7 @@ function getCertAttributes(type: "ca" | "dev"): pki.CertificateField[] {
  * @returns boolean - success of the command
  */
 export async function generateCerts(context: vscode.ExtensionContext): Promise<boolean> {
+  const fnLogTrace = [...logTrace, "generateCerts"];
   const storagePath = context.storageUri?.fsPath;
   if (!storagePath) {
     return false;
@@ -97,7 +98,7 @@ export async function generateCerts(context: vscode.ExtensionContext): Promise<b
         caKey = pki.rsa.generateKeyPair({ bits: 4096, e: 0x10001 });
       } catch (err) {
         showMessage("error", "Error generating the RSA key pair for the CA certificate");
-        logger.info((err as Error).message);
+        logger.error((err as Error).message, ...fnLogTrace);
         return false;
       }
 
@@ -139,10 +140,10 @@ export async function generateCerts(context: vscode.ExtensionContext): Promise<b
           },
         ]);
         caCert.sign(caKey.privateKey, md.sha256.create());
-        logger.info("CA Cert created successfully");
+        logger.info("CA Cert created successfully", ...fnLogTrace);
       } catch (err) {
         showMessage("error", "Error generating the CA certificate");
-        logger.info((err as Error).message);
+        logger.error((err as Error).message, ...fnLogTrace);
         return false;
       }
 
@@ -153,7 +154,7 @@ export async function generateCerts(context: vscode.ExtensionContext): Promise<b
         devKey = pki.rsa.generateKeyPair({ bits: 4096, e: 0x10001 });
       } catch (err) {
         showMessage("error", "Error generating the RSA key pair for the Developer certificate");
-        logger.info((err as Error).message);
+        logger.error((err as Error).message, ...fnLogTrace);
         return false;
       }
 
@@ -194,10 +195,10 @@ export async function generateCerts(context: vscode.ExtensionContext): Promise<b
           },
         ]);
         devCert.sign(caKey.privateKey, md.sha256.create());
-        logger.info("DEV Cert created successfully");
+        logger.info("DEV Cert created successfully", ...fnLogTrace);
       } catch (err) {
         showMessage("error", "Error generating the Developer certificate");
-        logger.info((err as Error).message);
+        logger.error((err as Error).message, ...fnLogTrace);
         return false;
       }
 
@@ -217,7 +218,7 @@ export async function generateCerts(context: vscode.ExtensionContext): Promise<b
         path.join(certsDir, "developer.pem"),
         pki.certificateToPem(devCert) + pki.privateKeyToPem(devKey.privateKey),
       );
-      logger.info(`Wrote all certificates at location ${certsDir}`);
+      logger.info(`Wrote all certificates at location ${certsDir}`, ...fnLogTrace);
 
       return true;
     },
@@ -238,7 +239,7 @@ export async function generateCerts(context: vscode.ExtensionContext): Promise<b
         useGlobal === "Yes" ? true : undefined,
       )
       .then(undefined, () => {
-        logger.info("Could not update setting developerCertkeyLocation");
+        logger.info("Could not update setting developerCertkeyLocation", ...fnLogTrace);
       });
     vscode.workspace
       .getConfiguration("dynatraceExtensions", null)
@@ -248,7 +249,7 @@ export async function generateCerts(context: vscode.ExtensionContext): Promise<b
         useGlobal === "Yes" ? true : undefined,
       )
       .then(undefined, () => {
-        logger.info("Could not update setting rootOrCaCertificateLocation");
+        logger.info("Could not update setting rootOrCaCertificateLocation", ...fnLogTrace);
       });
 
     // Link command - Upload Certificates

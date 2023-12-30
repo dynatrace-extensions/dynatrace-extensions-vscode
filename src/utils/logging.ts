@@ -21,108 +21,94 @@ import { cleanUpLogs } from "./fileSystem";
 
 type LogLevel = "DEBUG" | "INFO" | "WARN" | "ERROR" | "NONE";
 
-export class Logger {
-  private static logLevel: LogLevel = "INFO";
-  private static currentLogFile: string;
-  private static outputChannel: vscode.OutputChannel;
-  private static context: vscode.ExtensionContext;
-  private readonly scopes: string[];
+let logLevel: LogLevel = "INFO";
+let currentLogFile: string;
+let outputChannel: vscode.OutputChannel;
+let context: vscode.ExtensionContext;
 
-  constructor(scopes: string[]) {
-    this.scopes = scopes;
-  }
+function startNewLogFile() {
+  const logsDir = path.join(context.globalStorageUri.fsPath, "logs");
+  currentLogFile = path.join(logsDir, `${new Date().toISOString().replace(/:/g, "_")}.log`);
+  writeFileSync(currentLogFile, "");
+}
 
-  private static checkFileSize() {
-    // If the file is larger than 10MB, start a new log file
-    const size = statSync(Logger.currentLogFile).size / (1024 * 1024);
-    if (size > 10) {
-      Logger.startNewLogFile();
-    }
-  }
-
-  private static startNewLogFile() {
-    const logsDir = path.join(Logger.context.globalStorageUri.fsPath, "logs");
-    Logger.currentLogFile = path.join(
-      logsDir,
-      `${new Date().toISOString().replace(/:/g, "_")}.log`,
-    );
-    writeFileSync(Logger.currentLogFile, "");
-  }
-
-  private logToConsole(message: string, level: LogLevel) {
-    switch (level) {
-      case "DEBUG":
-        console.debug(message);
-        break;
-      case "INFO":
-        console.info(message);
-        break;
-      case "WARN":
-        console.warn(message);
-        break;
-      case "ERROR":
-        console.error(message);
-        break;
-      case "NONE":
-        console.log(message);
-        break;
-    }
-  }
-
-  private logMessage(message: unknown, level: LogLevel, ...scopes: string[]) {
-    const data = typeof message === "string" ? message : JSON.stringify(message, null, 2);
-    const timestamp = new Date().toISOString();
-    const scope = [...this.scopes, ...scopes].join(".");
-    const formattedMessage =
-      level === "NONE"
-        ? `${timestamp} [${scope}] ${data}`
-        : `${timestamp} [${level}][${scope}] ${data}`;
-
-    this.logToConsole(formattedMessage, level);
-    Logger.outputChannel.appendLine(formattedMessage);
-    writeFileSync(Logger.currentLogFile, `${formattedMessage}\n`, { flag: "a" });
-    Logger.checkFileSize();
-  }
-
-  public static initialize(context: vscode.ExtensionContext) {
-    Logger.context = context;
-    Logger.outputChannel = vscode.window.createOutputChannel("Dynatrace Log", "log");
-    Logger.startNewLogFile();
-  }
-
-  public static dispose() {
-    Logger.outputChannel.dispose();
-    cleanUpLogs(path.join(Logger.context.globalStorageUri.fsPath, "logs"), 10);
-  }
-
-  public setLogLevel(logLevel: LogLevel) {
-    Logger.logLevel = logLevel;
-  }
-
-  public log(message: unknown, ...scopes: string[]) {
-    this.logMessage(message, "NONE", ...scopes);
-  }
-
-  public debug(message: unknown, ...scopes: string[]) {
-    if (["INFO", "WARN", "ERROR"].includes(Logger.logLevel)) return;
-    this.logMessage(message, "DEBUG", ...scopes);
-  }
-
-  public info(message: unknown, ...scopes: string[]) {
-    if (["WARN", "ERROR"].includes(Logger.logLevel)) return;
-    this.logMessage(message, "INFO", ...scopes);
-  }
-
-  public warn(message: unknown, ...scopes: string[]) {
-    if (Logger.logLevel === "ERROR") return;
-    this.logMessage(message, "WARN", ...scopes);
-  }
-
-  public error(message: unknown, ...scopes: string[]) {
-    this.logMessage(message, "ERROR", ...scopes);
+function checkFileSize() {
+  // If the file is larger than 10MB, start a new log file
+  const size = statSync(currentLogFile).size / (1024 * 1024);
+  if (size > 10) {
+    startNewLogFile();
   }
 }
 
-export function getLogger(...scopes: string[]): Logger {
-  return new Logger(scopes);
+function logToConsole(message: string, level: LogLevel) {
+  switch (level) {
+    case "DEBUG":
+      console.debug(message);
+      break;
+    case "INFO":
+      console.info(message);
+      break;
+    case "WARN":
+      console.warn(message);
+      break;
+    case "ERROR":
+      console.error(message);
+      break;
+    case "NONE":
+      console.log(message);
+      break;
+  }
+}
+
+function logMessage(message: unknown, level: LogLevel, ...trace: string[]) {
+  const data = typeof message === "string" ? message : JSON.stringify(message, null, 2);
+  const timestamp = new Date().toISOString();
+  const scope = trace.join(".");
+  const formattedMessage =
+    level === "NONE"
+      ? `${timestamp} [${scope}] ${data}`
+      : `${timestamp} [${level}][${scope}] ${data}`;
+
+  logToConsole(formattedMessage, level);
+  outputChannel.appendLine(formattedMessage);
+  writeFileSync(currentLogFile, `${formattedMessage}\n`, { flag: "a" });
+  checkFileSize();
+}
+
+export function initializeLogging(ctx: vscode.ExtensionContext) {
+  context = ctx;
+  outputChannel = vscode.window.createOutputChannel("Dynatrace Log", "log");
+  startNewLogFile();
+}
+
+export function disposeLogger() {
+  outputChannel.dispose();
+  cleanUpLogs(path.join(context.globalStorageUri.fsPath, "logs"), 10);
+}
+
+export function setLogLevel(level: LogLevel) {
+  logLevel = level;
+}
+
+export function log(message: unknown, ...trace: string[]) {
+  logMessage(message, "NONE", ...trace);
+}
+
+export function debug(message: unknown, ...trace: string[]) {
+  if (["INFO", "WARN", "ERROR"].includes(logLevel)) return;
+  logMessage(message, "DEBUG", ...trace);
+}
+
+export function info(message: unknown, ...trace: string[]) {
+  if (["WARN", "ERROR"].includes(logLevel)) return;
+  logMessage(message, "INFO", ...trace);
+}
+
+export function warn(message: unknown, ...trace: string[]) {
+  if (logLevel === "ERROR") return;
+  logMessage(message, "WARN", ...trace);
+}
+
+export function error(message: unknown, ...trace: string[]) {
+  logMessage(message, "ERROR", ...trace);
 }

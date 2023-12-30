@@ -72,11 +72,11 @@ import {
   initWorkspaceStorage,
   migrateFromLegacyExtension,
 } from "./utils/fileSystem";
-import { Logger, getLogger } from "./utils/logging";
+import * as logger from "./utils/logging";
 import { REGISTERED_PANELS, WebviewPanelManager } from "./webviews/webviewPanel";
 
 let simulatorManager: SimulatorManager;
-const logger = getLogger("extension");
+const logTrace = ["extension"];
 
 /**
  * Registers Completion Providers for this extension.
@@ -600,13 +600,15 @@ function registerFeatureSwitchCommands() {
  * @param context VSCode Extension Context
  */
 export async function activate(context: vscode.ExtensionContext) {
+  const fnLogTrace = [...logTrace, "activate"];
   // Initialize global storage and logging
   initGlobalStorage(context);
-  Logger.initialize(context);
+  logger.initializeLogging(context);
   logger.info(
     `Dynatrace Extensions is activating. Version ${
       (context.extension.packageJSON as { version: string }).version
     }`,
+    ...fnLogTrace,
   );
 
   // Check presence of legacy extension
@@ -631,7 +633,7 @@ export async function activate(context: vscode.ExtensionContext) {
       getAllWorkspaces(context).length,
     )
     .then(undefined, () => {
-      logger.info("Could not set context for number of registered workspaces.");
+      logger.info("Could not set context for number of registered workspaces.", ...fnLogTrace);
     });
   // Additonal context: different welcome message for the extensions tree view if inside a workspace
   vscode.commands
@@ -641,7 +643,7 @@ export async function activate(context: vscode.ExtensionContext) {
       isExtensionsWorkspace(context, false),
     )
     .then(undefined, () => {
-      logger.info("Could not set context for recognised extension workspace.");
+      logger.info("Could not set context for recognised extension workspace.", ...fnLogTrace);
     });
   // Additional context: number of environments affects the welcome message for the tenants tree view
   vscode.commands
@@ -651,7 +653,7 @@ export async function activate(context: vscode.ExtensionContext) {
       getAllEnvironments(context).length,
     )
     .then(undefined, () => {
-      logger.info("Could not set context for number of Dynatrace enviornments.");
+      logger.info("Could not set context for number of Dynatrace enviornments.", ...fnLogTrace);
     });
   // Create feature/data providers
   const genericChannel = vscode.window.createOutputChannel("Dynatrace", "json");
@@ -713,7 +715,11 @@ export async function activate(context: vscode.ExtensionContext) {
   // The check for the simulator's initial status (must happen once cached data is available)
   vscode.commands.executeCommand("dynatrace-extensions.simulator.checkReady", false).then(
     () => {},
-    err => logger.info(`Error while checking simulator status: ${(err as Error).message}`),
+    err =>
+      logger.info(
+        `Error while checking simulator status: ${(err as Error).message}`,
+        ...fnLogTrace,
+      ),
   );
 
   // Perform all feature registrations
@@ -908,5 +914,5 @@ export function deactivate() {
   // Kill any simulator processes left running
   simulatorManager.stop();
 
-  Logger.dispose();
+  logger.disposeLogger();
 }

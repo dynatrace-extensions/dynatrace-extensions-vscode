@@ -27,9 +27,9 @@ import {
   SimulationLocation,
 } from "../interfaces/simulator";
 import { getSimulatorTargets } from "./fileSystem";
-import { getLogger } from "./logging";
+import * as logger from "./logging";
 
-const logger = getLogger("utils", "simulator");
+const logTrace = ["utils", "simulator"];
 
 /**
  * Gets the default directory where the specified datasource .exe is located.
@@ -120,6 +120,7 @@ export function canSimulateDatasource(os: OsType, eecType: EecType, dataSource: 
  * @returns {@link SimulationConfig}
  */
 export function loadDefaultSimulationConfig(context: vscode.ExtensionContext): SimulationConfig {
+  const fnLogTrace = [...logTrace, "loadDefaultSimulationConfig"];
   // A fallback value in case the user's settings are invalid.
   const fallbackValue: SimulationConfig = {
     eecType: "ONEAGENT",
@@ -144,24 +145,27 @@ export function loadDefaultSimulationConfig(context: vscode.ExtensionContext): S
     // Target name is required
     const targetName = config.get<string>("remoteTargetName");
     if (!targetName || targetName === "") {
-      logger.info(
+      logger.error(
         "Invalid default simulator configuration: No target name specified for remote simulation",
+        ...fnLogTrace,
       );
       return fallbackValue;
     }
     // Name must match a registered target
     const registeredTargets = getSimulatorTargets(context).filter(t => t.name === targetName);
     if (registeredTargets.length === 0) {
-      logger.info(
+      logger.error(
         `Invalid default simulator configuration: No registered target exists by name "${targetName}"`,
+        ...fnLogTrace,
       );
       return fallbackValue;
     }
     // Target specs must match the EEC Type
     target = registeredTargets[0];
     if (target.eecType !== defaultEecType) {
-      logger.info(
+      logger.error(
         `Invalid default simulator configuration: Target "${targetName}" is not registered with EEC Type of ${defaultEecType}`,
+        ...fnLogTrace,
       );
       return fallbackValue;
     }

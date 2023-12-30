@@ -21,9 +21,9 @@
 import { existsSync, readFileSync } from "fs";
 import path = require("path");
 import { DatasourceName } from "../interfaces/extensionMeta";
-import { getLogger } from "./logging";
+import * as logger from "./logging";
 
-const logger = getLogger("utils", "schemaParsing");
+const logTrace = ["utils", "schemaParsing"];
 
 type UnknownSchemaProperties = Record<string, Record<string, unknown>>;
 interface SubPrecondition {
@@ -73,6 +73,7 @@ function meetsPreconditions(
   configObject: Record<string, unknown>,
   negate: boolean = false,
 ): [boolean, Record<string, unknown>[]] {
+  const fnLogTrace = [...logTrace, "meetsPreconditions"];
   const property = precondition.property;
   switch (precondition.type) {
     case "EQUALS":
@@ -89,14 +90,14 @@ function meetsPreconditions(
         : [true, []];
     case "NOT":
       if (!precondition.precondition) {
-        logger.info("Precondition is expected but not found. This is an error.");
+        logger.error("Precondition is expected but not found. This is an error.", ...fnLogTrace);
         return [true, []];
       }
       return meetsPreconditions(precondition.precondition, configObject, true);
     case "AND": {
       const andPreconditions = precondition.preconditions;
       if (!andPreconditions) {
-        logger.info("Preconditions is expected but not found. This is an error");
+        logger.error("Preconditions is expected but not found. This is an error", ...fnLogTrace);
         return [true, []];
       }
       const andMeetsArray: [boolean, Record<string, unknown>[]][] = Array.from(
@@ -135,7 +136,7 @@ function meetsPreconditions(
     case "OR": {
       const orPreconditions = precondition.preconditions;
       if (!orPreconditions) {
-        logger.info("Preconditions is expected but not found. This is an error");
+        logger.error("Preconditions is expected but not found. This is an error", ...fnLogTrace);
         return [true, []];
       }
       const orMeetsArray: [boolean, Record<string, unknown>[]][] = Array.from(
@@ -167,7 +168,10 @@ function meetsPreconditions(
       ];
     }
     default:
-      logger.info(`Cannot process precondition of type "${precondition.type}". Unknown type.`);
+      logger.error(
+        `Cannot process precondition of type "${precondition.type}". Unknown type.`,
+        ...fnLogTrace,
+      );
       return [true, []];
   }
 }
@@ -282,7 +286,11 @@ function getValueForPrimitive(schema: MinimalSchema, propertyKey: string) {
       return listValue;
     }
     default:
-      logger.info(`Cannot process property of type "${String(property.type)}". Unkown primitive.`);
+      logger.info(
+        `Cannot process property of type "${String(property.type)}". Unkown primitive.`,
+        ...logTrace,
+        "getValueForPrimitive",
+      );
       return null;
   }
 }

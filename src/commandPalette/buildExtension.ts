@@ -36,11 +36,11 @@ import { checkDtSdkPresent } from "../utils/conditionCheckers";
 import { sign } from "../utils/cryptography";
 import { normalizeExtensionVersion, incrementExtensionVersion } from "../utils/extensionParsing";
 import { getExtensionFilePath, resolveRealPath } from "../utils/fileSystem";
-import { getLogger } from "../utils/logging";
+import * as logger from "../utils/logging";
 import { getPythonVenvOpts } from "../utils/otherExtensions";
 import { runCommand } from "../utils/subprocesses";
 
-const logger = getLogger("commandPalette", "buildExtension");
+const logTrace = ["commandPalette", "buildExtension"];
 
 type FastModeOptions = {
   status: FastModeStatus;
@@ -69,6 +69,7 @@ async function preBuildTasks(
   forceIncrement: boolean = false,
   dt?: Dynatrace,
 ): Promise<string> {
+  const fnLogTrace = [...logTrace, "preBuildTasks"];
   // Create the dist folder if it doesn't exist
   if (!existsSync(distDir)) {
     mkdirSync(distDir);
@@ -84,7 +85,7 @@ async function preBuildTasks(
     try {
       unlinkSync(path.join(extensionDir, file));
     } catch {
-      logger.info(`Couldn't delete file ${file}`);
+      logger.error(`Couldn't delete file ${file}`, ...fnLogTrace);
     }
   });
 
@@ -126,18 +127,19 @@ function assembleStandard(
   zipFileName: string,
   devCertKeyPath: string,
 ) {
+  const fnLogTrace = [...logTrace, "assembleStandard"];
   // Build the inner .zip archive
   const innerZip = new AdmZip();
   innerZip.addLocalFolder(extensionDir);
   const innerZipPath = path.resolve(workspaceStorage, "extension.zip");
   innerZip.writeZip(innerZipPath);
-  logger.info(`Built the inner archive: ${innerZipPath}`);
+  logger.info(`Built the inner archive: ${innerZipPath}`, ...fnLogTrace);
 
   // Sign the inner .zip archive and write the signature file
   const signature = sign(innerZipPath, devCertKeyPath);
   const sigatureFilePath = path.resolve(workspaceStorage, "extension.zip.sig");
   writeFileSync(sigatureFilePath, signature);
-  logger.info(`Wrote the signature file: ${sigatureFilePath}`);
+  logger.info(`Wrote the signature file: ${sigatureFilePath}`, ...fnLogTrace);
 
   // Build the outer .zip that includes the inner .zip and the signature file
   const outerZip = new AdmZip();
@@ -145,7 +147,7 @@ function assembleStandard(
   outerZip.addLocalFile(innerZipPath);
   outerZip.addLocalFile(sigatureFilePath);
   outerZip.writeZip(outerZipPath);
-  logger.info(`Wrote initial outer zip at: ${outerZipPath}`);
+  logger.info(`Wrote initial outer zip at: ${outerZipPath}`, ...fnLogTrace);
 }
 
 /**
@@ -348,6 +350,7 @@ export async function buildExtension(
   dt?: Dynatrace,
   fastMode?: FastModeOptions,
 ) {
+  const fnLogTrace = [...logTrace, "buildExtension"];
   // Basic details we already know exist
   const workspaceStorage = context.storageUri?.fsPath;
   if (!workspaceStorage) {
@@ -472,7 +475,10 @@ export async function buildExtension(
               try {
                 rmSync(libDir, { recursive: true, force: true });
               } catch (e) {
-                logger.info(`Couldn't clean up 'lib' directory. ${(e as Error).message}`);
+                logger.error(
+                  `Couldn't clean up 'lib' directory. ${(e as Error).message}`,
+                  ...fnLogTrace,
+                );
               }
             }
           } else {

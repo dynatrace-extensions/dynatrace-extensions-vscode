@@ -16,7 +16,7 @@
 
 import * as vscode from "vscode";
 import { PanelData, WebviewMessage } from "../interfaces/webview";
-import { Logger, getLogger } from "../utils/logging";
+import * as logger from "../utils/logging";
 
 /**
  * Registered viewType (id) values for known webivew panels.
@@ -59,7 +59,7 @@ function getColumn() {
  * Handling of each data type individually should be done within the React components.
  */
 export class WebviewPanelManager implements vscode.WebviewPanelSerializer {
-  private readonly logger: Logger;
+  private readonly logTrace = ["webviews", "webviewPanel", this.constructor.name];
   private currentPanels: Map<REGISTERED_PANELS, vscode.WebviewPanel>;
   private disposables: Map<REGISTERED_PANELS, vscode.Disposable[]>;
 
@@ -69,7 +69,6 @@ export class WebviewPanelManager implements vscode.WebviewPanelSerializer {
    * @param extensionUri The URI of the directory containing the extension
    */
   constructor(extensionUri: vscode.Uri) {
-    this.logger = getLogger("webviews", "webviewPanel", this.constructor.name);
     this.currentPanels = new Map<REGISTERED_PANELS, vscode.WebviewPanel>();
     this.disposables = new Map<REGISTERED_PANELS, vscode.Disposable[]>();
     this.extensionUri = extensionUri;
@@ -174,14 +173,18 @@ export class WebviewPanelManager implements vscode.WebviewPanelSerializer {
    * @param data data to be sent to the webview
    */
   public render(viewType: REGISTERED_PANELS, title: string, data: PanelData) {
+    const fnLogTrace = [...this.logTrace, "render"];
     if (this.currentPanels.has(viewType)) {
       // If a webview panel of this view type exists, send it the new data
       const existingPanel = this.currentPanels.get(viewType);
       existingPanel.webview.postMessage({ messageType: "updateData", data }).then(
         () => {},
         err => {
-          this.logger.error(err);
-          this.logger.error(`Could not post message to webview. ${(err as Error).message}`);
+          logger.error(err, ...fnLogTrace);
+          logger.error(
+            `Could not post message to webview. ${(err as Error).message}`,
+            ...fnLogTrace,
+          );
         },
       );
     } else {
@@ -207,13 +210,17 @@ export class WebviewPanelManager implements vscode.WebviewPanelSerializer {
    * @param message
    */
   public postMessage(viewType: REGISTERED_PANELS, message: WebviewMessage) {
+    const fnLogTrace = [...this.logTrace, "postMessage"];
     if (this.currentPanels.has(viewType)) {
       const existingPanel = this.currentPanels.get(viewType);
       existingPanel.webview.postMessage(message).then(
         () => {},
         err => {
-          this.logger.error(err);
-          this.logger.error(`Could not post message to webview. ${(err as Error).message}`);
+          logger.error(err, ...fnLogTrace);
+          logger.error(
+            `Could not post message to webview. ${(err as Error).message}`,
+            ...fnLogTrace,
+          );
         },
       );
     }

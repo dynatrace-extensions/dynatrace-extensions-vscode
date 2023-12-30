@@ -17,11 +17,11 @@
 import { exec } from "child_process";
 import * as vscode from "vscode";
 import { CachedData } from "../../utils/dataCaching";
-import { getLogger } from "../../utils/logging";
+import * as logger from "../../utils/logging";
 import { REGISTERED_PANELS, WebviewPanelManager } from "../../webviews/webviewPanel";
 import { ValidationStatus } from "./selectorUtils";
 
-const logger = getLogger("codeLens", "utils", "wmiUtils");
+const logTrace = ["codeLens", "utils", "wmiUtils"];
 const ignoreProperties =
   'Select-Object -Property * -ExcludeProperty @("Scope", "Path", "Options", "Properties", ' +
   '"SystemProperties", "ClassPath", "Qualifiers", "Site", "Container", "PSComputerName", ' +
@@ -50,6 +50,7 @@ export async function runWMIQuery(
   cachedData: CachedData,
   updateCallback: (query: string, status: ValidationStatus, result?: WmiQueryResult) => void,
 ) {
+  const fnLogTrace = [...logTrace, "runWMIQuery"];
   updateCallback(query, { status: "loading" });
 
   // First check for cached data...
@@ -71,14 +72,14 @@ export async function runWMIQuery(
   } else {
     const command = `Get-WmiObject -Query "${query}" | ${ignoreProperties} | ConvertTo-Json`;
     const startTime = new Date();
-    logger.info(`Running command: ${command}`);
+    logger.info(`Running command: ${command}`, ...fnLogTrace);
 
     exec(
       command,
       { shell: "powershell.exe", maxBuffer: 10 * 1024 * 1024 },
       (error, stdout, stderr) => {
         if (error) {
-          logger.info(`error: ${error.message}`);
+          logger.error(error.message, ...fnLogTrace);
           oc.clear();
           oc.appendLine(error.message);
           oc.show();
@@ -97,7 +98,7 @@ export async function runWMIQuery(
           return;
         }
         if (stderr) {
-          logger.info(`stderr: ${stderr}`);
+          logger.error(`stderr: ${stderr}`, ...fnLogTrace);
           oc.clear();
           oc.appendLine(stderr);
           oc.show();

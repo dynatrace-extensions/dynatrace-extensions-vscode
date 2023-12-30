@@ -18,14 +18,14 @@ import * as vscode from "vscode";
 import { EnvironmentsTreeDataProvider } from "../treeViews/environmentsTreeView";
 import { showMessage } from "../utils/code";
 import { CachedDataConsumer } from "../utils/dataCaching";
-import { getLogger, Logger } from "../utils/logging";
+import * as logger from "../utils/logging";
 import { getBlockItemIndexAtLine, getParentBlocks } from "../utils/yamlParsing";
 
 /**
  * Implementation of a Code Lens Provider to allow opening Dynatrace screens in the browser.
  */
 export class ScreenLensProvider extends CachedDataConsumer implements vscode.CodeLensProvider {
-  private readonly logger: Logger;
+  private readonly logTrace = ["codeLens", "screenCodeLens", this.constructor.name];
   private codeLenses: vscode.CodeLens[];
   private regex: RegExp;
   private _onDidChangeCodeLenses: vscode.EventEmitter<void> = new vscode.EventEmitter<void>();
@@ -37,7 +37,6 @@ export class ScreenLensProvider extends CachedDataConsumer implements vscode.Cod
    */
   constructor(environmentsProvider: EnvironmentsTreeDataProvider) {
     super();
-    this.logger = getLogger("codeLens", "screenCodeLens", "ScreenLensProvider");
     this.codeLenses = [];
     this.regex = /^ {2}- ./gm;
     this.environments = environmentsProvider;
@@ -137,7 +136,7 @@ export class ScreenLensProvider extends CachedDataConsumer implements vscode.Cod
       }
       // Things can fail. We don't care.
     } catch (err) {
-      this.logger.warn(`Could not open screen: ${(err as Error).message}`);
+      logger.warn(`Could not open screen: ${(err as Error).message}`, ...this.logTrace);
       showMessage("warn", "Could not open screen.");
     }
   }

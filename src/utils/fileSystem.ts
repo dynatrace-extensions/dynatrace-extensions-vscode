@@ -41,9 +41,9 @@ import {
 } from "../interfaces/simulator";
 import { DynatraceEnvironmentData, ExtensionWorkspace } from "../interfaces/treeViewData";
 import { showMessage } from "./code";
-import { getLogger } from "./logging";
+import * as logger from "./logging";
 
-const logger = getLogger("utils", "fileSystem");
+const logTrace = ["utils", "fileSystem"];
 
 /**
  * Performs some basic clean-up of any old log files in the logs directory.
@@ -119,12 +119,13 @@ export function initGlobalStorage(context: vscode.ExtensionContext) {
  * @param context VSCode Extension Context
  */
 export function initWorkspaceStorage(context: vscode.ExtensionContext) {
+  const fnLogTrace = [...logTrace, "initWorkspaceStorage"];
   const storagePath = context.storageUri?.fsPath;
   if (!storagePath) {
-    logger.info("No workspace detected.");
+    logger.error("No workspace detected.", ...fnLogTrace);
     return;
   }
-  logger.info(`Workspace storage will be at: ${storagePath}`);
+  logger.info(`Workspace storage will be at: ${storagePath}`, ...fnLogTrace);
   if (!existsSync(storagePath)) {
     mkdirSync(storagePath);
   }
@@ -137,7 +138,11 @@ export function initWorkspaceStorage(context: vscode.ExtensionContext) {
  */
 export async function registerWorkspace(context: vscode.ExtensionContext) {
   if (!context.storageUri?.fsPath || !vscode.workspace.workspaceFolders) {
-    logger.info("No workspace to register. Check should be upstream.");
+    logger.error(
+      "No workspace to register. Check should be upstream.",
+      ...logTrace,
+      "registerWorkspace",
+    );
     return;
   }
   const workspacesJson = path.join(context.globalStorageUri.fsPath, "extensionWorkspaces.json");
@@ -379,7 +384,12 @@ export function cleanUpSimulatorLogs(context: vscode.ExtensionContext) {
             try {
               rmSync(summary.logPath);
             } catch (err) {
-              logger.info(`Error deleting file "${summary.logPath}": ${(err as Error).message}`);
+              logger.error(
+                `Error deleting file "${summary.logPath}": ${(err as Error).message}`,
+                ...logTrace,
+                // eslint-disable-next-line no-secrets/no-secrets
+                "cleanUpSimulatorLogs",
+              );
             }
           }
         });
@@ -478,7 +488,11 @@ export function uploadComponentCert(certPath: string, component: "OneAgent" | "A
       )) ||
     !existsSync(path.join(uploadDir, certFilename))
   ) {
-    logger.info(`Copying certificate file from ${certPath} to ${uploadDir}`);
+    logger.info(
+      `Copying certificate file from ${certPath} to ${uploadDir}`,
+      ...logTrace,
+      "uploadComponentCert",
+    );
     const [name, ext] = certFilename.split(".");
     certFilename = `${name}_${vscode.workspace.name ?? ""}.${ext}`;
     copyFileSync(certPath, path.join(uploadDir, certFilename));
