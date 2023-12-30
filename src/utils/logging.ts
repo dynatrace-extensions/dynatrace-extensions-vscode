@@ -49,6 +49,26 @@ export class Logger {
     writeFileSync(Logger.currentLogFile, "");
   }
 
+  private logToConsole(message: string, level: LogLevel) {
+    switch (level) {
+      case "DEBUG":
+        console.debug(message);
+        break;
+      case "INFO":
+        console.info(message);
+        break;
+      case "WARN":
+        console.warn(message);
+        break;
+      case "ERROR":
+        console.error(message);
+        break;
+      case "NONE":
+        console.log(message);
+        break;
+    }
+  }
+
   private logMessage(message: unknown, level: LogLevel) {
     const data = typeof message === "string" ? message : JSON.stringify(message, null, 2);
     const timestamp = new Date().toISOString();
@@ -57,6 +77,7 @@ export class Logger {
         ? `${timestamp} [${this.scope}] ${data}`
         : `${timestamp} [${level}][${this.scope}] ${data}`;
 
+    this.logToConsole(formattedMessage, level);
     Logger.outputChannel.appendLine(formattedMessage);
     writeFileSync(Logger.currentLogFile, `${formattedMessage}\n`, { flag: "a" });
     Logger.checkFileSize();
