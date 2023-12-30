@@ -26,6 +26,7 @@ import {
   getReferencedCardsMeta,
 } from "../utils/extensionParsing";
 import { getExtensionFilePath } from "../utils/fileSystem";
+import { Logger, getLogger } from "../utils/logging";
 import { isOidReadable, isTable, oidFromMetriValue, OidInformation } from "../utils/snmp";
 import {
   getBlockItemIndexAtLine,
@@ -62,15 +63,15 @@ import {
  */
 export class DiagnosticsProvider extends CachedDataProducer {
   private readonly collection: vscode.DiagnosticCollection;
-  private readonly context: vscode.ExtensionContext;
+  private readonly logger: Logger;
 
   /**
    * @param context VSCode Extension Context
    * @param cachedDataProvider Provider for cacheable data
    */
-  constructor(context: vscode.ExtensionContext, cachedData: CachedData) {
+  constructor(cachedData: CachedData) {
     super(cachedData);
-    this.context = context;
+    this.logger = getLogger("diagnostics", "diagnostics", "DiagnosticsProvider");
     this.collection = vscode.languages.createDiagnosticCollection("Dynatrace");
   }
 
@@ -128,7 +129,7 @@ export class DiagnosticsProvider extends CachedDataProducer {
       status = false;
     }
 
-    console.log(`Check - diagnostics collection clear? > ${String(status)}`);
+    this.logger.info(`Check - diagnostics collection clear? > ${String(status)}`);
     return status;
   }
 

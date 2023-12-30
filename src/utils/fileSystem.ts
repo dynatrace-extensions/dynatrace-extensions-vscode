@@ -41,6 +41,9 @@ import {
 } from "../interfaces/simulator";
 import { DynatraceEnvironmentData, ExtensionWorkspace } from "../interfaces/treeViewData";
 import { showMessage } from "./code";
+import { getLogger } from "./logging";
+
+const logger = getLogger("utils", "fileSystem");
 
 /**
  * Performs some basic clean-up of any old log files in the logs directory.
@@ -118,10 +121,10 @@ export function initGlobalStorage(context: vscode.ExtensionContext) {
 export function initWorkspaceStorage(context: vscode.ExtensionContext) {
   const storagePath = context.storageUri?.fsPath;
   if (!storagePath) {
-    console.log("No workspace detected.");
+    logger.info("No workspace detected.");
     return;
   }
-  console.log(`Workspace storage will be at: ${storagePath}`);
+  logger.info(`Workspace storage will be at: ${storagePath}`);
   if (!existsSync(storagePath)) {
     mkdirSync(storagePath);
   }
@@ -134,7 +137,7 @@ export function initWorkspaceStorage(context: vscode.ExtensionContext) {
  */
 export async function registerWorkspace(context: vscode.ExtensionContext) {
   if (!context.storageUri?.fsPath || !vscode.workspace.workspaceFolders) {
-    console.log("No workspace to register. Check should be upstream.");
+    logger.info("No workspace to register. Check should be upstream.");
     return;
   }
   const workspacesJson = path.join(context.globalStorageUri.fsPath, "extensionWorkspaces.json");
@@ -376,7 +379,7 @@ export function cleanUpSimulatorLogs(context: vscode.ExtensionContext) {
             try {
               rmSync(summary.logPath);
             } catch (err) {
-              console.log(`Error deleting file "${summary.logPath}": ${(err as Error).message}`);
+              logger.info(`Error deleting file "${summary.logPath}": ${(err as Error).message}`);
             }
           }
         });
@@ -475,7 +478,7 @@ export function uploadComponentCert(certPath: string, component: "OneAgent" | "A
       )) ||
     !existsSync(path.join(uploadDir, certFilename))
   ) {
-    console.log(`Copying certificate file from ${certPath} to ${uploadDir}`);
+    logger.info(`Copying certificate file from ${certPath} to ${uploadDir}`);
     const [name, ext] = certFilename.split(".");
     certFilename = `${name}_${vscode.workspace.name ?? ""}.${ext}`;
     copyFileSync(certPath, path.join(uploadDir, certFilename));

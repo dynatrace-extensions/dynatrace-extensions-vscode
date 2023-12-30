@@ -14,13 +14,17 @@
   limitations under the License.
  */
 
-import { existsSync, readFileSync } from "fs";
-import path = require("path");
-import { DatasourceName } from "../interfaces/extensionMeta";
-
 /********************************************************************************
  * UTILITIES FOR AGNOSTICALLY/GNERICALLY PARSING SCHEMAS
  ********************************************************************************/
+
+import { existsSync, readFileSync } from "fs";
+import path = require("path");
+import { DatasourceName } from "../interfaces/extensionMeta";
+import { getLogger } from "./logging";
+
+const logger = getLogger("utils", "schemaParsing");
+
 type UnknownSchemaProperties = Record<string, Record<string, unknown>>;
 interface SubPrecondition {
   type: "EQUALS" | "NULL" | "IN";
@@ -85,14 +89,14 @@ function meetsPreconditions(
         : [true, []];
     case "NOT":
       if (!precondition.precondition) {
-        console.log("Precondition is expected but not found. This is an error.");
+        logger.info("Precondition is expected but not found. This is an error.");
         return [true, []];
       }
       return meetsPreconditions(precondition.precondition, configObject, true);
     case "AND": {
       const andPreconditions = precondition.preconditions;
       if (!andPreconditions) {
-        console.log("Preconditions is expected but not found. This is an error");
+        logger.info("Preconditions is expected but not found. This is an error");
         return [true, []];
       }
       const andMeetsArray: [boolean, Record<string, unknown>[]][] = Array.from(
@@ -131,7 +135,7 @@ function meetsPreconditions(
     case "OR": {
       const orPreconditions = precondition.preconditions;
       if (!orPreconditions) {
-        console.log("Preconditions is expected but not found. This is an error");
+        logger.info("Preconditions is expected but not found. This is an error");
         return [true, []];
       }
       const orMeetsArray: [boolean, Record<string, unknown>[]][] = Array.from(
@@ -163,7 +167,7 @@ function meetsPreconditions(
       ];
     }
     default:
-      console.log(`Cannot process precondition of type "${precondition.type}". Unknown type.`);
+      logger.info(`Cannot process precondition of type "${precondition.type}". Unknown type.`);
       return [true, []];
   }
 }
@@ -278,7 +282,7 @@ function getValueForPrimitive(schema: MinimalSchema, propertyKey: string) {
       return listValue;
     }
     default:
-      console.log(`Cannot process property of type "${String(property.type)}". Unkown primitive.`);
+      logger.info(`Cannot process property of type "${String(property.type)}". Unkown primitive.`);
       return null;
   }
 }

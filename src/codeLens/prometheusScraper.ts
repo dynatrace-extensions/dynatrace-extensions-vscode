@@ -19,7 +19,9 @@ import axios from "axios";
 import * as vscode from "vscode";
 import { showMessage } from "../utils/code";
 import { CachedData, CachedDataProducer } from "../utils/dataCaching";
+import { getLogger } from "../utils/logging";
 
+const logger = getLogger("codeLens", "prometheusScraper");
 export type PromData = Record<string, PromDetails>;
 type PromDetails = {
   type?: string;
@@ -314,12 +316,12 @@ export class PrometheusCodeLensProvider
             this.processPrometheusData(data);
             return true;
           } catch (err) {
-            console.log(err);
+            logger.info(err);
             return false;
           }
       }
     } catch (err) {
-      console.log(err);
+      logger.info(err);
       return false;
     }
   }

@@ -36,8 +36,11 @@ import { checkDtSdkPresent } from "../utils/conditionCheckers";
 import { sign } from "../utils/cryptography";
 import { normalizeExtensionVersion, incrementExtensionVersion } from "../utils/extensionParsing";
 import { getExtensionFilePath, resolveRealPath } from "../utils/fileSystem";
+import { getLogger } from "../utils/logging";
 import { getPythonVenvOpts } from "../utils/otherExtensions";
 import { runCommand } from "../utils/subprocesses";
+
+const logger = getLogger("commandPalette", "buildExtension");
 
 type FastModeOptions = {
   status: FastModeStatus;
@@ -81,7 +84,7 @@ async function preBuildTasks(
     try {
       unlinkSync(path.join(extensionDir, file));
     } catch {
-      console.log(`Couldn't delete file ${file}`);
+      logger.info(`Couldn't delete file ${file}`);
     }
   });
 
@@ -128,13 +131,13 @@ function assembleStandard(
   innerZip.addLocalFolder(extensionDir);
   const innerZipPath = path.resolve(workspaceStorage, "extension.zip");
   innerZip.writeZip(innerZipPath);
-  console.log(`Built the inner archive: ${innerZipPath}`);
+  logger.info(`Built the inner archive: ${innerZipPath}`);
 
   // Sign the inner .zip archive and write the signature file
   const signature = sign(innerZipPath, devCertKeyPath);
   const sigatureFilePath = path.resolve(workspaceStorage, "extension.zip.sig");
   writeFileSync(sigatureFilePath, signature);
-  console.log(`Wrote the signature file: ${sigatureFilePath}`);
+  logger.info(`Wrote the signature file: ${sigatureFilePath}`);
 
   // Build the outer .zip that includes the inner .zip and the signature file
   const outerZip = new AdmZip();
@@ -142,7 +145,7 @@ function assembleStandard(
   outerZip.addLocalFile(innerZipPath);
   outerZip.addLocalFile(sigatureFilePath);
   outerZip.writeZip(outerZipPath);
-  console.log(`Wrote initial outer zip at: ${outerZipPath}`);
+  logger.info(`Wrote initial outer zip at: ${outerZipPath}`);
 }
 
 /**
@@ -469,7 +472,7 @@ export async function buildExtension(
               try {
                 rmSync(libDir, { recursive: true, force: true });
               } catch (e) {
-                console.log("Couldn't clean up `lib` directory.", e.message);
+                logger.info(`Couldn't clean up 'lib' directory. ${(e as Error).message}`);
               }
             }
           } else {

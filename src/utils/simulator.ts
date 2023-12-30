@@ -14,7 +14,9 @@
   limitations under the License.
  */
 
-// UTILS Related to simulating extensions
+/********************************************************************************
+ * UTILITIES RELATED TO SIMULATING EXTENSIONS
+ ********************************************************************************/
 
 import * as vscode from "vscode";
 import {
@@ -25,6 +27,9 @@ import {
   SimulationLocation,
 } from "../interfaces/simulator";
 import { getSimulatorTargets } from "./fileSystem";
+import { getLogger } from "./logging";
+
+const logger = getLogger("utils", "simulator");
 
 /**
  * Gets the default directory where the specified datasource .exe is located.
@@ -139,7 +144,7 @@ export function loadDefaultSimulationConfig(context: vscode.ExtensionContext): S
     // Target name is required
     const targetName = config.get<string>("remoteTargetName");
     if (!targetName || targetName === "") {
-      console.log(
+      logger.info(
         "Invalid default simulator configuration: No target name specified for remote simulation",
       );
       return fallbackValue;
@@ -147,7 +152,7 @@ export function loadDefaultSimulationConfig(context: vscode.ExtensionContext): S
     // Name must match a registered target
     const registeredTargets = getSimulatorTargets(context).filter(t => t.name === targetName);
     if (registeredTargets.length === 0) {
-      console.log(
+      logger.info(
         `Invalid default simulator configuration: No registered target exists by name "${targetName}"`,
       );
       return fallbackValue;
@@ -155,7 +160,7 @@ export function loadDefaultSimulationConfig(context: vscode.ExtensionContext): S
     // Target specs must match the EEC Type
     target = registeredTargets[0];
     if (target.eecType !== defaultEecType) {
-      console.log(
+      logger.info(
         `Invalid default simulator configuration: Target "${targetName}" is not registered with EEC Type of ${defaultEecType}`,
       );
       return fallbackValue;

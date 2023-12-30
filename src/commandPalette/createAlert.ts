@@ -23,6 +23,9 @@ import { showMessage } from "../utils/code";
 import { CachedData } from "../utils/dataCaching";
 import { getAllMetricKeys, getEntityForMetric } from "../utils/extensionParsing";
 import { createUniqueFileName, getExtensionFilePath } from "../utils/fileSystem";
+import { getLogger } from "../utils/logging";
+
+const logger = getLogger("commandPalette", "createAlert");
 
 export async function createAlert(cachedData: CachedData) {
   const extensionFile = getExtensionFilePath();
@@ -149,7 +152,7 @@ export async function createAlert(cachedData: CachedData) {
 
   const alertFile = path.resolve(alertsDir, fileName);
   const alertFileContent = JSON.stringify(alertTemplate, null, 2);
-  console.log(`Creating alert file ${alertFile}`);
+  logger.info(`Creating alert file ${alertFile}`);
   writeFileSync(alertFile, alertFileContent);
 
   // Add the alert to the extension.yaml file

@@ -42,7 +42,9 @@ import {
 } from "../interfaces/extensionMeta";
 import { showMessage } from "../utils/code";
 import { CachedData } from "../utils/dataCaching";
+import { getLogger } from "../utils/logging";
 
+const logger = getLogger("commandPalette", "convertJMXExtension");
 const OPTION_LOCAL_FILE: vscode.QuickPickItem = {
   label: "Locally",
   description: "Browse the local filesystem for a .json or .zip file",
@@ -210,7 +212,7 @@ function createMetricKeyMap(v1Metrics: MetricDto[], extensionName: string) {
  */
 function extractQueryString(v1MetricSource: SourceDto): string {
   if (!v1MetricSource.domain) {
-    console.log("Error processing metric. No domain found.");
+    logger.info("Error processing metric. No domain found.");
     return "";
   }
 

@@ -29,9 +29,12 @@ import {
   registerWorkspace,
   writeGititnore,
 } from "../utils/fileSystem";
+import { getLogger } from "../utils/logging";
 import { getPythonVenvOpts } from "../utils/otherExtensions";
 import { runCommand } from "../utils/subprocesses";
 import { loadSchemas } from "./loadSchemas";
+
+const logger = getLogger("commandPalette", "initWorkspace");
 
 const PROJECT_TYPES = {
   defaultExtension: {
@@ -162,7 +165,7 @@ async function existingExtensionSetup(dt: Dynatrace, rootPath: string) {
         extensionZip
           .getEntries()
           .filter(e => {
-            console.log(e.name);
+            logger.info(e.name);
             return e.name.startsWith(moduleName);
           })
           .forEach(e => {
@@ -173,7 +176,7 @@ async function existingExtensionSetup(dt: Dynatrace, rootPath: string) {
       await writeGititnore(true);
     }
   } catch (err) {
-    console.log(err);
+    logger.info(err);
     showMessage(
       "warn",
       "Not all files were extracted successfully. Manual edits are still needed.",
@@ -264,7 +267,7 @@ export async function initWorkspace(
           .getConfiguration()
           .update("yaml.schemas", { [mainSchema]: "extension.yaml" })
           .then(undefined, () => {
-            console.log("Could not update configuration yaml.schemas");
+            logger.info("Could not update configuration yaml.schemas");
           });
       }
 

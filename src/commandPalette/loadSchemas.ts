@@ -21,6 +21,9 @@ import * as vscode from "vscode";
 import { Dynatrace } from "../dynatrace-api/dynatrace";
 import { showMessage } from "../utils/code";
 import { getExtensionFilePath } from "../utils/fileSystem";
+import { getLogger } from "../utils/logging";
+
+const logger = getLogger("commandPalette", "loadSchemas");
 
 /**
  * Downloads (at the given location) all schema files of a given version.
@@ -140,10 +143,10 @@ export async function loadSchemas(
     .getConfiguration()
     .update("yaml.schemas", { [mainSchema]: "extension.yaml" })
     .then(undefined, () => {
-      console.log("Could not update configuraton yaml.schema");
+      logger.info("Could not update configuraton yaml.schema");
     });
   context.workspaceState.update("schemaVersion", version).then(undefined, () => {
-    console.log("Could not update workspace state for schemaVersion");
+    logger.info("Could not update workspace state for schemaVersion");
   });
 
   try {

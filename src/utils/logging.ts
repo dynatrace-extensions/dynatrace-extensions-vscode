@@ -26,10 +26,10 @@ export class Logger {
   private static currentLogFile: string;
   private static outputChannel: vscode.OutputChannel;
   private static context: vscode.ExtensionContext;
-  private readonly scope: string;
+  private readonly scopes: string[];
 
-  constructor(scope: string) {
-    this.scope = scope;
+  constructor(scopes: string[]) {
+    this.scopes = scopes;
   }
 
   private static checkFileSize() {
@@ -69,13 +69,14 @@ export class Logger {
     }
   }
 
-  private logMessage(message: unknown, level: LogLevel) {
+  private logMessage(message: unknown, level: LogLevel, ...scopes: string[]) {
     const data = typeof message === "string" ? message : JSON.stringify(message, null, 2);
     const timestamp = new Date().toISOString();
+    const scope = [...this.scopes, ...scopes].join(".");
     const formattedMessage =
       level === "NONE"
-        ? `${timestamp} [${this.scope}] ${data}`
-        : `${timestamp} [${level}][${this.scope}] ${data}`;
+        ? `${timestamp} [${scope}] ${data}`
+        : `${timestamp} [${level}][${scope}] ${data}`;
 
     this.logToConsole(formattedMessage, level);
     Logger.outputChannel.appendLine(formattedMessage);
@@ -98,26 +99,30 @@ export class Logger {
     Logger.logLevel = logLevel;
   }
 
-  public log(message: unknown) {
-    this.logMessage(message, "NONE");
+  public log(message: unknown, ...scopes: string[]) {
+    this.logMessage(message, "NONE", ...scopes);
   }
 
-  public debug(message: unknown) {
+  public debug(message: unknown, ...scopes: string[]) {
     if (["INFO", "WARN", "ERROR"].includes(Logger.logLevel)) return;
-    this.logMessage(message, "DEBUG");
+    this.logMessage(message, "DEBUG", ...scopes);
   }
 
-  public info(message: unknown) {
+  public info(message: unknown, ...scopes: string[]) {
     if (["WARN", "ERROR"].includes(Logger.logLevel)) return;
-    this.logMessage(message, "INFO");
+    this.logMessage(message, "INFO", ...scopes);
   }
 
-  public warn(message: unknown) {
+  public warn(message: unknown, ...scopes: string[]) {
     if (Logger.logLevel === "ERROR") return;
-    this.logMessage(message, "WARN");
+    this.logMessage(message, "WARN", ...scopes);
   }
 
-  public error(message: unknown) {
-    this.logMessage(message, "ERROR");
+  public error(message: unknown, ...scopes: string[]) {
+    this.logMessage(message, "ERROR", ...scopes);
   }
+}
+
+export function getLogger(...scopes: string[]): Logger {
+  return new Logger(scopes);
 }

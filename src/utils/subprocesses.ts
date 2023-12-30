@@ -20,6 +20,9 @@
 
 import { exec, ExecOptions } from "child_process";
 import * as vscode from "vscode";
+import { getLogger } from "./logging";
+
+const logger = getLogger("utils", "subprocesses");
 
 /**
  * Executes the given command in a child process and wraps the whole thing in a Promise.
@@ -74,7 +77,7 @@ export function runCommand(
         }
         reject(Error(shortMessage));
       }
-      console.log(stdout);
+      logger.info(stdout);
       return resolve(code);
     });
   });

@@ -16,6 +16,7 @@
 
 import * as vscode from "vscode";
 import { PanelData, WebviewMessage } from "../interfaces/webview";
+import { Logger, getLogger } from "../utils/logging";
 
 /**
  * Registered viewType (id) values for known webivew panels.
@@ -58,6 +59,7 @@ function getColumn() {
  * Handling of each data type individually should be done within the React components.
  */
 export class WebviewPanelManager implements vscode.WebviewPanelSerializer {
+  private readonly logger: Logger;
   private currentPanels: Map<REGISTERED_PANELS, vscode.WebviewPanel>;
   private disposables: Map<REGISTERED_PANELS, vscode.Disposable[]>;
 
@@ -67,6 +69,7 @@ export class WebviewPanelManager implements vscode.WebviewPanelSerializer {
    * @param extensionUri The URI of the directory containing the extension
    */
   constructor(extensionUri: vscode.Uri) {
+    this.logger = getLogger("webviews", "webviewPanel", this.constructor.name);
     this.currentPanels = new Map<REGISTERED_PANELS, vscode.WebviewPanel>();
     this.disposables = new Map<REGISTERED_PANELS, vscode.Disposable[]>();
     this.extensionUri = extensionUri;
@@ -177,8 +180,8 @@ export class WebviewPanelManager implements vscode.WebviewPanelSerializer {
       existingPanel.webview.postMessage({ messageType: "updateData", data }).then(
         () => {},
         err => {
-          console.log(err);
-          console.log(`Could not post message to webview. ${(err as Error).message}`);
+          this.logger.error(err);
+          this.logger.error(`Could not post message to webview. ${(err as Error).message}`);
         },
       );
     } else {
@@ -209,8 +212,8 @@ export class WebviewPanelManager implements vscode.WebviewPanelSerializer {
       existingPanel.webview.postMessage(message).then(
         () => {},
         err => {
-          console.log(err);
-          console.log(`Could not post message to webview. ${(err as Error).message}`);
+          this.logger.error(err);
+          this.logger.error(`Could not post message to webview. ${(err as Error).message}`);
         },
       );
     }

@@ -19,6 +19,9 @@ import path = require("path");
 import { md, pki, random, util } from "node-forge";
 import * as vscode from "vscode";
 import { showMessage } from "../utils/code";
+import { getLogger } from "../utils/logging";
+
+const logger = getLogger("commandPalette", "generateCertificates");
 
 /**
  * Generates a random serial number, valid for X.509 Certificates.
@@ -94,7 +97,7 @@ export async function generateCerts(context: vscode.ExtensionContext): Promise<b
         caKey = pki.rsa.generateKeyPair({ bits: 4096, e: 0x10001 });
       } catch (err) {
         showMessage("error", "Error generating the RSA key pair for the CA certificate");
-        console.log((err as Error).message);
+        logger.info((err as Error).message);
         return false;
       }
 
@@ -136,10 +139,10 @@ export async function generateCerts(context: vscode.ExtensionContext): Promise<b
           },
         ]);
         caCert.sign(caKey.privateKey, md.sha256.create());
-        console.log("CA Cert created successfully");
+        logger.info("CA Cert created successfully");
       } catch (err) {
         showMessage("error", "Error generating the CA certificate");
-        console.log((err as Error).message);
+        logger.info((err as Error).message);
         return false;
       }
 
@@ -150,7 +153,7 @@ export async function generateCerts(context: vscode.ExtensionContext): Promise<b
         devKey = pki.rsa.generateKeyPair({ bits: 4096, e: 0x10001 });
       } catch (err) {
         showMessage("error", "Error generating the RSA key pair for the Developer certificate");
-        console.log((err as Error).message);
+        logger.info((err as Error).message);
         return false;
       }
 
@@ -191,10 +194,10 @@ export async function generateCerts(context: vscode.ExtensionContext): Promise<b
           },
         ]);
         devCert.sign(caKey.privateKey, md.sha256.create());
-        console.log("DEV Cert created successfully");
+        logger.info("DEV Cert created successfully");
       } catch (err) {
         showMessage("error", "Error generating the Developer certificate");
-        console.log((err as Error).message);
+        logger.info((err as Error).message);
         return false;
       }
 
@@ -214,7 +217,7 @@ export async function generateCerts(context: vscode.ExtensionContext): Promise<b
         path.join(certsDir, "developer.pem"),
         pki.certificateToPem(devCert) + pki.privateKeyToPem(devKey.privateKey),
       );
-      console.log(`Wrote all certificates at location ${certsDir}`);
+      logger.info(`Wrote all certificates at location ${certsDir}`);
 
       return true;
     },
@@ -235,7 +238,7 @@ export async function generateCerts(context: vscode.ExtensionContext): Promise<b
         useGlobal === "Yes" ? true : undefined,
       )
       .then(undefined, () => {
-        console.log("Could not update setting developerCertkeyLocation");
+        logger.info("Could not update setting developerCertkeyLocation");
       });
     vscode.workspace
       .getConfiguration("dynatraceExtensions", null)
@@ -245,7 +248,7 @@ export async function generateCerts(context: vscode.ExtensionContext): Promise<b
         useGlobal === "Yes" ? true : undefined,
       )
       .then(undefined, () => {
-        console.log("Could not update setting rootOrCaCertificateLocation");
+        logger.info("Could not update setting rootOrCaCertificateLocation");
       });
 
     // Link command - Upload Certificates
