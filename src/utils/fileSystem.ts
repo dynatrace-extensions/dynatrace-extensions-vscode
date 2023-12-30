@@ -43,6 +43,21 @@ import { DynatraceEnvironmentData, ExtensionWorkspace } from "../interfaces/tree
 import { showMessage } from "./code";
 
 /**
+ * Performs some basic clean-up of any old log files in the logs directory.
+ * @param logsDir path to the logs directory
+ */
+export function cleanUpLogs(logsDir: string, count: number) {
+  // Ensure we have at most 10 files including the current one
+  const logFiles = readdirSync(logsDir).sort();
+  while (logFiles.length > count) {
+    const fileToDelete = logFiles.pop();
+    if (fileToDelete) {
+      rmSync(path.join(logsDir, fileToDelete));
+    }
+  }
+}
+
+/**
  * Initializes the global storage path for the VS Code extension.
  * Given that VS Code storage paths may not exist yet, this function creates it if needed.
  * Also creates empty JSON files where all initialized repos' and tenants' metadata should be stored.
@@ -55,6 +70,7 @@ export function initGlobalStorage(context: vscode.ExtensionContext) {
   const idTokenPath = path.join(globalStoragePath, "idToken.txt");
   const targetsJson = path.join(globalStoragePath, "targets.json");
   const summariesJson = path.join(globalStoragePath, "summaries.json");
+  const logsDir = path.join(globalStoragePath, "logs");
 
   // Create global storage folder if needed
   if (!existsSync(globalStoragePath)) {
@@ -85,6 +101,13 @@ export function initGlobalStorage(context: vscode.ExtensionContext) {
   if (!existsSync(summariesJson)) {
     writeFileSync(summariesJson, "[]");
   }
+
+  // Create logs folder if needed
+  if (!existsSync(logsDir)) {
+    mkdirSync(logsDir, { recursive: true });
+  }
+
+  cleanUpLogs(logsDir, 9);
 }
 
 /**

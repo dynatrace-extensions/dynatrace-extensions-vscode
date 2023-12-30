@@ -72,6 +72,7 @@ import {
   initWorkspaceStorage,
   migrateFromLegacyExtension,
 } from "./utils/fileSystem";
+import { Logger } from "./utils/logging";
 import { REGISTERED_PANELS, WebviewPanelManager } from "./webviews/webviewPanel";
 
 let simulatorManager: SimulatorManager;
@@ -595,9 +596,15 @@ function registerFeatureSwitchCommands() {
  * @param context VSCode Extension Context
  */
 export async function activate(context: vscode.ExtensionContext) {
-  console.log("DYNATRACE EXTENSIONS - ACTIVATED!");
-  // Initialize global storage
+  // Initialize global storage and logging
   initGlobalStorage(context);
+  Logger.initialize(context);
+  const logger = new Logger("extension.activate");
+  logger.info(
+    `Dynatrace Extensions is activating. Version ${
+      (context.extension.packageJSON as { version: string }).version
+    }`,
+  );
 
   // Check presence of legacy extension
   const legacyExtension = vscode.extensions.getExtension(
@@ -897,4 +904,6 @@ export function deactivate() {
 
   // Kill any simulator processes left running
   simulatorManager.stop();
+
+  Logger.dispose();
 }
