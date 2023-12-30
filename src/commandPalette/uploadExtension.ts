@@ -22,7 +22,8 @@ import * as yaml from "yaml";
 import { Dynatrace } from "../dynatrace-api/dynatrace";
 import { DynatraceAPIError } from "../dynatrace-api/errors";
 import { ExtensionStub } from "../interfaces/extensionMeta";
-import { loopSafeWait, showMessage } from "../utils/code";
+import { loopSafeWait } from "../utils/code";
+import { notify } from "../utils/logging";
 
 /**
  * Uploads the latest avaialable extension 2.0 package from the `dist` folder of
@@ -73,7 +74,7 @@ export async function uploadExtension(dt: Dynatrace, tenantUrl: string) {
       "No",
     );
     if (choice !== "Yes") {
-      showMessage("error", "Operation cancelled.");
+      notify("ERROR", "Operation cancelled.");
       return;
     }
 
@@ -81,7 +82,7 @@ export async function uploadExtension(dt: Dynatrace, tenantUrl: string) {
     const success = await dt.extensionsV2
       .deleteVersion(extensionName, existingVersions[0].version)
       .then(() => {
-        showMessage("info", "Oldest version removed successfully");
+        notify("INFO", "Oldest version removed successfully");
         return true;
       })
       .catch(async () => {
@@ -104,11 +105,11 @@ export async function uploadExtension(dt: Dynatrace, tenantUrl: string) {
               dt.extensionsV2
                 .deleteVersion(extensionName, version)
                 .then(() => {
-                  showMessage("info", `Version ${version} removed successfully`);
+                  notify("INFO", `Version ${version} removed successfully`);
                   return true;
                 })
                 .catch(err => {
-                  showMessage("error", (err as Error).message);
+                  notify("ERROR", (err as Error).message);
                   return false;
                 });
             }
@@ -170,7 +171,7 @@ export async function uploadExtension(dt: Dynatrace, tenantUrl: string) {
       extensionVersion,
     );
   } else {
-    showMessage("error", status);
-    showMessage("error", "Extension upload failed.");
+    notify("ERROR", status);
+    notify("ERROR", "Extension upload failed.");
   }
 }

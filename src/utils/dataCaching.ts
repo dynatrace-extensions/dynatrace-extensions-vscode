@@ -30,7 +30,7 @@ import { WmiQueryResult } from "../codeLens/utils/wmiUtils";
 import { Entity, EntityType } from "../dynatrace-api/interfaces/monitoredEntities";
 import { ExtensionStub } from "../interfaces/extensionMeta";
 import { EnvironmentsTreeDataProvider } from "../treeViews/environmentsTreeView";
-import { loopSafeWait } from "./code";
+import { loopSafeWait } from "./logging";
 import { getExtensionFilePath, getSnmpMibFiles } from "./fileSystem";
 import * as logger from "./logging";
 import { fetchOID, MibModuleStore, OidInformation, parseMibFile } from "./snmp";

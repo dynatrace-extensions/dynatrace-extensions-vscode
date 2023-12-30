@@ -18,7 +18,6 @@ import { existsSync, mkdirSync, writeFileSync } from "fs";
 import path = require("path");
 import { md, pki, random, util } from "node-forge";
 import * as vscode from "vscode";
-import { showMessage } from "../utils/code";
 import * as logger from "../utils/logging";
 
 const logTrace = ["commandPalette", "generateCertificates"];
@@ -97,7 +96,7 @@ export async function generateCerts(context: vscode.ExtensionContext): Promise<b
       try {
         caKey = pki.rsa.generateKeyPair({ bits: 4096, e: 0x10001 });
       } catch (err) {
-        showMessage("error", "Error generating the RSA key pair for the CA certificate");
+        logger.notify("ERROR", "Error generating the RSA key pair for the CA certificate");
         logger.error((err as Error).message, ...fnLogTrace);
         return false;
       }
@@ -142,7 +141,7 @@ export async function generateCerts(context: vscode.ExtensionContext): Promise<b
         caCert.sign(caKey.privateKey, md.sha256.create());
         logger.info("CA Cert created successfully", ...fnLogTrace);
       } catch (err) {
-        showMessage("error", "Error generating the CA certificate");
+        logger.notify("ERROR", "Error generating the CA certificate");
         logger.error((err as Error).message, ...fnLogTrace);
         return false;
       }
@@ -153,7 +152,7 @@ export async function generateCerts(context: vscode.ExtensionContext): Promise<b
       try {
         devKey = pki.rsa.generateKeyPair({ bits: 4096, e: 0x10001 });
       } catch (err) {
-        showMessage("error", "Error generating the RSA key pair for the Developer certificate");
+        logger.notify("ERROR", "Error generating the RSA key pair for the Developer certificate");
         logger.error((err as Error).message, ...fnLogTrace);
         return false;
       }
@@ -197,7 +196,7 @@ export async function generateCerts(context: vscode.ExtensionContext): Promise<b
         devCert.sign(caKey.privateKey, md.sha256.create());
         logger.info("DEV Cert created successfully", ...fnLogTrace);
       } catch (err) {
-        showMessage("error", "Error generating the Developer certificate");
+        logger.notify("ERROR", "Error generating the Developer certificate");
         logger.error((err as Error).message, ...fnLogTrace);
         return false;
       }

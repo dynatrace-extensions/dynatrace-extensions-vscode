@@ -31,7 +31,7 @@ import * as vscode from "vscode";
 import { Dynatrace } from "../dynatrace-api/dynatrace";
 import { DynatraceAPIError } from "../dynatrace-api/errors";
 import { FastModeStatus } from "../statusBar/fastMode";
-import { loopSafeWait, showMessage } from "../utils/code";
+import { loopSafeWait } from "../utils/code";
 import { checkDtSdkPresent } from "../utils/conditionCheckers";
 import { sign } from "../utils/cryptography";
 import { normalizeExtensionVersion, incrementExtensionVersion } from "../utils/extensionParsing";
@@ -92,7 +92,7 @@ async function preBuildTasks(
   if (forceIncrement) {
     // Always increment the version
     writeFileSync(extensionFile, extensionContent.replace(versionRegex, `version: ${nextVersion}`));
-    showMessage("info", "Extension version automatically increased.");
+    logger.notify("INFO", "Extension version automatically increased.");
     return nextVersion;
   } else if (dt) {
     // Increment the version if there is clash on the tenant
@@ -105,7 +105,7 @@ async function preBuildTasks(
         extensionFile,
         extensionContent.replace(versionRegex, `version: ${nextVersion}`),
       );
-      showMessage("info", "Extension version automatically increased.");
+      logger.notify("INFO", "Extension version automatically increased.");
       return nextVersion;
     }
   }
@@ -217,7 +217,7 @@ async function validateExtension(
       .upload(readFileSync(outerZipPath), true)
       .then(() => true)
       .catch(async (err: DynatraceAPIError) => {
-        showMessage("error", "Extension validation failed.");
+        logger.notify("ERROR", "Extension validation failed.");
         oc.replace(JSON.stringify(err.errorParams, null, 2));
         oc.show();
         return false;
@@ -394,7 +394,7 @@ export async function buildExtension(
     },
     async (progress, cancelToken) => {
       cancelToken.onCancellationRequested(async () => {
-        showMessage("warn", "Operation cancelled by user.");
+        logger.notify("WARN", "Operation cancelled by user.");
       });
 
       // Handle unsaved changes
@@ -404,9 +404,9 @@ export async function buildExtension(
       if (extensionDocument?.isDirty) {
         const saved = await extensionDocument.save();
         if (saved) {
-          showMessage("info", "Document saved automatically.");
+          logger.notify("INFO", "Document saved automatically.");
         } else {
-          showMessage("error", "Failed to save extension manifest. Build command cancelled.");
+          logger.notify("ERROR", "Failed to save extension manifest. Build command cancelled.");
           return false;
         }
       }
@@ -438,7 +438,7 @@ export async function buildExtension(
               dt,
             );
       } catch (err: unknown) {
-        showMessage("error", `Error during pre-build phase: ${(err as Error).message}`);
+        logger.notify("ERROR", `Error during pre-build phase: ${(err as Error).message}`);
         return false;
       }
 
@@ -482,14 +482,14 @@ export async function buildExtension(
               }
             }
           } else {
-            showMessage("error", "Cannot build Python extension - dt-sdk package not available");
+            logger.notify("ERROR", "Cannot build Python extension - dt-sdk package not available");
             return false;
           }
         } else {
           assembleStandard(workspaceStorage, extensionDir, zipFilename, devCertKey);
         }
       } catch (err: unknown) {
-        showMessage("error", `Error during archiving & signing: ${(err as Error).message}`);
+        logger.notify("ERROR", `Error during archiving & signing: ${(err as Error).message}`);
         return false;
       }
 

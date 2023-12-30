@@ -40,7 +40,7 @@ import {
   RemoteTarget,
 } from "../interfaces/simulator";
 import { DynatraceEnvironmentData, ExtensionWorkspace } from "../interfaces/treeViewData";
-import { showMessage } from "./code";
+import { notify } from "./logging";
 import * as logger from "./logging";
 
 const logTrace = ["utils", "fileSystem"];
@@ -845,7 +845,7 @@ export async function migrateFromLegacyExtension(context: vscode.ExtensionContex
         });
     },
   );
-  showMessage("info", "Migration from legacy version complete.");
+  notify("INFO", "Migration from legacy version complete.");
 }
 
 /**

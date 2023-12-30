@@ -16,7 +16,6 @@
 
 import * as vscode from "vscode";
 import { EnvironmentsTreeDataProvider } from "../treeViews/environmentsTreeView";
-import { showMessage } from "../utils/code";
 import { CachedDataConsumer } from "../utils/dataCaching";
 import * as logger from "../utils/logging";
 import { getBlockItemIndexAtLine, getParentBlocks } from "../utils/yamlParsing";
@@ -130,14 +129,14 @@ export class ScreenLensProvider extends CachedDataConsumer implements vscode.Cod
             const entityId = entities[0].entityId;
             await vscode.env.openExternal(vscode.Uri.parse(`${baseUrl}/ui/entity/${entityId}`));
           } else {
-            showMessage("error", "No entities of this type were found in your tenant.");
+            logger.notify("ERROR", "No entities of this type were found in your tenant.");
           }
         }
       }
       // Things can fail. We don't care.
     } catch (err) {
       logger.warn(`Could not open screen: ${(err as Error).message}`, ...this.logTrace);
-      showMessage("warn", "Could not open screen.");
+      logger.notify("WARN", "Could not open screen.");
     }
   }
 }

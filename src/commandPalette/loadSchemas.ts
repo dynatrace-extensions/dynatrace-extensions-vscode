@@ -19,7 +19,6 @@ import * as path from "path";
 import axios from "axios";
 import * as vscode from "vscode";
 import { Dynatrace } from "../dynatrace-api/dynatrace";
-import { showMessage } from "../utils/code";
 import { getExtensionFilePath } from "../utils/fileSystem";
 import * as logger from "../utils/logging";
 
@@ -45,7 +44,7 @@ function downloadSchemaFiles(location: string, version: string, dt: Dynatrace) {
         return "cancelled";
       }
       const schemaFiles = await dt.extensionsV2.listSchemaFiles(version).catch(async err => {
-        showMessage("error", (err as Error).message);
+        logger.notify("ERROR", (err as Error).message);
         return [];
       });
 
@@ -80,7 +79,7 @@ function downloadSchemaFiles(location: string, version: string, dt: Dynatrace) {
           }),
         )
         .catch(async err => {
-          showMessage("error", (err as Error).message);
+          logger.notify("ERROR", (err as Error).message);
         });
     },
   );
@@ -100,11 +99,11 @@ export async function loadSchemas(
 ): Promise<boolean> {
   // Fetch available schema versions from cluster
   const availableVersions = await dt.extensionsV2.listSchemaVersions().catch(async err => {
-    showMessage("error", (err as Error).message);
+    logger.notify("ERROR", (err as Error).message);
     return [];
   });
   if (availableVersions.length === 0) {
-    showMessage("error", "No schemas available. Operation cancelled.");
+    logger.notify("ERROR", "No schemas available. Operation cancelled.");
     return false;
   }
 
@@ -114,7 +113,7 @@ export async function loadSchemas(
     title: "Extension workspace: Load Schemas",
   });
   if (!version) {
-    showMessage("error", "No schema was selected. Operation cancelled.");
+    logger.notify("ERROR", "No schema was selected. Operation cancelled.");
     return false;
   }
   const location = path.join(context.globalStorageUri.fsPath, version);
@@ -133,7 +132,7 @@ export async function loadSchemas(
     }
   }
   if (cancelled === "cancelled") {
-    showMessage("warn", "Operation cancelled by user");
+    logger.notify("WARN", "Operation cancelled by user");
     return false;
   }
 
@@ -163,11 +162,14 @@ export async function loadSchemas(
       );
     }
   } catch (err) {
-    showMessage("error", "Extension YAML was not updated. Schema loading only partially complete.");
-    showMessage("error", (err as Error).message);
+    logger.notify(
+      "ERROR",
+      "Extension YAML was not updated. Schema loading only partially complete.",
+    );
+    logger.notify("ERROR", (err as Error).message);
     return false;
   }
 
-  showMessage("info", "Schema loading complete.");
+  logger.notify("INFO", "Schema loading complete.");
   return true;
 }

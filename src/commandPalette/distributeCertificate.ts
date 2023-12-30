@@ -18,9 +18,9 @@ import { readFileSync } from "fs";
 import * as vscode from "vscode";
 import { Dynatrace } from "../dynatrace-api/dynatrace";
 import { DynatraceAPIError } from "../dynatrace-api/errors";
-import { showMessage } from "../utils/code";
 import { checkActiveGateInstalled, checkOneAgentInstalled } from "../utils/conditionCheckers";
 import { resolveRealPath, uploadComponentCert } from "../utils/fileSystem";
+import { notify } from "../utils/logging";
 
 /**
  * Delivers the "Distribute certificate" command functionality.
@@ -61,10 +61,10 @@ export async function distributeCertificate(context: vscode.ExtensionContext, dt
     await dt.credentialVault
       .putCertificate(caCertId, certContent, oldCert.name, oldCert.description)
       .then(async () => {
-        showMessage("info", "Certificate successfully updated in the Credential Vault.");
+        notify("INFO", "Certificate successfully updated in the Credential Vault.");
       })
       .catch(async (err: DynatraceAPIError) => {
-        showMessage("error", `Certificate update failed: ${err.message}`);
+        notify("ERROR", `Certificate update failed: ${err.message}`);
       });
   } else {
     // Prompt user for Certificate Name
@@ -75,7 +75,7 @@ export async function distributeCertificate(context: vscode.ExtensionContext, dt
       ignoreFocusOut: true,
     });
     if (!certName || certName === "") {
-      showMessage("error", "Certificate name is mandatory. Skipping upload to Credentials Vault.");
+      notify("ERROR", "Certificate name is mandatory. Skipping upload to Credentials Vault.");
     } else {
       // Prompt user for Certificate Description
       const certDescr = await vscode.window.showInputBox({
@@ -89,10 +89,10 @@ export async function distributeCertificate(context: vscode.ExtensionContext, dt
         .postCertificate(certContent, certName, certDescr ?? "")
         .then(async res => {
           await context.workspaceState.update("caCertId", res.id);
-          showMessage("info", "Certificate successfully uploaded to Credentials Vault.");
+          notify("INFO", "Certificate successfully uploaded to Credentials Vault.");
         })
         .catch(async (err: DynatraceAPIError) => {
-          showMessage("error", `Certificate upload failed: ${err.message}`);
+          notify("ERROR", `Certificate upload failed: ${err.message}`);
         });
     }
   }
@@ -111,15 +111,15 @@ export async function distributeCertificate(context: vscode.ExtensionContext, dt
       try {
         if (oaPresent) {
           uploadComponentCert(certPath, "OneAgent");
-          showMessage("info", "Certificate successfully uploaded to local OneAgent.");
+          notify("INFO", "Certificate successfully uploaded to local OneAgent.");
         }
         if (agPresent) {
           uploadComponentCert(certPath, "ActiveGate");
-          showMessage("info", "Certificate successfully uploaded to local ActiveGate.");
+          notify("INFO", "Certificate successfully uploaded to local ActiveGate.");
         }
       } catch (err) {
-        showMessage(
-          "error",
+        notify(
+          "ERROR",
           (err as Error).name === "EPERM"
             ? "Writing certificate locally failed due to access permissions. " +
                 "Try again after running VS Code as Administrator."

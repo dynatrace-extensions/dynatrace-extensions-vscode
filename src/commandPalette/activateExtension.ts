@@ -18,9 +18,9 @@ import * as vscode from "vscode";
 import { Dynatrace } from "../dynatrace-api/dynatrace";
 import { DynatraceAPIError } from "../dynatrace-api/errors";
 import { ExtensionStub } from "../interfaces/extensionMeta";
-import { showMessage } from "../utils/code";
 import { CachedData } from "../utils/dataCaching";
 import { getExtensionFilePath } from "../utils/fileSystem";
+import { notify } from "../utils/logging";
 
 /**
  * Activates the extension found in the currently open workspace. If a version is not provided
@@ -72,9 +72,9 @@ export async function activateExtension(
         }
       })
       .catch((err: DynatraceAPIError) => {
-        showMessage("error", err.message);
+        notify("ERROR", err.message);
       });
   } else {
-    showMessage("error", "Version not selected. Cancelling operation.");
+    notify("ERROR", "Version not selected. Cancelling operation.");
   }
 }

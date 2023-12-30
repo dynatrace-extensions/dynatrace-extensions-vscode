@@ -32,7 +32,7 @@ import {
   SimulatorStatus,
 } from "../interfaces/simulator";
 import { ToastOptions } from "../interfaces/webview";
-import { loopSafeWait, showMessage } from "../utils/code";
+import { loopSafeWait, showMessage } from "../utils/logging";
 import { checkDtSdkPresent } from "../utils/conditionCheckers";
 import { CachedDataConsumer } from "../utils/dataCaching";
 import { getDatasourceName } from "../utils/extensionParsing";
@@ -562,7 +562,7 @@ export class SimulatorManager extends CachedDataConsumer {
       }
       this.refreshUI(showUI, "RUNNING");
     } catch (err) {
-      showMessage("error", `Error starting the simulation ${(err as Error).message}`);
+      notify("ERROR", `Error starting the simulation ${(err as Error).message}`);
     }
   }
 
@@ -575,7 +575,7 @@ export class SimulatorManager extends CachedDataConsumer {
         // Datasource is detached from main process, so we need to kill the entire process tree
         pidtree(this.simulatorProcess.pid, (err, pids) => {
           if (err) {
-            showMessage(
+            notify(
               "error",
               `Error getting all PIDs: ${err.message}. Please ensure all processes are manually stopped.`,
             );
@@ -584,7 +584,7 @@ export class SimulatorManager extends CachedDataConsumer {
               try {
                 process.kill(pid, "SIGKILL");
               } catch (e) {
-                showMessage("error", `Process ${pid} must be stopped manually.`);
+                notify("ERROR", `Process ${pid} must be stopped manually.`);
               }
             });
           }
@@ -594,7 +594,7 @@ export class SimulatorManager extends CachedDataConsumer {
         this.simulatorProcess = undefined;
       }
     } catch (err) {
-      showMessage("error", `Error stopping the simulation ${(err as Error).message}`);
+      notify("ERROR", `Error stopping the simulation ${(err as Error).message}`);
     } finally {
       this.refreshUI(showUI, "READY");
     }

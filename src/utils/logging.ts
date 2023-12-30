@@ -20,6 +20,7 @@ import * as vscode from "vscode";
 import { cleanUpLogs } from "./fileSystem";
 
 type LogLevel = "DEBUG" | "INFO" | "WARN" | "ERROR" | "NONE";
+type NotificationLevel = Extract<LogLevel, "INFO" | "WARN" | "ERROR">;
 
 let logLevel: LogLevel = "INFO";
 let currentLogFile: string;
@@ -111,4 +112,27 @@ export function warn(message: unknown, ...trace: string[]) {
 
 export function error(message: unknown, ...trace: string[]) {
   logMessage(message, "ERROR", ...trace);
+}
+
+export function notify(level: NotificationLevel, message: string, ...trace: string[]) {
+  switch (level) {
+    case "INFO":
+      vscode.window.showInformationMessage(message).then(
+        () => info(message, ...trace),
+        () => error("Could not create UI notification", ...trace),
+      );
+      break;
+    case "WARN":
+      vscode.window.showWarningMessage(message).then(
+        () => warn(message, ...trace),
+        () => error("Could not create UI notification", ...trace),
+      );
+      break;
+    case "ERROR":
+      vscode.window.showErrorMessage(message).then(
+        () => error(message, ...trace),
+        () => error("Could not create UI notification", ...trace),
+      );
+      break;
+  }
 }

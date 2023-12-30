@@ -17,9 +17,9 @@
 import { copyFileSync, existsSync, mkdirSync } from "fs";
 import * as path from "path";
 import * as vscode from "vscode";
-import { showMessage } from "../utils/code";
 import { CachedData } from "../utils/dataCaching";
 import { getSnmpDirPath } from "../utils/fileSystem";
+import { notify } from "../utils/logging";
 
 /**
  * Implementation of a Code Lens Provider to facilitate importing custom MIBs and keeping track of
@@ -49,7 +49,7 @@ export class SnmpCodeLensProvider implements vscode.CodeLensProvider {
       title: "Select MIB files",
     });
     if (!files) {
-      showMessage("error", "No files selected. Operation cancelled.");
+      notify("ERROR", "No files selected. Operation cancelled.");
       return;
     }
     const newFiles = files.filter(
@@ -71,7 +71,7 @@ export class SnmpCodeLensProvider implements vscode.CodeLensProvider {
         });
       });
     } else {
-      showMessage("info", "Selected files have already been imported.");
+      notify("INFO", "Selected files have already been imported.");
     }
   }
 

@@ -40,7 +40,6 @@ import {
   SourceDto,
   V1UI,
 } from "../interfaces/extensionMeta";
-import { showMessage } from "../utils/code";
 import { CachedData } from "../utils/dataCaching";
 import * as logger from "../utils/logging";
 
@@ -799,7 +798,7 @@ export async function convertJMXExtension(
   });
 
   if (!pluginJSONOrigin) {
-    showMessage("warn", "No selection made. Operation cancelled.");
+    logger.notify("WARN", "No selection made. Operation cancelled.");
     return;
   }
 
@@ -809,7 +808,7 @@ export async function convertJMXExtension(
       : await extractV1FromRemote("JMX", dt);
 
   if (errorMessage !== "") {
-    showMessage("error", `Operation failed: ${errorMessage}`);
+    logger.notify("ERROR", `Operation failed: ${errorMessage}`);
     return;
   }
 
@@ -831,7 +830,7 @@ export async function convertJMXExtension(
     const extensionYAMLFile =
       outputPath ?? (await vscode.window.showSaveDialog(options).then(p => p?.fsPath));
     if (!extensionYAMLFile) {
-      showMessage("error", "No file was selected. Operation cancelled.");
+      logger.notify("ERROR", "No file was selected. Operation cancelled.");
       return;
     }
     // Save the file as yaml
@@ -845,7 +844,7 @@ export async function convertJMXExtension(
     const document = await vscode.workspace.openTextDocument(extensionYAMLFile);
     await vscode.window.showTextDocument(document);
   } catch (e) {
-    showMessage("error", `Operation failed: ${(e as Error).message}`);
+    logger.notify("ERROR", `Operation failed: ${(e as Error).message}`);
     return;
   }
 }

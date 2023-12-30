@@ -17,7 +17,6 @@
 import { readFileSync } from "fs";
 import axios from "axios";
 import * as vscode from "vscode";
-import { showMessage } from "../utils/code";
 import { CachedData, CachedDataProducer } from "../utils/dataCaching";
 import * as logger from "../utils/logging";
 
@@ -227,7 +226,7 @@ export class PrometheusCodeLensProvider
             return true;
           case "AWS key":
             // TODO: Figure out how to implement AWS authentication
-            showMessage("error", "AWS authentication not support yet, sorry.");
+            logger.notify("ERROR", "AWS authentication not support yet, sorry.");
             return false;
             this.promAccessKey = await vscode.window.showInputBox({
               title: "Scrape data - endpoint authentication",

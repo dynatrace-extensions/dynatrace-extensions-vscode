@@ -21,7 +21,7 @@
 import { readFileSync } from "fs";
 import * as path from "path";
 import axios from "axios";
-import { showMessage } from "./code";
+import { notify } from "./logging";
 import * as logger from "./logging";
 
 const logTrace = ["utils", "snmp"];
@@ -871,7 +871,7 @@ class MibParser {
                       ModuleName + ": Can not find " + ImportModule + "!!!!!!!!!!!!!!!!!!!!!",
                     );
                     logger.info(`${ModuleName}: Can not import ${JSON.stringify(IMPORTS)}`);
-                    showMessage("warn", `Local MIB files missing depenency: ${ImportModule}`);
+                    notify("WARN", `Local MIB files missing depenency: ${ImportModule}`);
                   }
                   Module.IMPORTS[ImportModule] = IMPORTS;
                   tmp++;

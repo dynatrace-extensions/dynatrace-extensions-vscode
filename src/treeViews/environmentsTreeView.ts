@@ -19,7 +19,7 @@ import * as vscode from "vscode";
 import { Dynatrace } from "../dynatrace-api/dynatrace";
 import { DynatraceEnvironmentData } from "../interfaces/treeViewData";
 import { ConnectionStatusManager } from "../statusBar/connection";
-import { showMessage } from "../utils/code";
+import { notify } from "../utils/logging";
 import { decryptToken, encryptToken } from "../utils/cryptography";
 import { getAllEnvironments, registerEnvironment } from "../utils/fileSystem";
 import * as logger from "../utils/logging";
@@ -322,7 +322,7 @@ export class EnvironmentsTreeDataProvider implements vscode.TreeDataProvider<Env
       "dynatrace-extensions-environments.saveConfig",
       async (config: MonitoringConfiguration) => {
         await saveMoniotringConfiguration(config).catch(err => {
-          showMessage("error", `Unable to save configuration. ${(err as Error).message}`);
+          notify("ERROR", `Unable to save configuration. ${(err as Error).message}`);
         });
       },
     );
