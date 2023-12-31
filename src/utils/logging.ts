@@ -23,25 +23,41 @@ import { cleanUpLogs } from "./fileSystem";
 type LogLevel = "DEBUG" | "INFO" | "WARN" | "ERROR" | "NONE";
 type NotificationLevel = Extract<LogLevel, "INFO" | "WARN" | "ERROR">;
 
-let logLevel: LogLevel = "INFO";
+let logLevel: LogLevel;
 let currentLogFile: string;
 let outputChannel: vscode.OutputChannel;
 let context: vscode.ExtensionContext;
 
+/**
+ * Starts a new log file with the current timestamp.
+ */
 function startNewLogFile() {
   const logsDir = path.join(context.globalStorageUri.fsPath, "logs");
-  currentLogFile = path.join(logsDir, `${new Date().toISOString().replace(/:/g, "_")}.log`);
+  currentLogFile = path.join(
+    logsDir,
+    `${new Date().toISOString().replace("T", "_").replace(/:/g, "-")}_log.log`,
+  );
   writeFileSync(currentLogFile, "");
 }
 
+/**
+ * Checks the size of the current log file and starts a new one if it is larger than 10MB.
+ */
 function checkFileSize() {
-  // If the file is larger than 10MB, start a new log file
   const size = statSync(currentLogFile).size / (1024 * 1024);
   if (size > 10) {
     startNewLogFile();
   }
 }
 
+/**
+ * Logs a message to the developer tools console. The message is formatted with colors by
+ * using chalk. All messages have an easily recognizable '[Dynatrace]' prefix.
+ * @param timestamp the timestamp of the log message
+ * @param data the data to log
+ * @param scope the scope (trace breadcrumbs) of the log message
+ * @param level the log level
+ */
 function logToConsole(timestamp: string, data: string, scope: string, level: LogLevel) {
   const fmtPrefix = chalk.black.bgCyan("[Dynatrace]");
   const fmtTimestamp = chalk.cyan(timestamp);
@@ -66,59 +82,104 @@ function logToConsole(timestamp: string, data: string, scope: string, level: Log
   );
 }
 
-function logMessage(message: unknown, level: LogLevel, ...trace: string[]) {
-  const data = typeof message === "string" ? message : JSON.stringify(message, null, 2);
+/**
+ * Logs a message at the appropriate level with the given trace breadcrumbs.
+ * Messages without a level are only logged to the developer tools console. Other levels
+ * are also logged to the output channel and a log file in global storage.
+ * @param data the data to log; objects will be JSON stringified
+ * @param trace any trace breadcrumbs for internal logging
+ * @param level the log level
+ */
+function logMessage(data: unknown, level: LogLevel, ...trace: string[]) {
+  const message = typeof data === "string" ? data : JSON.stringify(data, null, 2);
   const timestamp = new Date().toISOString();
   const scope = trace.join(".");
-  const formattedMessage =
-    level === "NONE"
-      ? `${timestamp} [${scope}] ${data}`
-      : `${timestamp} [${level}][${scope}] ${data}`;
 
-  logToConsole(timestamp, data, scope, level);
-  outputChannel.appendLine(formattedMessage);
-  writeFileSync(currentLogFile, `${formattedMessage}\n`, { flag: "a" });
-  checkFileSize();
+  logToConsole(timestamp, message, scope, level);
+
+  if (level !== "NONE") {
+    const formattedMessage = `${timestamp} [${level}][${scope}] ${message}`;
+    outputChannel.appendLine(formattedMessage);
+    writeFileSync(currentLogFile, `${formattedMessage}\n`, { flag: "a" });
+    checkFileSize();
+  }
 }
 
+/**
+ * Initializes the logging system. This must be called before any other logging statements.
+ * It creates the output channel and starts a new log file.
+ * @param ctx the extension context
+ */
 export function initializeLogging(ctx: vscode.ExtensionContext) {
+  logLevel = "INFO";
   context = ctx;
   outputChannel = vscode.window.createOutputChannel("Dynatrace Log", "log");
   startNewLogFile();
 }
 
+/**
+ * Disposes the output channel and cleans up old log files.
+ */
 export function disposeLogger() {
   outputChannel.dispose();
   cleanUpLogs(path.join(context.globalStorageUri.fsPath, "logs"), 10);
 }
 
-export function setLogLevel(level: LogLevel) {
-  logLevel = level;
+/**
+ * Log a message without a level. These messages are only logged to
+ * the editor's developer tools console.
+ * @param data the data to log; objects will be JSON stringified
+ * @param trace any trace breadcrumbs for internal logging
+ */
+export function log(data: unknown, ...trace: string[]) {
+  logMessage(data, "NONE", ...trace);
 }
 
-export function log(message: unknown, ...trace: string[]) {
-  logMessage(message, "NONE", ...trace);
-}
-
-export function debug(message: unknown, ...trace: string[]) {
+/**
+ * Log a message with DEBUG level.
+ * @param data the data to log; objects will be JSON stringified
+ * @param trace any trace breadcrumbs for internal logging
+ */
+export function debug(data: unknown, ...trace: string[]) {
   if (["INFO", "WARN", "ERROR"].includes(logLevel)) return;
-  logMessage(message, "DEBUG", ...trace);
+  logMessage(data, "DEBUG", ...trace);
 }
 
-export function info(message: unknown, ...trace: string[]) {
+/**
+ * Log a message with INFO level.
+ * @param data the data to log; objects will be JSON stringified
+ * @param trace any trace breadcrumbs for internal logging
+ */
+export function info(data: unknown, ...trace: string[]) {
   if (["WARN", "ERROR"].includes(logLevel)) return;
-  logMessage(message, "INFO", ...trace);
+  logMessage(data, "INFO", ...trace);
 }
 
-export function warn(message: unknown, ...trace: string[]) {
+/**
+ * Log a message with WARN level.
+ * @param data the data to log; objects will be JSON stringified
+ * @param trace any trace breadcrumbs for internal logging
+ */
+export function warn(data: unknown, ...trace: string[]) {
   if (logLevel === "ERROR") return;
-  logMessage(message, "WARN", ...trace);
+  logMessage(data, "WARN", ...trace);
 }
 
-export function error(message: unknown, ...trace: string[]) {
-  logMessage(message, "ERROR", ...trace);
+/**
+ * Log a message with ERROR level. This will always be logged.
+ * @param data the data to log; objects will be JSON stringified
+ * @param trace any trace breadcrumbs for internal logging
+ */
+export function error(data: unknown, ...trace: string[]) {
+  logMessage(data, "ERROR", ...trace);
 }
 
+/**
+ * Sends a notitification at the specified level to the UI. It also logs the message internally.
+ * @param level level of the notification
+ * @param message message of the notification
+ * @param trace any trace breadcrumbs for internal logging
+ */
 export function notify(level: NotificationLevel, message: string, ...trace: string[]) {
   switch (level) {
     case "INFO":
