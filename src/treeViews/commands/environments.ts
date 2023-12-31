@@ -19,7 +19,6 @@ import * as path from "path";
 import * as vscode from "vscode";
 import { DynatraceAPIError } from "../../dynatrace-api/errors";
 import { DynatraceEnvironmentData } from "../../interfaces/treeViewData";
-import { notify } from "../../utils/logging";
 import { checkUrlReachable } from "../../utils/conditionCheckers";
 import { encryptToken } from "../../utils/cryptography";
 import {
@@ -29,6 +28,7 @@ import {
   registerEnvironment,
   removeEnvironment,
 } from "../../utils/fileSystem";
+import { notify } from "../../utils/logging";
 import { createObjectFromSchema } from "../../utils/schemaParsing";
 import {
   DeployedExtension,

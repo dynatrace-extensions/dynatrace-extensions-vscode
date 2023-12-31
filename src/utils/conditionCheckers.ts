@@ -24,7 +24,6 @@ import * as path from "path";
 import axios from "axios";
 import * as vscode from "vscode";
 import { EnvironmentsTreeDataProvider } from "../treeViews/environmentsTreeView";
-import { notify } from "./logging";
 import { getExtensionFilePath, resolveRealPath } from "./fileSystem";
 import * as logger from "./logging";
 import { runCommand } from "./subprocesses";
@@ -75,7 +74,7 @@ export async function checkEnvironmentConnected(
 ): Promise<boolean> {
   let status = true;
   if (!(await environmentsTree.getCurrentEnvironment())) {
-    notify("ERROR", "You must be connected to a Dynatrace Environment to use this command.");
+    logger.notify("ERROR", "You must be connected to a Dynatrace Environment to use this command.");
     status = false;
   }
 
@@ -121,8 +120,8 @@ export async function isExtensionsWorkspace(
     const extensionYaml = getExtensionFilePath();
     if (!extensionYaml) {
       if (showWarningMessage) {
-        notify(
-          "warn",
+        logger.notify(
+          "WARN",
           "This command must be run from an Extensions Workspace. " +
             "Ensure your `extension` folder is within the root of the workspace.",
         );
@@ -239,7 +238,7 @@ export async function checkExtensionZipExists(): Promise<boolean> {
   if (vscode.workspace.workspaceFolders) {
     const distDir = path.join(vscode.workspace.workspaceFolders[0].uri.fsPath, "dist");
     if (readdirSync(distDir).filter(i => i.endsWith(".zip")).length === 0) {
-      notify("ERROR", "No extension archive was found. Try building one first.");
+      logger.notify("ERROR", "No extension archive was found. Try building one first.");
       return false;
     }
     return true;
@@ -259,7 +258,7 @@ export async function checkUrlReachable(url: string, showError: boolean = false)
     .then(res => res.status === 200)
     .catch(err => {
       if (showError) {
-        notify("ERROR", (err as Error).message);
+        logger.notify("ERROR", (err as Error).message);
       }
       logger.error(JSON.stringify(err), ...logTrace);
       return false;

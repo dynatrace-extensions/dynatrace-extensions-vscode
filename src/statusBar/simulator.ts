@@ -32,7 +32,7 @@ import {
   SimulatorStatus,
 } from "../interfaces/simulator";
 import { ToastOptions } from "../interfaces/webview";
-import { loopSafeWait, showMessage } from "../utils/logging";
+import { loopSafeWait } from "../utils/code";
 import { checkDtSdkPresent } from "../utils/conditionCheckers";
 import { CachedDataConsumer } from "../utils/dataCaching";
 import { getDatasourceName } from "../utils/extensionParsing";
@@ -46,6 +46,7 @@ import {
   registerSimulatorSummary,
   registerSimulatorTarget,
 } from "../utils/fileSystem";
+import { notify } from "../utils/logging";
 import { getPythonVenvOpts } from "../utils/otherExtensions";
 import {
   canSimulateDatasource,
@@ -576,7 +577,7 @@ export class SimulatorManager extends CachedDataConsumer {
         pidtree(this.simulatorProcess.pid, (err, pids) => {
           if (err) {
             notify(
-              "error",
+              "ERROR",
               `Error getting all PIDs: ${err.message}. Please ensure all processes are manually stopped.`,
             );
           } else {

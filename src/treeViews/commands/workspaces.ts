@@ -15,8 +15,8 @@
  */
 
 import * as vscode from "vscode";
-import { notify } from "../../utils/logging";
 import { removeWorkspace } from "../../utils/fileSystem";
+import { notify } from "../../utils/logging";
 import { ExtensionProjectItem } from "../extensionsTreeView";
 
 /**
