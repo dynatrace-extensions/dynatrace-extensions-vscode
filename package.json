@@ -99,6 +99,11 @@
         "category": "Dynatrace extensions"
       },
       {
+        "command": "dynatrace-extensions.downloadSupportArchive",
+        "title": "Download support archive",
+        "category": "Dynatrace extensions"
+      },
+      {
         "command": "dynatrace-extensions-workspaces.refresh",
         "title": "Refresh",
         "icon": "$(refresh)"

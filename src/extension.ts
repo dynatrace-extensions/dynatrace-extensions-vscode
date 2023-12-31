@@ -43,6 +43,7 @@ import { createMonitoringConfiguration } from "./commandPalette/createConfigurat
 import { createOverviewDashboard } from "./commandPalette/createDashboard";
 import { createDocumentation } from "./commandPalette/createDocumentation";
 import { distributeCertificate } from "./commandPalette/distributeCertificate";
+import { downloadSupportArchive } from "./commandPalette/downloadSupportArchive";
 import { generateCerts } from "./commandPalette/generateCertificates";
 import { initWorkspace } from "./commandPalette/initWorkspace";
 import { loadSchemas } from "./commandPalette/loadSchemas";
@@ -359,6 +360,13 @@ function registerCommandPaletteCommands(
         }
       },
     ),
+    // Download support archive
+    vscode.commands.registerCommand("dynatrace-extensions.downloadSupportArchive", async () => {
+      // eslint-disable-next-line no-secrets/no-secrets
+      logger.info("Command 'downloadSupportArchive' called.", ...logTrace);
+      const logsDir = path.join(context.globalStorageUri.fsPath, "logs");
+      await downloadSupportArchive(logsDir);
+    }),
   ];
 }
 
