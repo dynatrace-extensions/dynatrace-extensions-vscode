@@ -853,7 +853,7 @@ export function getRequiredDimensions(
   extension: ExtensionStub,
 ): string[] {
   const rule = extension.topology?.types?.[typeIdx].rules[ruleIdx];
-  if (!rule || !rule.requiredDimensions) {
+  if (!rule?.requiredDimensions) {
     return [];
   }
 
