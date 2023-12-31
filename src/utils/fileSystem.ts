@@ -109,8 +109,6 @@ export function initGlobalStorage(context: vscode.ExtensionContext) {
   if (!existsSync(logsDir)) {
     mkdirSync(logsDir, { recursive: true });
   }
-
-  cleanUpLogs(logsDir, 9);
 }
 
 /**

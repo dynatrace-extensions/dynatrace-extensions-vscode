@@ -23,7 +23,9 @@ import { cleanUpLogs } from "./fileSystem";
 type LogLevel = "DEBUG" | "INFO" | "WARN" | "ERROR" | "NONE";
 type NotificationLevel = Extract<LogLevel, "INFO" | "WARN" | "ERROR">;
 
-let logLevel: LogLevel;
+let logLevel: LogLevel = "INFO";
+let maxFileSize: number = 10;
+let maxFiles: number = 10;
 let currentLogFile: string;
 let outputChannel: vscode.OutputChannel;
 let context: vscode.ExtensionContext;
@@ -45,7 +47,7 @@ function startNewLogFile() {
  */
 function checkFileSize() {
   const size = statSync(currentLogFile).size / (1024 * 1024);
-  if (size > 10) {
+  if (size > maxFileSize) {
     startNewLogFile();
   }
 }
@@ -111,8 +113,15 @@ function logMessage(data: unknown, level: LogLevel, ...trace: string[]) {
  * @param ctx the extension context
  */
 export function initializeLogging(ctx: vscode.ExtensionContext) {
-  logLevel = "INFO";
   context = ctx;
+  cleanUpLogs(path.join(context.globalStorageUri.fsPath, "logs"), maxFiles - 1);
+
+  // Load the configuration
+  const config = vscode.workspace.getConfiguration("dynatraceExtensions.logging", null);
+  logLevel = config.get<LogLevel>("level");
+  maxFileSize = config.get<number>("maxFileSize");
+  maxFiles = config.get<number>("maxFiles");
+
   outputChannel = vscode.window.createOutputChannel("Dynatrace Log", "log");
   startNewLogFile();
 }
@@ -122,7 +131,7 @@ export function initializeLogging(ctx: vscode.ExtensionContext) {
  */
 export function disposeLogger() {
   outputChannel.dispose();
-  cleanUpLogs(path.join(context.globalStorageUri.fsPath, "logs"), 10);
+  cleanUpLogs(path.join(context.globalStorageUri.fsPath, "logs"), maxFiles);
 }
 
 /**
