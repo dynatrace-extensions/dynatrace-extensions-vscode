@@ -16,6 +16,7 @@
 
 import { statSync, writeFileSync } from "fs";
 import * as path from "path";
+import chalk from "chalk";
 import * as vscode from "vscode";
 import { cleanUpLogs } from "./fileSystem";
 
@@ -41,24 +42,28 @@ function checkFileSize() {
   }
 }
 
-function logToConsole(message: string, level: LogLevel) {
-  switch (level) {
-    case "DEBUG":
-      console.debug(message);
-      break;
-    case "INFO":
-      console.info(message);
-      break;
-    case "WARN":
-      console.warn(message);
-      break;
-    case "ERROR":
-      console.error(message);
-      break;
-    case "NONE":
-      console.log(message);
-      break;
-  }
+function logToConsole(timestamp: string, data: string, scope: string, level: LogLevel) {
+  const fmtPrefix = chalk.black.bgCyan("[Dynatrace]");
+  const fmtTimestamp = chalk.cyan(timestamp);
+  const fmtLevel = ((lvl: LogLevel) => {
+    switch (lvl) {
+      case "DEBUG":
+        return chalk.white(`[${lvl}]`);
+      case "INFO":
+        return chalk.green(`[${lvl}]`);
+      case "WARN":
+        return chalk.yellow(`[${lvl}]`);
+      case "ERROR":
+        return chalk.red(`[${lvl}]`);
+      case "NONE":
+        return "";
+    }
+  })(level);
+  const fmtScope = chalk.magentaBright(`[${scope}]`);
+  console.log(
+    `${fmtTimestamp} ${fmtPrefix}${fmtLevel}${fmtScope} ` +
+      (level === "DEBUG" ? `${chalk.gray(data)}\n` : `${data}`),
+  );
 }
 
 function logMessage(message: unknown, level: LogLevel, ...trace: string[]) {
@@ -70,7 +75,7 @@ function logMessage(message: unknown, level: LogLevel, ...trace: string[]) {
       ? `${timestamp} [${scope}] ${data}`
       : `${timestamp} [${level}][${scope}] ${data}`;
 
-  logToConsole(formattedMessage, level);
+  logToConsole(timestamp, data, scope, level);
   outputChannel.appendLine(formattedMessage);
   writeFileSync(currentLogFile, `${formattedMessage}\n`, { flag: "a" });
   checkFileSize();

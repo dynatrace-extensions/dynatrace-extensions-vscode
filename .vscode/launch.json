@@ -16,7 +16,10 @@
 			"outFiles": [
 				"${workspaceFolder}/out/**/*.js"
 			],
-			"preLaunchTask": "${defaultBuildTask}"
+			"preLaunchTask": "${defaultBuildTask}",
+      "env": {
+        "FORCE_COLOR": "1"
+      }
 		},
 		{
 			"name": "Extension Tests",
@@ -29,7 +32,10 @@
 			"outFiles": [
 				"${workspaceFolder}/out/test/**/*.js"
 			],
-			"preLaunchTask": "${defaultBuildTask}"
+			"preLaunchTask": "${defaultBuildTask}",
+      "env": {
+        "FORCE_COLOR": "1"
+      }
 		}
 	]
 }
