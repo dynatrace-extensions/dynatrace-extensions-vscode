@@ -113,6 +113,7 @@ export class CachedData {
    * @param environments a Dynatrace Environments provider
    */
   constructor(environments: EnvironmentsTreeDataProvider) {
+    logger.info("Data Cache created.", ...this.logTrace);
     this.environments = environments;
   }
 
@@ -148,19 +149,25 @@ export class CachedData {
    * Initializes cache by pulling all data that can be pre-loaded and setting up update schedules.
    */
   public async initialize() {
+    const fnLogTrace = [...this.logTrace, "initialize"];
+    logger.info("Initializing Data Cache...", ...fnLogTrace);
+
     // Fetch entities
+    logger.debug("Caching built-in entity types", ...fnLogTrace);
     this.fetchBuiltinEntityTypes()
       .then(entityTypes => this.builtinEntityTypes.next(entityTypes))
       .catch(() => this.builtinEntityTypes.next([]))
       .finally(() => this.builtinEntityTypes.complete());
 
     // Fetch Barista icons
+    logger.debug("Caching Barista icons", ...fnLogTrace);
     this.fetchBaristaIcons()
       .then(icons => this.baristaIcons.next(icons))
       .catch(() => this.baristaIcons.next([]))
       .finally(() => this.baristaIcons.complete());
 
     // Fetch extension manifest
+    logger.debug("Caching the initial extension manifest", ...fnLogTrace);
     const initialManifestContent = this.fetchExtensionManifest();
     // Load local SNMP database if applicable
     if (/^snmp:.*?$/gm.test(initialManifestContent)) {
@@ -215,6 +222,7 @@ export class CachedData {
     while (this.parsedExtension.getValue() === undefined) {
       await loopSafeWait(100);
     }
+    logger.info("Data Cache initialized.", ...fnLogTrace);
   }
 
   /**
@@ -222,6 +230,7 @@ export class CachedData {
    * higher priority for OID searches than the online server.
    */
   private buildLocalSnmpDatabase() {
+    logger.debug("Creating SNMP MIB store", ...this.logTrace, "buildLocalSnmpDatabase");
     this.mibStore = new MibModuleStore();
     this.localSnmpDatabase = this.mibStore.getAllOidInfos();
   }

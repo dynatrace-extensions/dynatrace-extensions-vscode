@@ -60,11 +60,14 @@ function checkFileSize() {
 function extractScope(stack: string) {
   return stack
     .split("\n")
-    .filter(l => l.includes("dynatrace-extensions-vscode"))
     .map(l => {
-      const match = l.match(/at (.*?) \(/);
-      return match ? match[1] : "";
+      if (l.includes("dynatrace-extensions-vscode")) {
+        const match = l.match(/at (.*?) \(/);
+        return match ? match[1] : "";
+      }
+      return "";
     })
+    .filter(l => l !== "")
     .slice(3)
     .reverse()
     .join(" > ");

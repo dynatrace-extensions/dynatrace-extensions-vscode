@@ -89,6 +89,7 @@ function registerCompletionProviders(
   documentSelector: vscode.DocumentSelector,
   cachedData: CachedData,
 ): vscode.Disposable[] {
+  logger.debug("Registering completion providers", ...logTrace, "registerCompletionProviders");
   // Instantiate completion providers
   const topologyCompletionProvider = new TopologyCompletionProvider();
   const entitySelectorCompletionProvider = new EntitySelectorCompletionProvider();
@@ -165,9 +166,15 @@ function registerCommandPaletteCommands(
   outputChannel: vscode.OutputChannel,
   context: vscode.ExtensionContext,
 ): vscode.Disposable[] {
+  logger.debug(
+    "Registering commands for the command palette",
+    ...logTrace,
+    "registerCommandPaletteCommands",
+  );
   return [
     // Load extension schemas of a given version
     vscode.commands.registerCommand("dynatrace-extensions.loadSchemas", async () => {
+      logger.info("Command 'loadSchemas' called.", ...logTrace);
       if (await checkEnvironmentConnected(tenantsProvider)) {
         const dtClient = await tenantsProvider.getDynatraceClient();
         if (dtClient) {
@@ -177,6 +184,7 @@ function registerCommandPaletteCommands(
     }),
     // Initialize a new workspace for extension development
     vscode.commands.registerCommand("dynatrace-extensions.initWorkspace", async () => {
+      logger.info("Command 'initWorkspace' called.", ...logTrace);
       if ((await checkWorkspaceOpen()) && (await checkEnvironmentConnected(tenantsProvider))) {
         initWorkspaceStorage(context);
         try {
@@ -193,6 +201,7 @@ function registerCommandPaletteCommands(
     }),
     // Generate the certificates required for extension signing
     vscode.commands.registerCommand("dynatrace-extensions.generateCertificates", async () => {
+      logger.info("Command 'generateCertificates' called.", ...logTrace);
       if (await checkWorkspaceOpen()) {
         initWorkspaceStorage(context);
         return checkOverwriteCertificates(context).then(async approved => {
@@ -206,6 +215,7 @@ function registerCommandPaletteCommands(
     }),
     // Distribute CA certificate to Dynatrace credential vault & OneAgents/ActiveGates
     vscode.commands.registerCommand("dynatrace-extensions.distributeCertificate", async () => {
+      logger.info("Command 'distributeCertificate' called.", ...logTrace);
       if ((await checkWorkspaceOpen()) && (await checkEnvironmentConnected(tenantsProvider))) {
         initWorkspaceStorage(context);
         const dtClient = await tenantsProvider.getDynatraceClient();
@@ -216,6 +226,7 @@ function registerCommandPaletteCommands(
     }),
     // Build Extension 2.0 package
     vscode.commands.registerCommand("dynatrace-extensions.buildExtension", async () => {
+      logger.info("Command 'buildExtension' called.", ...logTrace);
       if (
         (await checkWorkspaceOpen()) &&
         (await isExtensionsWorkspace(context)) &&
@@ -227,6 +238,7 @@ function registerCommandPaletteCommands(
     }),
     // Upload an extension to the tenant
     vscode.commands.registerCommand("dynatrace-extensions.uploadExtension", async () => {
+      logger.info("Command 'uploadExtension' called.", ...logTrace);
       if (
         (await checkWorkspaceOpen()) &&
         (await isExtensionsWorkspace(context)) &&
@@ -244,6 +256,7 @@ function registerCommandPaletteCommands(
     vscode.commands.registerCommand(
       "dynatrace-extensions.activateExtension",
       async (version?: string) => {
+        logger.info("Command 'activateExtension' called.", ...logTrace);
         if (
           (await checkWorkspaceOpen()) &&
           (await isExtensionsWorkspace(context)) &&
@@ -259,18 +272,21 @@ function registerCommandPaletteCommands(
     ),
     // Create Extension documentation
     vscode.commands.registerCommand("dynatrace-extensions.createDocumentation", async () => {
+      logger.info("Command 'createDocumentation' called.", ...logTrace);
       if ((await checkWorkspaceOpen()) && (await isExtensionsWorkspace(context))) {
         await createDocumentation(cachedData);
       }
     }),
     // Create Overview dashboard
     vscode.commands.registerCommand("dynatrace-extensions.createDashboard", async () => {
+      logger.info("Command 'createDashboard' called.", ...logTrace);
       if ((await checkWorkspaceOpen()) && (await isExtensionsWorkspace(context))) {
         await createOverviewDashboard(tenantsProvider, cachedData, outputChannel);
       }
     }),
     // Create Alert
     vscode.commands.registerCommand("dynatrace-extensions.createAlert", async () => {
+      logger.info("Command 'createAlert' called.", ...logTrace);
       if ((await checkWorkspaceOpen()) && (await isExtensionsWorkspace(context))) {
         await createAlert(cachedData);
       }
@@ -279,6 +295,7 @@ function registerCommandPaletteCommands(
     vscode.commands.registerCommand(
       "dynatrace-extensions.convertJmxExtension",
       async (outputPath?: string) => {
+        logger.info("Command 'convertJmxExtension' called.", ...logTrace);
         // Unless explicitly specified, try to detect output path
         if (!outputPath) {
           const extensionDir = getExtensionWorkspaceDir();
@@ -302,6 +319,7 @@ function registerCommandPaletteCommands(
     vscode.commands.registerCommand(
       "dynatrace-extensions.convertPythonExtension",
       async (outputPath?: string) => {
+        logger.info("Command 'convertPythonExtension' called.", ...logTrace);
         // Unless explicitly specified, try to detect output path
         if (!outputPath) {
           const extensionDir = getExtensionWorkspaceDir();
@@ -328,6 +346,7 @@ function registerCommandPaletteCommands(
     vscode.commands.registerCommand(
       "dynatrace-extensions.createMonitoringConfiguration",
       async () => {
+        logger.info("Command 'createMonitoringConfiguration' called.", ...logTrace);
         if (
           (await checkWorkspaceOpen()) &&
           (await isExtensionsWorkspace(context)) &&
@@ -349,6 +368,11 @@ function registerCommandPaletteCommands(
  * @returns list of commands as disposables
  */
 function registerFeatureSwitchCommands() {
+  logger.debug(
+    "Registering commands for enabling/disabling features",
+    ...logTrace,
+    "registerFeatureSwitchCommands",
+  );
   return [
     // Code lenses
     vscode.commands.registerCommand("dynatrace-extensions-workspaces.enableMetricSelectors", () => {
@@ -605,9 +629,9 @@ export async function activate(context: vscode.ExtensionContext) {
   initGlobalStorage(context);
   logger.initializeLogging(context);
   logger.info(
-    `Dynatrace Extensions is activating. Version ${
+    `Dynatrace Extensions version ${
       (context.extension.packageJSON as { version: string }).version
-    }`,
+    } is activating...`,
     ...fnLogTrace,
   );
 
@@ -633,7 +657,11 @@ export async function activate(context: vscode.ExtensionContext) {
       getAllWorkspaces(context).length,
     )
     .then(undefined, () => {
-      logger.info("Could not set context for number of registered workspaces.", ...fnLogTrace);
+      logger.warn(
+        "Could not set context for number of registered workspaces.",
+        ...fnLogTrace,
+        "setContext",
+      );
     });
   // Additonal context: different welcome message for the extensions tree view if inside a workspace
   vscode.commands
@@ -643,7 +671,11 @@ export async function activate(context: vscode.ExtensionContext) {
       isExtensionsWorkspace(context, false),
     )
     .then(undefined, () => {
-      logger.info("Could not set context for recognised extension workspace.", ...fnLogTrace);
+      logger.warn(
+        "Could not set context for recognised extension workspace.",
+        ...fnLogTrace,
+        "setContext",
+      );
     });
   // Additional context: number of environments affects the welcome message for the tenants tree view
   vscode.commands
@@ -653,8 +685,13 @@ export async function activate(context: vscode.ExtensionContext) {
       getAllEnvironments(context).length,
     )
     .then(undefined, () => {
-      logger.info("Could not set context for number of Dynatrace enviornments.", ...fnLogTrace);
+      logger.warn(
+        "Could not set context for number of Dynatrace enviornments.",
+        ...fnLogTrace,
+        "setContext",
+      );
     });
+  logger.debug("Instantiating feature providers", ...fnLogTrace);
   // Create feature/data providers
   const genericChannel = vscode.window.createOutputChannel("Dynatrace", "json");
   const connectionStatusManager = new ConnectionStatusManager();
@@ -694,6 +731,7 @@ export async function activate(context: vscode.ExtensionContext) {
   let editTimeout: NodeJS.Timeout | undefined;
 
   // Subscribe feature providers as consumers of cached data
+  logger.debug("Subscribing feature providers to cached data", ...fnLogTrace);
   cachedData.subscribeConsumers({
     parsedExtension: [
       snippetCodeActionProvider,
@@ -722,6 +760,7 @@ export async function activate(context: vscode.ExtensionContext) {
       ),
   );
 
+  logger.debug("Registering commands and feature providers", ...fnLogTrace);
   // Perform all feature registrations
   context.subscriptions.push(
     // Commands for the Command Palette
@@ -900,8 +939,13 @@ export async function activate(context: vscode.ExtensionContext) {
   // We may have an initialization pending from previous window/activation.
   const pendingInit = context.globalState.get("dynatrace-extensions.initPending");
   if (pendingInit) {
+    logger.info(
+      "There is a workspace initialization pending from previous window/activation. Triggering the command now.",
+      ...fnLogTrace,
+    );
     await vscode.commands.executeCommand("dynatrace-extensions.initWorkspace");
   }
+  logger.info("Dynatrace Extensions is now activated.", ...fnLogTrace);
 }
 
 /**
@@ -909,10 +953,12 @@ export async function activate(context: vscode.ExtensionContext) {
  * Automatically called when the extension was deactivated.
  */
 export function deactivate() {
-  logger.info("DYNATRACE EXTENSIONS - DEACTIVATED");
+  const fnLogTrace = [...logTrace, "deactivate"];
+  logger.info("Dynatrace Extensions is deactivating...", ...fnLogTrace);
 
   // Kill any simulator processes left running
   simulatorManager.stop();
 
   logger.disposeLogger();
+  logger.info("Dynatrace Extensions is now deactivated.", ...fnLogTrace);
 }
