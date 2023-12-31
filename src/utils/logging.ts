@@ -43,13 +43,31 @@ function startNewLogFile() {
 }
 
 /**
- * Checks the size of the current log file and starts a new one if it is larger than 10MB.
+ * Checks the size of the current log file and starts a new one if needed.
  */
 function checkFileSize() {
   const size = statSync(currentLogFile).size / (1024 * 1024);
   if (size > maxFileSize) {
     startNewLogFile();
   }
+}
+
+/**
+ * Extracts the log scope (trace breadcrumbs) from the stack trace.
+ * NOTE: This only works in development mode.
+ * @param stack the stack trace
+ */
+function extractScope(stack: string) {
+  return stack
+    .split("\n")
+    .filter(l => l.includes("dynatrace-extensions-vscode"))
+    .map(l => {
+      const match = l.match(/at (.*?) \(/);
+      return match ? match[1] : "";
+    })
+    .slice(3)
+    .reverse()
+    .join(" > ");
 }
 
 /**
@@ -77,7 +95,12 @@ function logToConsole(timestamp: string, data: string, scope: string, level: Log
         return "";
     }
   })(level);
-  const fmtScope = chalk.magentaBright(`[${scope}]`);
+
+  // During development, we can automatically build the trace
+  const fmtScope = chalk.magentaBright(
+    `[${process.env.DEVELOPMENT ? extractScope(new Error().stack) : scope}]`,
+  );
+
   console.log(
     `${fmtTimestamp} ${fmtPrefix}${fmtLevel}${fmtScope} ` +
       (level === "DEBUG" ? `${chalk.gray(data)}\n` : `${data}`),

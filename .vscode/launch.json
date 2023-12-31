@@ -18,7 +18,8 @@
 			],
 			"preLaunchTask": "${defaultBuildTask}",
       "env": {
-        "FORCE_COLOR": "1"
+        "FORCE_COLOR": "1",
+        "DEVELOPMENT": "1",
       }
 		},
 		{
@@ -34,7 +35,8 @@
 			],
 			"preLaunchTask": "${defaultBuildTask}",
       "env": {
-        "FORCE_COLOR": "1"
+        "FORCE_COLOR": "1",
+        "DEVELOPMENT": "1",
       }
 		}
 	]
