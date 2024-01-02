@@ -243,7 +243,7 @@ export class CachedData {
     downloadActiveGateMibFiles(this.globalStorage).then(
       () => {
         logger.debug("ActiveGate MIBs ready. Building MIB store", ...fnLogTrace);
-        this.mibStore = new MibModuleStore(this.globalStorage);
+        this.mibStore = new MibModuleStore();
         this.localSnmpDatabase = this.mibStore.getAllOidInfos();
       },
       err => {

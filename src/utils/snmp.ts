@@ -27,9 +27,8 @@ import * as logger from "./logging";
 
 const logTrace = ["utils", "snmp"];
 const AG_MIB_VERSION = "1.281"; // For now, we hardcode this.
-
-// URL to online OID Repository
-const BASE_URL = "https://oid-rep.orange-labs.fr/get";
+const BASE_URL = "https://oid-rep.orange-labs.fr/get"; // URL to online OID Repository
+let mibStoragePath: string;
 
 export interface OidInformation {
   description?: string;
@@ -43,6 +42,13 @@ export interface OidInformation {
 }
 
 /**
+ * @returns path to MIB storage
+ */
+export function getMibStoragePath() {
+  return mibStoragePath;
+}
+
+/**
  * Downloads the latest MIB files that are shipped with the ActiveGate and stores them in the
  * global storage provided by VS Code.
  * @param globalStorage path to global storage
@@ -50,8 +56,8 @@ export interface OidInformation {
 export async function downloadActiveGateMibFiles(globalStorage: string) {
   const fnLogTrace = [...logTrace, "downloadActiveGateMibFiles"];
 
-  const storagePath = path.resolve(globalStorage, "mibs", AG_MIB_VERSION);
-  if (existsSync(storagePath) && readdirSync(storagePath).length > 0) {
+  mibStoragePath = path.resolve(globalStorage, "mibs", AG_MIB_VERSION);
+  if (existsSync(mibStoragePath) && readdirSync(mibStoragePath).length > 0) {
     logger.debug(
       `ActiveGate MIBs version ${AG_MIB_VERSION} already exist. Skipping download.`,
       ...fnLogTrace,
@@ -60,8 +66,8 @@ export async function downloadActiveGateMibFiles(globalStorage: string) {
   }
 
   // Create the directory
-  if (!existsSync(storagePath)) {
-    mkdirSync(storagePath, { recursive: true });
+  if (!existsSync(mibStoragePath)) {
+    mkdirSync(mibStoragePath, { recursive: true });
   }
 
   // Download MIBs from our public repo
@@ -77,14 +83,14 @@ export async function downloadActiveGateMibFiles(globalStorage: string) {
       // Download and extract the MIBs
       const mibZip = new AdmZip(zipRes.data);
       const zipEntry = mibZip.getEntries().filter(e => e.entryName.endsWith("/mibs/"))[0];
-      mibZip.extractEntryTo(zipEntry, storagePath, false, true);
+      mibZip.extractEntryTo(zipEntry, mibStoragePath, false, true);
 
       // Ensure all end in .mib
-      readdirSync(storagePath).forEach(file => {
+      readdirSync(mibStoragePath).forEach(file => {
         if (!file.endsWith(".mib")) {
           const fileName = file.split(".")[0];
-          const oldPath = path.resolve(storagePath, file);
-          const newPath = path.resolve(storagePath, `${fileName}.mib`);
+          const oldPath = path.resolve(mibStoragePath, file);
+          const newPath = path.resolve(mibStoragePath, `${fileName}.mib`);
           renameSync(oldPath, newPath);
         }
       });
@@ -1120,9 +1126,8 @@ export class MibModuleStore {
     { name: "NETWORK-SERVICES-MIB", source: "storage" },
   ];
 
-  constructor(globalStorage: string) {
-    this.storePath = path.resolve(globalStorage, "mibs", AG_MIB_VERSION);
-    this.parser = new MibParser(this.storePath);
+  constructor() {
+    this.parser = new MibParser(mibStoragePath);
     this.loadBaseModules();
   }
 
@@ -1131,7 +1136,7 @@ export class MibModuleStore {
     this.BASE_MODULES.forEach(({ name, source }) => {
       const mibPath =
         source === "storage"
-          ? this.storePath
+          ? mibStoragePath
           : path.resolve(__filename, "..", "..", "src", "assets", "mibs");
       logger.debug(`Loading ${name} MIB`, ...this.logTrace);
       this.parser.Import(path.resolve(mibPath, `${name}.mib`));
@@ -1139,11 +1144,11 @@ export class MibModuleStore {
     this.parser.Serialize();
 
     // Then, load all other modules from storage
-    readdirSync(this.storePath)
+    readdirSync(mibStoragePath)
       .filter(fileName => this.BASE_MODULES.findIndex(m => `${m.name}.mib` === fileName) === -1)
       .forEach(fileName => {
         logger.debug(`Loading ${fileName}`, ...this.logTrace);
-        this.parser.Import(path.resolve(this.storePath, fileName));
+        this.parser.Import(path.resolve(mibStoragePath, fileName));
       });
     this.parser.Serialize();
   }
