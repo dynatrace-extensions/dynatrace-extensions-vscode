@@ -1,4 +1,4 @@
-          RFC1212-MIB DEFINITIONS ::= BEGIN
+          RFC-1212 DEFINITIONS ::= BEGIN
 
           IMPORTS
               ObjectName, NetworkAddress, IpAddress

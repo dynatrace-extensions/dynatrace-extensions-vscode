@@ -14,8 +14,10 @@
   limitations under the License.
  */
 
+import * as path from "path";
 import * as vscode from "vscode";
 import { CachedDataProducer } from "../utils/dataCaching";
+import { getMibStoragePath } from "../utils/snmp";
 
 /**
  * Simple hover provider to bring out details behind SNMP OIDs
@@ -65,12 +67,23 @@ export class SnmpHoverProvider extends CachedDataProducer implements vscode.Hove
           hoverContent += `\n\n**Max access:** ${oidInfo.maxAccess}`;
         }
         if (oidInfo.source) {
-          hoverContent += oidInfo.source.startsWith("http")
-            ? `\n\n\n**Source:** [online database](${oidInfo.source})`
-            : `\n\n\n**Source:** ${oidInfo.source}`;
+          if (oidInfo.source.startsWith("http")) {
+            hoverContent += `\n\n\n**Source:** [online database](${oidInfo.source})`;
+          } else {
+            const mibFileName = oidInfo.source.replace(/`/g, "").split("Local MIB file ")[1];
+            const mibFileUri = encodeURIComponent(
+              JSON.stringify([
+                vscode.Uri.file(path.resolve(getMibStoragePath(), `${mibFileName}.mib`)),
+              ]),
+            );
+            hoverContent += `\n\n\n**Source:** [${oidInfo.source}](command:vscode.open?${mibFileUri})`;
+          }
         }
 
-        return new vscode.Hover(new vscode.MarkdownString(hoverContent));
+        const markdownString = new vscode.MarkdownString(hoverContent);
+        markdownString.isTrusted = true;
+
+        return new vscode.Hover(markdownString);
       }
     }
   }

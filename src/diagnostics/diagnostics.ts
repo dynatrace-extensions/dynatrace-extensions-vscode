@@ -111,6 +111,7 @@ export class DiagnosticsProvider extends CachedDataProducer {
    * @returns true if extension will Build, false otherwise
    */
   public async isValidForBuilding(): Promise<boolean> {
+    const fnLogTrace = [...this.logTrace, "isValidForBuilding"];
     let status = true;
     const extensionYamlFile = getExtensionFilePath();
     if (!extensionYamlFile) {
@@ -122,16 +123,12 @@ export class DiagnosticsProvider extends CachedDataProducer {
       diagnostics &&
       diagnostics.findIndex(diag => diag.severity === vscode.DiagnosticSeverity.Error) > -1
     ) {
-      logger.notify("ERROR", "Extension cannot be built. Fix problems first.");
+      logger.notify("ERROR", "Extension cannot be built. Fix problems first.", ...fnLogTrace);
       await vscode.commands.executeCommand("workbench.action.problems.focus");
       status = false;
     }
 
-    logger.info(
-      `Check - diagnostics collection clear? > ${String(status)}`,
-      ...this.logTrace,
-      "isValidForBuilding",
-    );
+    logger.info(`Is diagnostics collection clear? ${String(status)}`, ...fnLogTrace);
     return status;
   }
 
@@ -529,7 +526,7 @@ export class DiagnosticsProvider extends CachedDataProducer {
       return [];
     }
 
-    // Honor the user's settings and bail early if no screens
+    // Honor the user's settings and bail early if diagnostics disabled.
     if (
       (!vscode.workspace
         .getConfiguration("dynatraceExtensions", null)

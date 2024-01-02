@@ -18,16 +18,17 @@
  * UTILITIES FOR WORKING WITH SNMP
  ********************************************************************************/
 
-import { readFileSync } from "fs";
+import { existsSync, mkdirSync, readFileSync, readdirSync, renameSync } from "fs";
 import * as path from "path";
+import AdmZip = require("adm-zip");
 import axios from "axios";
 import { notify } from "./logging";
 import * as logger from "./logging";
 
 const logTrace = ["utils", "snmp"];
-
-// URL to online OID Repository
-const BASE_URL = "https://oid-rep.orange-labs.fr/get";
+const AG_MIB_VERSION = "1.281"; // For now, we hardcode this.
+const BASE_URL = "https://oid-rep.orange-labs.fr/get"; // URL to online OID Repository
+let mibStoragePath: string;
 
 export interface OidInformation {
   description?: string;
@@ -38,6 +39,63 @@ export interface OidInformation {
   index?: string;
   oid?: string;
   source?: string;
+}
+
+/**
+ * @returns path to MIB storage
+ */
+export function getMibStoragePath() {
+  return mibStoragePath;
+}
+
+/**
+ * Downloads the latest MIB files that are shipped with the ActiveGate and stores them in the
+ * global storage provided by VS Code.
+ * @param globalStorage path to global storage
+ */
+export async function downloadActiveGateMibFiles(globalStorage: string) {
+  const fnLogTrace = [...logTrace, "downloadActiveGateMibFiles"];
+
+  mibStoragePath = path.resolve(globalStorage, "mibs", AG_MIB_VERSION);
+  if (existsSync(mibStoragePath) && readdirSync(mibStoragePath).length > 0) {
+    logger.debug(
+      `ActiveGate MIBs version ${AG_MIB_VERSION} already exist. Skipping download.`,
+      ...fnLogTrace,
+    );
+    return;
+  }
+
+  // Create the directory
+  if (!existsSync(mibStoragePath)) {
+    mkdirSync(mibStoragePath, { recursive: true });
+  }
+
+  // Download MIBs from our public repo
+  logger.debug("Downloading MIBs to global storage", ...fnLogTrace);
+  const zipUrl = `https://api.github.com/repos/dynatrace-extensions/snmp-mib-files/zipball/${AG_MIB_VERSION}`;
+  await axios
+    .request<Buffer>({
+      url: zipUrl,
+      method: "GET",
+      responseType: "arraybuffer",
+    })
+    .then(zipRes => {
+      // Download and extract the MIBs
+      const mibZip = new AdmZip(zipRes.data);
+      const zipEntry = mibZip.getEntries().filter(e => e.entryName.endsWith("/mibs/"))[0];
+      mibZip.extractEntryTo(zipEntry, mibStoragePath, false, true);
+
+      // Ensure all end in .mib
+      readdirSync(mibStoragePath).forEach(file => {
+        if (!file.endsWith(".mib")) {
+          const fileName = file.split(".")[0];
+          const oldPath = path.resolve(mibStoragePath, file);
+          const newPath = path.resolve(mibStoragePath, `${fileName}.mib`);
+          renameSync(oldPath, newPath);
+        }
+      });
+    })
+    .catch(err => logger.error(err, ...fnLogTrace));
 }
 
 /**
@@ -80,7 +138,7 @@ export function oidFromMetriValue(value: string): string {
  */
 function processOidData(details: string, oid?: string): OidInformation {
   const objectTypeMatches = /(.*?) OBJECT-TYPE/.exec(details) ?? [];
-  const syntaxMatches = /SYNTAX (.*?) MAX-ACCESS/.exec(details) ?? [];
+  const syntaxMatches = /SYNTAX (.*?) (?:MAX-)?ACCESS/.exec(details) ?? [];
   const maxAccessMatches = /MAX-ACCESS (.*?) /.exec(details) ?? [];
   const statusMatches = /STATUS (.*?) /.exec(details) ?? [];
   const descriptionMatches = /DESCRIPTION "(.*?)"/.exec(details) ?? [];
@@ -104,7 +162,7 @@ function processOidData(details: string, oid?: string): OidInformation {
  */
 export async function fetchOID(oid: string) {
   const fnLogTrace = [...logTrace, "fetchOID"];
-  logger.info(`>>> Fetching OID ${oid}`, ...fnLogTrace);
+  logger.debug(`Fetching OID ${oid} from online database`, ...fnLogTrace);
   return axios
     .get(`${BASE_URL}/${oid}`)
     .then(res => {
@@ -275,6 +333,7 @@ class CharBuffer {
  * MIB Parser
  */
 class MibParser {
+  private readonly logTrace = ["utils", "snmp", "MibParser"];
   directory: string;
   SymbolBuffer = {};
   StringBuffer = "";
@@ -547,6 +606,7 @@ class MibParser {
   }
 
   Compile() {
+    const fnLogTrace = [...this.logTrace, "Compile"];
     for (const ModuleName in this.SymbolBuffer) {
       if (Object.keys(this.SymbolBuffer).includes(ModuleName)) {
         if (!Object.keys(this.Modules).includes(ModuleName)) {
@@ -595,8 +655,6 @@ class MibParser {
                       function (ID, OD) {
                         snmpObject[Symbols[i - 2]].OID = ID;
                         snmpObject[Symbols[i - 2]].NameSpace = OD;
-                        //snmpObject[Symbols[i - 2]]['ModuleName'] = ModuleName;
-                        // snmpObject[Symbols[i - 2]]['ObjectName'] = Symbols[i - 2];
                       },
                     );
                   }
@@ -631,8 +689,6 @@ class MibParser {
                   while (c1 < i - 1) {
                     c1++;
                     key = Symbols[c1]; //Parse TYPE NOTATION. ex: SYNTAX, ACCESS, STATUS, DESCRIPTION.....
-
-                    //key == 'DESCRIPTION' ? logger.info(keychain.indexOf(key), key, Symbols[c1 + 1]) : false;
 
                     const regExp = /\(([^)]+)\)/; //in parentheses ex: "ethernet-csmacd (6)"
 
@@ -766,8 +822,6 @@ class MibParser {
                       function (ID, OD) {
                         snmpObject[Symbols[r - 1]].OID = ID;
                         snmpObject[Symbols[r - 1]].NameSpace = OD;
-                        //snmpObject[Symbols[r - 1]]['ModuleName'] = ModuleName;
-                        //snmpObject[Symbols[r - 1]]['ObjectName'] = Symbols[r - 1];
                       },
                     );
                   }
@@ -858,8 +912,6 @@ class MibParser {
               MACROName = "";
               break;
             case "IMPORTS": {
-              //logger.info(ModuleName, 'IMPORTS');
-              //i++;
               Module.IMPORTS = {};
               let tmp = i + 1;
               let IMPORTS = [];
@@ -867,11 +919,16 @@ class MibParser {
                 if (Symbols[tmp] == "FROM") {
                   const ImportModule = Symbols[tmp + 1];
                   if (!Object.keys(this.Modules).includes(ImportModule)) {
-                    logger.info(
-                      ModuleName + ": Can not find " + ImportModule + "!!!!!!!!!!!!!!!!!!!!!",
+                    logger.warn(`${ModuleName}: Cannot find ${ImportModule}`, ...fnLogTrace);
+                    logger.warn(
+                      `${ModuleName}: Cannot import ${JSON.stringify(IMPORTS)}`,
+                      ...fnLogTrace,
                     );
-                    logger.info(`${ModuleName}: Can not import ${JSON.stringify(IMPORTS)}`);
-                    notify("WARN", `Local MIB files missing depenency: ${ImportModule}`);
+                    notify(
+                      "WARN",
+                      `Local MIB files missing dependency ${ImportModule} required by ${ModuleName}`,
+                      ...fnLogTrace,
+                    );
                   }
                   Module.IMPORTS[ImportModule] = IMPORTS;
                   tmp++;
@@ -881,11 +938,9 @@ class MibParser {
                 }
                 tmp++;
               }
-              //logger.info(ModuleName, 'IMPORTS', Module['IMPORTS']);
               break;
             }
             case "EXPORTS":
-              //logger.info(ModuleName, 'EXPORTS');
               break;
             default:
               break;
@@ -1040,30 +1095,61 @@ class MibParser {
  * MIB Module store
  */
 export class MibModuleStore {
-  private path: string;
+  private readonly logTrace = ["utils", "snmp", "MibModuleStore"];
+  private readonly storePath;
   private parser: MibParser;
-  private BASE_MODULES = [
-    "SNMPv2-SMI",
-    "SNMPv2-TC",
-    "RFC1155-SMI",
-    "RFC1158-MIB",
-    "RFC1212-MIB",
-    "RFC1213-MIB",
-    "SNMPv2-CONF",
-    "SNMPv2-MIB",
-    "INET-ADDRESS-MIB",
+  private BASE_MODULES: { name: string; source: "bundle" | "storage" }[] = [
+    { name: "SNMPv2-SMI", source: "storage" },
+    { name: "SNMPv2-TC", source: "storage" },
+    { name: "RFC1155-SMI", source: "storage" },
+    { name: "RFC1158-MIB", source: "bundle" },
+    { name: "RFC1212-MIB", source: "bundle" },
+    { name: "RFC1213-MIB", source: "storage" },
+    { name: "SNMPv2-CONF", source: "storage" },
+    { name: "SNMPv2-MIB", source: "storage" },
+    { name: "INET-ADDRESS-MIB", source: "storage" },
+    { name: "RFC-1215", source: "storage" },
+    { name: "HCNUM-TC", source: "storage" },
+    { name: "F5-BIGIP-COMMON-MIB", source: "storage" },
+    { name: "IANAifType-MIB", source: "storage" },
+    { name: "IF-MIB", source: "storage" },
+    { name: "SNMP-FRAMEWORK-MIB", source: "storage" },
+    { name: "SNMP-TARGET-MIB", source: "storage" },
+    { name: "CISCO-SMI", source: "storage" },
+    { name: "IP-MIB", source: "storage" },
+    { name: "IPV6-TC", source: "storage" },
+    { name: "IPV6-MIB", source: "storage" },
+    { name: "UCD-SNMP-MIB", source: "storage" },
+    { name: "NET-SNMP-MIB", source: "storage" },
+    { name: "NET-SNMP-TC", source: "storage" },
+    { name: "SNMP-VIEW-BASED-ACM-MIB", source: "storage" },
+    { name: "NETWORK-SERVICES-MIB", source: "storage" },
   ];
 
-  constructor(basePath?: string) {
-    this.path = basePath ?? path.resolve(__filename, "..", "..", "src", "assets", "mibs");
-    this.parser = new MibParser(this.path);
+  constructor() {
+    this.parser = new MibParser(mibStoragePath);
     this.loadBaseModules();
   }
 
   private loadBaseModules() {
-    for (const mibModule of this.BASE_MODULES) {
-      this.parser.Import(path.resolve(this.path, `${mibModule}.mib`));
-    }
+    // First, load the base modules in order to resolve dependencies
+    this.BASE_MODULES.forEach(({ name, source }) => {
+      const mibPath =
+        source === "storage"
+          ? mibStoragePath
+          : path.resolve(__filename, "..", "..", "src", "assets", "mibs");
+      logger.debug(`Loading ${name} MIB`, ...this.logTrace);
+      this.parser.Import(path.resolve(mibPath, `${name}.mib`));
+    });
+    this.parser.Serialize();
+
+    // Then, load all other modules from storage
+    readdirSync(mibStoragePath)
+      .filter(fileName => this.BASE_MODULES.findIndex(m => `${m.name}.mib` === fileName) === -1)
+      .forEach(fileName => {
+        logger.debug(`Loading ${fileName}`, ...this.logTrace);
+        this.parser.Import(path.resolve(mibStoragePath, fileName));
+      });
     this.parser.Serialize();
   }
 
