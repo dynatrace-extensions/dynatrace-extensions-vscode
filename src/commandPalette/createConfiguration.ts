@@ -23,10 +23,10 @@ import {
   MinimalConfiguration,
   getConfigurationDetailsViaFile,
 } from "../treeViews/commands/environments";
-import { showMessage } from "../utils/code";
 import { CachedData } from "../utils/dataCaching";
 import { getDatasourceName } from "../utils/extensionParsing";
 import { createUniqueFileName, getExtensionFilePath } from "../utils/fileSystem";
+import { notify } from "../utils/logging";
 import { createGenericConfigObject, createObjectFromSchema } from "../utils/schemaParsing";
 
 /**
@@ -74,7 +74,7 @@ export async function createMonitoringConfiguration(
         title: "Where will this configuration run?",
       });
       if (!activationContext) {
-        showMessage("info", "Operation cancelled");
+        notify("INFO", "Operation cancelled");
         return;
       }
     }
@@ -124,7 +124,7 @@ export async function createMonitoringConfiguration(
     ignoreFocusOut: true,
   });
   if (!fileName) {
-    showMessage("info", "Operation cancelled.");
+    notify("INFO", "Operation cancelled.");
   } else {
     writeFileSync(path.join(configDir, fileName), JSON.stringify(configObject, undefined, 4));
   }

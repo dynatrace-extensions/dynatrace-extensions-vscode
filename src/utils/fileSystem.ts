@@ -40,7 +40,25 @@ import {
   RemoteTarget,
 } from "../interfaces/simulator";
 import { DynatraceEnvironmentData, ExtensionWorkspace } from "../interfaces/treeViewData";
-import { showMessage } from "./code";
+import { notify } from "./logging";
+import * as logger from "./logging";
+
+const logTrace = ["utils", "fileSystem"];
+
+/**
+ * Performs some basic clean-up of any old log files in the logs directory.
+ * @param logsDir path to the logs directory
+ */
+export function cleanUpLogs(logsDir: string, count: number) {
+  // Ensure we have at most 10 files including the current one
+  const logFiles = readdirSync(logsDir).sort();
+  while (logFiles.length > count) {
+    const fileToDelete = logFiles.pop();
+    if (fileToDelete) {
+      rmSync(path.join(logsDir, fileToDelete));
+    }
+  }
+}
 
 /**
  * Initializes the global storage path for the VS Code extension.
@@ -55,6 +73,7 @@ export function initGlobalStorage(context: vscode.ExtensionContext) {
   const idTokenPath = path.join(globalStoragePath, "idToken.txt");
   const targetsJson = path.join(globalStoragePath, "targets.json");
   const summariesJson = path.join(globalStoragePath, "summaries.json");
+  const logsDir = path.join(globalStoragePath, "logs");
 
   // Create global storage folder if needed
   if (!existsSync(globalStoragePath)) {
@@ -85,6 +104,11 @@ export function initGlobalStorage(context: vscode.ExtensionContext) {
   if (!existsSync(summariesJson)) {
     writeFileSync(summariesJson, "[]");
   }
+
+  // Create logs folder if needed
+  if (!existsSync(logsDir)) {
+    mkdirSync(logsDir, { recursive: true });
+  }
 }
 
 /**
@@ -93,12 +117,13 @@ export function initGlobalStorage(context: vscode.ExtensionContext) {
  * @param context VSCode Extension Context
  */
 export function initWorkspaceStorage(context: vscode.ExtensionContext) {
+  const fnLogTrace = [...logTrace, "initWorkspaceStorage"];
   const storagePath = context.storageUri?.fsPath;
   if (!storagePath) {
-    console.log("No workspace detected.");
+    logger.error("No workspace detected.", ...fnLogTrace);
     return;
   }
-  console.log(`Workspace storage will be at: ${storagePath}`);
+  logger.info(`Workspace storage will be at: ${storagePath}`, ...fnLogTrace);
   if (!existsSync(storagePath)) {
     mkdirSync(storagePath);
   }
@@ -111,7 +136,11 @@ export function initWorkspaceStorage(context: vscode.ExtensionContext) {
  */
 export async function registerWorkspace(context: vscode.ExtensionContext) {
   if (!context.storageUri?.fsPath || !vscode.workspace.workspaceFolders) {
-    console.log("No workspace to register. Check should be upstream.");
+    logger.error(
+      "No workspace to register. Check should be upstream.",
+      ...logTrace,
+      "registerWorkspace",
+    );
     return;
   }
   const workspacesJson = path.join(context.globalStorageUri.fsPath, "extensionWorkspaces.json");
@@ -353,7 +382,12 @@ export function cleanUpSimulatorLogs(context: vscode.ExtensionContext) {
             try {
               rmSync(summary.logPath);
             } catch (err) {
-              console.log(`Error deleting file "${summary.logPath}": ${(err as Error).message}`);
+              logger.error(
+                `Error deleting file "${summary.logPath}": ${(err as Error).message}`,
+                ...logTrace,
+                // eslint-disable-next-line no-secrets/no-secrets
+                "cleanUpSimulatorLogs",
+              );
             }
           }
         });
@@ -452,7 +486,11 @@ export function uploadComponentCert(certPath: string, component: "OneAgent" | "A
       )) ||
     !existsSync(path.join(uploadDir, certFilename))
   ) {
-    console.log(`Copying certificate file from ${certPath} to ${uploadDir}`);
+    logger.info(
+      `Copying certificate file from ${certPath} to ${uploadDir}`,
+      ...logTrace,
+      "uploadComponentCert",
+    );
     const [name, ext] = certFilename.split(".");
     certFilename = `${name}_${vscode.workspace.name ?? ""}.${ext}`;
     copyFileSync(certPath, path.join(uploadDir, certFilename));
@@ -805,7 +843,7 @@ export async function migrateFromLegacyExtension(context: vscode.ExtensionContex
         });
     },
   );
-  showMessage("info", "Migration from legacy version complete.");
+  notify("INFO", "Migration from legacy version complete.");
 }
 
 /**

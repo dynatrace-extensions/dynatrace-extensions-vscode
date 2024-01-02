@@ -17,10 +17,13 @@
 /* eslint-disable @typescript-eslint/naming-convention */
 
 import * as assert from "assert";
-import * as mock from 'mock-fs';
+import * as mock from "mock-fs";
+import * as path from "path";
 
 import { sign } from "../../utils/cryptography";
-
+import { suiteSetup } from "mocha";
+import { rmSync, writeFileSync } from "fs";
+import { testGlobalStorage } from "../mock/vscode";
 
 const developerCertKey = `
 -----BEGIN CERTIFICATE-----
@@ -108,7 +111,6 @@ QpBQf+Yhr6m1jdrIsSrIun90XaCl7IGBgPJPagssHgBVrtjN4/f4VXEz/RN+
 -----END RSA PRIVATE KEY-----
 `;
 
-
 const expectedCMS = `-----BEGIN CMS-----
 MIIISgYJKoZIhvcNAQcCoIIIOzCCCDcCAQExDzANBglghkgBZQMEAgEFADALBgkq
 hkiG9w0BBwGgggV+MIIFejCCA2KgAwIBAgIUeWjuijtWhJFvrkTafpIAPLpJV5Qw
@@ -160,28 +162,27 @@ yjCcpMEM1OlaIQD3lZg=
 
 suite("Cryptography Test Suite", () => {
 
+  const mockDeveloperKey = path.join(testGlobalStorage, "developer.pem");
+  const mockExtensionZip = path.join(testGlobalStorage, "extension.zip");
 
-    /**
-     * Tests the signing of a message
-     */
-    test("Test sign", () => {
-        mock({
-            "mock": {
-                "extension.zip": "AAA",
-                "developer.pem": developerCertKey
-            }
-        });
+  suiteSetup(() => {
+    writeFileSync(mockDeveloperKey, developerCertKey);
+    writeFileSync(mockExtensionZip, "AAA");
+  });
 
-        const cms = sign("mock/extension.zip", "mock/developer.pem");
+  /**
+   * Tests the signing of a message
+   */
+  test("Test sign", () => {
+    const cms = sign(mockExtensionZip, mockDeveloperKey);
 
-        // Needed because if the test runs on windows we get \r\n instead of \n
-        const cmsNewLines = cms.replace(/\r?\n|\r/g, "\n");
-        assert.strictEqual(cmsNewLines, expectedCMS);
+    // Needed because if the test runs on windows we get \r\n instead of \n
+    const cmsNewLines = cms.replace(/\r?\n|\r/g, "\n");
+    assert.strictEqual(cmsNewLines, expectedCMS);
+  });
 
-    });
-
-    suiteTeardown(() => {
-        // Remove the fake file system
-        mock.restore();
-    });
+  suiteTeardown(() => {
+    rmSync(mockDeveloperKey);
+    rmSync(mockExtensionZip);
+  });
 });

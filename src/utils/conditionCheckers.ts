@@ -24,9 +24,11 @@ import * as path from "path";
 import axios from "axios";
 import * as vscode from "vscode";
 import { EnvironmentsTreeDataProvider } from "../treeViews/environmentsTreeView";
-import { showMessage } from "./code";
 import { getExtensionFilePath, resolveRealPath } from "./fileSystem";
+import * as logger from "./logging";
 import { runCommand } from "./subprocesses";
+
+const logTrace = ["utils", "conditionCheckers"];
 
 /**
  * Checks whether one or more VSCode settings are configured.
@@ -35,11 +37,12 @@ import { runCommand } from "./subprocesses";
  * @returns check status
  */
 export async function checkSettings(...settings: string[]): Promise<boolean> {
+  const fnLogTrace = [...logTrace, "checkSettings"];
   const config = vscode.workspace.getConfiguration("dynatraceExtensions", null);
   let status = true;
   for (const setting of settings) {
     if (!config.get(setting)) {
-      console.log(`Setting ${setting} not found. Check failed.`);
+      logger.debug(`Setting ${setting} not found. Check failed.`, ...fnLogTrace);
       await vscode.window
         .showErrorMessage(
           `Missing one or more required settings. Check ${setting}`,
@@ -58,7 +61,7 @@ export async function checkSettings(...settings: string[]): Promise<boolean> {
     }
   }
 
-  console.log(`Check - are required settings present? > ${String(status)}`);
+  logger.info(`Settings ${settings.join(", ")} exist? ${String(status)}`, ...fnLogTrace);
   return status;
 }
 
@@ -70,13 +73,18 @@ export async function checkSettings(...settings: string[]): Promise<boolean> {
 export async function checkEnvironmentConnected(
   environmentsTree: EnvironmentsTreeDataProvider,
 ): Promise<boolean> {
+  const fnLogTrace = [...logTrace, "checkEnvironmentConnected"];
   let status = true;
   if (!(await environmentsTree.getCurrentEnvironment())) {
-    showMessage("error", "You must be connected to a Dynatrace Environment to use this command.");
+    logger.notify(
+      "ERROR",
+      "You must be connected to a Dynatrace Environment to use this command.",
+      ...fnLogTrace,
+    );
     status = false;
   }
 
-  console.log(`Check - is an environment connected? > ${String(status)}`);
+  logger.info(`Is a tenant connected? ${String(status)}`, ...fnLogTrace);
   return status;
 }
 
@@ -99,7 +107,7 @@ export async function checkWorkspaceOpen(suppressMessaging: boolean = false): Pr
     }
     status = false;
   }
-  console.log(`Check - is a workspace open? > ${String(status)}`);
+  logger.info(`Is a workspace open? ${String(status)}`, ...logTrace, "checkWorkspaceOpen");
   return status;
 }
 
@@ -113,15 +121,17 @@ export async function isExtensionsWorkspace(
   context: vscode.ExtensionContext,
   showWarningMessage: boolean = true,
 ): Promise<boolean> {
+  const fnLogTrace = [...logTrace, "isExtensionsWorkspace"];
   let status = false;
   if (context.storageUri && existsSync(context.storageUri.fsPath)) {
     const extensionYaml = getExtensionFilePath();
     if (!extensionYaml) {
       if (showWarningMessage) {
-        showMessage(
-          "warn",
+        logger.notify(
+          "WARN",
           "This command must be run from an Extensions Workspace. " +
             "Ensure your `extension` folder is within the root of the workspace.",
+          ...fnLogTrace,
         );
       }
     } else {
@@ -129,7 +139,7 @@ export async function isExtensionsWorkspace(
     }
   }
 
-  console.log(`Check - is this an extensions workspace? > ${String(status)}`);
+  logger.info(`Is this an extensions workspace? ${String(status)}`, ...fnLogTrace);
   return status;
 }
 
@@ -161,7 +171,11 @@ export async function checkOverwriteCertificates(
       }
     }
   }
-  console.log(`Check - can continue and/or overwrite certificates? > ${String(status)}`);
+  logger.info(
+    `Can continue and overwrite certificates? ${String(status)}`,
+    ...logTrace,
+    "checkOverwriteCertificates",
+  );
   return status;
 }
 
@@ -195,7 +209,11 @@ export async function checkCertificateExists(type: "ca" | "dev" | "all"): Promis
       allExist = false;
     }
   }
-  console.log(`Check - ${type.toUpperCase()} certificates exist? > ${String(allExist)}`);
+  logger.info(
+    `Does ${type.toUpperCase()} certificates exist? ${String(allExist)}`,
+    ...logTrace,
+    "checkCertificateExists",
+  );
 
   if (!allExist) {
     await vscode.window
@@ -230,7 +248,12 @@ export async function checkExtensionZipExists(): Promise<boolean> {
   if (vscode.workspace.workspaceFolders) {
     const distDir = path.join(vscode.workspace.workspaceFolders[0].uri.fsPath, "dist");
     if (readdirSync(distDir).filter(i => i.endsWith(".zip")).length === 0) {
-      showMessage("error", "No extension archive was found. Try building one first.");
+      logger.notify(
+        "ERROR",
+        "No extension archive was found. Try building one first.",
+        ...logTrace,
+        "checkExtensionZipExists",
+      );
       return false;
     }
     return true;
@@ -245,18 +268,19 @@ export async function checkExtensionZipExists(): Promise<boolean> {
  * @returns status of check
  */
 export async function checkUrlReachable(url: string, showError: boolean = false): Promise<boolean> {
+  const fnLogTrace = [...logTrace, "checkUrlReachable"];
   const status = await axios
     .get(url)
     .then(res => res.status === 200)
     .catch(err => {
       if (showError) {
-        showMessage("error", (err as Error).message);
+        logger.notify("ERROR", (err as Error).message, ...fnLogTrace);
       }
-      console.log(JSON.stringify(err));
+      logger.error(JSON.stringify(err), ...fnLogTrace);
       return false;
     });
 
-  console.log(`Check - is URL ${url} reachable? > ${String(status)}`);
+  logger.info(`Is URL ${url} reachable? ${String(status)}`, ...fnLogTrace);
 
   return status;
 }
@@ -312,7 +336,11 @@ export async function checkDtInternalProperties(): Promise<boolean> {
     }
   }
 
-  console.log(`Check - is this an internal Dynatrace repo? > ${String(status)}`);
+  logger.info(
+    `Is this an internal Dynatrace repo? ${String(status)}`,
+    ...logTrace,
+    "checkDtInternalProperties",
+  );
 
   return status;
 }
@@ -327,7 +355,11 @@ export function checkOneAgentInstalled(): boolean {
   const oaLinPath = "/var/lib/dynatrace/oneagent/agent/config";
   const status = process.platform === "win32" ? existsSync(oaWinPath) : existsSync(oaLinPath);
 
-  console.log(`Check - is OneAgent installed locally? > ${String(status)}`);
+  logger.info(
+    `Is OneAgent installed locally? > ${String(status)}`,
+    ...logTrace,
+    "checkOneAgentInstalled",
+  );
   return status;
 }
 
@@ -341,7 +373,11 @@ export function checkActiveGateInstalled(): boolean {
   const agLinPath = "/var/lib/dynatrace/remotepluginmodule/agent/conf";
   const status = process.platform === "win32" ? existsSync(agWinPath) : existsSync(agLinPath);
 
-  console.log(`Check - is ActiveGate installed locally? > ${String(status)}`);
+  logger.info(
+    `Is ActiveGate installed locally? ${String(status)}`,
+    ...logTrace,
+    "checkActiveGateInstalled",
+  );
   return status;
 }
 
@@ -362,7 +398,7 @@ export async function checkDtSdkPresent(
     .then(() => true)
     .catch(() => false);
 
-  console.log(`Check - Is dt-sdk available? > ${String(status)}`);
+  logger.info(`Is dt-sdk available? ${String(status)}`, ...logTrace, "checkDtSdkPresent");
 
   return status;
 }

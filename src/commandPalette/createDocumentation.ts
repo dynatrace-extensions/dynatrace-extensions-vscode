@@ -106,7 +106,7 @@ function extractDashboards(extension: ExtensionStub, extensionDir: string): Dash
  * @returns topology processed metadata
  */
 function extractTopology(extension: ExtensionStub): EntityDoc[] {
-  if (!extension.topology || !extension.topology.types) {
+  if (!extension.topology?.types) {
     return [];
   }
   return extension.topology.types.map((topologyType): EntityDoc => {

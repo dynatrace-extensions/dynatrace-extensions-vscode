@@ -17,8 +17,8 @@
 import { readFileSync } from "fs";
 import axios from "axios";
 import * as vscode from "vscode";
-import { showMessage } from "../utils/code";
 import { CachedData, CachedDataProducer } from "../utils/dataCaching";
+import * as logger from "../utils/logging";
 
 export type PromData = Record<string, PromDetails>;
 type PromDetails = {
@@ -37,6 +37,7 @@ export class PrometheusCodeLensProvider
   extends CachedDataProducer
   implements vscode.CodeLensProvider
 {
+  private readonly logTrace = ["codeLens", "prometheusScraper", this.constructor.name];
   private codeLenses: vscode.CodeLens[];
   private regex: RegExp;
   private lastScrape = "N/A";
@@ -225,7 +226,7 @@ export class PrometheusCodeLensProvider
             return true;
           case "AWS key":
             // TODO: Figure out how to implement AWS authentication
-            showMessage("error", "AWS authentication not support yet, sorry.");
+            logger.notify("ERROR", "AWS authentication not support yet, sorry.");
             return false;
             this.promAccessKey = await vscode.window.showInputBox({
               title: "Scrape data - endpoint authentication",
@@ -314,12 +315,12 @@ export class PrometheusCodeLensProvider
             this.processPrometheusData(data);
             return true;
           } catch (err) {
-            console.log(err);
+            logger.error(err, ...this.logTrace);
             return false;
           }
       }
     } catch (err) {
-      console.log(err);
+      logger.error(err, ...this.logTrace);
       return false;
     }
   }

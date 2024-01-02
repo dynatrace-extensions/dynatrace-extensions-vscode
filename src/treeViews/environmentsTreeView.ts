@@ -19,9 +19,9 @@ import * as vscode from "vscode";
 import { Dynatrace } from "../dynatrace-api/dynatrace";
 import { DynatraceEnvironmentData } from "../interfaces/treeViewData";
 import { ConnectionStatusManager } from "../statusBar/connection";
-import { showMessage } from "../utils/code";
 import { decryptToken, encryptToken } from "../utils/cryptography";
 import { getAllEnvironments, registerEnvironment } from "../utils/fileSystem";
+import * as logger from "../utils/logging";
 import {
   addEnvironment,
   editEnvironment,
@@ -197,6 +197,7 @@ export class MonitoringConfiguration extends vscode.TreeItem implements IMonitor
  * Any environment in the list may be used for API-based operations.
  */
 export class EnvironmentsTreeDataProvider implements vscode.TreeDataProvider<EnvironmentsTreeItem> {
+  private readonly logTrace = ["treeViews", "environmentsTreeView", this.constructor.name];
   context: vscode.ExtensionContext;
   connectionStatus: ConnectionStatusManager;
   oc: vscode.OutputChannel;
@@ -228,7 +229,7 @@ export class EnvironmentsTreeDataProvider implements vscode.TreeDataProvider<Env
           .catch(() => {});
       })
       .catch(err => {
-        console.log((err as Error).message);
+        logger.error((err as Error).message, ...this.logTrace);
       });
     this.registerCommands(context);
   }
@@ -320,7 +321,7 @@ export class EnvironmentsTreeDataProvider implements vscode.TreeDataProvider<Env
       "dynatrace-extensions-environments.saveConfig",
       async (config: MonitoringConfiguration) => {
         await saveMoniotringConfiguration(config).catch(err => {
-          showMessage("error", `Unable to save configuration. ${(err as Error).message}`);
+          logger.notify("ERROR", `Unable to save configuration. ${(err as Error).message}`);
         });
       },
     );
@@ -329,7 +330,11 @@ export class EnvironmentsTreeDataProvider implements vscode.TreeDataProvider<Env
       "dynatrace-extensions-environments.openExtension",
       async (extension: DeployedExtension) => {
         await openExtension(extension).catch(err => {
-          console.log(`Couldn't open URL for extension ${extension.id}`, (err as Error).message);
+          logger.warn(
+            `Couldn't open URL for extension ${extension.id}: ${(err as Error).message}`,
+            ...this.logTrace,
+            "openExtension",
+          );
         });
       },
     );

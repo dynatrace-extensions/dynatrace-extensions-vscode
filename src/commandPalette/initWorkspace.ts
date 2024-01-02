@@ -20,7 +20,6 @@ import { TextEncoder } from "util";
 import AdmZip = require("adm-zip");
 import * as vscode from "vscode";
 import { Dynatrace } from "../dynatrace-api/dynatrace";
-import { showMessage } from "../utils/code";
 import { checkDtSdkPresent, checkSettings } from "../utils/conditionCheckers";
 import { CachedData } from "../utils/dataCaching";
 import {
@@ -29,9 +28,13 @@ import {
   registerWorkspace,
   writeGititnore,
 } from "../utils/fileSystem";
+import { notify } from "../utils/logging";
+import * as logger from "../utils/logging";
 import { getPythonVenvOpts } from "../utils/otherExtensions";
 import { runCommand } from "../utils/subprocesses";
 import { loadSchemas } from "./loadSchemas";
+
+const logTrace = ["commandPalette", "initWorkspace"];
 
 const PROJECT_TYPES = {
   defaultExtension: {
@@ -120,6 +123,7 @@ async function pythonExtensionSetup(
  * @returns
  */
 async function existingExtensionSetup(dt: Dynatrace, rootPath: string) {
+  const fnLogTrace = [...logTrace, "existingExtensionSetup"];
   const download = await vscode.window.showQuickPick(
     (
       await dt.extensionsV2.list()
@@ -134,7 +138,7 @@ async function existingExtensionSetup(dt: Dynatrace, rootPath: string) {
     },
   );
   if (!download) {
-    showMessage("error", "No selection made. Operation aborted.");
+    notify("ERROR", "No selection made. Operation aborted.");
     return;
   }
 
@@ -162,7 +166,7 @@ async function existingExtensionSetup(dt: Dynatrace, rootPath: string) {
         extensionZip
           .getEntries()
           .filter(e => {
-            console.log(e.name);
+            logger.info(e.name, ...fnLogTrace);
             return e.name.startsWith(moduleName);
           })
           .forEach(e => {
@@ -173,11 +177,8 @@ async function existingExtensionSetup(dt: Dynatrace, rootPath: string) {
       await writeGititnore(true);
     }
   } catch (err) {
-    console.log(err);
-    showMessage(
-      "warn",
-      "Not all files were extracted successfully. Manual edits are still needed.",
-    );
+    logger.error(err, ...fnLogTrace);
+    notify("WARN", "Not all files were extracted successfully. Manual edits are still needed.");
   }
 }
 
@@ -244,16 +245,16 @@ export async function initWorkspace(
         if (cmdSuccess) {
           schemaVersion = context.workspaceState.get<string>("schemaVersion");
           if (!schemaVersion) {
-            showMessage("error", "Error loading schemas. Cannot continue initialization.");
+            notify("ERROR", "Error loading schemas. Cannot continue initialization.");
             return false;
           }
-          showMessage("info", `Loaded schemas version ${schemaVersion}`);
+          notify("INFO", `Loaded schemas version ${schemaVersion}`);
         } else {
-          showMessage("error", "Cannot initialize workspace without schemas.");
+          notify("ERROR", "Cannot initialize workspace without schemas.");
           return false;
         }
       } else {
-        showMessage("info", `Using cached schema version ${schemaVersion}`);
+        notify("INFO", `Using cached schema version ${schemaVersion}`);
         const mainSchema = vscode.Uri.file(
           path.join(
             path.join(context.globalStorageUri.fsPath, schemaVersion),
@@ -264,7 +265,7 @@ export async function initWorkspace(
           .getConfiguration()
           .update("yaml.schemas", { [mainSchema]: "extension.yaml" })
           .then(undefined, () => {
-            console.log("Could not update configuration yaml.schemas");
+            logger.error("Could not update configuration yaml.schemas", ...logTrace);
           });
       }
 
@@ -284,7 +285,7 @@ export async function initWorkspace(
         case "Use existing": {
           const hasCertificates = await checkSettings("developerCertkeyLocation");
           if (!hasCertificates) {
-            showMessage("error", "Personal certificates not found. Workspace not initialized.");
+            notify("ERROR", "Personal certificates not found. Workspace not initialized.");
             return false;
           }
           break;
@@ -294,13 +295,13 @@ export async function initWorkspace(
             "dynatrace-extensions.generateCertificates",
           );
           if (!cmdSuccess) {
-            showMessage("error", "Cannot initialize workspace without certificates.");
+            notify("ERROR", "Cannot initialize workspace without certificates.");
             return false;
           }
           break;
         }
         default:
-          showMessage("error", "No certificate choice made. Workspace not initialized.");
+          notify("ERROR", "No certificate choice made. Workspace not initialized.");
           return false;
       }
 
@@ -352,7 +353,7 @@ export async function initWorkspace(
         });
       }
       if (!projectType) {
-        showMessage("error", "No selection made. Operation cancelled.");
+        notify("ERROR", "No selection made. Operation cancelled.");
         return;
       }
       // This was done earlier in the flow already.
@@ -394,5 +395,5 @@ export async function initWorkspace(
     },
   );
 
-  showMessage("info", "Workspace initialization completed successfully.");
+  notify("INFO", "Workspace initialization completed successfully.");
 }

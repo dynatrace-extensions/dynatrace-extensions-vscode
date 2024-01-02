@@ -21,6 +21,9 @@
 import * as crypto from "crypto";
 import * as fs from "fs";
 import * as forge from "node-forge";
+import * as logger from "./logging";
+
+const logTrace = ["utils", "cryptography"];
 
 const algorithm = "aes-256-cbc";
 
@@ -96,7 +99,7 @@ function getContentFromMergedFile(filePath: string): [string, string] {
  * @returns signature
  */
 export function sign(inputFilePath: string, certKeyPath: string): string {
-  console.log(`Signing extension with credentials from ${certKeyPath}`);
+  logger.info(`Signing extension with credentials from ${certKeyPath}`, ...logTrace, "sign");
 
   const [keyContents, certContents] = getContentFromMergedFile(certKeyPath);
 

@@ -16,6 +16,7 @@
 
 import axios, { ResponseType } from "axios";
 import FormData = require("form-data");
+import * as logger from "../utils/logging";
 import { DynatraceAPIError } from "./errors";
 import { DynatraceAxiosError, ErrorEnvelope, PaginatedResponse } from "./interfaces/dynatrace";
 
@@ -23,6 +24,7 @@ import { DynatraceAxiosError, ErrorEnvelope, PaginatedResponse } from "./interfa
  * Implementation of a HTTP Client specialised for accessing Dynatrace APIs
  */
 export class HttpClient {
+  private readonly logTrace = ["dynatrace-api", "http_client", "HttpClient"];
   private readonly baseUrl: string;
   private readonly apiToken: string;
 
@@ -50,6 +52,7 @@ export class HttpClient {
     files?: { file: Buffer; name: string },
     responseType?: ResponseType,
   ): Promise<T> {
+    const fnLogTrace = [...this.logTrace, "makeRequest"];
     const url = `${this.baseUrl}${path}`;
 
     let body = null;
@@ -68,10 +71,11 @@ export class HttpClient {
     }
     headers.Authorization = `Api-Token ${this.apiToken}`;
 
-    console.debug(
+    logger.debug(
       `Making ${method} request to ${url} ${
         params ? "with params " + JSON.stringify(params) : ""
       } ${body ? " and body " + JSON.stringify(body) : ""}`,
+      ...fnLogTrace,
     );
 
     return axios
@@ -89,7 +93,7 @@ export class HttpClient {
           const message = `Error making request to ${url}: ${
             res.status
           }. Response: ${JSON.stringify(errorData, undefined, 2)}`;
-          console.log(errorData);
+          logger.error(errorData, ...fnLogTrace);
           throw new DynatraceAPIError(message, errorData.error);
         }
         return res.data as T;
@@ -103,7 +107,7 @@ export class HttpClient {
           );
         } else if (Object.keys(err).includes("request")) {
           // Request was made, but no response received
-          console.log(err);
+          logger.error(err, ...fnLogTrace);
           throw new DynatraceAPIError(`No response from server ${this.baseUrl}`, {
             code: 0,
             constraintViolations: [],
@@ -112,7 +116,7 @@ export class HttpClient {
         } else {
           // Something else unexpected happened
           const message = `Error making request to ${url}: ${(err as Error).message}.`;
-          console.log(message);
+          logger.error(message, ...fnLogTrace);
           throw new DynatraceAPIError(message, {
             code: 0,
             constraintViolations: [],

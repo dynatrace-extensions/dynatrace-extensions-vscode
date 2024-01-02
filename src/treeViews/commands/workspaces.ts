@@ -15,8 +15,8 @@
  */
 
 import * as vscode from "vscode";
-import { showMessage } from "../../utils/code";
 import { removeWorkspace } from "../../utils/fileSystem";
+import { notify } from "../../utils/logging";
 import { ExtensionProjectItem } from "../extensionsTreeView";
 
 /**
@@ -38,7 +38,7 @@ export async function deleteWorkspace(
   });
 
   if (confirm !== "Yes") {
-    showMessage("info", "Operation cancelled.");
+    notify("INFO", "Operation cancelled.");
     return;
   }
 

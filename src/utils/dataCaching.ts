@@ -32,6 +32,7 @@ import { ExtensionStub } from "../interfaces/extensionMeta";
 import { EnvironmentsTreeDataProvider } from "../treeViews/environmentsTreeView";
 import { loopSafeWait } from "./code";
 import { getExtensionFilePath, getSnmpMibFiles } from "./fileSystem";
+import * as logger from "./logging";
 import { fetchOID, MibModuleStore, OidInformation, parseMibFile } from "./snmp";
 
 type CachedDataType =
@@ -93,6 +94,7 @@ type LoadedFile = { name: string; filePath: string };
  * Find the global instance in src/extension.ts
  */
 export class CachedData {
+  private readonly logTrace = ["utils", "dataCaching", this.constructor.name];
   private readonly environments: EnvironmentsTreeDataProvider;
   private builtinEntityTypes = new BehaviorSubject<EntityType[]>([]);
   private parsedExtension = new BehaviorSubject<ExtensionStub | undefined>(undefined);
@@ -111,6 +113,7 @@ export class CachedData {
    * @param environments a Dynatrace Environments provider
    */
   constructor(environments: EnvironmentsTreeDataProvider) {
+    logger.info("Data Cache created.", ...this.logTrace);
     this.environments = environments;
   }
 
@@ -146,19 +149,25 @@ export class CachedData {
    * Initializes cache by pulling all data that can be pre-loaded and setting up update schedules.
    */
   public async initialize() {
+    const fnLogTrace = [...this.logTrace, "initialize"];
+    logger.info("Initializing Data Cache...", ...fnLogTrace);
+
     // Fetch entities
+    logger.debug("Caching built-in entity types", ...fnLogTrace);
     this.fetchBuiltinEntityTypes()
       .then(entityTypes => this.builtinEntityTypes.next(entityTypes))
       .catch(() => this.builtinEntityTypes.next([]))
       .finally(() => this.builtinEntityTypes.complete());
 
     // Fetch Barista icons
+    logger.debug("Caching Barista icons", ...fnLogTrace);
     this.fetchBaristaIcons()
       .then(icons => this.baristaIcons.next(icons))
       .catch(() => this.baristaIcons.next([]))
       .finally(() => this.baristaIcons.complete());
 
     // Fetch extension manifest
+    logger.debug("Caching the initial extension manifest", ...fnLogTrace);
     const initialManifestContent = this.fetchExtensionManifest();
     // Load local SNMP database if applicable
     if (/^snmp:.*?$/gm.test(initialManifestContent)) {
@@ -213,6 +222,7 @@ export class CachedData {
     while (this.parsedExtension.getValue() === undefined) {
       await loopSafeWait(100);
     }
+    logger.info("Data Cache initialized.", ...fnLogTrace);
   }
 
   /**
@@ -220,6 +230,7 @@ export class CachedData {
    * higher priority for OID searches than the online server.
    */
   private buildLocalSnmpDatabase() {
+    logger.debug("Creating SNMP MIB store", ...this.logTrace, "buildLocalSnmpDatabase");
     this.mibStore = new MibModuleStore();
     this.localSnmpDatabase = this.mibStore.getAllOidInfos();
   }
@@ -281,8 +292,11 @@ export class CachedData {
             return [];
           })
           .catch(err => {
-            console.log("Barista not accessible.");
-            console.log((err as Error).message);
+            logger.warn(
+              `Barista not accessible.${(err as Error).message}`,
+              ...this.logTrace,
+              "fetchBaristaIcons",
+            );
             return [];
           });
         return publicIcons;
@@ -320,7 +334,11 @@ export class CachedData {
       const parsedManifest = yaml.parse(readFileSync(manifestFilePath).toString()) as ExtensionStub;
       this.parsedExtension.next(parsedManifest);
     } catch {
-      console.log("Error parsing manifest content. Invalid YAML.");
+      logger.error(
+        "Error parsing manifest content. Invalid YAML.",
+        ...this.logTrace,
+        "updateParsedExtension",
+      );
     }
   }
 

@@ -19,7 +19,6 @@ import * as path from "path";
 import * as vscode from "vscode";
 import { DynatraceAPIError } from "../../dynatrace-api/errors";
 import { DynatraceEnvironmentData } from "../../interfaces/treeViewData";
-import { showMessage } from "../../utils/code";
 import { checkUrlReachable } from "../../utils/conditionCheckers";
 import { encryptToken } from "../../utils/cryptography";
 import {
@@ -29,6 +28,7 @@ import {
   registerEnvironment,
   removeEnvironment,
 } from "../../utils/fileSystem";
+import { notify } from "../../utils/logging";
 import { createObjectFromSchema } from "../../utils/schemaParsing";
 import {
   DeployedExtension,
@@ -101,7 +101,7 @@ export async function addEnvironment(context: vscode.ExtensionContext) {
     validateInput: value => validateEnvironmentUrl(value),
   });
   if (!url || url === "") {
-    showMessage("error", "URL cannot be blank. Operation was cancelled.");
+    notify("ERROR", "URL cannot be blank. Operation was cancelled.");
     return;
   }
   if (url.endsWith("/")) {
@@ -116,7 +116,7 @@ export async function addEnvironment(context: vscode.ExtensionContext) {
 
   const reachable = await checkUrlReachable(`${apiUrl}/api/v1/time`, true);
   if (!reachable) {
-    showMessage("error", "The environment URL entered is not reachable.");
+    notify("ERROR", "The environment URL entered is not reachable.");
     return;
   }
 
@@ -128,7 +128,7 @@ export async function addEnvironment(context: vscode.ExtensionContext) {
     password: true,
   });
   if (!token || token === "") {
-    showMessage("error", "Token cannot be blank. Operation was cancelled");
+    notify("ERROR", "Token cannot be blank. Operation was cancelled");
     return;
   }
 
@@ -170,7 +170,7 @@ export async function editEnvironment(
     validateInput: value => validateEnvironmentUrl(value),
   });
   if (!url || url === "") {
-    showMessage("error", "URL cannot be blank. Operation was cancelled.");
+    notify("ERROR", "URL cannot be blank. Operation was cancelled.");
     return;
   }
   if (url.endsWith("/")) {
@@ -185,7 +185,7 @@ export async function editEnvironment(
 
   const reachable = await checkUrlReachable(`${apiUrl}/api/v1/time`, true);
   if (!reachable) {
-    showMessage("error", "The environment URL entered is not reachable.");
+    notify("ERROR", "The environment URL entered is not reachable.");
     return;
   }
 
@@ -198,7 +198,7 @@ export async function editEnvironment(
     ignoreFocusOut: true,
   });
   if (!token || token === "") {
-    showMessage("error", "Token cannot be blank. Operation was cancelled");
+    notify("ERROR", "Token cannot be blank. Operation was cancelled");
     return;
   }
 
@@ -237,7 +237,7 @@ export async function deleteEnvironment(
   });
 
   if (confirm !== "Yes") {
-    showMessage("info", "Operation cancelled.");
+    notify("INFO", "Operation cancelled.");
     return;
   }
 
@@ -259,7 +259,7 @@ export async function changeConnection(
   const environments = getAllEnvironments(context);
   // No point showing a list of 1 or empty
   if (environments.length < 2) {
-    showMessage("info", "No other environments available. Add one first");
+    notify("INFO", "No other environments available. Add one first");
     return [false, undefined];
   }
   const currentEnv = environments.find(e => e.current);
@@ -390,11 +390,11 @@ export async function editMonitoringConfiguration(
           JSON.parse(response) as Record<string, unknown>,
         )
         .then(() => {
-          showMessage("info", "Configuration updated successfully.");
+          notify("INFO", "Configuration updated successfully.");
           return true;
         })
         .catch((err: DynatraceAPIError) => {
-          showMessage("error", `Update operation failed: ${err.message}`);
+          notify("ERROR", `Update operation failed: ${err.message}`);
           oc.replace(JSON.stringify(err.errorParams, undefined, 2));
           oc.show();
           return false;
@@ -402,7 +402,7 @@ export async function editMonitoringConfiguration(
     // Otherwise cancel operation
     response => {
       if (response === "No changes.") {
-        showMessage("info", "No changes were made. Operation cancelled.");
+        notify("INFO", "No changes were made. Operation cancelled.");
       }
       return false;
     },
@@ -427,18 +427,18 @@ export async function deleteMonitoringConfiguration(
   });
 
   if (confirm !== "Yes") {
-    showMessage("info", "Operation cancelled.");
+    notify("INFO", "Operation cancelled.");
     return false;
   }
 
   return config.dt.extensionsV2
     .deleteMonitoringConfiguration(config.extensionName, config.id)
     .then(() => {
-      showMessage("info", "Configuration deleted successfully.");
+      notify("INFO", "Configuration deleted successfully.");
       return true;
     })
     .catch((err: DynatraceAPIError) => {
-      showMessage("error", `Delete operation failed: ${err.message}`);
+      notify("ERROR", `Delete operation failed: ${err.message}`);
       return false;
     });
 }
@@ -497,7 +497,7 @@ export async function addMonitoringConfiguration(
         ]);
 
         if (!choice) {
-          showMessage("info", "Operation cancelled.");
+          notify("INFO", "Operation cancelled.");
           return false;
         }
 
@@ -540,11 +540,11 @@ export async function addMonitoringConfiguration(
   const status = await extension.dt.extensionsV2
     .postMonitoringConfiguration(extension.id, [configObject] as unknown as Record<string, unknown>)
     .then(() => {
-      showMessage("info", "Configuration successfully created.");
+      notify("INFO", "Configuration successfully created.");
       return true;
     })
     .catch((err: DynatraceAPIError) => {
-      showMessage("error", "Create operation failed.");
+      notify("ERROR", "Create operation failed.");
       oc.replace(JSON.stringify(err.errorParams, undefined, 2));
       oc.show();
       return false;
@@ -587,11 +587,11 @@ export async function saveMoniotringConfiguration(config: MonitoringConfiguratio
     ignoreFocusOut: true,
   });
   if (!fileName) {
-    showMessage("info", "Operation cancelled.");
+    notify("INFO", "Operation cancelled.");
     return;
   }
   writeFileSync(path.join(configDir, fileName), existingConfig);
-  showMessage("info", "Configuration file saved successfully.");
+  notify("INFO", "Configuration file saved successfully.");
 }
 
 /**

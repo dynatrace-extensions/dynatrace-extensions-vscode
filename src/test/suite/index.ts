@@ -14,41 +14,56 @@
   limitations under the License.
  */
 
-import * as path from 'path';
-import * as Mocha from 'mocha';
-import * as glob from 'glob';
+import * as path from "path";
+import * as Mocha from "mocha";
+import * as glob from "glob";
+import * as logging from "../../utils/logging";
+import { initGlobalStorage } from "../../utils/fileSystem";
+import { testContext, testGlobalStorage, testWkspaceStorage } from "../mock/vscode";
+import { rmSync } from "fs";
+import mock = require("mock-fs");
 
 export function run(): Promise<void> {
-	// Create the mocha test
-	const mocha = new Mocha({
-		ui: 'tdd',
-		color: true
-	});
+  // Create the mocha test
+  const mocha = new Mocha({
+    ui: "tdd",
+    color: true,
+  });
 
-	const testsRoot = path.resolve(__dirname, '..');
+  const testsRoot = path.resolve(__dirname, "..");
 
-	return new Promise((c, e) => {
-		glob('suite/*.test.js', { cwd: testsRoot }, (err, files) => {
-			if (err) {
-				return e(err);
-			}
+  return new Promise((c, e) => {
+    glob("suite/*.test.js", { cwd: testsRoot }, (err, files) => {
+      if (err) {
+        return e(err);
+      }
 
-			// Add files to the test suite
-			files.forEach(f => mocha.addFile(path.resolve(testsRoot, f)));
+      // Add files to the test suite
+      files.forEach(f => mocha.addFile(path.resolve(testsRoot, f)));
 
-			try {
-				// Run the mocha test
-				mocha.run(failures => {
-					if (failures > 0) {
-						e(new Error(`${failures} tests failed.`));
-					} else {
-						c();
-					}
-				});
-			} catch (err) {
-				console.error(err);
-				e(err);
-			}
-		});
-	});
+      mocha.globalSetup(() => {
+        initGlobalStorage(testContext);
+        logging.initializeLogging(testContext);
+      });
+
+      mocha.globalTeardown(() => {
+        rmSync(testGlobalStorage, { recursive: true, force: true });
+        rmSync(testWkspaceStorage, { recursive: true, force: true });
+      });
+
+      try {
+        // Run the mocha test
+        mocha.run(failures => {
+          if (failures > 0) {
+            e(new Error(`${failures} tests failed.`));
+          } else {
+            c();
+          }
+        });
+      } catch (err) {
+        console.error(err);
+        e(err);
+      }
+    });
+  });
 }

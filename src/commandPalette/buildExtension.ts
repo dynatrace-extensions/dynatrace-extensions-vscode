@@ -31,13 +31,16 @@ import * as vscode from "vscode";
 import { Dynatrace } from "../dynatrace-api/dynatrace";
 import { DynatraceAPIError } from "../dynatrace-api/errors";
 import { FastModeStatus } from "../statusBar/fastMode";
-import { loopSafeWait, showMessage } from "../utils/code";
+import { loopSafeWait } from "../utils/code";
 import { checkDtSdkPresent } from "../utils/conditionCheckers";
 import { sign } from "../utils/cryptography";
 import { normalizeExtensionVersion, incrementExtensionVersion } from "../utils/extensionParsing";
 import { getExtensionFilePath, resolveRealPath } from "../utils/fileSystem";
+import * as logger from "../utils/logging";
 import { getPythonVenvOpts } from "../utils/otherExtensions";
 import { runCommand } from "../utils/subprocesses";
+
+const logTrace = ["commandPalette", "buildExtension"];
 
 type FastModeOptions = {
   status: FastModeStatus;
@@ -66,6 +69,7 @@ async function preBuildTasks(
   forceIncrement: boolean = false,
   dt?: Dynatrace,
 ): Promise<string> {
+  const fnLogTrace = [...logTrace, "preBuildTasks"];
   // Create the dist folder if it doesn't exist
   if (!existsSync(distDir)) {
     mkdirSync(distDir);
@@ -81,14 +85,14 @@ async function preBuildTasks(
     try {
       unlinkSync(path.join(extensionDir, file));
     } catch {
-      console.log(`Couldn't delete file ${file}`);
+      logger.error(`Couldn't delete file ${file}`, ...fnLogTrace);
     }
   });
 
   if (forceIncrement) {
     // Always increment the version
     writeFileSync(extensionFile, extensionContent.replace(versionRegex, `version: ${nextVersion}`));
-    showMessage("info", "Extension version automatically increased.");
+    logger.notify("INFO", "Extension version automatically increased.");
     return nextVersion;
   } else if (dt) {
     // Increment the version if there is clash on the tenant
@@ -101,7 +105,7 @@ async function preBuildTasks(
         extensionFile,
         extensionContent.replace(versionRegex, `version: ${nextVersion}`),
       );
-      showMessage("info", "Extension version automatically increased.");
+      logger.notify("INFO", "Extension version automatically increased.");
       return nextVersion;
     }
   }
@@ -123,18 +127,19 @@ function assembleStandard(
   zipFileName: string,
   devCertKeyPath: string,
 ) {
+  const fnLogTrace = [...logTrace, "assembleStandard"];
   // Build the inner .zip archive
   const innerZip = new AdmZip();
   innerZip.addLocalFolder(extensionDir);
   const innerZipPath = path.resolve(workspaceStorage, "extension.zip");
   innerZip.writeZip(innerZipPath);
-  console.log(`Built the inner archive: ${innerZipPath}`);
+  logger.info(`Built the inner archive: ${innerZipPath}`, ...fnLogTrace);
 
   // Sign the inner .zip archive and write the signature file
   const signature = sign(innerZipPath, devCertKeyPath);
   const sigatureFilePath = path.resolve(workspaceStorage, "extension.zip.sig");
   writeFileSync(sigatureFilePath, signature);
-  console.log(`Wrote the signature file: ${sigatureFilePath}`);
+  logger.info(`Wrote the signature file: ${sigatureFilePath}`, ...fnLogTrace);
 
   // Build the outer .zip that includes the inner .zip and the signature file
   const outerZip = new AdmZip();
@@ -142,7 +147,7 @@ function assembleStandard(
   outerZip.addLocalFile(innerZipPath);
   outerZip.addLocalFile(sigatureFilePath);
   outerZip.writeZip(outerZipPath);
-  console.log(`Wrote initial outer zip at: ${outerZipPath}`);
+  logger.info(`Wrote initial outer zip at: ${outerZipPath}`, ...fnLogTrace);
 }
 
 /**
@@ -212,7 +217,7 @@ async function validateExtension(
       .upload(readFileSync(outerZipPath), true)
       .then(() => true)
       .catch(async (err: DynatraceAPIError) => {
-        showMessage("error", "Extension validation failed.");
+        logger.notify("ERROR", "Extension validation failed.");
         oc.replace(JSON.stringify(err.errorParams, null, 2));
         oc.show();
         return false;
@@ -345,6 +350,7 @@ export async function buildExtension(
   dt?: Dynatrace,
   fastMode?: FastModeOptions,
 ) {
+  const fnLogTrace = [...logTrace, "buildExtension"];
   // Basic details we already know exist
   const workspaceStorage = context.storageUri?.fsPath;
   if (!workspaceStorage) {
@@ -388,7 +394,7 @@ export async function buildExtension(
     },
     async (progress, cancelToken) => {
       cancelToken.onCancellationRequested(async () => {
-        showMessage("warn", "Operation cancelled by user.");
+        logger.notify("WARN", "Operation cancelled by user.");
       });
 
       // Handle unsaved changes
@@ -398,9 +404,9 @@ export async function buildExtension(
       if (extensionDocument?.isDirty) {
         const saved = await extensionDocument.save();
         if (saved) {
-          showMessage("info", "Document saved automatically.");
+          logger.notify("INFO", "Document saved automatically.");
         } else {
-          showMessage("error", "Failed to save extension manifest. Build command cancelled.");
+          logger.notify("ERROR", "Failed to save extension manifest. Build command cancelled.");
           return false;
         }
       }
@@ -432,7 +438,7 @@ export async function buildExtension(
               dt,
             );
       } catch (err: unknown) {
-        showMessage("error", `Error during pre-build phase: ${(err as Error).message}`);
+        logger.notify("ERROR", `Error during pre-build phase: ${(err as Error).message}`);
         return false;
       }
 
@@ -469,18 +475,21 @@ export async function buildExtension(
               try {
                 rmSync(libDir, { recursive: true, force: true });
               } catch (e) {
-                console.log("Couldn't clean up `lib` directory.", e.message);
+                logger.error(
+                  `Couldn't clean up 'lib' directory. ${(e as Error).message}`,
+                  ...fnLogTrace,
+                );
               }
             }
           } else {
-            showMessage("error", "Cannot build Python extension - dt-sdk package not available");
+            logger.notify("ERROR", "Cannot build Python extension - dt-sdk package not available");
             return false;
           }
         } else {
           assembleStandard(workspaceStorage, extensionDir, zipFilename, devCertKey);
         }
       } catch (err: unknown) {
-        showMessage("error", `Error during archiving & signing: ${(err as Error).message}`);
+        logger.notify("ERROR", `Error during archiving & signing: ${(err as Error).message}`);
         return false;
       }
 

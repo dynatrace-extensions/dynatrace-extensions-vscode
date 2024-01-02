@@ -17,8 +17,8 @@
 import { writeFileSync } from "fs";
 import * as vscode from "vscode";
 import { Dynatrace } from "../dynatrace-api/dynatrace";
-import { showMessage } from "../utils/code";
 import { CachedData } from "../utils/dataCaching";
+import { notify } from "../utils/logging";
 import { extractV1FromRemote, extractv1ExtensionFromLocal } from "./convertJMXExtension";
 import { convertPluginJsonToActivationSchema } from "./python/pythonConversion";
 
@@ -55,7 +55,7 @@ export async function convertPythonExtension(
   });
 
   if (!pluginJSONOrigin) {
-    showMessage("warn", "No selection made. Operation cancelled.");
+    notify("WARN", "No selection made. Operation cancelled.");
     return;
   }
 
@@ -65,7 +65,7 @@ export async function convertPythonExtension(
       : await extractV1FromRemote("Python", dt);
 
   if (errorMessage !== "") {
-    showMessage("error", `Operation failed: ${errorMessage}`);
+    notify("ERROR", `Operation failed: ${errorMessage}`);
     return;
   }
 
@@ -87,7 +87,7 @@ export async function convertPythonExtension(
     const extensionJSONFile =
       outputPath ?? (await vscode.window.showSaveDialog(options).then(p => p?.fsPath));
     if (!extensionJSONFile) {
-      showMessage("error", "No file was selected. Operation cancelled.");
+      notify("ERROR", "No file was selected. Operation cancelled.");
       return;
     }
     // Save the file
@@ -101,7 +101,7 @@ export async function convertPythonExtension(
     const document = await vscode.workspace.openTextDocument(extensionJSONFile);
     await vscode.window.showTextDocument(document);
   } catch (e) {
-    showMessage("error", `Operation failed: ${(e as Error).message}`);
+    notify("ERROR", `Operation failed: ${(e as Error).message}`);
     return;
   }
 }

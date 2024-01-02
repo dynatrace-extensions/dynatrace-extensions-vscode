@@ -21,7 +21,10 @@
 import { readFileSync } from "fs";
 import * as path from "path";
 import axios from "axios";
-import { showMessage } from "./code";
+import { notify } from "./logging";
+import * as logger from "./logging";
+
+const logTrace = ["utils", "snmp"];
 
 // URL to online OID Repository
 const BASE_URL = "https://oid-rep.orange-labs.fr/get";
@@ -100,7 +103,8 @@ function processOidData(details: string, oid?: string): OidInformation {
  * @returns metadata info or empty object if not available
  */
 export async function fetchOID(oid: string) {
-  console.log(`>>> Fetching OID ${oid}`);
+  const fnLogTrace = [...logTrace, "fetchOID"];
+  logger.info(`>>> Fetching OID ${oid}`, ...fnLogTrace);
   return axios
     .get(`${BASE_URL}/${oid}`)
     .then(res => {
@@ -115,7 +119,7 @@ export async function fetchOID(oid: string) {
       return {};
     })
     .catch(err => {
-      console.log(err);
+      logger.error(err, ...fnLogTrace);
       return {};
     });
 }
@@ -519,7 +523,7 @@ class MibParser {
             default:
               if (symbol.startsWith("--")) {
                 //REMOVE COMMENTS
-                //console.log(ModuleName, symbol);
+                //logger.info(ModuleName, symbol);
                 addSymbol = false;
               } else {
                 foundTheEnd = false;
@@ -532,7 +536,7 @@ class MibParser {
       }
       if (!foundTheEnd) {
         // Warn that the contents are malformed
-        console.warn(
+        logger.warn(
           '[%s]: Incorrect formatting: no END statement found - last good declaration "%s" (line ?)',
           ModuleName,
           lastGoodDeclaration.join(" "),
@@ -628,7 +632,7 @@ class MibParser {
                     c1++;
                     key = Symbols[c1]; //Parse TYPE NOTATION. ex: SYNTAX, ACCESS, STATUS, DESCRIPTION.....
 
-                    //key == 'DESCRIPTION' ? console.log(keychain.indexOf(key), key, Symbols[c1 + 1]) : false;
+                    //key == 'DESCRIPTION' ? logger.info(keychain.indexOf(key), key, Symbols[c1 + 1]) : false;
 
                     const regExp = /\(([^)]+)\)/; //in parentheses ex: "ethernet-csmacd (6)"
 
@@ -854,7 +858,7 @@ class MibParser {
               MACROName = "";
               break;
             case "IMPORTS": {
-              //console.log(ModuleName, 'IMPORTS');
+              //logger.info(ModuleName, 'IMPORTS');
               //i++;
               Module.IMPORTS = {};
               let tmp = i + 1;
@@ -863,11 +867,11 @@ class MibParser {
                 if (Symbols[tmp] == "FROM") {
                   const ImportModule = Symbols[tmp + 1];
                   if (!Object.keys(this.Modules).includes(ImportModule)) {
-                    console.log(
+                    logger.info(
                       ModuleName + ": Can not find " + ImportModule + "!!!!!!!!!!!!!!!!!!!!!",
                     );
-                    console.log(ModuleName + ": Can not import ", IMPORTS);
-                    showMessage("warn", `Local MIB files missing depenency: ${ImportModule}`);
+                    logger.info(`${ModuleName}: Can not import ${JSON.stringify(IMPORTS)}`);
+                    notify("WARN", `Local MIB files missing depenency: ${ImportModule}`);
                   }
                   Module.IMPORTS[ImportModule] = IMPORTS;
                   tmp++;
@@ -877,11 +881,11 @@ class MibParser {
                 }
                 tmp++;
               }
-              //console.log(ModuleName, 'IMPORTS', Module['IMPORTS']);
+              //logger.info(ModuleName, 'IMPORTS', Module['IMPORTS']);
               break;
             }
             case "EXPORTS":
-              //console.log(ModuleName, 'EXPORTS');
+              //logger.info(ModuleName, 'EXPORTS');
               break;
             default:
               break;

@@ -16,7 +16,6 @@
 
 import * as vscode from "vscode";
 import { ExtensionStub } from "../interfaces/extensionMeta";
-import { showMessage } from "../utils/code";
 import { checkDtInternalProperties } from "../utils/conditionCheckers";
 import { CachedData, CachedDataProducer } from "../utils/dataCaching";
 import {
@@ -26,6 +25,7 @@ import {
   getReferencedCardsMeta,
 } from "../utils/extensionParsing";
 import { getExtensionFilePath } from "../utils/fileSystem";
+import * as logger from "../utils/logging";
 import { isOidReadable, isTable, oidFromMetriValue, OidInformation } from "../utils/snmp";
 import {
   getBlockItemIndexAtLine,
@@ -61,16 +61,15 @@ import {
  * of an Extensions 2.0 YAML file.
  */
 export class DiagnosticsProvider extends CachedDataProducer {
+  private readonly logTrace = ["diagnostics", "diagnostics", this.constructor.name];
   private readonly collection: vscode.DiagnosticCollection;
-  private readonly context: vscode.ExtensionContext;
 
   /**
    * @param context VSCode Extension Context
    * @param cachedDataProvider Provider for cacheable data
    */
-  constructor(context: vscode.ExtensionContext, cachedData: CachedData) {
+  constructor(cachedData: CachedData) {
     super(cachedData);
-    this.context = context;
     this.collection = vscode.languages.createDiagnosticCollection("Dynatrace");
   }
 
@@ -123,12 +122,16 @@ export class DiagnosticsProvider extends CachedDataProducer {
       diagnostics &&
       diagnostics.findIndex(diag => diag.severity === vscode.DiagnosticSeverity.Error) > -1
     ) {
-      showMessage("error", "Extension cannot be built. Fix problems first.");
+      logger.notify("ERROR", "Extension cannot be built. Fix problems first.");
       await vscode.commands.executeCommand("workbench.action.problems.focus");
       status = false;
     }
 
-    console.log(`Check - diagnostics collection clear? > ${String(status)}`);
+    logger.info(
+      `Check - diagnostics collection clear? > ${String(status)}`,
+      ...this.logTrace,
+      "isValidForBuilding",
+    );
     return status;
   }
 

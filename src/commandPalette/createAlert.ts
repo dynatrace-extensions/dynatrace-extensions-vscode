@@ -19,10 +19,12 @@ import { existsSync, mkdirSync, readFileSync, writeFileSync } from "fs";
 import path = require("path");
 import * as vscode from "vscode";
 import { ExtensionStub, MetricMetadata } from "../interfaces/extensionMeta";
-import { showMessage } from "../utils/code";
 import { CachedData } from "../utils/dataCaching";
 import { getAllMetricKeys, getEntityForMetric } from "../utils/extensionParsing";
 import { createUniqueFileName, getExtensionFilePath } from "../utils/fileSystem";
+import * as logger from "../utils/logging";
+
+const logTrace = ["commandPalette", "createAlert"];
 
 export async function createAlert(cachedData: CachedData) {
   const extensionFile = getExtensionFilePath();
@@ -41,8 +43,8 @@ export async function createAlert(cachedData: CachedData) {
   }
 
   if (metricKeys.length === 0) {
-    showMessage(
-      "warn",
+    logger.notify(
+      "WARN",
       "No metrics defined in extension.yaml, please define them before creating alerts",
     );
     return;
@@ -54,7 +56,7 @@ export async function createAlert(cachedData: CachedData) {
     ignoreFocusOut: true,
   });
   if (!metricToUse) {
-    showMessage("error", "No metric was selected. Operation cancelled.");
+    logger.notify("ERROR", "No metric was selected. Operation cancelled.");
     return;
   }
 
@@ -65,7 +67,7 @@ export async function createAlert(cachedData: CachedData) {
     ignoreFocusOut: true,
   });
   if (!alertName) {
-    showMessage("error", "No alert name was entered. Operation cancelled.");
+    logger.notify("ERROR", "No alert name was entered. Operation cancelled.");
     return;
   }
 
@@ -76,7 +78,7 @@ export async function createAlert(cachedData: CachedData) {
     ignoreFocusOut: true,
   });
   if (!alertCondition) {
-    showMessage("error", "No alert condition was selected. Operation cancelled.");
+    logger.notify("ERROR", "No alert condition was selected. Operation cancelled.");
     return;
   }
 
@@ -88,7 +90,7 @@ export async function createAlert(cachedData: CachedData) {
   });
 
   if (!threshold || isNaN(Number(threshold))) {
-    showMessage("error", "No valid threshold was entered. Operation cancelled.");
+    logger.notify("ERROR", "No valid threshold was entered. Operation cancelled.");
     return;
   }
 
@@ -149,7 +151,7 @@ export async function createAlert(cachedData: CachedData) {
 
   const alertFile = path.resolve(alertsDir, fileName);
   const alertFileContent = JSON.stringify(alertTemplate, null, 2);
-  console.log(`Creating alert file ${alertFile}`);
+  logger.info(`Creating alert file ${alertFile}`, ...logTrace);
   writeFileSync(alertFile, alertFileContent);
 
   // Add the alert to the extension.yaml file
@@ -173,5 +175,5 @@ export async function createAlert(cachedData: CachedData) {
 
   writeFileSync(extensionFile, updatedExtensionText);
 
-  showMessage("info", `Alert '${alertName}' created on alerts/${fileName}`);
+  logger.notify("INFO", `Alert '${alertName}' created on alerts/${fileName}`);
 }

@@ -16,14 +16,15 @@
 
 import * as vscode from "vscode";
 import { EnvironmentsTreeDataProvider } from "../treeViews/environmentsTreeView";
-import { showMessage } from "../utils/code";
 import { CachedDataConsumer } from "../utils/dataCaching";
+import * as logger from "../utils/logging";
 import { getBlockItemIndexAtLine, getParentBlocks } from "../utils/yamlParsing";
 
 /**
  * Implementation of a Code Lens Provider to allow opening Dynatrace screens in the browser.
  */
 export class ScreenLensProvider extends CachedDataConsumer implements vscode.CodeLensProvider {
+  private readonly logTrace = ["codeLens", "screenCodeLens", this.constructor.name];
   private codeLenses: vscode.CodeLens[];
   private regex: RegExp;
   private _onDidChangeCodeLenses: vscode.EventEmitter<void> = new vscode.EventEmitter<void>();
@@ -128,14 +129,14 @@ export class ScreenLensProvider extends CachedDataConsumer implements vscode.Cod
             const entityId = entities[0].entityId;
             await vscode.env.openExternal(vscode.Uri.parse(`${baseUrl}/ui/entity/${entityId}`));
           } else {
-            showMessage("error", "No entities of this type were found in your tenant.");
+            logger.notify("ERROR", "No entities of this type were found in your tenant.");
           }
         }
       }
       // Things can fail. We don't care.
     } catch (err) {
-      console.log(err);
-      showMessage("warn", "Could not open screen.");
+      logger.warn(`Could not open screen: ${(err as Error).message}`, ...this.logTrace);
+      logger.notify("WARN", "Could not open screen.");
     }
   }
 }

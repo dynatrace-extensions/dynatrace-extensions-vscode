@@ -25,7 +25,22 @@
     "prettier",
     "airbnb-typescript"
   ],
+  "overrides": [
+    {
+      "files": ["**/utils/logging.ts"],
+      "rules": {
+        "no-restricted-syntax": "off"
+      }
+    }
+  ],
   "rules": {
+    "no-restricted-syntax": [
+      "error",
+      {
+        "selector": "CallExpression[callee.object.name='console']",
+        "message": "Don't use console directly. Use the functions from `src/utils/logging` instead."
+      }
+    ],
     "brace-style": "off",
     "@typescript-eslint/brace-style": "off",
     "camelcase": [2, { "properties": "never" }],

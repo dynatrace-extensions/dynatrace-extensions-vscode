@@ -18,7 +18,9 @@ import { existsSync, mkdirSync, writeFileSync } from "fs";
 import path = require("path");
 import { md, pki, random, util } from "node-forge";
 import * as vscode from "vscode";
-import { showMessage } from "../utils/code";
+import * as logger from "../utils/logging";
+
+const logTrace = ["commandPalette", "generateCertificates"];
 
 /**
  * Generates a random serial number, valid for X.509 Certificates.
@@ -76,6 +78,7 @@ function getCertAttributes(type: "ca" | "dev"): pki.CertificateField[] {
  * @returns boolean - success of the command
  */
 export async function generateCerts(context: vscode.ExtensionContext): Promise<boolean> {
+  const fnLogTrace = [...logTrace, "generateCerts"];
   const storagePath = context.storageUri?.fsPath;
   if (!storagePath) {
     return false;
@@ -93,8 +96,8 @@ export async function generateCerts(context: vscode.ExtensionContext): Promise<b
       try {
         caKey = pki.rsa.generateKeyPair({ bits: 4096, e: 0x10001 });
       } catch (err) {
-        showMessage("error", "Error generating the RSA key pair for the CA certificate");
-        console.log((err as Error).message);
+        logger.notify("ERROR", "Error generating the RSA key pair for the CA certificate");
+        logger.error((err as Error).message, ...fnLogTrace);
         return false;
       }
 
@@ -136,10 +139,10 @@ export async function generateCerts(context: vscode.ExtensionContext): Promise<b
           },
         ]);
         caCert.sign(caKey.privateKey, md.sha256.create());
-        console.log("CA Cert created successfully");
+        logger.info("CA Cert created successfully", ...fnLogTrace);
       } catch (err) {
-        showMessage("error", "Error generating the CA certificate");
-        console.log((err as Error).message);
+        logger.notify("ERROR", "Error generating the CA certificate");
+        logger.error((err as Error).message, ...fnLogTrace);
         return false;
       }
 
@@ -149,8 +152,8 @@ export async function generateCerts(context: vscode.ExtensionContext): Promise<b
       try {
         devKey = pki.rsa.generateKeyPair({ bits: 4096, e: 0x10001 });
       } catch (err) {
-        showMessage("error", "Error generating the RSA key pair for the Developer certificate");
-        console.log((err as Error).message);
+        logger.notify("ERROR", "Error generating the RSA key pair for the Developer certificate");
+        logger.error((err as Error).message, ...fnLogTrace);
         return false;
       }
 
@@ -191,10 +194,10 @@ export async function generateCerts(context: vscode.ExtensionContext): Promise<b
           },
         ]);
         devCert.sign(caKey.privateKey, md.sha256.create());
-        console.log("DEV Cert created successfully");
+        logger.info("DEV Cert created successfully", ...fnLogTrace);
       } catch (err) {
-        showMessage("error", "Error generating the Developer certificate");
-        console.log((err as Error).message);
+        logger.notify("ERROR", "Error generating the Developer certificate");
+        logger.error((err as Error).message, ...fnLogTrace);
         return false;
       }
 
@@ -214,7 +217,7 @@ export async function generateCerts(context: vscode.ExtensionContext): Promise<b
         path.join(certsDir, "developer.pem"),
         pki.certificateToPem(devCert) + pki.privateKeyToPem(devKey.privateKey),
       );
-      console.log(`Wrote all certificates at location ${certsDir}`);
+      logger.info(`Wrote all certificates at location ${certsDir}`, ...fnLogTrace);
 
       return true;
     },
@@ -235,7 +238,7 @@ export async function generateCerts(context: vscode.ExtensionContext): Promise<b
         useGlobal === "Yes" ? true : undefined,
       )
       .then(undefined, () => {
-        console.log("Could not update setting developerCertkeyLocation");
+        logger.info("Could not update setting developerCertkeyLocation", ...fnLogTrace);
       });
     vscode.workspace
       .getConfiguration("dynatraceExtensions", null)
@@ -245,7 +248,7 @@ export async function generateCerts(context: vscode.ExtensionContext): Promise<b
         useGlobal === "Yes" ? true : undefined,
       )
       .then(undefined, () => {
-        console.log("Could not update setting rootOrCaCertificateLocation");
+        logger.info("Could not update setting rootOrCaCertificateLocation", ...fnLogTrace);
       });
 
     // Link command - Upload Certificates
