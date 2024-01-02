@@ -18,7 +18,7 @@
  * UTILITIES FOR WORKING WITH SNMP
  ********************************************************************************/
 
-import { existsSync, readFileSync, readdirSync, renameSync } from "fs";
+import { existsSync, mkdirSync, readFileSync, readdirSync, renameSync } from "fs";
 import * as path from "path";
 import AdmZip = require("adm-zip");
 import axios from "axios";
@@ -47,7 +47,7 @@ export interface OidInformation {
  * global storage provided by VS Code.
  * @param globalStorage path to global storage
  */
-export function downloadActiveGateMibFiles(globalStorage: string) {
+export async function downloadActiveGateMibFiles(globalStorage: string) {
   const fnLogTrace = [...logTrace, "downloadActiveGateMibFiles"];
 
   const storagePath = path.resolve(globalStorage, "mibs", AG_MIB_VERSION);
@@ -59,10 +59,15 @@ export function downloadActiveGateMibFiles(globalStorage: string) {
     return;
   }
 
+  // Create the directory
+  if (!existsSync(storagePath)) {
+    mkdirSync(storagePath, { recursive: true });
+  }
+
   // Download MIBs from our public repo
   logger.debug("Downloading MIBs to global storage", ...fnLogTrace);
   const zipUrl = `https://api.github.com/repos/dynatrace-extensions/snmp-mib-files/zipball/${AG_MIB_VERSION}`;
-  axios
+  await axios
     .request<Buffer>({
       url: zipUrl,
       method: "GET",
@@ -72,7 +77,7 @@ export function downloadActiveGateMibFiles(globalStorage: string) {
       // Download and extract the MIBs
       const mibZip = new AdmZip(zipRes.data);
       const zipEntry = mibZip.getEntries().filter(e => e.entryName.endsWith("/mibs/"))[0];
-      mibZip.extractEntryTo(zipEntry, storagePath, false);
+      mibZip.extractEntryTo(zipEntry, storagePath, false, true);
 
       // Ensure all end in .mib
       readdirSync(storagePath).forEach(file => {

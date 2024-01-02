@@ -708,7 +708,7 @@ export async function activate(context: vscode.ExtensionContext) {
     connectionStatusManager,
     genericChannel,
   );
-  const cachedData = new CachedData(tenantsTreeViewProvider);
+  const cachedData = new CachedData(tenantsTreeViewProvider, context.globalStorageUri.fsPath);
   await cachedData.initialize();
   const webviewPanelManager = new WebviewPanelManager(context.extensionUri);
   const extensionsTreeViewProvider = new ExtensionsTreeDataProvider(context);

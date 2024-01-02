@@ -33,7 +33,13 @@ import { EnvironmentsTreeDataProvider } from "../treeViews/environmentsTreeView"
 import { loopSafeWait } from "./code";
 import { getExtensionFilePath, getSnmpMibFiles } from "./fileSystem";
 import * as logger from "./logging";
-import { fetchOID, MibModuleStore, OidInformation, parseMibFile } from "./snmp";
+import {
+  fetchOID,
+  MibModuleStore,
+  OidInformation,
+  parseMibFile,
+  downloadActiveGateMibFiles,
+} from "./snmp";
 
 type CachedDataType =
   | "builtinEntityTypes"
@@ -94,6 +100,7 @@ type LoadedFile = { name: string; filePath: string };
  * Find the global instance in src/extension.ts
  */
 export class CachedData {
+  private readonly globalStorage: string;
   private readonly logTrace = ["utils", "dataCaching", this.constructor.name];
   private readonly environments: EnvironmentsTreeDataProvider;
   private builtinEntityTypes = new BehaviorSubject<EntityType[]>([]);
@@ -112,9 +119,10 @@ export class CachedData {
   /**
    * @param environments a Dynatrace Environments provider
    */
-  constructor(environments: EnvironmentsTreeDataProvider) {
+  constructor(environments: EnvironmentsTreeDataProvider, globalStorage: string) {
     logger.info("Data Cache created.", ...this.logTrace);
     this.environments = environments;
+    this.globalStorage = globalStorage;
   }
 
   public subscribeConsumers(subscription: Partial<Record<CachedDataType, CachedDataConsumer[]>>) {
@@ -230,9 +238,18 @@ export class CachedData {
    * higher priority for OID searches than the online server.
    */
   private buildLocalSnmpDatabase() {
-    logger.debug("Creating SNMP MIB store", ...this.logTrace, "buildLocalSnmpDatabase");
-    this.mibStore = new MibModuleStore();
-    this.localSnmpDatabase = this.mibStore.getAllOidInfos();
+    const fnLogTrace = [...this.logTrace, "buildLocalSnmpDatabase"];
+    logger.debug("Creating SNMP MIB store", ...fnLogTrace);
+    downloadActiveGateMibFiles(this.globalStorage).then(
+      () => {
+        logger.debug("ActiveGate MIBs ready. Building MIB store", ...fnLogTrace);
+        this.mibStore = new MibModuleStore(this.globalStorage);
+        this.localSnmpDatabase = this.mibStore.getAllOidInfos();
+      },
+      err => {
+        logger.warn(`Could not download ActiveGate MIBs ${(err as Error).message}`, ...fnLogTrace);
+      },
+    );
   }
 
   /**
@@ -455,6 +472,11 @@ export class CachedData {
       newFiles.forEach(file => {
         this.mibFilesLoaded.push({ name: path.basename(file).split(".")[0], filePath: file });
         try {
+          logger.debug(
+            `Loading user provided MIB file ${file}`,
+            ...this.logTrace,
+            "loadLocalMibFiles",
+          );
           this.mibStore.loadFromFile(file);
         } catch {
           // TODO: Should analyse if this is really needed
