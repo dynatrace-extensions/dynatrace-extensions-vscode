@@ -18,7 +18,7 @@ import * as assert from "assert";
 import * as path from "path";
 import * as dtExt from "../../extension";
 import { existsSync, readFileSync, rmSync } from "fs";
-import { testContext, testGlobalStorage, testWkspaceStorage } from "../mock/vscode";
+import { testContext } from "../mock/vscode";
 
 /**
  * Simple test suite for extension tests.
@@ -41,8 +41,5 @@ suite("Extension Test Suite", () => {
 
     assert.strictEqual(readFileSync(extensionWorkspacesJson).toString(), "[]");
     assert.strictEqual(readFileSync(dynatraceEnvironmentsJson).toString(), "[]");
-
-    rmSync(testGlobalStorage, { recursive: true, force: true});
-    rmSync(testWkspaceStorage, { recursive: true, force: true});
   });
 });
