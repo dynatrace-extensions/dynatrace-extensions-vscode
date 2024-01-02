@@ -138,7 +138,7 @@ export function oidFromMetriValue(value: string): string {
  */
 function processOidData(details: string, oid?: string): OidInformation {
   const objectTypeMatches = /(.*?) OBJECT-TYPE/.exec(details) ?? [];
-  const syntaxMatches = /SYNTAX (.*?) MAX-ACCESS/.exec(details) ?? [];
+  const syntaxMatches = /SYNTAX (.*?) (?:MAX-)?ACCESS/.exec(details) ?? [];
   const maxAccessMatches = /MAX-ACCESS (.*?) /.exec(details) ?? [];
   const statusMatches = /STATUS (.*?) /.exec(details) ?? [];
   const descriptionMatches = /DESCRIPTION "(.*?)"/.exec(details) ?? [];
@@ -162,7 +162,7 @@ function processOidData(details: string, oid?: string): OidInformation {
  */
 export async function fetchOID(oid: string) {
   const fnLogTrace = [...logTrace, "fetchOID"];
-  logger.info(`>>> Fetching OID ${oid}`, ...fnLogTrace);
+  logger.debug(`Fetching OID ${oid} from online database`, ...fnLogTrace);
   return axios
     .get(`${BASE_URL}/${oid}`)
     .then(res => {
