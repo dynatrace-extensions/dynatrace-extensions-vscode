@@ -122,7 +122,7 @@ export async function addEnvironment(context: vscode.ExtensionContext) {
 
   const token = await vscode.window.showInputBox({
     title: "Add a Dynatrace environment (2/3)",
-    placeHolder: "An access token, to use when autheticating API calls...",
+    placeHolder: "An access token, to use when authenticating API calls...",
     prompt: "Mandatory",
     ignoreFocusOut: true,
     password: true,
