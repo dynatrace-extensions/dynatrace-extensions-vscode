@@ -117,11 +117,16 @@ export class DiagnosticsProvider extends CachedDataProducer {
     if (!extensionYamlFile) {
       return false;
     }
-    const diagnostics = this.collection.get(vscode.Uri.file(extensionYamlFile));
+    const diagnostics = [
+      ...this.collection.get(vscode.Uri.file(extensionYamlFile)),
+      ...vscode.languages.getDiagnostics().find(([uri]) => uri.fsPath === extensionYamlFile)[1],
+    ];
 
     if (
-      diagnostics &&
-      diagnostics.findIndex(diag => diag.severity === vscode.DiagnosticSeverity.Error) > -1
+      diagnostics.length > 0 &&
+      diagnostics.findIndex(
+        diag => (diag as vscode.Diagnostic).severity === vscode.DiagnosticSeverity.Error,
+      ) > -1
     ) {
       logger.notify("ERROR", "Extension cannot be built. Fix problems first.", ...fnLogTrace);
       await vscode.commands.executeCommand("workbench.action.problems.focus");
