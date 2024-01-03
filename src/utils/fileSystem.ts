@@ -46,16 +46,22 @@ import * as logger from "./logging";
 const logTrace = ["utils", "fileSystem"];
 
 /**
- * Performs some basic clean-up of any old log files in the logs directory.
- * @param logsDir path to the logs directory
+ * Performs some basic clean-up by removing oldest files from the given directory.
+ * @param dirPath path to the logs directory
+ * @param count number of files to keep
  */
-export function cleanUpLogs(logsDir: string, count: number) {
-  // Ensure we have at most 10 files including the current one
-  const logFiles = readdirSync(logsDir).sort();
-  while (logFiles.length > count) {
-    const fileToDelete = logFiles.pop();
+export function removeOldestFiles(dirPath: string, count: number) {
+  // Sort files by date modified
+  const files = readdirSync(dirPath).sort((f1: string, f2: string) => {
+    const f1Stats = statSync(path.join(dirPath, f1));
+    const f2Stats = statSync(path.join(dirPath, f2));
+    return f1Stats.mtimeMs - f2Stats.mtimeMs;
+  });
+  // Remove oldest files until the desired count
+  while (files.length > count) {
+    const fileToDelete = files.pop();
     if (fileToDelete) {
-      rmSync(path.join(logsDir, fileToDelete));
+      rmSync(path.join(dirPath, fileToDelete));
     }
   }
 }

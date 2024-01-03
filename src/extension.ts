@@ -967,6 +967,6 @@ export function deactivate() {
   // Kill any simulator processes left running
   simulatorManager.stop();
 
-  logger.disposeLogger();
   logger.info("Dynatrace Extensions is now deactivated.", ...fnLogTrace);
+  logger.disposeLogger();
 }

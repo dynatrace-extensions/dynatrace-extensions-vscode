@@ -18,7 +18,7 @@ import { statSync, writeFileSync } from "fs";
 import * as path from "path";
 import * as chalk from "chalk";
 import * as vscode from "vscode";
-import { cleanUpLogs } from "./fileSystem";
+import { removeOldestFiles } from "./fileSystem";
 
 type LogLevel = "DEBUG" | "INFO" | "WARN" | "ERROR" | "NONE";
 type NotificationLevel = Extract<LogLevel, "INFO" | "WARN" | "ERROR">;
@@ -140,7 +140,7 @@ function logMessage(data: unknown, level: LogLevel, ...trace: string[]) {
  */
 export function initializeLogging(ctx: vscode.ExtensionContext) {
   context = ctx;
-  cleanUpLogs(path.join(context.globalStorageUri.fsPath, "logs"), maxFiles - 1);
+  removeOldestFiles(path.join(context.globalStorageUri.fsPath, "logs"), maxFiles - 1);
 
   // Load the configuration
   const config = vscode.workspace.getConfiguration("dynatraceExtensions.logging", null);
@@ -157,7 +157,7 @@ export function initializeLogging(ctx: vscode.ExtensionContext) {
  */
 export function disposeLogger() {
   outputChannel.dispose();
-  cleanUpLogs(path.join(context.globalStorageUri.fsPath, "logs"), maxFiles);
+  removeOldestFiles(path.join(context.globalStorageUri.fsPath, "logs"), maxFiles);
 }
 
 /**

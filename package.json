@@ -303,6 +303,14 @@
             "scope": "resource",
             "default": false
           },
+          "dynatraceExtensions.maxBuildFiles": {
+            "type": "number",
+            "description": "The maximum number of build files (by age) kept on disk (in the dist folder of the workspace). Setting this to 0 will keep all files.",
+            "order": 6,
+            "minimum": 0,
+            "scope": "resource",
+            "default": 10
+          },
           "dynatraceExtensions.logging.level": {
             "type": "string",
             "description": "The minimum level of log messages logged by the VSCode extension.",

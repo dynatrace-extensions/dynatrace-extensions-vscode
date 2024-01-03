@@ -35,7 +35,7 @@ import { loopSafeWait } from "../utils/code";
 import { checkDtSdkPresent } from "../utils/conditionCheckers";
 import { sign } from "../utils/cryptography";
 import { normalizeExtensionVersion, incrementExtensionVersion } from "../utils/extensionParsing";
-import { getExtensionFilePath, resolveRealPath } from "../utils/fileSystem";
+import { getExtensionFilePath, removeOldestFiles, resolveRealPath } from "../utils/fileSystem";
 import * as logger from "../utils/logging";
 import { getPythonVenvOpts } from "../utils/otherExtensions";
 import { runCommand } from "../utils/subprocesses";
@@ -527,6 +527,14 @@ export async function buildExtension(
       }
     },
   );
+
+  // Perform any clean-up as needed
+  const maxFiles = vscode.workspace
+    .getConfiguration("dynatraceExtensions", null)
+    .get<number>("maxBuildFiles");
+  if (maxFiles > 0) {
+    removeOldestFiles(distDir, maxFiles);
+  }
 
   // Follow-up is carried out separately to keep notification messages cleaner
   if (followUpFlow) {
