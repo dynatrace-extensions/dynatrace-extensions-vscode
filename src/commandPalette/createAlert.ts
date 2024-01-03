@@ -127,7 +127,7 @@ export async function createAlert(cachedData: CachedData) {
 
   const alertTemplate = {
     id: crypto.randomUUID(),
-    metricSelector: metricToUse,
+    metricId: metricToUse,
     name: alertName,
     description: "The {metricname} value was {alert_condition} normal behavior. Dimensions: {dims}",
     enabled: true,
