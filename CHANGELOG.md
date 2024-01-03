@@ -1,5 +1,23 @@
 # Change Log
 
+## Version 2.4.0 (03.01.2024)
+
+### ✨ New in this version:
+- [#138 - Extension Simulator](https://github.com/dynatrace-extensions/dynatrace-extensions-vscode/issues/138)
+- [#151 - Python plugin.json conversion to activationSchema.json](https://github.com/dynatrace-extensions/dynatrace-extensions-vscode/pull/151)
+
+### 🪲 Fixed in this version:
+- [#145 - SNMP table entry OID incorrectly detected as static](https://github.com/dynatrace-extensions/dynatrace-extensions-vscode/issues/145)
+
+### 🚀 Improved in this version:
+- [#137 - Build command should communicate if not ready to trigger](https://github.com/dynatrace-extensions/dynatrace-extensions-vscode/issues/137)
+- [#149 - Use simple metric in alerts instead of metric selector](https://github.com/dynatrace-extensions/dynatrace-extensions-vscode/issues/149)
+- [#152 - Add setting for max number of extension packages kept in dist](https://github.com/dynatrace-extensions/dynatrace-extensions-vscode/issues/152)
+- [#126 - Load all SNMP MIBs shipped with ActiveGate](https://github.com/dynatrace-extensions/dynatrace-extensions-vscode/issues/126)
+- [#128 - Logging improvements](https://github.com/dynatrace-extensions/dynatrace-extensions-vscode/issues/128)
+
+---
+
 ## Version 2.3.2 (29.11.2023)
 
 ### ✨ New in this version:
