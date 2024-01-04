@@ -1,0 +1,39 @@
+name: Auto-add item to project
+
+on:
+  issues:
+    types:
+      - opened
+      - labeled
+  pull_request:
+    types:
+      - opened
+
+jobs:
+  add-to-project:
+    name: Add to project with default fields
+    runs-on: ubuntu-latest
+    steps:
+      - name: Add item to project
+        id: add-item
+        uses: actions/add-to-project@v0.5.0
+        with:
+          project-url: https://github.com/users/radu-stefan-dt/projects/1
+          github-token: ${{ secrets.PROJECT_PAT }}
+      - name: Set fields for bug items
+        if: contains(github.event.issue.labels.*.name, 'bug')
+        uses: titoportas/update-project-fields@v0.1.0
+        with:
+          project-url: https://github.com/users/radu-stefan-dt/projects/1
+          github-token: ${{ secrets.PROJECT_PAT }}
+          item-id: ${{ steps.add-item.outputs.itemId }}
+          field-keys: Status,Priority,Release
+          field-values: Ready to start,Bug,Hotfix
+      - name: Set fields for default items
+        uses: titoportas/update-project-fields@v0.1.0
+        with:
+          project-url: https://github.com/users/radu-stefan-dt/projects/1
+          github-token: ${{ secrets.PROJECT_PAT }}
+          item-id: ${{ steps.add-item.outputs.itemId }}
+          field-keys: Status,Priority,Release
+          field-values: Backlog,Nice to have,Future release
