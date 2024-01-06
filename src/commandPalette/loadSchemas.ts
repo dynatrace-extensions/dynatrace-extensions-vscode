@@ -31,6 +31,7 @@ const logTrace = ["commandPalette", "loadSchemas"];
  * @param dt Dynatrace API Client
  */
 function downloadSchemaFiles(location: string, version: string, dt: Dynatrace) {
+  const fnLogTrace = [...logTrace, "downloadSchemaFiles"];
   mkdirSync(location, { recursive: true });
   return vscode.window.withProgress(
     {
@@ -44,7 +45,7 @@ function downloadSchemaFiles(location: string, version: string, dt: Dynatrace) {
         return "cancelled";
       }
       const schemaFiles = await dt.extensionsV2.listSchemaFiles(version).catch(async err => {
-        logger.notify("ERROR", (err as Error).message);
+        logger.notify("ERROR", (err as Error).message, ...fnLogTrace);
         return [];
       });
 
@@ -65,21 +66,25 @@ function downloadSchemaFiles(location: string, version: string, dt: Dynatrace) {
                 }
                 writeFile(`${location}/${fileName}`, JSON.stringify(resp), err => {
                   if (err) {
-                    vscode.window
-                      .showErrorMessage(`Error writing file ${fileName}:\n${err.message}`)
-                      .then(undefined, () => {});
+                    logger.notify(
+                      "ERROR",
+                      `Error writing file ${fileName}:\n${err.message}`,
+                      ...fnLogTrace,
+                    );
                   }
                 });
               } catch (err) {
-                vscode.window
-                  .showErrorMessage(`Error writing file:\n${(err as Error).message}`)
-                  .then(undefined, () => {});
+                logger.notify(
+                  "ERROR",
+                  `Error writing file:\n${(err as Error).message}`,
+                  ...fnLogTrace,
+                );
               }
             });
           }),
         )
         .catch(async err => {
-          logger.notify("ERROR", (err as Error).message);
+          logger.notify("ERROR", (err as Error).message, ...fnLogTrace);
         });
     },
   );
@@ -97,13 +102,14 @@ export async function loadSchemas(
   context: vscode.ExtensionContext,
   dt: Dynatrace,
 ): Promise<boolean> {
+  logger.info("Executing Load Schemas command", ...logTrace);
   // Fetch available schema versions from cluster
   const availableVersions = await dt.extensionsV2.listSchemaVersions().catch(async err => {
-    logger.notify("ERROR", (err as Error).message);
+    logger.notify("ERROR", (err as Error).message, ...logTrace);
     return [];
   });
   if (availableVersions.length === 0) {
-    logger.notify("ERROR", "No schemas available. Operation cancelled.");
+    logger.notify("ERROR", "No schemas available. Operation cancelled.", ...logTrace);
     return false;
   }
 
@@ -113,7 +119,7 @@ export async function loadSchemas(
     title: "Extension workspace: Load Schemas",
   });
   if (!version) {
-    logger.notify("ERROR", "No schema was selected. Operation cancelled.");
+    logger.notify("ERROR", "No schema was selected. Operation cancelled.", ...logTrace);
     return false;
   }
   const location = path.join(context.globalStorageUri.fsPath, version);
@@ -132,7 +138,7 @@ export async function loadSchemas(
     }
   }
   if (cancelled === "cancelled") {
-    logger.notify("WARN", "Operation cancelled by user");
+    logger.notify("WARN", "Operation cancelled by user", ...logTrace);
     return false;
   }
 
@@ -165,11 +171,12 @@ export async function loadSchemas(
     logger.notify(
       "ERROR",
       "Extension YAML was not updated. Schema loading only partially complete.",
+      ...logTrace,
     );
-    logger.notify("ERROR", (err as Error).message);
+    logger.notify("ERROR", (err as Error).message, ...logTrace);
     return false;
   }
 
-  logger.notify("INFO", "Schema loading complete.");
+  logger.notify("INFO", "Schema loading complete.", ...logTrace);
   return true;
 }

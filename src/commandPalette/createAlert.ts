@@ -27,8 +27,10 @@ import * as logger from "../utils/logging";
 const logTrace = ["commandPalette", "createAlert"];
 
 export async function createAlert(cachedData: CachedData) {
+  logger.info("Executing Create Alert command", ...logTrace);
   const extensionFile = getExtensionFilePath();
   if (!extensionFile) {
+    logger.error("Missing extension file. Command aborted.", ...logTrace);
     return;
   }
   const extensionText = readFileSync(extensionFile).toString();
@@ -46,6 +48,7 @@ export async function createAlert(cachedData: CachedData) {
     logger.notify(
       "WARN",
       "No metrics defined in extension.yaml, please define them before creating alerts",
+      ...logTrace,
     );
     return;
   }
@@ -56,7 +59,7 @@ export async function createAlert(cachedData: CachedData) {
     ignoreFocusOut: true,
   });
   if (!metricToUse) {
-    logger.notify("ERROR", "No metric was selected. Operation cancelled.");
+    logger.notify("ERROR", "No metric was selected. Operation cancelled.", ...logTrace);
     return;
   }
 
@@ -67,7 +70,7 @@ export async function createAlert(cachedData: CachedData) {
     ignoreFocusOut: true,
   });
   if (!alertName) {
-    logger.notify("ERROR", "No alert name was entered. Operation cancelled.");
+    logger.notify("ERROR", "No alert name was entered. Operation cancelled.", ...logTrace);
     return;
   }
 
@@ -78,7 +81,7 @@ export async function createAlert(cachedData: CachedData) {
     ignoreFocusOut: true,
   });
   if (!alertCondition) {
-    logger.notify("ERROR", "No alert condition was selected. Operation cancelled.");
+    logger.notify("ERROR", "No alert condition was selected. Operation cancelled.", ...logTrace);
     return;
   }
 
@@ -90,7 +93,7 @@ export async function createAlert(cachedData: CachedData) {
   });
 
   if (!threshold || isNaN(Number(threshold))) {
-    logger.notify("ERROR", "No valid threshold was entered. Operation cancelled.");
+    logger.notify("ERROR", "No valid threshold was entered. Operation cancelled.", ...logTrace);
     return;
   }
 
@@ -175,5 +178,5 @@ export async function createAlert(cachedData: CachedData) {
 
   writeFileSync(extensionFile, updatedExtensionText);
 
-  logger.notify("INFO", `Alert '${alertName}' created on alerts/${fileName}`);
+  logger.notify("INFO", `Alert '${alertName}' created on alerts/${fileName}`, ...logTrace);
 }

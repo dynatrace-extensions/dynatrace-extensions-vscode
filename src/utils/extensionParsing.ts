@@ -20,6 +20,9 @@
 
 import { FeatureSetDoc } from "../interfaces/extensionDocs";
 import { DatasourceGroup, DatasourceName, ExtensionStub } from "../interfaces/extensionMeta";
+import * as logger from "./logging";
+
+const logTrace = ["utils", "extensionParsing"];
 
 /**
  * Normalize semi-invalid versions of extension because they get re-written cluster-side.
@@ -28,11 +31,16 @@ import { DatasourceGroup, DatasourceName, ExtensionStub } from "../interfaces/ex
  * @returns version normalized
  */
 export function normalizeExtensionVersion(version: string): string {
+  const fnLogTrace = [...logTrace, "normalizeExtensionVersion"];
+  logger.debug(`Normalizing extension version "${version}"`);
+
   const versionParts = version.split(".");
   while (versionParts.length < 3) {
     versionParts.push("0");
   }
-  return versionParts.slice(0, 3).join(".");
+  const result = versionParts.slice(0, 3).join(".");
+  logger.debug(`Normalized as "${result}"`, ...fnLogTrace);
+  return result;
 }
 
 /**
@@ -41,12 +49,18 @@ export function normalizeExtensionVersion(version: string): string {
  * @returns the incremented version
  */
 export function incrementExtensionVersion(currentVersion: string) {
+  const fnLogTrace = [...logTrace, "incrementExtensionVersion"];
+  logger.debug(`Incrementing extension version from "${currentVersion}"`, ...fnLogTrace);
+
   currentVersion = normalizeExtensionVersion(currentVersion);
   const versionParts = currentVersion.split(".");
-  return [
+  const result = [
     ...versionParts.slice(0, versionParts.length - 1),
     Number(versionParts[versionParts.length - 1]) + 1,
   ].join(".");
+
+  logger.debug(`New version now "${result}"`, ...fnLogTrace);
+  return result;
 }
 
 /**

@@ -23,7 +23,7 @@ import { Dynatrace } from "../dynatrace-api/dynatrace";
 import { DynatraceAPIError } from "../dynatrace-api/errors";
 import { ExtensionStub } from "../interfaces/extensionMeta";
 import { loopSafeWait } from "../utils/code";
-import { notify } from "../utils/logging";
+import * as logger from "../utils/logging";
 
 /**
  * Uploads the latest avaialable extension 2.0 package from the `dist` folder of
@@ -34,9 +34,12 @@ import { notify } from "../utils/logging";
  * @returns void
  */
 export async function uploadExtension(dt: Dynatrace, tenantUrl: string) {
+  const fnLogTrace = ["commandPalette", "uploadExtension"];
+  logger.info("Executing Upload Extension command", ...fnLogTrace);
   // Get the most recent entry in dist folder
   const rootPath = vscode.workspace.workspaceFolders?.[0].uri.fsPath;
   if (!rootPath) {
+    logger.error("Workspace root path not found. Aborting command", ...fnLogTrace);
     return;
   }
   const distDir = path.join(rootPath, "dist");
@@ -44,6 +47,8 @@ export async function uploadExtension(dt: Dynatrace, tenantUrl: string) {
     .filter(file => file.endsWith(".zip") && lstatSync(path.join(distDir, file)).isFile())
     .map(file => ({ file, mtime: lstatSync(path.join(distDir, file)).mtime }))
     .sort((a, b) => b.mtime.getTime() - a.mtime.getTime())[0].file;
+
+  logger.debug(`Zip file for upload is ${extensionZip}`, ...fnLogTrace);
 
   // Browse extension archive and extract the extension name and version
   let zip = new AdmZip(path.join(distDir, extensionZip));
@@ -68,13 +73,14 @@ export async function uploadExtension(dt: Dynatrace, tenantUrl: string) {
     return [];
   });
   if (existingVersions.length >= 10) {
+    logger.debug("10 extensions already on tenant. Must delete one", ...fnLogTrace);
     const choice = await vscode.window.showWarningMessage(
       "Maximum number of extensions detected. Would you like to remove the last one?",
       "Yes",
       "No",
     );
     if (choice !== "Yes") {
-      notify("ERROR", "Operation cancelled.");
+      logger.notify("ERROR", "Operation cancelled.", ...fnLogTrace);
       return;
     }
 
@@ -82,10 +88,11 @@ export async function uploadExtension(dt: Dynatrace, tenantUrl: string) {
     const success = await dt.extensionsV2
       .deleteVersion(extensionName, existingVersions[0].version)
       .then(() => {
-        notify("INFO", "Oldest version removed successfully");
+        logger.notify("INFO", "Oldest version removed successfully", ...fnLogTrace);
         return true;
       })
       .catch(async () => {
+        logger.warn("Could not delete oldest version", ...fnLogTrace);
         // Could not delete oldest version, prompt user to select another one
         await vscode.window
           .showQuickPick(
@@ -105,11 +112,11 @@ export async function uploadExtension(dt: Dynatrace, tenantUrl: string) {
               dt.extensionsV2
                 .deleteVersion(extensionName, version)
                 .then(() => {
-                  notify("INFO", `Version ${version} removed successfully`);
+                  logger.notify("INFO", `Version ${version} removed successfully`, ...fnLogTrace);
                   return true;
                 })
                 .catch(err => {
-                  notify("ERROR", (err as Error).message);
+                  logger.notify("ERROR", (err as Error).message, ...fnLogTrace);
                   return false;
                 });
             }
@@ -122,6 +129,7 @@ export async function uploadExtension(dt: Dynatrace, tenantUrl: string) {
   }
 
   // Upload extension
+  logger.info("Uploading extension", ...fnLogTrace);
   const status: string = await vscode.window.withProgress(
     {
       location: vscode.ProgressLocation.Notification,
@@ -166,12 +174,13 @@ export async function uploadExtension(dt: Dynatrace, tenantUrl: string) {
       }
       return;
     }
+    logger.debug("User chose to activate extension will trigger separate flow.", ...fnLogTrace);
     await vscode.commands.executeCommand(
       "dynatrace-extensions.activateExtension",
       extensionVersion,
     );
   } else {
-    notify("ERROR", status);
-    notify("ERROR", "Extension upload failed.");
+    logger.notify("ERROR", status, ...fnLogTrace);
+    logger.notify("ERROR", "Extension upload failed.", ...fnLogTrace);
   }
 }

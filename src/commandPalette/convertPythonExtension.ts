@@ -18,7 +18,7 @@ import { writeFileSync } from "fs";
 import * as vscode from "vscode";
 import { Dynatrace } from "../dynatrace-api/dynatrace";
 import { CachedData } from "../utils/dataCaching";
-import { notify } from "../utils/logging";
+import * as logger from "../utils/logging";
 import { extractV1FromRemote, extractv1ExtensionFromLocal } from "./convertJMXExtension";
 import { convertPluginJsonToActivationSchema } from "./python/pythonConversion";
 
@@ -45,6 +45,8 @@ export async function convertPythonExtension(
   dt?: Dynatrace,
   outputPath?: string,
 ) {
+  const fnLogTrace = ["commandPalette", "convertPythonExtension"];
+  logger.info("Executing Convert Python Extension command", ...fnLogTrace);
   // User chooses if they want to use a local file or browse from the Dynatrace environment
   const pluginJSONOrigins = [OPTION_LOCAL_FILE, OPTION_DYNATRACE_ENVIRONMENT];
   const pluginJSONOrigin = await vscode.window.showQuickPick(pluginJSONOrigins, {
@@ -55,7 +57,7 @@ export async function convertPythonExtension(
   });
 
   if (!pluginJSONOrigin) {
-    notify("WARN", "No selection made. Operation cancelled.");
+    logger.notify("WARN", "No selection made. Operation cancelled.", ...fnLogTrace);
     return;
   }
 
@@ -65,7 +67,7 @@ export async function convertPythonExtension(
       : await extractV1FromRemote("Python", dt);
 
   if (errorMessage !== "") {
-    notify("ERROR", `Operation failed: ${errorMessage}`);
+    logger.notify("ERROR", `Operation failed: ${errorMessage}`, ...fnLogTrace);
     return;
   }
 
@@ -87,7 +89,7 @@ export async function convertPythonExtension(
     const extensionJSONFile =
       outputPath ?? (await vscode.window.showSaveDialog(options).then(p => p?.fsPath));
     if (!extensionJSONFile) {
-      notify("ERROR", "No file was selected. Operation cancelled.");
+      logger.notify("ERROR", "No file was selected. Operation cancelled.", ...fnLogTrace);
       return;
     }
     // Save the file
@@ -101,7 +103,7 @@ export async function convertPythonExtension(
     const document = await vscode.workspace.openTextDocument(extensionJSONFile);
     await vscode.window.showTextDocument(document);
   } catch (e) {
-    notify("ERROR", `Operation failed: ${(e as Error).message}`);
+    logger.notify("ERROR", `Operation failed: ${(e as Error).message}`, ...fnLogTrace);
     return;
   }
 }

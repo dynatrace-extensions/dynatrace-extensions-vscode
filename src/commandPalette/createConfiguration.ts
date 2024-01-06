@@ -26,7 +26,7 @@ import {
 import { CachedData } from "../utils/dataCaching";
 import { getDatasourceName } from "../utils/extensionParsing";
 import { createUniqueFileName, getExtensionFilePath } from "../utils/fileSystem";
-import { notify } from "../utils/logging";
+import * as logger from "../utils/logging";
 import { createGenericConfigObject, createObjectFromSchema } from "../utils/schemaParsing";
 
 /**
@@ -45,12 +45,16 @@ export async function createMonitoringConfiguration(
   context: vscode.ExtensionContext,
   cachedData: CachedData,
 ) {
+  const fnLogTrace = ["commandPalette", "createConfiguration", "createMonitoringConfiguration"];
+  logger.info("Executing Create Configuration command", ...fnLogTrace);
   const workspaceRoot = vscode.workspace.workspaceFolders?.[0].uri.fsPath;
   if (!workspaceRoot) {
+    logger.error("Missing workspace root path. Aborting command.", ...fnLogTrace);
     return;
   }
   const extensionFilePath = getExtensionFilePath();
   if (!extensionFilePath) {
+    logger.error("Missing extension file. Aborting command.", ...fnLogTrace);
     return;
   }
   const configDir = path.join(workspaceRoot, "config");
@@ -62,11 +66,16 @@ export async function createMonitoringConfiguration(
   // If the extension is deployed, create config template from live schema
   let initialConfig: { value: Record<string, unknown>; scope: string };
   if (Object.keys(deployedExtension).length > 0) {
+    logger.debug(
+      "This extension is deployed. Parsing live schema to create base config object",
+      ...fnLogTrace,
+    );
     initialConfig = { value: createObjectFromSchema(deployedExtension), scope: "" };
   } else {
-    // If this is a python extension, create template from activationSchema.json
+    logger.debug("Extension is not deployed. Need to build schema from scratch", ...fnLogTrace);
     const datasourceName = getDatasourceName(extension);
     let activationContext = "REMOTE";
+    // For datasources that support both local and remote activation
     if (["wmi", "prometheus", "python"].includes(datasourceName)) {
       activationContext = await vscode.window.showQuickPick(["LOCAL", "REMOTE"], {
         canPickMany: false,
@@ -74,11 +83,17 @@ export async function createMonitoringConfiguration(
         title: "Where will this configuration run?",
       });
       if (!activationContext) {
-        notify("INFO", "Operation cancelled");
+        logger.notify("INFO", "Operation cancelled", ...fnLogTrace);
         return;
       }
     }
+    logger.debug(`Activation type chosen as ${activationContext}`, ...fnLogTrace);
+    // If this is a python extension, create template from activationSchema.json
     if (datasourceName === "python") {
+      logger.debug(
+        "Python extension - creating config object from activationSchema.json",
+        ...fnLogTrace,
+      );
       const activationSchemaFile = path.join(extensionFilePath, "..", "activationSchema.json");
       const activationSchema = JSON.parse(readFileSync(activationSchemaFile).toString()) as unknown;
       initialConfig = {
@@ -87,6 +102,10 @@ export async function createMonitoringConfiguration(
       };
     } else {
       // Otherwise, create a default config based on datasource
+      logger.debug(
+        "Non-python extension - creating config object based on datasource",
+        ...fnLogTrace,
+      );
       initialConfig = {
         value: createGenericConfigObject(datasourceName, { activationContext: activationContext }),
         scope: "",
@@ -124,7 +143,7 @@ export async function createMonitoringConfiguration(
     ignoreFocusOut: true,
   });
   if (!fileName) {
-    notify("INFO", "Operation cancelled.");
+    logger.notify("INFO", "Operation cancelled.", ...fnLogTrace);
   } else {
     writeFileSync(path.join(configDir, fileName), JSON.stringify(configObject, undefined, 4));
   }

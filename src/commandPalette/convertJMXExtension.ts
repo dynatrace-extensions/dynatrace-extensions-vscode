@@ -788,6 +788,8 @@ export async function convertJMXExtension(
   dt?: Dynatrace,
   outputPath?: string,
 ) {
+  const fnLogTrace = [...logTrace, "convertJMXExtension"];
+  logger.info("Executing Covert JMX command", ...fnLogTrace);
   // User chooses if they want to use a local file or browse from the Dynatrace environment
   const pluginJSONOrigins = [OPTION_LOCAL_FILE, OPTION_DYNATRACE_ENVIRONMENT];
   const pluginJSONOrigin = await vscode.window.showQuickPick(pluginJSONOrigins, {
@@ -798,7 +800,7 @@ export async function convertJMXExtension(
   });
 
   if (!pluginJSONOrigin) {
-    logger.notify("WARN", "No selection made. Operation cancelled.");
+    logger.notify("WARN", "No selection made. Operation cancelled.", ...fnLogTrace);
     return;
   }
 
@@ -808,12 +810,13 @@ export async function convertJMXExtension(
       : await extractV1FromRemote("JMX", dt);
 
   if (errorMessage !== "") {
-    logger.notify("ERROR", `Operation failed: ${errorMessage}`);
+    logger.notify("ERROR", `Operation failed: ${errorMessage}`, ...fnLogTrace);
     return;
   }
 
   // Convert the JMX v1 extension to v2
   try {
+    logger.debug("JSON extracted successfully. Converting it now.", ...fnLogTrace);
     const jmxV2Extension = await convertJMXExtensionToV2(jmxV1Extension);
 
     // Ask the user where they would like to save the file to
@@ -830,7 +833,7 @@ export async function convertJMXExtension(
     const extensionYAMLFile =
       outputPath ?? (await vscode.window.showSaveDialog(options).then(p => p?.fsPath));
     if (!extensionYAMLFile) {
-      logger.notify("ERROR", "No file was selected. Operation cancelled.");
+      logger.notify("ERROR", "No file was selected. Operation cancelled.", ...fnLogTrace);
       return;
     }
     // Save the file as yaml
@@ -844,7 +847,7 @@ export async function convertJMXExtension(
     const document = await vscode.workspace.openTextDocument(extensionYAMLFile);
     await vscode.window.showTextDocument(document);
   } catch (e) {
-    logger.notify("ERROR", `Operation failed: ${(e as Error).message}`);
+    logger.notify("ERROR", `Operation failed: ${(e as Error).message}`, ...fnLogTrace);
     return;
   }
 }
