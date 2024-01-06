@@ -30,6 +30,7 @@ jobs:
           field-values: Ready to start,Bug,Hotfix
       - name: Set fields for default items
         uses: titoportas/update-project-fields@v0.1.0
+        if: ${{ !contains(github.event.issue.labels.*.name, 'bug') }}
         with:
           project-url: https://github.com/users/radu-stefan-dt/projects/1
           github-token: ${{ secrets.PROJECT_PAT }}
