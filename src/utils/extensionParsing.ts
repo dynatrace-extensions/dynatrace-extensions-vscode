@@ -191,7 +191,10 @@ export function getExtensionDatasource(extension: ExtensionStub): DatasourceGrou
  * @param extension extension.yaml serialized as object
  * @returns datasource name
  */
-export function getDatasourceName(extension: ExtensionStub): DatasourceName {
+export function getDatasourceName(extension?: ExtensionStub): DatasourceName {
+  if (!extension) {
+    return "unsupported";
+  }
   if (extension.snmp) {
     return "snmp";
   }
