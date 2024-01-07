@@ -107,7 +107,12 @@ async function pythonExtensionSetup(
   logger.debug(`Generated extension name is "${chosenName}"`, ...fnLogTrace);
   // Generate artefacts
   progress.report({ message: "Creating folders and files" });
-  await runCommand(`dt-sdk create -o ${tempPath} ${chosenName}`, undefined, undefined, envOptions);
+  await runCommand(
+    `dt-sdk create -o "${tempPath}" ${chosenName}`,
+    undefined,
+    undefined,
+    envOptions,
+  );
 
   // Tidy up
   // TODO - This doesn't work if the workspace is in another drive in Windows.
