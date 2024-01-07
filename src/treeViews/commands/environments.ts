@@ -46,6 +46,8 @@ export interface MinimalConfiguration {
   };
 }
 
+const logTrace = ["treeViews", "commands", "environments"];
+
 /**
  * Applies regular expressions for known Dynatrace environment URL schemes.
  * @param value value to test
@@ -93,6 +95,7 @@ export function validateEnvironmentUrl(value: string): string | null {
  * @returns
  */
 export async function addEnvironment(context: vscode.ExtensionContext) {
+  const fnLogTrace = [...logTrace, "addEnvironment"];
   let url = await vscode.window.showInputBox({
     title: "Add a Dynatrace environment (1/3)",
     placeHolder: "The URL at which this environment is accessible...",
@@ -101,7 +104,7 @@ export async function addEnvironment(context: vscode.ExtensionContext) {
     validateInput: value => validateEnvironmentUrl(value),
   });
   if (!url || url === "") {
-    notify("ERROR", "URL cannot be blank. Operation was cancelled.");
+    notify("ERROR", "URL cannot be blank. Operation was cancelled.", ...fnLogTrace);
     return;
   }
   if (url.endsWith("/")) {
@@ -116,7 +119,7 @@ export async function addEnvironment(context: vscode.ExtensionContext) {
 
   const reachable = await checkUrlReachable(`${apiUrl}/api/v1/time`, true);
   if (!reachable) {
-    notify("ERROR", "The environment URL entered is not reachable.");
+    notify("ERROR", "The environment URL entered is not reachable.", ...fnLogTrace);
     return;
   }
 
@@ -128,7 +131,7 @@ export async function addEnvironment(context: vscode.ExtensionContext) {
     password: true,
   });
   if (!token || token === "") {
-    notify("ERROR", "Token cannot be blank. Operation was cancelled");
+    notify("ERROR", "Token cannot be blank. Operation was cancelled", ...fnLogTrace);
     return;
   }
 
@@ -161,6 +164,7 @@ export async function editEnvironment(
   context: vscode.ExtensionContext,
   environment: DynatraceEnvironment,
 ) {
+  const fnLogTrace = [...logTrace, "editEnvironment"];
   let url = await vscode.window.showInputBox({
     title: "The new URL for this environment",
     placeHolder: "The URL at which this environment is accessible...",
@@ -170,7 +174,7 @@ export async function editEnvironment(
     validateInput: value => validateEnvironmentUrl(value),
   });
   if (!url || url === "") {
-    notify("ERROR", "URL cannot be blank. Operation was cancelled.");
+    notify("ERROR", "URL cannot be blank. Operation was cancelled.", ...fnLogTrace);
     return;
   }
   if (url.endsWith("/")) {
@@ -185,7 +189,7 @@ export async function editEnvironment(
 
   const reachable = await checkUrlReachable(`${apiUrl}/api/v1/time`, true);
   if (!reachable) {
-    notify("ERROR", "The environment URL entered is not reachable.");
+    notify("ERROR", "The environment URL entered is not reachable.", ...fnLogTrace);
     return;
   }
 
@@ -198,7 +202,7 @@ export async function editEnvironment(
     ignoreFocusOut: true,
   });
   if (!token || token === "") {
-    notify("ERROR", "Token cannot be blank. Operation was cancelled");
+    notify("ERROR", "Token cannot be blank. Operation was cancelled", ...fnLogTrace);
     return;
   }
 
@@ -237,7 +241,7 @@ export async function deleteEnvironment(
   });
 
   if (confirm !== "Yes") {
-    notify("INFO", "Operation cancelled.");
+    notify("INFO", "Operation cancelled.", ...logTrace, "deleteEnvironment");
     return;
   }
 
@@ -259,7 +263,12 @@ export async function changeConnection(
   const environments = getAllEnvironments(context);
   // No point showing a list of 1 or empty
   if (environments.length < 2) {
-    notify("INFO", "No other environments available. Add one first");
+    notify(
+      "INFO",
+      "No other environments available. Add one first",
+      ...logTrace,
+      "changeConnection",
+    );
     return [false, undefined];
   }
   const currentEnv = environments.find(e => e.current);
@@ -364,6 +373,7 @@ export async function editMonitoringConfiguration(
   context: vscode.ExtensionContext,
   oc: vscode.OutputChannel,
 ): Promise<boolean> {
+  const fnLogTrace = [...logTrace, "editMonitoringConfiguration"];
   // Fetch the current configuration details
   const existingConfig = await config.dt.extensionsV2
     .getMonitoringConfiguration(config.extensionName, config.id)
@@ -390,11 +400,11 @@ export async function editMonitoringConfiguration(
           JSON.parse(response) as Record<string, unknown>,
         )
         .then(() => {
-          notify("INFO", "Configuration updated successfully.");
+          notify("INFO", "Configuration updated successfully.", ...fnLogTrace);
           return true;
         })
         .catch((err: DynatraceAPIError) => {
-          notify("ERROR", `Update operation failed: ${err.message}`);
+          notify("ERROR", `Update operation failed: ${err.message}`, ...fnLogTrace);
           oc.replace(JSON.stringify(err.errorParams, undefined, 2));
           oc.show();
           return false;
@@ -402,7 +412,7 @@ export async function editMonitoringConfiguration(
     // Otherwise cancel operation
     response => {
       if (response === "No changes.") {
-        notify("INFO", "No changes were made. Operation cancelled.");
+        notify("INFO", "No changes were made. Operation cancelled.", ...fnLogTrace);
       }
       return false;
     },
@@ -420,6 +430,7 @@ export async function editMonitoringConfiguration(
 export async function deleteMonitoringConfiguration(
   config: MonitoringConfiguration,
 ): Promise<boolean> {
+  const fnLogTrace = [...logTrace, "deleteMonitoringConfiguration"];
   const confirm = await vscode.window.showQuickPick(["Yes", "No"], {
     title: `Delete configuration ${config.label?.toString() ?? config.id}?`,
     canPickMany: false,
@@ -427,18 +438,18 @@ export async function deleteMonitoringConfiguration(
   });
 
   if (confirm !== "Yes") {
-    notify("INFO", "Operation cancelled.");
+    notify("INFO", "Operation cancelled.", ...fnLogTrace);
     return false;
   }
 
   return config.dt.extensionsV2
     .deleteMonitoringConfiguration(config.extensionName, config.id)
     .then(() => {
-      notify("INFO", "Configuration deleted successfully.");
+      notify("INFO", "Configuration deleted successfully.", ...fnLogTrace);
       return true;
     })
     .catch((err: DynatraceAPIError) => {
-      notify("ERROR", `Delete operation failed: ${err.message}`);
+      notify("ERROR", `Delete operation failed: ${err.message}`, ...fnLogTrace);
       return false;
     });
 }
@@ -459,6 +470,7 @@ export async function addMonitoringConfiguration(
   context: vscode.ExtensionContext,
   oc: vscode.OutputChannel,
 ) {
+  const fnLogTrace = [...logTrace, "addMonitoringConfiguration"];
   let configObject: MinimalConfiguration | undefined;
   // Check if workspace matches the extension
   let workspaceMatch = false;
@@ -497,7 +509,7 @@ export async function addMonitoringConfiguration(
         ]);
 
         if (!choice) {
-          notify("INFO", "Operation cancelled.");
+          notify("INFO", "Operation cancelled.", ...fnLogTrace);
           return false;
         }
 
@@ -540,11 +552,11 @@ export async function addMonitoringConfiguration(
   const status = await extension.dt.extensionsV2
     .postMonitoringConfiguration(extension.id, [configObject] as unknown as Record<string, unknown>)
     .then(() => {
-      notify("INFO", "Configuration successfully created.");
+      notify("INFO", "Configuration successfully created.", ...fnLogTrace);
       return true;
     })
     .catch((err: DynatraceAPIError) => {
-      notify("ERROR", "Create operation failed.");
+      notify("ERROR", "Create operation failed.", ...fnLogTrace);
       oc.replace(JSON.stringify(err.errorParams, undefined, 2));
       oc.show();
       return false;
@@ -559,6 +571,7 @@ export async function addMonitoringConfiguration(
  * @param config the MonitoringConfiguration item to save
  */
 export async function saveMoniotringConfiguration(config: MonitoringConfiguration) {
+  const fnLogTrace = [...logTrace, "saveMoniotringConfiguration"];
   const workspaceRoot = vscode.workspace.workspaceFolders?.[0].uri.fsPath;
   if (!workspaceRoot) {
     return;
@@ -587,11 +600,11 @@ export async function saveMoniotringConfiguration(config: MonitoringConfiguratio
     ignoreFocusOut: true,
   });
   if (!fileName) {
-    notify("INFO", "Operation cancelled.");
+    notify("INFO", "Operation cancelled.", ...fnLogTrace);
     return;
   }
   writeFileSync(path.join(configDir, fileName), existingConfig);
-  notify("INFO", "Configuration file saved successfully.");
+  notify("INFO", "Configuration file saved successfully.", ...fnLogTrace);
 }
 
 /**

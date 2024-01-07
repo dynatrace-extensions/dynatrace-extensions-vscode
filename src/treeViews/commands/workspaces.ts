@@ -31,6 +31,7 @@ export async function deleteWorkspace(
   context: vscode.ExtensionContext,
   workspace: ExtensionProjectItem,
 ) {
+  const fnLogTrace = ["treeViews", "commands", "workspaces", "deleteWorkspace"];
   const confirm = await vscode.window.showQuickPick(["Yes", "No"], {
     title: `Delete workspace ${workspace.label?.toString() ?? workspace.id}?`,
     canPickMany: false,
@@ -38,7 +39,7 @@ export async function deleteWorkspace(
   });
 
   if (confirm !== "Yes") {
-    notify("INFO", "Operation cancelled.");
+    notify("INFO", "Operation cancelled.", ...fnLogTrace);
     return;
   }
 
