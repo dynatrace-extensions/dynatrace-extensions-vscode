@@ -35,10 +35,12 @@ let context: vscode.ExtensionContext;
  */
 function startNewLogFile() {
   const logsDir = path.join(context.globalStorageUri.fsPath, "logs");
-  currentLogFile = path.join(
-    logsDir,
-    `${new Date().toISOString().replace("T", "_").replace(/:/g, "-")}_log.log`,
-  );
+  const workspaceName = vscode.workspace.workspaceFolders?.[0].name ?? "no-workspace";
+  const fileName = `${workspaceName}_${new Date()
+    .toISOString()
+    .replace("T", "_")
+    .replace(/:/g, "-")}_log.log`;
+  currentLogFile = path.join(logsDir, fileName);
   writeFileSync(currentLogFile, "");
 }
 
@@ -149,7 +151,6 @@ function logMessage(data: unknown, level: LogLevel, ...trace: string[]) {
  */
 export function initializeLogging(ctx: vscode.ExtensionContext) {
   context = ctx;
-  removeOldestFiles(path.join(context.globalStorageUri.fsPath, "logs"), maxFiles - 1);
 
   // Load the configuration
   const config = vscode.workspace.getConfiguration("dynatraceExtensions.logging", null);
@@ -157,8 +158,10 @@ export function initializeLogging(ctx: vscode.ExtensionContext) {
   maxFileSize = config.get<number>("maxFileSize");
   maxFiles = config.get<number>("maxFiles");
 
+  // Create the output channel, start a new log file, and remove old logs
   outputChannel = vscode.window.createOutputChannel("Dynatrace Log", "log");
   startNewLogFile();
+  removeOldestFiles(path.join(context.globalStorageUri.fsPath, "logs"), maxFiles);
 }
 
 /**

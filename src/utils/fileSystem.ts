@@ -363,12 +363,16 @@ export function getSimulatorSummaries(
  * @param context - Extension Context
  */
 export function cleanUpSimulatorLogs(context: vscode.ExtensionContext) {
+  // eslint-disable-next-line no-secrets/no-secrets
+  const fnLogTrace = [...logTrace, "cleanUpSimulatorLogs"];
   const maxFiles = vscode.workspace
     .getConfiguration("dynatraceExtensions.simulator", null)
     .get<number>("maximumLogFiles");
 
-  // No clean-up is done if user disabled i
+  // No clean-up is done if user disabled it
   if (maxFiles < 0) return;
+
+  logger.debug(`Cleaning up simulator logs. Keeping only ${String(maxFiles)} files`, ...fnLogTrace);
 
   // Order summaries by workspace
   const newSummaries: ExecutionSummary[] = [];
@@ -396,9 +400,7 @@ export function cleanUpSimulatorLogs(context: vscode.ExtensionContext) {
             } catch (err) {
               logger.error(
                 `Error deleting file "${summary.logPath}": ${(err as Error).message}`,
-                ...logTrace,
-                // eslint-disable-next-line no-secrets/no-secrets
-                "cleanUpSimulatorLogs",
+                ...fnLogTrace,
               );
             }
           }
