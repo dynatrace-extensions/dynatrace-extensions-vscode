@@ -30,6 +30,9 @@ import { ExtensionStub } from "../interfaces/extensionMeta";
 import { CachedData } from "../utils/dataCaching";
 import { getAllMetricsByFeatureSet } from "../utils/extensionParsing";
 import { getExtensionFilePath } from "../utils/fileSystem";
+import * as logger from "../utils/logging";
+
+const logTrace = ["commandPalette", "createDocumentation"];
 
 /**
  * Reads extension.yaml data and extracts relevant details for documenting custom events for
@@ -305,12 +308,15 @@ function writeDocumentation(extension: ExtensionStub, extensionDir: string) {
  * @returns void
  */
 export async function createDocumentation(cachedData: CachedData) {
+  const fnLogTrace = [...logTrace, "createDocumentation"];
+  logger.info("Executing Create Documentation command", ...fnLogTrace);
   await vscode.window.withProgress(
     { location: vscode.ProgressLocation.Notification, title: "Creating documentation" },
     async progress => {
       progress.report({ message: "Parsing metadata" });
       const extensionFile = getExtensionFilePath();
       if (!extensionFile) {
+        logger.error("Missing extension file. Command aborted.", ...fnLogTrace);
         return;
       }
       const extensionDir = path.dirname(extensionFile);

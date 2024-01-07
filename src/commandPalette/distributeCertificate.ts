@@ -20,7 +20,7 @@ import { Dynatrace } from "../dynatrace-api/dynatrace";
 import { DynatraceAPIError } from "../dynatrace-api/errors";
 import { checkActiveGateInstalled, checkOneAgentInstalled } from "../utils/conditionCheckers";
 import { resolveRealPath, uploadComponentCert } from "../utils/fileSystem";
-import { notify } from "../utils/logging";
+import * as logger from "../utils/logging";
 
 /**
  * Delivers the "Distribute certificate" command functionality.
@@ -32,6 +32,9 @@ import { notify } from "../utils/logging";
  * @returns boolean - the success of the command
  */
 export async function distributeCertificate(context: vscode.ExtensionContext, dt: Dynatrace) {
+  const fnLogTrace = ["commandPalette", "distributeCertificate"];
+  logger.info("Executing Distribute Certificate command", ...fnLogTrace);
+
   const certSettingValue = vscode.workspace
     .getConfiguration("dynatraceExtensions", null)
     .get<string>("rootOrCaCertificateLocation");
@@ -46,6 +49,7 @@ export async function distributeCertificate(context: vscode.ExtensionContext, dt
   const caCertId = context.workspaceState.get<string>("caCertId");
   let update = false;
   if (caCertId) {
+    logger.debug(`Detected existng certificate under ID ${caCertId}`, ...fnLogTrace);
     const choice = await vscode.window.showQuickPick(["Yes", "No"], {
       canPickMany: false,
       ignoreFocusOut: true,
@@ -57,16 +61,22 @@ export async function distributeCertificate(context: vscode.ExtensionContext, dt
 
   // Update existing certificate by replacing the content
   if (update && caCertId) {
+    logger.debug("Overwriting existing entry in credential vault", ...fnLogTrace);
     const oldCert = await dt.credentialVault.getCertificate(caCertId);
     await dt.credentialVault
       .putCertificate(caCertId, certContent, oldCert.name, oldCert.description)
       .then(async () => {
-        notify("INFO", "Certificate successfully updated in the Credential Vault.");
+        logger.notify(
+          "INFO",
+          "Certificate successfully updated in the Credential Vault.",
+          ...fnLogTrace,
+        );
       })
       .catch(async (err: DynatraceAPIError) => {
-        notify("ERROR", `Certificate update failed: ${err.message}`);
+        logger.notify("ERROR", `Certificate update failed: ${err.message}`, ...fnLogTrace);
       });
   } else {
+    logger.debug("Creating new entry in credential vault", ...fnLogTrace);
     // Prompt user for Certificate Name
     const certName = await vscode.window.showInputBox({
       title: "Upload certificate (1/2)",
@@ -75,7 +85,11 @@ export async function distributeCertificate(context: vscode.ExtensionContext, dt
       ignoreFocusOut: true,
     });
     if (!certName || certName === "") {
-      notify("ERROR", "Certificate name is mandatory. Skipping upload to Credentials Vault.");
+      logger.notify(
+        "ERROR",
+        "Certificate name is mandatory. Skipping upload to Credentials Vault.",
+        ...fnLogTrace,
+      );
     } else {
       // Prompt user for Certificate Description
       const certDescr = await vscode.window.showInputBox({
@@ -89,10 +103,14 @@ export async function distributeCertificate(context: vscode.ExtensionContext, dt
         .postCertificate(certContent, certName, certDescr ?? "")
         .then(async res => {
           await context.workspaceState.update("caCertId", res.id);
-          notify("INFO", "Certificate successfully uploaded to Credentials Vault.");
+          logger.notify(
+            "INFO",
+            "Certificate successfully uploaded to Credentials Vault.",
+            ...fnLogTrace,
+          );
         })
         .catch(async (err: DynatraceAPIError) => {
-          notify("ERROR", `Certificate upload failed: ${err.message}`);
+          logger.notify("ERROR", `Certificate upload failed: ${err.message}`, ...fnLogTrace);
         });
     }
   }
@@ -111,19 +129,28 @@ export async function distributeCertificate(context: vscode.ExtensionContext, dt
       try {
         if (oaPresent) {
           uploadComponentCert(certPath, "OneAgent");
-          notify("INFO", "Certificate successfully uploaded to local OneAgent.");
+          logger.notify(
+            "INFO",
+            "Certificate successfully uploaded to local OneAgent.",
+            ...fnLogTrace,
+          );
         }
         if (agPresent) {
           uploadComponentCert(certPath, "ActiveGate");
-          notify("INFO", "Certificate successfully uploaded to local ActiveGate.");
+          logger.notify(
+            "INFO",
+            "Certificate successfully uploaded to local ActiveGate.",
+            ...fnLogTrace,
+          );
         }
       } catch (err) {
-        notify(
+        logger.notify(
           "ERROR",
           (err as Error).name === "EPERM"
             ? "Writing certificate locally failed due to access permissions. " +
                 "Try again after running VS Code as Administrator."
             : `Writing certificate locally failed: ${(err as Error).message}`,
+          ...fnLogTrace,
         );
       }
     }

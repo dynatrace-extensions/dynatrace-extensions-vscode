@@ -51,6 +51,11 @@ const logTrace = ["utils", "fileSystem"];
  * @param count number of files to keep
  */
 export function removeOldestFiles(dirPath: string, count: number) {
+  logger.debug(
+    `Cleaning files from "${dirPath}" to keep only ${count}.`,
+    ...logTrace,
+    "removeOldestFiles",
+  );
   // Sort files by date modified
   const files = readdirSync(dirPath).sort((f1: string, f2: string) => {
     const f1Stats = statSync(path.join(dirPath, f1));
@@ -129,8 +134,9 @@ export function initWorkspaceStorage(context: vscode.ExtensionContext) {
     logger.error("No workspace detected.", ...fnLogTrace);
     return;
   }
-  logger.info(`Workspace storage will be at: ${storagePath}`, ...fnLogTrace);
+
   if (!existsSync(storagePath)) {
+    logger.info(`Workspace storage created at: ${storagePath}`, ...fnLogTrace);
     mkdirSync(storagePath);
   }
 }
@@ -357,12 +363,16 @@ export function getSimulatorSummaries(
  * @param context - Extension Context
  */
 export function cleanUpSimulatorLogs(context: vscode.ExtensionContext) {
+  // eslint-disable-next-line no-secrets/no-secrets
+  const fnLogTrace = [...logTrace, "cleanUpSimulatorLogs"];
   const maxFiles = vscode.workspace
     .getConfiguration("dynatraceExtensions.simulator", null)
     .get<number>("maximumLogFiles");
 
-  // No clean-up is done if user disabled i
+  // No clean-up is done if user disabled it
   if (maxFiles < 0) return;
+
+  logger.debug(`Cleaning up simulator logs. Keeping only ${String(maxFiles)} files`, ...fnLogTrace);
 
   // Order summaries by workspace
   const newSummaries: ExecutionSummary[] = [];
@@ -390,9 +400,7 @@ export function cleanUpSimulatorLogs(context: vscode.ExtensionContext) {
             } catch (err) {
               logger.error(
                 `Error deleting file "${summary.logPath}": ${(err as Error).message}`,
-                ...logTrace,
-                // eslint-disable-next-line no-secrets/no-secrets
-                "cleanUpSimulatorLogs",
+                ...fnLogTrace,
               );
             }
           }
@@ -592,9 +600,11 @@ export function resolveRealPath(pathToResolve: string): string {
  * @param includePython whether the .gitignore needs the Python content or not
  */
 export async function writeGititnore(includePython: boolean = false) {
+  const fnLogTrace = [...logTrace, "writeGitignore"];
+  logger.debug("Writing the workspace's .gitignore file", ...fnLogTrace);
+
   const VSCODE_IGNORES = [
     ".vscode/*",
-    "!.vscode/settings.json",
     "!.vscode/tasks.json",
     "!.vscode/launch.json",
     "!.vscode/extensions.json",
@@ -617,7 +627,6 @@ export async function writeGititnore(includePython: boolean = false) {
   const BASE_GITIGNORE = `\
 # VS Code
 .vscode/*
-!.vscode/settings.json
 !.vscode/tasks.json
 !.vscode/launch.json
 !.vscode/extensions.json

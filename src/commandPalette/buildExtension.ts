@@ -70,6 +70,7 @@ async function preBuildTasks(
   dt?: Dynatrace,
 ): Promise<string> {
   const fnLogTrace = [...logTrace, "preBuildTasks"];
+
   // Create the dist folder if it doesn't exist
   if (!existsSync(distDir)) {
     mkdirSync(distDir);
@@ -79,6 +80,7 @@ async function preBuildTasks(
   const nextVersion = incrementExtensionVersion(currentVersion);
 
   // Delete any .DS_Store files found
+  logger.debug("Checking and deleting any .DS_Store files", ...fnLogTrace);
   const extensionDir = path.resolve(extensionFile, "..");
   const dsFiles = glob.sync("**/.DS_Store", { cwd: extensionDir });
   dsFiles.forEach(file => {
@@ -95,6 +97,10 @@ async function preBuildTasks(
     logger.notify("INFO", "Extension version automatically increased.");
     return nextVersion;
   } else if (dt) {
+    logger.debug(
+      `Checking version ${currentVersion} doesn't already exist on tenant.`,
+      ...fnLogTrace,
+    );
     // Increment the version if there is clash on the tenant
     const versions = await dt.extensionsV2
       .listVersions(extensionName)
@@ -168,6 +174,8 @@ async function assemblePython(
   oc: vscode.OutputChannel,
   cancelToken: vscode.CancellationToken,
 ) {
+  const fnLogTrace = [...logTrace, "assemblePython"];
+
   // By default, we add the linux_x86_64 and/or win_amd64 platforms
   let platformString =
     process.platform === "win32"
@@ -180,6 +188,8 @@ async function assemblePython(
   if (extraPlatforms && extraPlatforms.length > 0) {
     platformString = `-e ${extraPlatforms.join(" -e ")}`;
   }
+
+  logger.debug(`Assembling for python with platform param "${platformString}"`, ...fnLogTrace);
 
   // Build
   await runCommand(
@@ -259,6 +269,7 @@ async function uploadAndActivate(
   oc: vscode.OutputChannel,
   cancelToken: vscode.CancellationToken,
 ) {
+  const fnLogTrace = [...logTrace, "uploadAndActivate"];
   try {
     // Check upload possible
     const existingVersions = await dt.extensionsV2.listVersions(extensionName).catch(() => {
@@ -266,10 +277,18 @@ async function uploadAndActivate(
     });
     if (existingVersions.length >= 10) {
       // Try delete oldest version
+      logger.debug(
+        "10 Extension versions already on tenant. Attempting to delete oldest one.",
+        ...fnLogTrace,
+      );
       await dt.extensionsV2
         .deleteVersion(extensionName, existingVersions[0].version)
         .catch(async () => {
           // Try delete newest version
+          logger.debug(
+            "Couldn't delete oldest version. Trying to delete newest one.",
+            ...fnLogTrace,
+          );
           await dt.extensionsV2.deleteVersion(
             extensionName,
             existingVersions[existingVersions.length - 1].version,
@@ -299,9 +318,14 @@ async function uploadAndActivate(
 
     // Activate extension or throw error
     if (uploadStatus === "success") {
+      logger.debug(
+        "Extension upload successful. Activating environment configuration.",
+        ...fnLogTrace,
+      );
       await dt.extensionsV2.putEnvironmentConfiguration(extensionName, extensionVersion);
     } else {
       if (lastError) {
+        logger.error(`Extension upload failed: ${lastError.message}`, ...fnLogTrace);
         throw lastError;
       }
     }
@@ -351,25 +375,30 @@ export async function buildExtension(
   fastMode?: FastModeOptions,
 ) {
   const fnLogTrace = [...logTrace, "buildExtension"];
+  logger.info("Executing Build Extension command", ...fnLogTrace);
   // Basic details we already know exist
   const workspaceStorage = context.storageUri?.fsPath;
   if (!workspaceStorage) {
+    logger.error("Missing workspace storage path. Command aborted.", ...fnLogTrace);
     return;
   }
   const devCertKeySetting = vscode.workspace
     .getConfiguration("dynatraceExtensions", null)
     .get<string>("developerCertkeyLocation");
   if (!devCertKeySetting) {
+    logger.error("Missing developer certificate key setting. Command aborted.", ...fnLogTrace);
     return;
   }
   const devCertKey = resolveRealPath(devCertKeySetting);
   const workspaceRoot = vscode.workspace.workspaceFolders?.[0].uri.fsPath;
   if (!workspaceRoot) {
+    logger.error("Missing workspace root path. Command aborted.", ...fnLogTrace);
     return;
   }
   const distDir = path.resolve(workspaceRoot, "dist");
   const extensionFile = fastMode ? fastMode.document.fileName : getExtensionFilePath();
   if (!extensionFile) {
+    logger.error("Missing extension file. Command aborted.", ...fnLogTrace);
     return;
   }
   const extensionDir = path.resolve(extensionFile, "..");
@@ -377,11 +406,13 @@ export async function buildExtension(
   const extension = readFileSync(extensionFile).toString();
   const nameMatch = /^name: "?([:a-zA-Z0-9.\-_]+)"?/gm.exec(extension);
   if (!nameMatch?.[1]) {
+    logger.error("Extension name missing from manifest. Command aborted.", ...fnLogTrace);
     return;
   }
   const extensionName = nameMatch[1];
   const versionMatch = /^version: "?([0-9.]+)"?/gm.exec(extension);
   if (!versionMatch?.[1]) {
+    logger.error("Extension version missing from manifest. Command aborted.", ...fnLogTrace);
     return;
   }
   const currentVersion = normalizeExtensionVersion(versionMatch[1]);
@@ -418,25 +449,15 @@ export async function buildExtension(
       let updatedVersion = "";
       progress.report({ message: "Checking prerequisites" });
       try {
-        updatedVersion = fastMode
-          ? await preBuildTasks(
-              distDir,
-              extensionFile,
-              extension,
-              extensionName,
-              currentVersion,
-              true,
-              dt,
-            )
-          : await preBuildTasks(
-              distDir,
-              extensionFile,
-              extension,
-              extensionName,
-              currentVersion,
-              false,
-              dt,
-            );
+        updatedVersion = await preBuildTasks(
+          distDir,
+          extensionFile,
+          extension,
+          extensionName,
+          currentVersion,
+          fastMode ? true : false,
+          dt,
+        );
       } catch (err: unknown) {
         logger.notify("ERROR", `Error during pre-build phase: ${(err as Error).message}`);
         return false;
@@ -452,6 +473,7 @@ export async function buildExtension(
       const zipFilename = `${extensionName.replace(":", "_")}-${updatedVersion}.zip`;
       try {
         if (/^python:$/gm.test(extension)) {
+          logger.debug("Building package for a python extension", ...fnLogTrace);
           const envOptions = await getPythonVenvOpts();
           const sdkAvailable = await checkDtSdkPresent(oc, cancelToken, envOptions);
           const extraPlatforms = vscode.workspace
@@ -486,6 +508,7 @@ export async function buildExtension(
             return false;
           }
         } else {
+          logger.debug("Building package for a non-python extension", ...fnLogTrace);
           assembleStandard(workspaceStorage, extensionDir, zipFilename, devCertKey);
         }
       } catch (err: unknown) {
@@ -502,6 +525,10 @@ export async function buildExtension(
       if (fastMode) {
         progress.report({ message: "Uploading & activating extension" });
         if (!dt) {
+          logger.warn(
+            "No Dynatrace client available. Won't continue fast mode flow",
+            ...fnLogTrace,
+          );
           return false;
         }
         await uploadAndActivate(
@@ -538,6 +565,7 @@ export async function buildExtension(
 
   // Follow-up is carried out separately to keep notification messages cleaner
   if (followUpFlow) {
+    logger.debug("Follow-up flow available. Prompting for upload.");
     await vscode.window
       .showInformationMessage(
         "Extension built successfully. Would you like to upload it to Dynatrace?",

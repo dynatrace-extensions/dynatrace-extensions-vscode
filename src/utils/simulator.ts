@@ -40,9 +40,14 @@ const logTrace = ["utils", "simulator"];
  */
 export function getDatasourceDir(os: OsType, eecType: EecType, dataSource: string) {
   const eec = eecType === "ONEAGENT" ? "oneagent" : "remotepluginmodule";
-  return os === "WINDOWS"
-    ? `C:\\Program Files\\dynatrace\\${eec}\\agent\\datasources\\${dataSource}\\`
-    : `/opt/dynatrace/${eec}/agent/datasources/${dataSource}/`;
+  const datasourceDir =
+    os === "WINDOWS"
+      ? `C:\\Program Files\\dynatrace\\${eec}\\agent\\datasources\\${dataSource}\\`
+      : `/opt/dynatrace/${eec}/agent/datasources/${dataSource}/`;
+
+  logger.debug(`Datasource directory is: ${datasourceDir}`, ...logTrace, "getDatasourceDir");
+
+  return datasourceDir;
 }
 
 /**
@@ -53,7 +58,11 @@ export function getDatasourceDir(os: OsType, eecType: EecType, dataSource: strin
  */
 export function getDatasourceExe(os: OsType, eecType: EecType, dataSource: string) {
   const exePrefix = eecType === "ONEAGENT" ? "oneagent" : "dynatrace";
-  return `${exePrefix}source${dataSource}` + (os === "WINDOWS" ? ".exe" : "");
+  const datasourceExe = `${exePrefix}source${dataSource}` + (os === "WINDOWS" ? ".exe" : "");
+
+  logger.debug(`Datasource exe is: ${datasourceExe}`, ...logTrace, "getDatasourceExe");
+
+  return datasourceExe;
 }
 
 /**
@@ -64,7 +73,13 @@ export function getDatasourceExe(os: OsType, eecType: EecType, dataSource: strin
  * @returns - full path to the datasource executable
  */
 export function getDatasourcePath(os: OsType, eecType: EecType, dataSource: string) {
-  return `${getDatasourceDir(os, eecType, dataSource)}${getDatasourceExe(os, eecType, dataSource)}`;
+  const datasourcePath = `${getDatasourceDir(os, eecType, dataSource)}${getDatasourceExe(
+    os,
+    eecType,
+    dataSource,
+  )}`;
+  logger.debug(`Datasource path is: ${datasourcePath}`, ...logTrace, "getDatasourcePath");
+  return datasourcePath;
 }
 
 /**
@@ -109,7 +124,15 @@ export function canSimulateDatasource(os: OsType, eecType: EecType, dataSource: 
     },
   };
 
-  return DATASOURCES[os][eecType].includes(dataSource);
+  const result = DATASOURCES[os][eecType].includes(dataSource);
+
+  logger.debug(
+    `Can we simulate ${dataSource} on ${os} ${eecType}? ${String(result)}`,
+    ...logTrace,
+    "canSimulateDatasource",
+  );
+
+  return result;
 }
 
 /**
@@ -133,10 +156,18 @@ export function loadDefaultSimulationConfig(context: vscode.ExtensionContext): S
   const config = vscode.workspace.getConfiguration("dynatraceExtensions.simulator", null);
   const defaultLocation = config.get<SimulationLocation>("defaultLocation");
   const defaultEecType = config.get<EecType>("defaultEecType");
-  const defaultSendMetrics = config.get<boolean>("defaultSendMetrics");
+  const defaultSendMetrics = config.get<boolean>("defaultMetricsIngestion");
 
-  if (!defaultLocation || !defaultEecType || !defaultSendMetrics) {
+  if (
+    defaultLocation === undefined ||
+    defaultEecType === undefined ||
+    defaultSendMetrics === undefined
+  ) {
     // This should never happen as these are all enums with defaults.
+    logger.warn(
+      "Default config options not found. Falling back to hardcoded value.",
+      ...fnLogTrace,
+    );
     return fallbackValue;
   }
 
@@ -171,10 +202,17 @@ export function loadDefaultSimulationConfig(context: vscode.ExtensionContext): S
     }
   }
 
-  return {
+  const defaultConfig = {
     eecType: defaultEecType,
     location: defaultLocation,
     sendMetrics: defaultSendMetrics,
     target,
   };
+
+  logger.debug(
+    `Loaded default simulation config as ${JSON.stringify(defaultConfig)}`,
+    ...fnLogTrace,
+  );
+
+  return defaultConfig;
 }

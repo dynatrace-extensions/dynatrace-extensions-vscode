@@ -7,6 +7,8 @@ import * as logger from "../utils/logging";
  * @param logsDir path to the logs directory
  */
 export async function downloadSupportArchive(logsDir: string) {
+  const fnLogTrace = ["commandPalette", "downloadSupportArchive"];
+  logger.info("Executing Download Support Archive command", ...fnLogTrace);
   const zip = new AdmZip();
   zip.addLocalFolder(logsDir);
 
@@ -22,7 +24,7 @@ export async function downloadSupportArchive(logsDir: string) {
     .then(uri => uri?.fsPath);
 
   if (!saveDestination) {
-    logger.notify("ERROR", "No save destination selected. Operation cancelled.");
+    logger.notify("ERROR", "No save destination selected. Operation cancelled.", ...fnLogTrace);
     return;
   }
 

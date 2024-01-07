@@ -35,10 +35,12 @@ let context: vscode.ExtensionContext;
  */
 function startNewLogFile() {
   const logsDir = path.join(context.globalStorageUri.fsPath, "logs");
-  currentLogFile = path.join(
-    logsDir,
-    `${new Date().toISOString().replace("T", "_").replace(/:/g, "-")}_log.log`,
-  );
+  const workspaceName = vscode.workspace.workspaceFolders?.[0].name ?? "no-workspace";
+  const fileName = `${workspaceName}_${new Date()
+    .toISOString()
+    .replace("T", "_")
+    .replace(/:/g, "-")}_log.log`;
+  currentLogFile = path.join(logsDir, fileName);
   writeFileSync(currentLogFile, "");
 }
 
@@ -122,15 +124,24 @@ function logMessage(data: unknown, level: LogLevel, ...trace: string[]) {
   const message = typeof data === "string" ? data : JSON.stringify(data, null, 2);
   const timestamp = new Date().toISOString();
   const scope = trace.join(".");
+  const formattedMessage = `${timestamp} [${level}][${scope}] ${message}`;
 
-  logToConsole(timestamp, message, scope, level);
-
-  if (level !== "NONE") {
-    const formattedMessage = `${timestamp} [${level}][${scope}] ${message}`;
-    outputChannel.appendLine(formattedMessage);
-    writeFileSync(currentLogFile, `${formattedMessage}\n`, { flag: "a" });
-    checkFileSize();
+  // Log to console and output channel controlled by settings
+  if (
+    ["ERROR", "NONE"].includes(level) ||
+    (level === "DEBUG" && ["DEBUG", "NONE"].includes(logLevel)) ||
+    (level === "INFO" && ["INFO", "DEBUG", "NONE"].includes(logLevel)) ||
+    (level === "WARN" && logLevel !== "ERROR")
+  ) {
+    logToConsole(timestamp, message, scope, level);
+    if (level === "NONE") {
+      outputChannel.appendLine(formattedMessage);
+    }
   }
+
+  // File log will always capture all messages
+  writeFileSync(currentLogFile, `${formattedMessage}\n`, { flag: "a" });
+  checkFileSize();
 }
 
 /**
@@ -140,7 +151,6 @@ function logMessage(data: unknown, level: LogLevel, ...trace: string[]) {
  */
 export function initializeLogging(ctx: vscode.ExtensionContext) {
   context = ctx;
-  removeOldestFiles(path.join(context.globalStorageUri.fsPath, "logs"), maxFiles - 1);
 
   // Load the configuration
   const config = vscode.workspace.getConfiguration("dynatraceExtensions.logging", null);
@@ -148,8 +158,10 @@ export function initializeLogging(ctx: vscode.ExtensionContext) {
   maxFileSize = config.get<number>("maxFileSize");
   maxFiles = config.get<number>("maxFiles");
 
+  // Create the output channel, start a new log file, and remove old logs
   outputChannel = vscode.window.createOutputChannel("Dynatrace Log", "log");
   startNewLogFile();
+  removeOldestFiles(path.join(context.globalStorageUri.fsPath, "logs"), maxFiles);
 }
 
 /**
@@ -176,7 +188,6 @@ export function log(data: unknown, ...trace: string[]) {
  * @param trace any trace breadcrumbs for internal logging
  */
 export function debug(data: unknown, ...trace: string[]) {
-  if (["INFO", "WARN", "ERROR"].includes(logLevel)) return;
   logMessage(data, "DEBUG", ...trace);
 }
 
@@ -186,7 +197,6 @@ export function debug(data: unknown, ...trace: string[]) {
  * @param trace any trace breadcrumbs for internal logging
  */
 export function info(data: unknown, ...trace: string[]) {
-  if (["WARN", "ERROR"].includes(logLevel)) return;
   logMessage(data, "INFO", ...trace);
 }
 
@@ -196,7 +206,6 @@ export function info(data: unknown, ...trace: string[]) {
  * @param trace any trace breadcrumbs for internal logging
  */
 export function warn(data: unknown, ...trace: string[]) {
-  if (logLevel === "ERROR") return;
   logMessage(data, "WARN", ...trace);
 }
 

@@ -39,22 +39,28 @@ export function runCommand(
   cancelToken?: vscode.CancellationToken,
   envOptions?: ExecOptions,
 ): Promise<number | null> {
+  const fnLogTrace = [...logTrace, "runCommand"];
+  logger.debug(`Running command "${command}"`, ...fnLogTrace);
+
   const p = exec(command, envOptions);
   let [stdout, stderr] = ["", ""];
 
   return new Promise((resolve, reject) => {
     if (cancelToken?.isCancellationRequested) {
+      logger.debug("Cancellation registered. Killing subprocess", ...fnLogTrace);
       p.kill("SIGINT");
     }
     p.stdout?.on("data", (data: Buffer) => {
       stdout += data.toString();
       if (cancelToken?.isCancellationRequested) {
+        logger.debug("Cancellation registered. Killing subprocess", ...fnLogTrace);
         p.kill("SIGINT");
       }
     });
     p.stderr?.on("data", (data: Buffer) => (stderr += data.toString()));
     p.on("exit", code => {
       if (cancelToken?.isCancellationRequested) {
+        logger.debug("Cancellation registered. Killing subprocess", ...fnLogTrace);
         return resolve(1);
       }
       if (code !== 0) {
@@ -62,22 +68,22 @@ export function runCommand(
         if (stderr.includes("ERROR") && stderr.includes("+")) {
           [shortMessage, ...details] = stderr.substring(stderr.indexOf("ERROR") + 7).split("+");
         }
+        const errorDetails = JSON.stringify(
+          {
+            error: shortMessage.split("\r\n"),
+            detailedOutput: `+${details.join("+")}`.split("\r\n"),
+          },
+          null,
+          2,
+        );
+        logger.error(errorDetails, ...fnLogTrace);
         if (oc) {
-          oc.replace(
-            JSON.stringify(
-              {
-                error: shortMessage.split("\r\n"),
-                detailedOutput: `+${details.join("+")}`.split("\r\n"),
-              },
-              null,
-              2,
-            ),
-          );
+          oc.replace(errorDetails);
           oc.show();
         }
         reject(Error(shortMessage));
       }
-      logger.info(stdout, ...logTrace, "runCommand");
+      logger.info(stdout, ...fnLogTrace);
       return resolve(code);
     });
   });

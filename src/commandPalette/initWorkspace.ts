@@ -72,6 +72,8 @@ async function pythonExtensionSetup(
     increment?: number;
   }>,
 ) {
+  const fnLogTrace = [...logTrace, "pythonExtensionSetup"];
+  logger.debug("Setting up a new python extension", ...fnLogTrace);
   // Get correct python env
   const envOptions = await getPythonVenvOpts();
   // Check: dt-sdk available?
@@ -102,9 +104,11 @@ async function pythonExtensionSetup(
         return undefined;
       },
     })) ?? "my_python_extension";
+  logger.debug(`Generated extension name is "${chosenName}"`, ...fnLogTrace);
   // Generate artefacts
   progress.report({ message: "Creating folders and files" });
   await runCommand(`dt-sdk create -o ${tempPath} ${chosenName}`, undefined, undefined, envOptions);
+
   // Tidy up
   // TODO - This doesn't work if the workspace is in another drive in Windows.
   // Can't rename from C: to D: for example
@@ -124,6 +128,8 @@ async function pythonExtensionSetup(
  */
 async function existingExtensionSetup(dt: Dynatrace, rootPath: string) {
   const fnLogTrace = [...logTrace, "existingExtensionSetup"];
+  logger.debug("Setting up workspace with an existing extension", ...fnLogTrace);
+
   const download = await vscode.window.showQuickPick(
     (
       await dt.extensionsV2.list()
@@ -138,7 +144,7 @@ async function existingExtensionSetup(dt: Dynatrace, rootPath: string) {
     },
   );
   if (!download) {
-    notify("ERROR", "No selection made. Operation aborted.");
+    notify("ERROR", "No selection made. Operation aborted.", ...fnLogTrace);
     return;
   }
 
@@ -147,6 +153,10 @@ async function existingExtensionSetup(dt: Dynatrace, rootPath: string) {
     mkdirSync(extensionDir);
   }
 
+  logger.debug(
+    `Attempting to download "${download.extension.extensionName}" version ${download.extension.version}`,
+    ...fnLogTrace,
+  );
   const zipData = await dt.extensionsV2.getExtension(
     download.extension.extensionName,
     download.extension.version,
@@ -160,6 +170,7 @@ async function existingExtensionSetup(dt: Dynatrace, rootPath: string) {
   const extensionYaml = readFileSync(path.resolve(extensionDir, "extension.yaml")).toString();
   try {
     if (/^python:/gm.test(extensionYaml)) {
+      logger.debug("This is a python extension. Extracting relevant contents", ...fnLogTrace);
       const moduleNameMatch = /^ *module: (.*?)$/gm.exec(extensionYaml);
       if (moduleNameMatch && moduleNameMatch.length > 1) {
         const moduleName = moduleNameMatch[1];
@@ -178,7 +189,11 @@ async function existingExtensionSetup(dt: Dynatrace, rootPath: string) {
     }
   } catch (err) {
     logger.error(err, ...fnLogTrace);
-    notify("WARN", "Not all files were extracted successfully. Manual edits are still needed.");
+    notify(
+      "WARN",
+      "Not all files were extracted successfully. Manual edits are still needed.",
+      ...fnLogTrace,
+    );
   }
 }
 
@@ -229,6 +244,9 @@ export async function initWorkspace(
   dt: Dynatrace,
   callback?: () => unknown,
 ) {
+  const fnLogTrace = [...logTrace, "initWorkspace"];
+  logger.info("Executing Initialize Workspace command", ...fnLogTrace);
+
   // First, we set up the common aspects that apply to all extension projects
   let schemaVersion: string | undefined;
   const success = await vscode.window.withProgress(
@@ -241,20 +259,25 @@ export async function initWorkspace(
       progress.report({ message: "Setting up workspace schemas" });
       schemaVersion = context.workspaceState.get<string>("schemaVersion");
       if (!schemaVersion) {
+        logger.debug("No schema version found in cache. Loading schemas now.", ...fnLogTrace);
         const cmdSuccess = await loadSchemas(context, dt);
         if (cmdSuccess) {
           schemaVersion = context.workspaceState.get<string>("schemaVersion");
           if (!schemaVersion) {
-            notify("ERROR", "Error loading schemas. Cannot continue initialization.");
+            notify(
+              "ERROR",
+              "Error loading schemas. Cannot continue initialization.",
+              ...fnLogTrace,
+            );
             return false;
           }
-          notify("INFO", `Loaded schemas version ${schemaVersion}`);
+          notify("INFO", `Loaded schemas version ${schemaVersion}`, ...fnLogTrace);
         } else {
-          notify("ERROR", "Cannot initialize workspace without schemas.");
+          notify("ERROR", "Cannot initialize workspace without schemas.", ...fnLogTrace);
           return false;
         }
       } else {
-        notify("INFO", `Using cached schema version ${schemaVersion}`);
+        notify("INFO", `Using cached schema version ${schemaVersion}`, ...fnLogTrace);
         const mainSchema = vscode.Uri.file(
           path.join(
             path.join(context.globalStorageUri.fsPath, schemaVersion),
@@ -265,7 +288,7 @@ export async function initWorkspace(
           .getConfiguration()
           .update("yaml.schemas", { [mainSchema]: "extension.yaml" })
           .then(undefined, () => {
-            logger.error("Could not update configuration yaml.schemas", ...logTrace);
+            logger.error("Could not update configuration yaml.schemas", ...fnLogTrace);
           });
       }
 
@@ -283,25 +306,31 @@ export async function initWorkspace(
       });
       switch (certChoice) {
         case "Use existing": {
+          logger.debug("Workspace will use existing certificates", ...fnLogTrace);
           const hasCertificates = await checkSettings("developerCertkeyLocation");
           if (!hasCertificates) {
-            notify("ERROR", "Personal certificates not found. Workspace not initialized.");
+            notify(
+              "ERROR",
+              "Personal certificates not found. Workspace not initialized.",
+              ...fnLogTrace,
+            );
             return false;
           }
           break;
         }
         case "Generate new ones": {
+          logger.debug("Workspace will generate new certificates", ...fnLogTrace);
           const cmdSuccess = await vscode.commands.executeCommand(
             "dynatrace-extensions.generateCertificates",
           );
           if (!cmdSuccess) {
-            notify("ERROR", "Cannot initialize workspace without certificates.");
+            notify("ERROR", "Cannot initialize workspace without certificates.", ...fnLogTrace);
             return false;
           }
           break;
         }
         default:
-          notify("ERROR", "No certificate choice made. Workspace not initialized.");
+          notify("ERROR", "No certificate choice made. Workspace not initialized.", ...fnLogTrace);
           return false;
       }
 
@@ -312,6 +341,7 @@ export async function initWorkspace(
       progress.report({ message: "Finalizing setup" });
       // Run any callbacks as needed
       if (callback) {
+        logger.debug("InitWorkspace was given callback, executing now.", ...fnLogTrace);
         callback();
       }
       return true;
@@ -320,6 +350,7 @@ export async function initWorkspace(
 
   // Then, we create some the extension artefacts for the specific project type
   if (!success) {
+    logger.error("Workspace initialization aborted due to earlier failure.", ...fnLogTrace);
     return;
   }
   await vscode.window.withProgress(
@@ -329,6 +360,7 @@ export async function initWorkspace(
     },
     async progress => {
       progress.report({ message: "Creating standard folders" });
+      logger.debug("Creating standard folders", ...fnLogTrace);
 
       // Create the working directories
       const rootPath = vscode.workspace.workspaceFolders?.[0].uri.fsPath;
@@ -343,8 +375,13 @@ export async function initWorkspace(
       // Determine type of extension project
       let projectType;
       if (getExtensionFilePath()) {
+        logger.debug(
+          "Extension manifest detected. Choosing 'default extension' starter template.",
+          ...fnLogTrace,
+        );
         projectType = PROJECT_TYPES.defaultExtension;
       } else {
+        logger.debug("Prompting user for template selection", ...fnLogTrace);
         projectType = await vscode.window.showQuickPick(Object.values(PROJECT_TYPES), {
           canPickMany: false,
           title: "What type of project are you starting?",
@@ -353,12 +390,16 @@ export async function initWorkspace(
         });
       }
       if (!projectType) {
-        notify("ERROR", "No selection made. Operation cancelled.");
+        notify("ERROR", "No selection made. Operation cancelled.", ...fnLogTrace);
         return;
       }
       // This was done earlier in the flow already.
       const storagePath = context.storageUri?.fsPath;
       if (!storagePath) {
+        logger.error(
+          "Missing workspace storage path. Workspace initialization aborted.",
+          ...fnLogTrace,
+        );
         return;
       }
 
@@ -368,6 +409,7 @@ export async function initWorkspace(
           await pythonExtensionSetup(rootPath, storagePath, progress);
           break;
         case PROJECT_TYPES.jmxConversion: {
+          logger.debug("JMX Conversion template selected. Triggering subflow", ...fnLogTrace);
           const extensionDir = path.resolve(rootPath, "extension");
           if (!existsSync(extensionDir)) {
             mkdirSync(extensionDir);
@@ -388,6 +430,7 @@ export async function initWorkspace(
       }
 
       // Update parsed extension in the cache
+      logger.debug("Parsed extension now updated in cache.", ...fnLogTrace);
       dataCache.updateParsedExtension();
 
       // Create or update the .gitignore
@@ -395,5 +438,5 @@ export async function initWorkspace(
     },
   );
 
-  notify("INFO", "Workspace initialization completed successfully.");
+  notify("INFO", "Workspace initialization completed successfully.", ...fnLogTrace);
 }

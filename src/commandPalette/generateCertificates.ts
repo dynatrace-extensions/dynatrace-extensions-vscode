@@ -66,6 +66,12 @@ function getCertAttributes(type: "ca" | "dev"): pki.CertificateField[] {
     attrs.push({ shortName: "C", value: certC });
   }
 
+  logger.debug(
+    `Attributes used for certificates: ${JSON.stringify(attrs)}`,
+    ...logTrace,
+    "getCertAttributes",
+  );
+
   return attrs;
 }
 
@@ -79,8 +85,10 @@ function getCertAttributes(type: "ca" | "dev"): pki.CertificateField[] {
  */
 export async function generateCerts(context: vscode.ExtensionContext): Promise<boolean> {
   const fnLogTrace = [...logTrace, "generateCerts"];
+  logger.info("Executing Generate Certificates command", ...fnLogTrace);
   const storagePath = context.storageUri?.fsPath;
   if (!storagePath) {
+    logger.error("Workspace storage path missing. Aborting command.", ...fnLogTrace);
     return false;
   }
   const certsDir = path.join(storagePath, "certificates");
@@ -96,13 +104,18 @@ export async function generateCerts(context: vscode.ExtensionContext): Promise<b
       try {
         caKey = pki.rsa.generateKeyPair({ bits: 4096, e: 0x10001 });
       } catch (err) {
-        logger.notify("ERROR", "Error generating the RSA key pair for the CA certificate");
+        logger.notify(
+          "ERROR",
+          "Error generating the RSA key pair for the CA certificate",
+          ...fnLogTrace,
+        );
         logger.error((err as Error).message, ...fnLogTrace);
         return false;
       }
 
       // Generate CA certificate
       progress.report({ message: "Generating the CA certificate" });
+      logger.info("Generating CA certificate", ...fnLogTrace);
       let caCert;
       try {
         caCert = pki.createCertificate();
@@ -141,24 +154,30 @@ export async function generateCerts(context: vscode.ExtensionContext): Promise<b
         caCert.sign(caKey.privateKey, md.sha256.create());
         logger.info("CA Cert created successfully", ...fnLogTrace);
       } catch (err) {
-        logger.notify("ERROR", "Error generating the CA certificate");
+        logger.notify("ERROR", "Error generating the CA certificate", ...fnLogTrace);
         logger.error((err as Error).message, ...fnLogTrace);
         return false;
       }
 
       // Generate DEV RSA key pair
       progress.report({ message: "Generating RSA key pair for Developer certificate" });
+      logger.info("Generating RSA key pair for Developer certificate", ...fnLogTrace);
       let devKey;
       try {
         devKey = pki.rsa.generateKeyPair({ bits: 4096, e: 0x10001 });
       } catch (err) {
-        logger.notify("ERROR", "Error generating the RSA key pair for the Developer certificate");
+        logger.notify(
+          "ERROR",
+          "Error generating the RSA key pair for the Developer certificate",
+          ...fnLogTrace,
+        );
         logger.error((err as Error).message, ...fnLogTrace);
         return false;
       }
 
       // Generate DEV certificate
       progress.report({ message: "Generating the Developer certificate" });
+      logger.info("Generating the Developer certificate", ...fnLogTrace);
       let devCert;
       try {
         devCert = pki.createCertificate();
@@ -196,13 +215,14 @@ export async function generateCerts(context: vscode.ExtensionContext): Promise<b
         devCert.sign(caKey.privateKey, md.sha256.create());
         logger.info("DEV Cert created successfully", ...fnLogTrace);
       } catch (err) {
-        logger.notify("ERROR", "Error generating the Developer certificate");
+        logger.notify("ERROR", "Error generating the Developer certificate", ...fnLogTrace);
         logger.error((err as Error).message, ...fnLogTrace);
         return false;
       }
 
       // Write files to workspace storage
       progress.report({ message: "Writing your certificates to file system" });
+      logger.info("Writing certificates to disk", ...fnLogTrace);
 
       if (!existsSync(certsDir)) {
         mkdirSync(certsDir);
@@ -224,6 +244,7 @@ export async function generateCerts(context: vscode.ExtensionContext): Promise<b
   );
 
   if (success) {
+    logger.info("Updating vscode settings", ...fnLogTrace);
     // Write the credential settings at either global or workspace level
     const useGlobal = await vscode.window.showInformationMessage(
       "Certificates generated. Do you want to use these for all workspaces by default?",
@@ -238,7 +259,7 @@ export async function generateCerts(context: vscode.ExtensionContext): Promise<b
         useGlobal === "Yes" ? true : undefined,
       )
       .then(undefined, () => {
-        logger.info("Could not update setting developerCertkeyLocation", ...fnLogTrace);
+        logger.error("Could not update setting developerCertkeyLocation", ...fnLogTrace);
       });
     vscode.workspace
       .getConfiguration("dynatraceExtensions", null)
@@ -248,7 +269,7 @@ export async function generateCerts(context: vscode.ExtensionContext): Promise<b
         useGlobal === "Yes" ? true : undefined,
       )
       .then(undefined, () => {
-        logger.info("Could not update setting rootOrCaCertificateLocation", ...fnLogTrace);
+        logger.error("Could not update setting rootOrCaCertificateLocation", ...fnLogTrace);
       });
 
     // Link command - Upload Certificates
@@ -258,6 +279,7 @@ export async function generateCerts(context: vscode.ExtensionContext): Promise<b
       "No",
     );
     if (choice === "Yes") {
+      logger.debug("User chose to upload certificates. Triggering separate flow.", ...fnLogTrace);
       await vscode.commands.executeCommand("dynatrace-extensions.distributeCertificate");
     }
     // We don't care about success of upload for the success of this command

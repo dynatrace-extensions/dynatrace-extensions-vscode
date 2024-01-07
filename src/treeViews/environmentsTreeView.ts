@@ -321,7 +321,12 @@ export class EnvironmentsTreeDataProvider implements vscode.TreeDataProvider<Env
       "dynatrace-extensions-environments.saveConfig",
       async (config: MonitoringConfiguration) => {
         await saveMoniotringConfiguration(config).catch(err => {
-          logger.notify("ERROR", `Unable to save configuration. ${(err as Error).message}`);
+          logger.notify(
+            "ERROR",
+            `Unable to save configuration. ${(err as Error).message}`,
+            ...this.logTrace,
+            "saveMoniotringConfiguration",
+          );
         });
       },
     );

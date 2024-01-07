@@ -286,7 +286,7 @@ function getValueForPrimitive(schema: MinimalSchema, propertyKey: string) {
       return listValue;
     }
     default:
-      logger.info(
+      logger.warn(
         `Cannot process property of type "${String(property.type)}". Unkown primitive.`,
         ...logTrace,
         "getValueForPrimitive",

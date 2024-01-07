@@ -23,7 +23,7 @@ import { EnvironmentsTreeDataProvider } from "../treeViews/environmentsTreeView"
 import { CachedData } from "../utils/dataCaching";
 import { getEntityMetrics, getMetricDisplayName } from "../utils/extensionParsing";
 import { getExtensionFilePath } from "../utils/fileSystem";
-import { notify } from "../utils/logging";
+import * as logger from "../utils/logging";
 
 /*======================================================*
  * TEMPLATES THAT CREATE VARIOUS PARTS OF THE DASHBOARD *
@@ -492,6 +492,8 @@ export async function createOverviewDashboard(
   cachedData: CachedData,
   outputChannel: vscode.OutputChannel,
 ) {
+  const fnLogTrace = ["commandPalette", "createDashboard", "createOverviewDashboard"];
+  logger.info("Executing Create Dashboard command", ...fnLogTrace);
   const DASHBOARD_PATH = "dashboards/overview_dashboard.json";
   // Read extension.yaml
   const extensionFile = getExtensionFilePath();
@@ -502,7 +504,11 @@ export async function createOverviewDashboard(
   const extension = cachedData.getCached<ExtensionStub>("parsedExtension");
   // Check topology. No topology = pointless dashboard
   if (!extension.topology) {
-    notify("WARN", "Please define your topology before running this command.");
+    logger.notify(
+      "WARN",
+      "Please define your topology before running this command.",
+      ...fnLogTrace,
+    );
     return;
   }
 
@@ -544,7 +550,7 @@ export async function createOverviewDashboard(
 
   writeFileSync(extensionFile, updatedExtensionText);
 
-  notify("INFO", "Dashboard created successfully");
+  logger.notify("INFO", "Dashboard created successfully", ...fnLogTrace);
 
   // If we're connected to the API, prompt for upload.
   await tenantsProvider.getDynatraceClient().then(async dt => {
@@ -556,7 +562,7 @@ export async function createOverviewDashboard(
             dt.dashboards
               .post(JSON.parse(dashboardJson) as Dashboard)
               .then(() => {
-                notify("INFO", "Upload successful.");
+                logger.notify("INFO", "Upload successful.", ...fnLogTrace);
               })
               .catch(err => {
                 outputChannel.replace(JSON.stringify(err, null, 2));

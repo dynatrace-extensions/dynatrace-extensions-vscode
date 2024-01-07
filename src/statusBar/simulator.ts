@@ -46,7 +46,7 @@ import {
   registerSimulatorSummary,
   registerSimulatorTarget,
 } from "../utils/fileSystem";
-import { notify } from "../utils/logging";
+import * as logger from "../utils/logging";
 import { getPythonVenvOpts } from "../utils/otherExtensions";
 import {
   canSimulateDatasource,
@@ -84,6 +84,7 @@ export class SimulatorManager extends CachedDataConsumer {
   private datasourceDir: string;
   private datasourceExe: string;
   private pyEnvOptions: ExecOptions;
+  private readonly logTrace = ["statusBar", "simulator", this.constructor.name];
   private readonly context: vscode.ExtensionContext;
   private readonly outputChannel: vscode.OutputChannel;
   private readonly statusBar: vscode.StatusBarItem;
@@ -128,36 +129,7 @@ export class SimulatorManager extends CachedDataConsumer {
     vscode.commands.registerCommand(SIMULATOR_STOP_CMD, () => this.stop());
     vscode.commands.registerCommand(
       SIMULATOR_CHECK_READY_CMD,
-      (showUI: boolean = true, config?: SimulationConfig) => {
-        // Let the panel know check is in progress
-        this.refreshUI(showUI, "CHECKING");
-
-        // First check mandatory requirements
-        const [result, failedChecks] = this.checkMantatoryRequirements();
-        if (!result) {
-          this.refreshUI(showUI, "UNSUPPORTED", undefined, failedChecks);
-          return;
-        }
-
-        // Check config if given, check further
-        if (config) {
-          this.currentConfiguration = config;
-          this.checkSimulationConfig(config.location, config.eecType, config.target).then(
-            ([status, statusMessage]) => {
-              this.refreshUI(showUI, status, statusMessage);
-            },
-            err =>
-              this.refreshUI(
-                showUI,
-                "NOTREADY",
-                `Error checking configuration: ${(err as Error).message}`,
-              ),
-          );
-          return;
-        }
-
-        this.refreshUI(showUI, "READY");
-      },
+      (showUI: boolean = true, config?: SimulationConfig) => this.checkReady(showUI, config),
     );
     vscode.commands.registerCommand(SIMULATOR_OPEN_UI_CMD, () => this.refreshUI(true));
     vscode.commands.registerCommand(SIMULATOR_READ_LOG_CMD, (logPath: string) =>
@@ -183,6 +155,7 @@ export class SimulatorManager extends CachedDataConsumer {
    * @param target - target to delete
    */
   private deleteTarget(target: RemoteTarget) {
+    logger.info(`Deleting target ${target.name}`, ...this.logTrace, "deleteTarget");
     // This will always succeed
     deleteSimulatorTarget(this.context, target);
     this.panelManager.postMessage(REGISTERED_PANELS.SIMULATOR_UI, {
@@ -202,6 +175,7 @@ export class SimulatorManager extends CachedDataConsumer {
    * @param target - target to register
    */
   private addTarget(target: RemoteTarget) {
+    logger.info(`Adding target ${target.name}`, ...this.logTrace, "addTarget");
     registerSimulatorTarget(this.context, target);
     this.panelManager.postMessage(REGISTERED_PANELS.SIMULATOR_UI, {
       messageType: "showToast",
@@ -213,6 +187,55 @@ export class SimulatorManager extends CachedDataConsumer {
       } as ToastOptions,
     });
     this.refreshUI(true);
+  }
+
+  /**
+   * Check readiness to start. Will first check workspace mandatory details, and, if a configuration
+   * was given, will continue checking the configuration details too.
+   * @param showUI whether to show the simulator panel after checking
+   * @param config a simulation config to check
+   */
+  public checkReady(showUI: boolean = true, config?: SimulationConfig) {
+    const fnLogTrace = [...this.logTrace, "checkReady"];
+    logger.info("Checking simulator readiness", ...fnLogTrace);
+    // Let the panel know check is in progress
+    this.refreshUI(showUI, "CHECKING");
+
+    // First check mandatory requirements
+    const [result, failedChecks] = this.checkMantatoryRequirements();
+    if (!result) {
+      this.refreshUI(showUI, "UNSUPPORTED", undefined, failedChecks);
+      logger.warn(`Mandatory checks failed: ${failedChecks.join(", ")}`, ...fnLogTrace);
+      return;
+    }
+
+    // Check config if given, check further
+    if (config) {
+      this.currentConfiguration = config;
+      this.checkSimulationConfig(config.location, config.eecType, config.target).then(
+        ([status, statusMessage]) => {
+          logger.debug(
+            `Simulation config check result: ${status} (${statusMessage})`,
+            ...fnLogTrace,
+          );
+          this.refreshUI(showUI, status, statusMessage);
+        },
+        err => {
+          logger.error(
+            `Error checking simulation config: ${(err as Error).message}`,
+            ...fnLogTrace,
+          );
+          this.refreshUI(
+            showUI,
+            "NOTREADY",
+            `Error checking configuration: ${(err as Error).message}`,
+          );
+        },
+      );
+      return;
+    }
+
+    this.refreshUI(showUI, "READY");
   }
 
   /**
@@ -379,13 +402,21 @@ export class SimulatorManager extends CachedDataConsumer {
       canSimulateDatasource("LINUX", "ONEAGENT", this.datasourceName) ||
       canSimulateDatasource("WINDOWS", "ONEAGENT", this.datasourceName);
 
-    return {
+    const specs = {
       isPython,
       localOneAgentDsExists,
       localActiveGateDsExists,
       dsSupportsActiveGateEec,
       dsSupportsOneAgentEec,
     };
+
+    logger.debug(
+      `Simulator specs are: ${JSON.stringify(specs)}`,
+      ...this.logTrace,
+      "getSimulationSpecs",
+    );
+
+    return specs;
   }
 
   /**
@@ -399,6 +430,11 @@ export class SimulatorManager extends CachedDataConsumer {
     command: string,
     options: SpawnOptions,
   ) {
+    logger.debug(
+      `Creating simulator process for command "${command}"`,
+      ...this.logTrace,
+      "createProcess",
+    );
     const startTime = new Date();
     let success = true;
     // If needed, make room for new log
@@ -490,14 +526,19 @@ export class SimulatorManager extends CachedDataConsumer {
    * @param target - remote target
    */
   private async startRemotely(target: RemoteTarget) {
+    const fnLogTrace = [...this.logTrace, "startRemotely"];
     this.outputChannel.replace(`Copying required files to remote machine at ${target.address}\n`);
     this.outputChannel.show();
 
     // Copy the files onto the host
-    const scp = spawn(
-      `scp -i "${target.privateKey}" "${this.activationFile}" "${this.extensionFile}" "${this.idToken}" ${target.username}@${target.address}:/tmp`,
-      { shell: process.platform === "win32" ? "powershell.exe" : "/bin/sh" },
+    const scpCommand = `scp -i "${target.privateKey}" "${this.activationFile}" "${this.extensionFile}" "${this.idToken}" ${target.username}@${target.address}:/tmp`;
+    logger.debug(
+      `Simulator starting remotely. Copying files using command "${scpCommand}"`,
+      ...fnLogTrace,
     );
+    const scp = spawn(scpCommand, {
+      shell: process.platform === "win32" ? "powershell.exe" : "/bin/sh",
+    });
     scp.stdout.on("data", (data: Buffer) => {
       this.outputChannel.append(data.toString());
     });
@@ -544,6 +585,9 @@ export class SimulatorManager extends CachedDataConsumer {
    * Starts simulating the extension based on the given configuration
    */
   public async start(config: SimulationConfig, showUI: boolean = true) {
+    const fnLogTrace = [...this.logTrace, "start"];
+    logger.info("Starting simulator", ...fnLogTrace);
+
     const { location, target } = config;
 
     // Create log folder if it doesn't exist
@@ -563,29 +607,37 @@ export class SimulatorManager extends CachedDataConsumer {
       }
       this.refreshUI(showUI, "RUNNING");
     } catch (err) {
-      notify("ERROR", `Error starting the simulation ${(err as Error).message}`);
+      logger.notify(
+        "ERROR",
+        `Error starting the simulation ${(err as Error).message}`,
+        ...fnLogTrace,
+      );
     }
   }
 
   /**
    * Performs all the necessary cleanup when the simulator is stopped.
+   * @param showUI - whether to show the UI after stopping
    */
   public stop(showUI: boolean = true) {
+    const fnLogTrace = [...this.logTrace, "stop"];
+    logger.info("Stopping simulator", ...fnLogTrace);
     try {
       if (this.simulatorProcess) {
         // Datasource is detached from main process, so we need to kill the entire process tree
         pidtree(this.simulatorProcess.pid, (err, pids) => {
           if (err) {
-            notify(
+            logger.notify(
               "ERROR",
               `Error getting all PIDs: ${err.message}. Please ensure all processes are manually stopped.`,
+              ...fnLogTrace,
             );
           } else {
             pids.forEach(pid => {
               try {
                 process.kill(pid, "SIGKILL");
               } catch (e) {
-                notify("ERROR", `Process ${pid} must be stopped manually.`);
+                logger.notify("ERROR", `Process ${pid} must be stopped manually.`, ...fnLogTrace);
               }
             });
           }
@@ -595,7 +647,11 @@ export class SimulatorManager extends CachedDataConsumer {
         this.simulatorProcess = undefined;
       }
     } catch (err) {
-      notify("ERROR", `Error stopping the simulation ${(err as Error).message}`);
+      logger.notify(
+        "ERROR",
+        `Error stopping the simulation ${(err as Error).message}`,
+        ...fnLogTrace,
+      );
     } finally {
       this.refreshUI(showUI, "READY");
     }
@@ -619,6 +675,12 @@ export class SimulatorManager extends CachedDataConsumer {
         failedChecks: failedChecks ?? this.failedChecks,
       },
     };
+
+    logger.debug(
+      `Refresh UI with panel data ${JSON.stringify(panelData)}`,
+      ...this.logTrace,
+      "refreshUI",
+    );
 
     if (show) {
       this.panelManager.render(REGISTERED_PANELS.SIMULATOR_UI, "Extension Simulator", panelData);

@@ -20,7 +20,7 @@ import { DynatraceAPIError } from "../dynatrace-api/errors";
 import { ExtensionStub } from "../interfaces/extensionMeta";
 import { CachedData } from "../utils/dataCaching";
 import { getExtensionFilePath } from "../utils/fileSystem";
-import { notify } from "../utils/logging";
+import * as logger from "../utils/logging";
 
 /**
  * Activates the extension found in the currently open workspace. If a version is not provided
@@ -35,8 +35,12 @@ export async function activateExtension(
   tenantUrl: string,
   version?: string,
 ) {
+  const fnLogTrace = ["commandPalette", "activateExtension"];
+  logger.info("Executing Activate Extension command", ...fnLogTrace);
+
   const extensionFile = getExtensionFilePath();
   if (!extensionFile) {
+    logger.error("Missing extension file. Command aborted.", ...fnLogTrace);
     return;
   }
 
@@ -44,6 +48,7 @@ export async function activateExtension(
 
   // If version was not provided, prompt user for selection
   if (!version) {
+    logger.debug("Prompting user for version selection.", ...fnLogTrace);
     version = await vscode.window.showQuickPick(
       dt.extensionsV2.listVersions(extension.name).then(res => res.map(me => me.version)),
       {
@@ -57,6 +62,7 @@ export async function activateExtension(
 
   // Activate the given version of the extension
   if (version) {
+    logger.debug(`Attempting to activate extension version ${version}`, ...fnLogTrace);
     dt.extensionsV2
       .putEnvironmentConfiguration(extension.name, version)
       .then(() => vscode.window.showInformationMessage("Extension activated successfully.", "Open"))
@@ -72,9 +78,9 @@ export async function activateExtension(
         }
       })
       .catch((err: DynatraceAPIError) => {
-        notify("ERROR", err.message);
+        logger.notify("ERROR", err.message);
       });
   } else {
-    notify("ERROR", "Version not selected. Cancelling operation.");
+    logger.notify("ERROR", "Version not selected. Cancelling operation.");
   }
 }
