@@ -1,5 +1,17 @@
 # Change Log
 
+## Version 2.4.1 (08.01.2024)
+
+### 🪲 Fixed in this version:
+- [#169 - Initialize workspace with python doesn't work when workspace path has spaces](https://github.com/dynatrace-extensions/dynatrace-extensions-vscode/issues/169)
+- [#170 - Extension simulator UI doesn't open outside of an extension workspace](https://github.com/dynatrace-extensions/dynatrace-extensions-vscode/issues/170)
+- [#171 - Default configuration for simulations isn't loaded](https://github.com/dynatrace-extensions/dynatrace-extensions-vscode/issues/171)
+
+### 🚀 Improved in this version:
+- [#168 - Increase logging verbosity](https://github.com/dynatrace-extensions/dynatrace-extensions-vscode/issues/168)
+
+---
+
 ## Version 2.4.0 (03.01.2024)
 
 ### ✨ New in this version:

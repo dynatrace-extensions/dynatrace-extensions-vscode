@@ -8,7 +8,7 @@
     "email": "extensions@dynatrace.com",
     "url": "https://info.dynatrace.com/global_all_wp_dynatrace_services_platform_extensions_fact_sheet_13656_fulfillment.html"
   },
-  "version": "2.4.0",
+  "version": "2.4.1",
   "repository": {
     "type": "git",
     "url": "https://github.com/dynatrace-extensions/dynatrace-extensions-vscode.git"
@@ -321,21 +321,21 @@
               "WARN",
               "ERROR"
             ],
-            "order": 6,
+            "order": 7,
             "scope": "machine",
             "default": "INFO"
           },
           "dynatraceExtensions.logging.maxFiles": {
             "type": "number",
             "description": "The maximum number of extension log files (by age) kept on disk (in VSCode global storage).",
-            "order": 7,
+            "order": 8,
             "scope": "machine",
             "default": 10
           },
           "dynatraceExtensions.logging.maxFileSize": {
             "type": "number",
             "description": "The maximum size of a single extension log file (in MB). When size is exceeded, a new file is started.",
-            "order": 8,
+            "order": 9,
             "scope": "machine",
             "default": 10
           }
