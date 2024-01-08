@@ -60,7 +60,7 @@ export function removeOldestFiles(dirPath: string, count: number) {
   const files = readdirSync(dirPath).sort((f1: string, f2: string) => {
     const f1Stats = statSync(path.join(dirPath, f1));
     const f2Stats = statSync(path.join(dirPath, f2));
-    return f1Stats.mtimeMs - f2Stats.mtimeMs;
+    return f2Stats.mtimeMs - f1Stats.mtimeMs;
   });
   // Remove oldest files until the desired count
   while (files.length > count) {

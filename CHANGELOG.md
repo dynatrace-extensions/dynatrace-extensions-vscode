@@ -1,5 +1,12 @@
 # Change Log
 
+## Version 2.4.2 (08.01.2024)
+
+### 🪲 Fixed in this version:
+- [#173 - 2.4.0 and 2.4.1 signing issue](https://github.com/dynatrace-extensions/dynatrace-extensions-vscode/issues/173)
+
+---
+
 ## Version 2.4.1 (08.01.2024)
 
 ### 🪲 Fixed in this version:
