@@ -1,5 +1,12 @@
 # Change Log
 
+## Version 2.4.3 (09.01.2024)
+
+### 🪲 Fixed in this version:
+- [#175 - Dynatrace Log channel is empty](https://github.com/dynatrace-extensions/dynatrace-extensions-vscode/issues/175)
+
+---
+
 ## Version 2.4.2 (08.01.2024)
 
 ### 🪲 Fixed in this version:

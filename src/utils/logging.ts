@@ -134,7 +134,7 @@ function logMessage(data: unknown, level: LogLevel, ...trace: string[]) {
     (level === "WARN" && logLevel !== "ERROR")
   ) {
     logToConsole(timestamp, message, scope, level);
-    if (level === "NONE") {
+    if (level !== "NONE") {
       outputChannel.appendLine(formattedMessage);
     }
   }
