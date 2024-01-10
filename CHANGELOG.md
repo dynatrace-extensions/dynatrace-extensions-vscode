@@ -1,9 +1,15 @@
 # Change Log
 
-## Version 2.4.3 (09.01.2024)
+## Version 2.4.3 (10.01.2024)
+
+### 🚀 Improved in this version:
+- [#177 - Add logs folder to .gitignore](https://github.com/dynatrace-extensions/dynatrace-extensions-vscode/issues/177)
 
 ### 🪲 Fixed in this version:
 - [#175 - Dynatrace Log channel is empty](https://github.com/dynatrace-extensions/dynatrace-extensions-vscode/issues/175)
+- [#178 - Simulator doesn't run second time on remote simulation](https://github.com/dynatrace-extensions/dynatrace-extensions-vscode/issues/178)
+- [#179 - Configure extension command broken due to simulator.json](https://github.com/dynatrace-extensions/dynatrace-extensions-vscode/issues/179)
+- [#176 - Bump follow-redirects from 1.15.2 to 1.15.4 in /webview-ui](https://github.com/dynatrace-extensions/dynatrace-extensions-vscode/pull/176)
 
 ---
 
