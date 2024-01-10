@@ -558,11 +558,6 @@ export class SimulatorManager extends CachedDataConsumer {
       await loopSafeWait(100);
     }
 
-    // Set the new file paths
-    this.idToken = "/tmp/idToken";
-    this.extensionFile = "/tmp/extension.yaml";
-    this.activationFile = "/tmp/simulator.json";
-
     // Initial message before starting the process
     this.outputChannel.appendLine("Starting remote simulation...");
     this.outputChannel.appendLine(`Target details: ${JSON.stringify(target)}\n`);
@@ -570,8 +565,8 @@ export class SimulatorManager extends CachedDataConsumer {
     // Build the command
     const command =
       `ssh -i "${target.privateKey}" ${target.username}@${target.address} ` +
-      `'cd ${this.datasourceDir} && ./${this.datasourceExe} --url "${this.url}"  --idtoken "${this.idToken}" ` +
-      `--extConfig "file://${this.extensionFile}" --userConfig "file://${this.activationFile}"'`;
+      `'cd ${this.datasourceDir} && ./${this.datasourceExe} --url "${this.url}"  --idtoken "/tmp/idToken" ` +
+      '--extConfig "file:///tmp/extension.yaml" --userConfig "file:///tmp/simulator.json"\'';
 
     this.outputChannel.appendLine(`Running command: ${command}`);
 
