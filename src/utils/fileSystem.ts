@@ -623,7 +623,7 @@ export async function writeGititnore(includePython: boolean = false) {
     "env/",
     "venv/",
   ];
-  const COPILOT_IGNORES = ["dist", "config"];
+  const COPILOT_IGNORES = ["dist", "config", "logs"];
   const BASE_GITIGNORE = `\
 # VS Code
 .vscode/*
@@ -641,6 +641,7 @@ export async function writeGititnore(includePython: boolean = false) {
 # Dynatrace Extensions builds & configs
 config
 dist
+logs
 `;
 
   const PYTHON_GITIGNORE = `\
