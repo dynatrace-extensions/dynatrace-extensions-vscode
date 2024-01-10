@@ -496,7 +496,11 @@ export async function addMonitoringConfiguration(
         const choice = await vscode.window.showQuickPick([
           ...configFiles.map(file => {
             const filePath = path.join(configDir, file);
-            const config = JSON.parse(readFileSync(filePath).toString()) as MinimalConfiguration;
+            const config =
+              file === "simulator.json"
+                ? // Simulator JSON has a list of configs
+                  (JSON.parse(readFileSync(filePath).toString()) as MinimalConfiguration[])[0]
+                : (JSON.parse(readFileSync(filePath).toString()) as MinimalConfiguration);
             return {
               label: `From file ${file}`,
               detail: `Description: ${config.value.description}; ${
@@ -515,9 +519,10 @@ export async function addMonitoringConfiguration(
 
         // If choice is file-based, read the config
         if ("filePath" in choice) {
-          configObject = JSON.parse(
-            readFileSync(choice.filePath).toString(),
-          ) as MinimalConfiguration;
+          configObject = choice.filePath.endsWith("simulator.json")
+            ? // Simulator JSON has a list of configs
+              (JSON.parse(readFileSync(choice.filePath).toString()) as MinimalConfiguration[])[0]
+            : (JSON.parse(readFileSync(choice.filePath).toString()) as MinimalConfiguration);
         }
       }
     }
