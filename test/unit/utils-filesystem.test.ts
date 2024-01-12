@@ -1,9 +1,16 @@
-import { existsSync, readFileSync } from "fs";
+import { existsSync, readdirSync, readFileSync } from "fs";
 import * as path from "path";
 import mock = require("mock-fs");
 import * as vscode from "vscode";
-import { createValidFileName, initGlobalStorage } from "../../src/utils/fileSystem";
+import {
+  createValidFileName,
+  initGlobalStorage,
+  initWorkspaceStorage,
+  removeOldestFiles,
+} from "../../src/utils/fileSystem";
 import { MockExtensionContext } from "./mocks/vscode";
+
+jest.mock("../../src/utils/logging");
 
 describe("Filesystem Utils - createUniqueFileName", () => {
   const expectedRegex = /[a-zA-Z0-9]+([-_./][a-zA-Z0-9]+)*/;
@@ -86,5 +93,95 @@ describe("Filesystem Utils - initGlobalStorage", () => {
 
   afterAll(() => {
     mock.restore();
+  });
+});
+
+describe("Filesystem Utils - removeOldestFiles", () => {
+  beforeEach(() => {
+    mock({
+      mock: {
+        f1: mock.file({ content: "A", mtime: new Date(1) }),
+        f2: mock.file({ content: "A", mtime: new Date(2) }),
+        f3: mock.file({ content: "A", mtime: new Date(3) }),
+      },
+    });
+  });
+
+  afterAll(() => {
+    mock.restore();
+  });
+
+  it("should remove extra files by age and count", () => {
+    removeOldestFiles("mock", 1);
+
+    expect(existsSync("mock/f1")).toBe(false);
+    expect(existsSync("mock/f2")).toBe(false);
+    expect(existsSync("mock/f3")).toBe(true);
+  });
+
+  it("should not remove files within limit", () => {
+    removeOldestFiles("mock", 3);
+
+    expect(existsSync("mock/f1")).toBe(true);
+    expect(existsSync("mock/f2")).toBe(true);
+    expect(existsSync("mock/f3")).toBe(true);
+  });
+
+  it("should not remove any files if a negative count given", () => {
+    removeOldestFiles("mock", -2);
+
+    expect(existsSync("mock/f1")).toBe(true);
+    expect(existsSync("mock/f2")).toBe(true);
+    expect(existsSync("mock/f3")).toBe(true);
+  });
+});
+
+describe("Filesystem Utils - initWorkspaceStorage", () => {
+  let mockContext: vscode.ExtensionContext;
+
+  beforeEach(() => {
+    mock({ mock: {} });
+  });
+
+  afterAll(() => {
+    mock.restore();
+  });
+
+  describe("When no workspace is open", () => {
+    beforeEach(() => {
+      mockContext = new MockExtensionContext(undefined, undefined);
+    });
+
+    it("shouldn't do anything if no path provided", () => {
+      initWorkspaceStorage(mockContext);
+
+      expect(readdirSync("mock").length).toBe(0);
+    });
+  });
+
+  describe("When workspace is open", () => {
+    beforeEach(() => {
+      mockContext = new MockExtensionContext(undefined, "mock/workspace");
+    });
+
+    describe("If path doesn't exist", () => {
+      it("should create directories", () => {
+        initWorkspaceStorage(mockContext);
+
+        expect(existsSync("mock/workspace")).toBe(true);
+      });
+    });
+
+    describe("If path already exists", () => {
+      beforeEach(() => {
+        mock({ mock: { workspace: { f1: "AAA" } } });
+      });
+      it("should leave content as is", () => {
+        initWorkspaceStorage(mockContext);
+
+        expect(existsSync("mock/workspace/f1")).toBe(true);
+        expect(readFileSync("mock/workspace/f1").toString()).toBe("AAA");
+      });
+    });
   });
 });

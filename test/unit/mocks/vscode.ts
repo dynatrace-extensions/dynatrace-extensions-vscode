@@ -82,7 +82,10 @@ export class MockExtensionContext implements vscode.ExtensionContext {
   constructor(globalStoragePath?: string, workspaceStoragePath?: string) {
     this.globalStoragePath = globalStoragePath ?? "";
     this.globalStorageUri = { ...blankUri, fsPath: this.globalStoragePath } as vscode.Uri;
-    this.storagePath = workspaceStoragePath ?? "";
-    this.storageUri = { ...blankUri, fsPath: this.storagePath } as vscode.Uri;
+
+    this.storagePath = workspaceStoragePath;
+    if (workspaceStoragePath) {
+      this.storageUri = { ...blankUri, fsPath: this.storagePath } as vscode.Uri;
+    }
   }
 }
