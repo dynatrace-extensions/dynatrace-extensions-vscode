@@ -6,7 +6,7 @@ jest.mock("../../src/utils/logging");
 describe("Extension", () => {
   let extension: vscode.Extension<unknown> | undefined;
 
-  beforeAll(async () => {
+  beforeAll(() => {
     extension = vscode.extensions.getExtension<unknown>(
       "DynatracePlatformExtensions.dynatrace-extensions",
     );
@@ -16,10 +16,14 @@ describe("Extension", () => {
     expect(extension).toBeDefined();
   });
 
-  it("should activate within 2 seconds", () => {
+  it("should activate within 1 second", () => {
     const actualState = () => (extension ? extension.isActive : false);
-    return waitForCondition(actualState, { timeout: 2000 }).then(() => {
+    return waitForCondition(actualState, { timeout: 1000 }).then(() => {
       expect(actualState()).toBe(true);
     });
   });
+
+  afterAll(done => {
+    done();
+  })
 });
