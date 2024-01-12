@@ -4,10 +4,14 @@ name: CI Tests
 on:
   push:
     branches:
-      - "main"
+      - main
+      - release/this
+      - release/hotfix
   pull_request:
     branches:
-      - "main"
+      - main
+      - release/this
+      - release/hotfix
 
 jobs:
   test:
