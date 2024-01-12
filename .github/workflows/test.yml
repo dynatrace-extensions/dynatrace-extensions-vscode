@@ -28,5 +28,5 @@ jobs:
       - name: Run unit tests
         run: npm run test:unit
       - name: Run integration tests
-        run: xvfb-run -a npm test
+        run: xvfb-run -a npm test:e2e
 
