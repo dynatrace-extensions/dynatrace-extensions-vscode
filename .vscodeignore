@@ -9,8 +9,8 @@
 .prettierrc.json
 .editorconfig
 .vscodeignore
-tsconfig.json
-tsconfig.app.json
+tsconfig.src.json
+tsconfig.test.json
 package.json
 package-lock.json
 *.md
@@ -21,6 +21,7 @@ docs/
 
 # Uncompiled source code
 src/
+test/
 out/
 node_modules
 ## Except the bundle and assets

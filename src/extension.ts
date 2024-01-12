@@ -954,6 +954,7 @@ export async function activate(context: vscode.ExtensionContext) {
     await vscode.commands.executeCommand("dynatrace-extensions.initWorkspace");
   }
   logger.info("Dynatrace Extensions is now activated.", ...fnLogTrace);
+  return context;
 }
 
 /**

@@ -1,13 +1,18 @@
 {
   "compileOnSave": false,
   "compilerOptions": {
+    "module": "commonjs",
+    "target": "ES2020",
+    "outDir": "out",
+    "lib": ["ES2020", "DOM"],
+    "sourceMap": true,
+    "rootDir": ".",
+    "skipLibCheck": true,
     "strict": true,
     "esModuleInterop": true,
     "noFallthroughCasesInSwitch": true,
     "useUnknownInCatchVariables": true,
     "noImplicitReturns": false
   },
-  "extends": ["./tsconfig.json"],
   "include": ["src/**/*.ts"],
-  "exclude": ["src/test/**/*.ts"]
 }
