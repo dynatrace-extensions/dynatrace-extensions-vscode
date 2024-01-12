@@ -133,7 +133,7 @@ const TECH_OPTIONS = [
  */
 async function extractPluginJSONFromZip(
   binaryData: Buffer | Uint8Array,
-): Promise<[ExtensionV1, string]> {
+): Promise<[ExtensionV1 | undefined, string]> {
   const zip = await jszip.loadAsync(binaryData);
 
   // Find the first ocurrence of plugin.json in the files in the zip
@@ -281,21 +281,22 @@ function convertV1Chart(
       stacked: v1Chart.series.every(s => s.stacked),
       metrics: v1Chart.series.map(series => {
         const visualization: ChartMetricVisualization = {};
-        const metricSelector = `${metricKeyMap.get(series.key).key}:splitBy(${
+        const metricKeyString = String(metricKeyMap.get(series.key)?.key);
+        const metricSelector = `${metricKeyString}:splitBy(${
           detailedSelectors ? "" : '"dt.entity.process_group_instance"'
         })`;
         const chartMetric: ChartMetric = { metricSelector };
         // Create detailed selectors
         if (detailedSelectors) {
-          const dimensionSplits = (customDimensions ?? metricKeyMap.get(series.key).dimensions)
+          const dimensionSplits = (
+            customDimensions ??
+            metricKeyMap.get(series.key)?.dimensions ??
+            []
+          )
             .map(d => `"${d}"`)
             .join(",");
-          chartMetric.metricSelectorSort = `${
-            metricKeyMap.get(series.key).key
-          }$(entityFilter)$(userFilter):splitBy(${dimensionSplits}):avg$(aggregation):last:sort(value(avg,$(sortOrder))):names`;
-          chartMetric.metricSelectorDetailed = `${
-            metricKeyMap.get(series.key).key
-          }$(entityFilter)$(userFilter):splitBy(${dimensionSplits})$(aggregation)`;
+          chartMetric.metricSelectorSort = `${metricKeyString}$(entityFilter)$(userFilter):splitBy(${dimensionSplits}):avg$(aggregation):last:sort(value(avg,$(sortOrder))):names`;
+          chartMetric.metricSelectorDetailed = `${metricKeyString}$(entityFilter)$(userFilter):splitBy(${dimensionSplits})$(aggregation)`;
         }
         // Handle Y Axis separation
         if (splitYAxes) {
@@ -325,10 +326,12 @@ function convertV1Chart(
   };
   // Split the Y Axis if needed
   if (splitYAxes) {
-    chart.graphChartConfig.yAxes = [
-      { key: "left", position: "LEFT", visible: true },
-      { key: "right", position: "RIGHT", visible: true },
-    ];
+    if (chart.graphChartConfig) {
+      chart.graphChartConfig.yAxes = [
+        { key: "left", position: "LEFT", visible: true },
+        { key: "right", position: "RIGHT", visible: true },
+      ];
+    }
   }
 
   return chart;
@@ -353,8 +356,9 @@ function convertV1MetricsToMetadata(
     if (metadata.findIndex(m => m.key === timeseries.key) === -1) {
       const newMetricName = timeseries.displayname ?? timeseries.key;
       // Extract metric metadata
+      const metricKeyString = String(metricKeyMap.get(timeseries.key)?.key);
       metadata.push({
-        key: metricKeyMap.get(timeseries.key).key,
+        key: metricKeyString,
         metadata: {
           displayName: newMetricName,
           description: newMetricName,
@@ -366,7 +370,7 @@ function convertV1MetricsToMetadata(
       // Create a rate metric if calculateRate is true
       if (source.calculateRate) {
         metadata.push({
-          key: `func:${metricKeyMap.get(timeseries.key).key}_persec`,
+          key: `func:${metricKeyString}_persec`,
           metadata: {
             displayName: `${newMetricName} (per second)`,
             description: `${newMetricName} expressed as a rate per second`,
@@ -376,7 +380,7 @@ function convertV1MetricsToMetadata(
             tags: ["JMX"],
           },
           query: {
-            metricSelector: `${metricKeyMap.get(timeseries.key).key} / (10)`,
+            metricSelector: `${metricKeyString} / (10)`,
           },
         });
       }
@@ -407,7 +411,7 @@ function convertV1MetricsToSubgroups(
     if (query === "") return;
 
     const currentMetric: MetricStub = {
-      key: metricKeyMap.get(timeseries.key).key,
+      key: String(metricKeyMap.get(timeseries.key)?.key),
       value: `attribute:${source.attribute}`,
       type: source.calculateDelta ? "count" : "gauge",
     };
@@ -426,9 +430,9 @@ function convertV1MetricsToSubgroups(
       subgroups[sgIdx].metrics.push(currentMetric);
       // And any new dimensions
       if (currentDimensions.length > 0) {
-        const existingKeys = subgroups[sgIdx].dimensions.map(d => d.key);
-        subgroups[sgIdx].dimensions.push(
-          ...currentDimensions.filter(d => !existingKeys.includes(d.key)),
+        const existingKeys = subgroups[sgIdx].dimensions?.map(d => d.key);
+        subgroups[sgIdx].dimensions?.push(
+          ...currentDimensions.filter(d => !(existingKeys ?? []).includes(d.key)),
         );
       }
       // Otherwise, create a new subgroup
@@ -482,7 +486,7 @@ async function convertV1UiToScreens(
     uiCharts
       .filter(uiChart =>
         // If at least some of the metrics don't have dimensions, chart groups are better
-        uiChart.series.some(s => metricKeyMap.get(s.key).dimensions.length === 0),
+        uiChart.series.some(s => metricKeyMap.get(s.key)?.dimensions.length === 0),
       )
       .forEach(uiChart => {
         // Create charts cards by the group
@@ -511,7 +515,7 @@ async function convertV1UiToScreens(
     uiCharts
       .filter(uiChart =>
         // If all metrics have dimensions, metric tables are better
-        uiChart.series.every(s => metricKeyMap.get(s.key).dimensions.length > 0),
+        uiChart.series.every(s => (metricKeyMap.get(s.key)?.dimensions ?? []).length > 0),
       )
       .forEach(uiChart => {
         // Create metric table cards by the group
@@ -684,7 +688,7 @@ async function convertJMXExtensionToV2(jmxV1Extension: ExtensionV1): Promise<Ext
   const screens = jmxV1Extension.ui
     ? await convertV1UiToScreens(jmxV1Extension.ui, extensionName, technology, metricKeyMap)
     : [];
-  if (screens.length > 0) {
+  if (screens && screens.length > 0) {
     jmxV2Extension.screens = screens;
   }
   // Metrics
@@ -702,7 +706,7 @@ async function convertJMXExtensionToV2(jmxV1Extension: ExtensionV1): Promise<Ext
  * content is returned.
  * @returns tuple of extracted json and error message in case of failure
  */
-export async function extractv1ExtensionFromLocal(): Promise<[ExtensionV1, string]> {
+export async function extractv1ExtensionFromLocal(): Promise<[ExtensionV1 | undefined, string]> {
   // TODO - move this to a shared file, as it is used by Python extensions as well
 
   const options: vscode.OpenDialogOptions = {
@@ -734,7 +738,7 @@ export async function extractv1ExtensionFromLocal(): Promise<[ExtensionV1, strin
 export async function extractV1FromRemote(
   extensionType: "JMX" | "Python",
   dt?: Dynatrace,
-): Promise<[ExtensionV1, string]> {
+): Promise<[ExtensionV1 | undefined, string]> {
   // TODO - move this to a shared file, as it is used by Python extensions as well
 
   if (!dt) return [undefined, "This option requires a Dynatrace environment connection."];
@@ -809,7 +813,7 @@ export async function convertJMXExtension(
       ? await extractv1ExtensionFromLocal()
       : await extractV1FromRemote("JMX", dt);
 
-  if (errorMessage !== "") {
+  if (jmxV1Extension === undefined || errorMessage !== "") {
     logger.notify("ERROR", `Operation failed: ${errorMessage}`, ...fnLogTrace);
     return;
   }

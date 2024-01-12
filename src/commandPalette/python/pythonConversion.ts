@@ -84,7 +84,7 @@ const activationSchemaTemplate: ActivationSchema = {
   multiObject: false,
 };
 
-const v1TypetoV2TypeMap = {
+const v1TypetoV2TypeMap: Record<string, unknown> = {
   // Only use lower case here
   textarea: "text",
   string: "text",
@@ -183,8 +183,10 @@ export async function convertPluginJsonToActivationSchema(
   if (Object.keys(activationSchema.types.custom_extension.properties).length === 0) {
     throw new Error("The extension does not have any properties");
   }
-  const firstProperty = v1Extension.properties[0].key;
-  activationSchema.types.custom_extension.summaryPattern = `${v1Extension.name} - {${firstProperty}}`;
+  const firstProperty = v1Extension.properties?.[0].key;
+  activationSchema.types.custom_extension.summaryPattern = `${v1Extension.name} - {${String(
+    firstProperty,
+  )}}`;
 
   // If the extension is remote, delete pythonLocal objects
   // If the extension is local, delete pythonRemote objects

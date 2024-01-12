@@ -74,7 +74,8 @@ export async function createMonitoringConfiguration(
   } else {
     logger.debug("Extension is not deployed. Need to build schema from scratch", ...fnLogTrace);
     const datasourceName = getDatasourceName(extension);
-    let activationContext = "REMOTE";
+    let activationContext;
+    activationContext = "REMOTE";
     // For datasources that support both local and remote activation
     if (["wmi", "prometheus", "python"].includes(datasourceName)) {
       activationContext = await vscode.window.showQuickPick(["LOCAL", "REMOTE"], {

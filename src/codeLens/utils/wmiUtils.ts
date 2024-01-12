@@ -59,7 +59,7 @@ export async function runWMIQuery(
     if (cachedWmiData[query].error) {
       updateCallback(query, { status: "invalid" });
       oc.clear();
-      oc.appendLine(cachedWmiData[query].errorMessage);
+      oc.appendLine(String(cachedWmiData[query].errorMessage));
       oc.show();
     } else {
       updateCallback(query, { status: "valid" });

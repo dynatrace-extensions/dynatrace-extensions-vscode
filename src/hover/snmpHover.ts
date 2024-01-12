@@ -26,7 +26,7 @@ export class SnmpHoverProvider extends CachedDataProducer implements vscode.Hove
   public async provideHover(
     document: vscode.TextDocument,
     position: vscode.Position,
-  ): Promise<vscode.Hover> {
+  ): Promise<vscode.Hover | undefined> {
     // Word range generally picks up YAML node values correctly
     const hoverText = document.getText(document.getWordRangeAtPosition(position));
 
@@ -38,6 +38,10 @@ export class SnmpHoverProvider extends CachedDataProducer implements vscode.Hove
 
       await this.cachedData.updateSnmpOid(oid);
       const oidInfo = this.snmpData[oid];
+
+      if (!oidInfo) {
+        return undefined;
+      }
 
       // Build the hover content; do not assume anything exists
       if (oidInfo.objectType) {
@@ -86,5 +90,7 @@ export class SnmpHoverProvider extends CachedDataProducer implements vscode.Hove
         return new vscode.Hover(markdownString);
       }
     }
+
+    return undefined;
   }
 }

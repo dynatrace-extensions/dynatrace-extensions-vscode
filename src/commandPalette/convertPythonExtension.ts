@@ -66,7 +66,7 @@ export async function convertPythonExtension(
       ? await extractv1ExtensionFromLocal()
       : await extractV1FromRemote("Python", dt);
 
-  if (errorMessage !== "") {
+  if (v1Extension === undefined || errorMessage !== "") {
     logger.notify("ERROR", `Operation failed: ${errorMessage}`, ...fnLogTrace);
     return;
   }

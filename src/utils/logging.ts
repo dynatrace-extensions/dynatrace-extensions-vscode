@@ -103,7 +103,7 @@ function logToConsole(timestamp: string, data: string, scope: string, level: Log
 
   // During development, we can automatically build the trace
   const fmtScope = chalk.magentaBright(
-    `[${process.env.DEVELOPMENT ? extractScope(new Error().stack) : scope}]`,
+    `[${process.env.DEVELOPMENT ? extractScope(new Error().stack ?? "") : scope}]`,
   );
 
   console.log(
@@ -154,9 +154,9 @@ export function initializeLogging(ctx: vscode.ExtensionContext) {
 
   // Load the configuration
   const config = vscode.workspace.getConfiguration("dynatraceExtensions.logging", null);
-  logLevel = config.get<LogLevel>("level");
-  maxFileSize = config.get<number>("maxFileSize");
-  maxFiles = config.get<number>("maxFiles");
+  logLevel = config.get<LogLevel>("level") ?? "INFO";
+  maxFileSize = config.get<number>("maxFileSize") ?? 10;
+  maxFiles = config.get<number>("maxFiles") ?? 10;
 
   // Create the output channel, start a new log file, and remove old logs
   outputChannel = vscode.window.createOutputChannel("Dynatrace Log", "log");

@@ -519,7 +519,10 @@ export async function createOverviewDashboard(
   });
 
   // Create dashboard
-  const dashboardJson = buildDashboard(extension, dashboardTitle);
+  const dashboardJson = buildDashboard(
+    extension,
+    dashboardTitle ?? `Extension Overview (${extension.name}:${extension.version})`,
+  );
   // Create directories for dashboard
   const extensionDir = path.resolve(extensionFile, "..");
   const dashboardsDir = path.resolve(extensionDir, "dashboards");

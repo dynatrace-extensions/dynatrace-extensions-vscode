@@ -125,7 +125,8 @@ export async function loadSchemas(
   const location = path.join(context.globalStorageUri.fsPath, version);
 
   // If directory exists, assume schemas already present
-  let cancelled = "";
+  let cancelled;
+  cancelled = "";
   if (!existsSync(location)) {
     cancelled = await downloadSchemaFiles(location, version, dt);
   } else {

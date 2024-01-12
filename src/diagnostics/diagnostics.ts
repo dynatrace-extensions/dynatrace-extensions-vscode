@@ -118,15 +118,16 @@ export class DiagnosticsProvider extends CachedDataProducer {
       return false;
     }
     const diagnostics = [
-      ...this.collection.get(vscode.Uri.file(extensionYamlFile)),
-      ...vscode.languages.getDiagnostics().find(([uri]) => uri.fsPath === extensionYamlFile)[1],
+      ...(this.collection.get(vscode.Uri.file(extensionYamlFile)) ?? []),
+      ...(vscode.languages.getDiagnostics().find(([uri]) => uri.fsPath === extensionYamlFile) ?? [
+        {},
+        [],
+      ])[1],
     ];
 
     if (
       diagnostics.length > 0 &&
-      diagnostics.findIndex(
-        diag => (diag as vscode.Diagnostic).severity === vscode.DiagnosticSeverity.Error,
-      ) > -1
+      diagnostics.findIndex(diag => diag.severity === vscode.DiagnosticSeverity.Error) > -1
     ) {
       logger.notify("ERROR", "Extension cannot be built. Fix problems first.", ...fnLogTrace);
       await vscode.commands.executeCommand("workbench.action.problems.focus");
@@ -356,7 +357,7 @@ export class DiagnosticsProvider extends CachedDataProducer {
           diagnostics.push(extensionDiagnostic(startPos, endPos, OID_SYNTAX_INVALID));
 
           // Check we have online data
-        } else if (!metric.info.objectType) {
+        } else if (!metric.info?.objectType) {
           diagnostics.push(extensionDiagnostic(startPos, endPos, OID_DOES_NOT_EXIST));
 
           // Check things we can infer from online data
@@ -401,7 +402,7 @@ export class DiagnosticsProvider extends CachedDataProducer {
             }
             diagnostics.push(
               ...(await this.createTableOidDiagnostics(
-                metric,
+                metric as { key: string; value: string; info: OidInformation },
                 oid,
                 startPos,
                 endPos,
@@ -474,14 +475,14 @@ export class DiagnosticsProvider extends CachedDataProducer {
           diagnostics.push(extensionDiagnostic(startPos, endPos, OID_SYNTAX_INVALID));
 
           // Check if there is online data
-        } else if (!dimension.info.objectType) {
+        } else if (!dimension.info?.objectType) {
           diagnostics.push(extensionDiagnostic(startPos, endPos, OID_DOES_NOT_EXIST));
 
           // Check things we can infer from the data
         } else {
           diagnostics.push(
             ...(await this.createTableOidDiagnostics(
-              dimension,
+              dimension as { key: string; value: string; info: OidInformation },
               oid,
               startPos,
               endPos,
@@ -551,8 +552,11 @@ export class DiagnosticsProvider extends CachedDataProducer {
           const grandparentOid = oid.slice(0, oid.slice(0, oid.lastIndexOf(".")).lastIndexOf("."));
           // Get data for grandparent OID, then check for signs of table
           await this.cachedData.updateSnmpOid(grandparentOid);
-          if (!isTable(this.snmpData[grandparentOid])) {
-            diagnostics.push(extensionDiagnostic(startPos, endPos, OID_STATIC_OBJ_IN_TABLE));
+          const oidInfo = this.snmpData[grandparentOid];
+          if (oidInfo) {
+            if (!isTable(oidInfo)) {
+              diagnostics.push(extensionDiagnostic(startPos, endPos, OID_STATIC_OBJ_IN_TABLE));
+            }
           }
         }
       } else {
@@ -566,8 +570,11 @@ export class DiagnosticsProvider extends CachedDataProducer {
           );
           // Get data for grandparent OID, then check for signs of table
           await this.cachedData.updateSnmpOid(grandparentOid);
-          if (isTable(this.snmpData[grandparentOid])) {
-            diagnostics.push(extensionDiagnostic(startPos, endPos, OID_TABLE_OBJ_AS_STATIC));
+          const oidInfo = this.snmpData[grandparentOid];
+          if (oidInfo) {
+            if (isTable(oidInfo)) {
+              diagnostics.push(extensionDiagnostic(startPos, endPos, OID_TABLE_OBJ_AS_STATIC));
+            }
           }
         }
       }

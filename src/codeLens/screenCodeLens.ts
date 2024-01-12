@@ -114,10 +114,10 @@ export class ScreenLensProvider extends CachedDataConsumer implements vscode.Cod
   private async openScreen(entityType: string, screenType: "list" | "details") {
     try {
       const tenant = await this.environments.getCurrentEnvironment();
-      const baseUrl = tenant.url.includes(".apps")
-        ? `${tenant.url}/ui/apps/dynatrace.classic.technologies`
-        : tenant.url;
       if (tenant) {
+        const baseUrl = tenant.url.includes(".apps")
+          ? `${tenant.url}/ui/apps/dynatrace.classic.technologies`
+          : tenant.url;
         if (screenType === "list") {
           await vscode.env.openExternal(
             vscode.Uri.parse(`${baseUrl}/ui/entity/list/${entityType}`),
@@ -132,8 +132,8 @@ export class ScreenLensProvider extends CachedDataConsumer implements vscode.Cod
             logger.notify("ERROR", "No entities of this type were found in your tenant.");
           }
         }
+        // Things can fail. We don't care.
       }
-      // Things can fail. We don't care.
     } catch (err) {
       logger.warn(`Could not open screen: ${(err as Error).message}`, ...this.logTrace);
       logger.notify("WARN", "Could not open screen.");

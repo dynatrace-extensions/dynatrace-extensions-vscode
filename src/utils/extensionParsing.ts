@@ -327,7 +327,7 @@ export function getAllMetricKeys(extension: ExtensionStub): string[] {
       }
     });
   } else {
-    extension.metrics.forEach(metric => {
+    extension.metrics?.forEach(metric => {
       metrics.push(metric.key);
     });
   }
@@ -994,7 +994,14 @@ export function getEntityChartCardKeys(screenIdx: number, extension: ExtensionSt
 
 type CardMeta = {
   key: string;
-  type: "ENTITIES_LIST" | "CHART_GROUP" | "MESSAGE" | "LOGS" | "EVENTS" | "METRIC_TABLE";
+  type:
+    | "ENTITIES_LIST"
+    | "CHART_GROUP"
+    | "MESSAGE"
+    | "LOGS"
+    | "EVENTS"
+    | "METRIC_TABLE"
+    | "INJECTIONS";
 };
 
 /**

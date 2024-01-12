@@ -96,6 +96,14 @@ export class SimulatorManager extends CachedDataConsumer {
    */
   constructor(context: vscode.ExtensionContext, panelManager: WebviewPanelManager) {
     super(); // Data cache access
+    this.datasourceName = "unsupported";
+    this.simulatorStatus = "UNSUPPORTED";
+    this.failedChecks = [];
+    this.extensionFile = "";
+    this.activationFile = "";
+    this.datasourceDir = "";
+    this.datasourceExe = "";
+    this.pyEnvOptions = {};
     this.url = "file://CONSOLE";
     this.context = context;
     this.idToken = path.join(context.globalStorageUri.fsPath, "idToken.txt");
@@ -272,11 +280,16 @@ export class SimulatorManager extends CachedDataConsumer {
       } else {
         // Python extensions may use "activation.json" as alternative
         if (datasourceName === "python") {
-          const pyActivation = path.resolve(
-            path.join(path.resolve(getExtensionWorkspaceDir(), ".."), "activation.json"),
-          );
-          if (existsSync(pyActivation)) {
-            this.activationFile = pyActivation;
+          const extDir = getExtensionWorkspaceDir();
+          if (extDir) {
+            const pyActivation = path.resolve(
+              path.join(path.resolve(extDir, ".."), "activation.json"),
+            );
+            if (existsSync(pyActivation)) {
+              this.activationFile = pyActivation;
+            } else {
+              failedChecks.push("Activation file");
+            }
           } else {
             failedChecks.push("Activation file");
           }
@@ -435,16 +448,21 @@ export class SimulatorManager extends CachedDataConsumer {
       ...this.logTrace,
       "createProcess",
     );
+    const workspaceFolders = vscode.workspace.workspaceFolders;
+    if (!workspaceFolders) {
+      logger.error("No workspace folders found. Aborting command.", ...this.logTrace);
+      return;
+    }
     const startTime = new Date();
     let success = true;
     // If needed, make room for new log
     cleanUpSimulatorLogs(this.context);
     const logFilePath = path.join(
-      vscode.workspace.workspaceFolders[0].uri.fsPath,
+      workspaceFolders[0].uri.fsPath,
       "logs",
       `${startTime.toISOString().replace(/:/g, "-")}_simulator.log`,
     );
-    const workspace = vscode.workspace.workspaceFolders[0].name;
+    const workspace = workspaceFolders[0].name;
     this.simulatorProcess = spawn(command, options);
 
     this.outputChannel.appendLine(
@@ -458,20 +476,24 @@ export class SimulatorManager extends CachedDataConsumer {
       writeFileSync(logFilePath, `ERROR:\n${err.message}\n`, { flag: "a" });
     });
 
-    this.simulatorProcess.stdout.on("data", (data: Buffer) => {
-      this.outputChannel.append(data.toString());
-      writeFileSync(logFilePath, data.toString(), { flag: "a" });
-    });
-    this.simulatorProcess.stderr.on("data", (data: Buffer) => {
-      this.outputChannel.appendLine("Error:");
-      this.outputChannel.append(data.toString());
-      success = false;
-      writeFileSync(logFilePath, `Error:\n${data.toString()}`, { flag: "a" });
-    });
+    if (this.simulatorProcess.stdout) {
+      this.simulatorProcess.stdout.on("data", (data: Buffer) => {
+        this.outputChannel.append(data.toString());
+        writeFileSync(logFilePath, data.toString(), { flag: "a" });
+      });
+    }
+    if (this.simulatorProcess.stderr) {
+      this.simulatorProcess.stderr.on("data", (data: Buffer) => {
+        this.outputChannel.appendLine("Error:");
+        this.outputChannel.append(data.toString());
+        success = false;
+        writeFileSync(logFilePath, `Error:\n${data.toString()}`, { flag: "a" });
+      });
+    }
 
     this.simulatorProcess.on("exit", (code, signal) => {
       this.outputChannel.appendLine(
-        `Simulator process exited with code ${code ?? signal.toString()}`,
+        `Simulator process exited with code ${String(code ?? signal?.toString())}`,
       );
     });
 
@@ -487,7 +509,7 @@ export class SimulatorManager extends CachedDataConsumer {
       } as LocalExecutionSummary | RemoteExecutionSummary);
       this.refreshUI(true);
       this.outputChannel.appendLine(
-        `Simulator process closed with code ${code ?? signal.toString()}`,
+        `Simulator process closed with code ${String(code ?? signal?.toString())}`,
       );
       this.simulatorProcess = undefined;
     });
@@ -497,16 +519,22 @@ export class SimulatorManager extends CachedDataConsumer {
    * Starts a local simulation of the extension.
    */
   private startLocally() {
+    const extDir = getExtensionWorkspaceDir();
+    if (!extDir) {
+      logger.error(
+        "Could not find extension directory. Aborting command.",
+        ...this.logTrace,
+        "startLocally",
+      );
+      return;
+    }
     const command =
       this.datasourceName === "python"
         ? `dt-sdk run --activation-config "${this.activationFile}"` +
           (this.currentConfiguration.sendMetrics ? " --local-ingest" : "")
         : `.${path.sep}${this.datasourceExe} --url "${this.url}"  --idtoken "${this.idToken}" ` +
           `--extConfig "file://${this.extensionFile}" --userConfig "file://${this.activationFile}"`;
-    const cwd =
-      this.datasourceName === "python"
-        ? path.resolve(getExtensionWorkspaceDir(), "..")
-        : this.datasourceDir;
+    const cwd = this.datasourceName === "python" ? path.resolve(extDir, "..") : this.datasourceDir;
     const shell = process.platform === "win32" ? "powershell.exe" : "/bin/bash";
 
     // Initial message before starting the process
@@ -549,7 +577,9 @@ export class SimulatorManager extends CachedDataConsumer {
       if (code === 0) {
         this.outputChannel.appendLine("Files copied successfully.");
       } else {
-        this.outputChannel.appendLine(`SCP process exited with code ${code ?? signal.toString()}`);
+        this.outputChannel.appendLine(
+          `SCP process exited with code ${String(code ?? signal?.toString())}`,
+        );
       }
     });
 
@@ -583,10 +613,16 @@ export class SimulatorManager extends CachedDataConsumer {
     const fnLogTrace = [...this.logTrace, "start"];
     logger.info("Starting simulator", ...fnLogTrace);
 
+    const workspaceFolders = vscode.workspace.workspaceFolders;
+    if (!workspaceFolders) {
+      logger.error("No workspace folders found. Aborting command.", ...fnLogTrace);
+      return;
+    }
+
     const { location, target } = config;
 
     // Create log folder if it doesn't exist
-    const logsDir = path.join(vscode.workspace.workspaceFolders[0].uri.fsPath, "logs");
+    const logsDir = path.join(workspaceFolders[0].uri.fsPath, "logs");
     if (!existsSync(logsDir)) {
       mkdirSync(logsDir);
     }
@@ -597,6 +633,10 @@ export class SimulatorManager extends CachedDataConsumer {
           this.startLocally();
           break;
         case "REMOTE":
+          if (!target) {
+            logger.notify("ERROR", "No target given for remote simulation", ...fnLogTrace);
+            return;
+          }
           await this.startRemotely(target);
           break;
       }
@@ -666,7 +706,7 @@ export class SimulatorManager extends CachedDataConsumer {
         currentConfiguration: this.currentConfiguration,
         specs: this.simulationSpecs,
         status: status ?? this.simulatorStatus,
-        statusMessage,
+        statusMessage: String(statusMessage),
         failedChecks: failedChecks ?? this.failedChecks,
       },
     };
