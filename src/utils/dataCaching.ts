@@ -58,19 +58,19 @@ type CachedDataType =
  * Extend from CachedDataConsumer and make use of any property you've subscribed yourself to.
  */
 export class CachedDataConsumer {
-  protected builtinEntityTypes: EntityType[] = undefined;
-  protected baristaIcons: string[] = undefined;
-  protected parsedExtension: ExtensionStub = undefined;
-  protected prometheusData: PromData = undefined;
-  protected wmiData: Record<string, WmiQueryResult | undefined> = undefined;
-  protected wmiStatuses: Record<string, ValidationStatus | undefined> = undefined;
-  protected entityInstances: Record<string, Entity[] | undefined> = undefined;
-  protected selectorStatuses: Record<string, ValidationStatus | undefined> = undefined;
-  protected snmpData: Record<string, OidInformation | undefined> = undefined;
-  private snmpDatabase: OidInformation[];
+  protected builtinEntityTypes: EntityType[] | undefined = undefined;
+  protected baristaIcons: string[] | undefined = undefined;
+  protected parsedExtension: ExtensionStub | undefined = undefined;
+  protected prometheusData: PromData | undefined = undefined;
+  protected wmiData: Record<string, WmiQueryResult | undefined> | undefined = undefined;
+  protected wmiStatuses: Record<string, ValidationStatus | undefined> | undefined = undefined;
+  protected entityInstances: Record<string, Entity[] | undefined> | undefined = undefined;
+  protected selectorStatuses: Record<string, ValidationStatus | undefined> | undefined = undefined;
+  protected snmpData: Record<string, OidInformation | undefined> | undefined = undefined;
 
   public updateCachedData(dataType: CachedDataType, data: unknown) {
     if (Object.keys(this).includes(dataType)) {
+      /* @ts-expect-error */
       this[dataType.toString()] = data;
     }
   }
@@ -113,7 +113,7 @@ export class CachedData {
   private snmpData = new BehaviorSubject<Record<string, OidInformation | undefined>>({});
   private entityInstances = new BehaviorSubject<Record<string, Entity[] | undefined>>({});
   private localSnmpDatabase: OidInformation[] = [];
-  private mibStore: MibModuleStore;
+  private mibStore: MibModuleStore | undefined = undefined;
   public mibFilesLoaded: LoadedFile[] = [];
 
   /**
@@ -128,6 +128,7 @@ export class CachedData {
   public subscribeConsumers(subscription: Partial<Record<CachedDataType, CachedDataConsumer[]>>) {
     Object.entries(subscription).forEach(([dataType, consumers]) => {
       consumers.forEach(consumer => {
+        /* @ts-expect-error */
         (this[dataType] as BehaviorSubject<unknown>).subscribe({
           next: data => consumer.updateCachedData(dataType as CachedDataType, data),
         });
@@ -188,10 +189,10 @@ export class CachedData {
     new Observable(subscriber => {
       subscriber.next(initialManifestContent);
       const manifestFilePath = getExtensionFilePath();
-      const pushTextUpdate = (filePath: string, doc: vscode.TextDocument) => {
+      const pushTextUpdate = (filePath: string | undefined, doc: vscode.TextDocument) => {
         // If manifest didn't exist at activation time, we must detect again
         if (!filePath) {
-          filePath = getExtensionFilePath();
+          filePath = getExtensionFilePath() ?? "";
         }
         if (path.resolve(doc.fileName) === path.resolve(filePath)) {
           subscriber.next(doc.getText());
@@ -214,6 +215,7 @@ export class CachedData {
     })
       .pipe(
         // Skip some expensive processing by only parsing the last text after 200 ms
+        /* @ts-expect-error */
         switchMap((value: string) => of(value).pipe(delay(200))),
         map((manifestText: string) => {
           try {
@@ -322,7 +324,7 @@ export class CachedData {
     return icons;
   }
 
-  private async collectSingleOid(oid: string): Promise<[string, OidInformation]> {
+  private async collectSingleOid(oid: string): Promise<[string, OidInformation | undefined]> {
     // Check it's not in the cached data
     if (!(oid in this.snmpData.getValue())) {
       // And not in the local database
@@ -346,16 +348,17 @@ export class CachedData {
    * This is needed when the manifest is modified programatically.
    */
   public updateParsedExtension() {
+    const fnLogTrace = [...this.logTrace, "updateParsedExtension"];
     const manifestFilePath = getExtensionFilePath();
+    if (!manifestFilePath) {
+      logger.error("No manifest file path.", ...fnLogTrace);
+      return;
+    }
     try {
       const parsedManifest = yaml.parse(readFileSync(manifestFilePath).toString()) as ExtensionStub;
       this.parsedExtension.next(parsedManifest);
     } catch {
-      logger.error(
-        "Error parsing manifest content. Invalid YAML.",
-        ...this.logTrace,
-        "updateParsedExtension",
-      );
+      logger.error("Error parsing manifest content. Invalid YAML.", ...fnLogTrace);
     }
   }
 
@@ -395,7 +398,7 @@ export class CachedData {
         if (!(t in this.entityInstances.getValue())) {
           return [t, await dtClient.entitiesV2.list(`type(${t}}`).catch(() => [])];
         }
-        return [t, this.entityInstances.getValue()[t]];
+        return [t, this.entityInstances.getValue()[t] ?? []];
       });
       const entityLists = await Promise.all(entityPromises);
       const nextEntityInstances = {
@@ -477,14 +480,14 @@ export class CachedData {
             ...this.logTrace,
             "loadLocalMibFiles",
           );
-          this.mibStore.loadFromFile(file);
+          this.mibStore?.loadFromFile(file);
         } catch {
           // TODO: Should analyse if this is really needed
           partialParsed.push(...parseMibFile(file));
         }
       });
 
-      this.localSnmpDatabase = [...this.mibStore.getAllOidInfos(), ...partialParsed];
+      this.localSnmpDatabase = [...(this.mibStore?.getAllOidInfos() ?? []), ...partialParsed];
     }
   }
 }

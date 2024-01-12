@@ -221,12 +221,14 @@ export class EnvironmentsTreeDataProvider implements vscode.TreeDataProvider<Env
     this.oc = errorChannel;
     this.getCurrentEnvironment()
       .then(environment => {
-        this.connectionStatus
-          .updateStatusBar(Boolean(environment), {
-            ...{ ...environment },
-            name: environment.label.toString(),
-          })
-          .catch(() => {});
+        if (environment) {
+          this.connectionStatus
+            .updateStatusBar(Boolean(environment), {
+              ...{ ...environment },
+              name: environment.label?.toString(),
+            })
+            .catch(() => {});
+        }
       })
       .catch(err => {
         logger.error((err as Error).message, ...this.logTrace);
@@ -259,7 +261,7 @@ export class EnvironmentsTreeDataProvider implements vscode.TreeDataProvider<Env
         );
         this.connectionStatus.clearConnectionChecks();
         this.connectionStatus
-          .updateStatusBar(true, { ...{ ...environment }, name: environment.label.toString() })
+          .updateStatusBar(true, { ...{ ...environment }, name: environment.label?.toString() })
           .catch(() => {});
         this.refresh();
       },

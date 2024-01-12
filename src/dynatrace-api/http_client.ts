@@ -99,13 +99,13 @@ export class HttpClient {
         return res.data as T;
       })
       .catch((err: unknown) => {
-        if (Object.keys(err).includes("response")) {
+        if (Object.keys(err ?? {}).includes("response")) {
           // Request was made, server responded with non-2xx, axios threw as error
           throw new DynatraceAPIError(
             (err as DynatraceAxiosError).message,
             (err as DynatraceAxiosError).response.data.error,
           );
-        } else if (Object.keys(err).includes("request")) {
+        } else if (Object.keys(err ?? {}).includes("request")) {
           // Request was made, but no response received
           logger.error(err, ...fnLogTrace);
           throw new DynatraceAPIError(`No response from server ${this.baseUrl}`, {

@@ -559,7 +559,7 @@ export async function buildExtension(
   const maxFiles = vscode.workspace
     .getConfiguration("dynatraceExtensions", null)
     .get<number>("maxBuildFiles");
-  if (maxFiles > 0) {
+  if (maxFiles && maxFiles > 0) {
     removeOldestFiles(distDir, maxFiles);
   }
 

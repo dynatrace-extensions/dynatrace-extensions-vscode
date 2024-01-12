@@ -177,7 +177,7 @@ export class WebviewPanelManager implements vscode.WebviewPanelSerializer {
     if (this.currentPanels.has(viewType)) {
       // If a webview panel of this view type exists, send it the new data
       const existingPanel = this.currentPanels.get(viewType);
-      existingPanel.webview.postMessage({ messageType: "updateData", data }).then(
+      existingPanel?.webview.postMessage({ messageType: "updateData", data }).then(
         () => {},
         err => {
           logger.error(err, ...fnLogTrace);
@@ -213,7 +213,7 @@ export class WebviewPanelManager implements vscode.WebviewPanelSerializer {
     const fnLogTrace = [...this.logTrace, "postMessage"];
     if (this.currentPanels.has(viewType)) {
       const existingPanel = this.currentPanels.get(viewType);
-      existingPanel.webview.postMessage(message).then(
+      existingPanel?.webview.postMessage(message).then(
         () => {},
         err => {
           logger.error(err, ...fnLogTrace);

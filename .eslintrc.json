@@ -4,7 +4,7 @@
   "parserOptions": {
     "ecmaVersion": 6,
     "sourceType": "module",
-    "project": ["./tsconfig.json", "./tsconfig.app.json"]
+    "project": ["./tsconfig.src.json", "./tsconfig.test.json"]
   },
   "plugins": [
     "@typescript-eslint",
@@ -27,7 +27,7 @@
   ],
   "overrides": [
     {
-      "files": ["**/utils/logging.ts"],
+      "files": ["src/utils/logging.ts", "test/**/*.test.ts", "**/__mocks__/**/*.ts"],
       "rules": {
         "no-restricted-syntax": "off"
       }
@@ -131,5 +131,5 @@
       }
     ]
   },
-  "ignorePatterns": ["out", "dist", "**/*.d.ts", "node_modules", "src/test", "jest.config.js"]
+  "ignorePatterns": ["out", "dist", "**/*.d.ts", "node_modules", "src/test", "jest*.config.js"]
 }

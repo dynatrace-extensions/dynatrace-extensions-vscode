@@ -56,7 +56,7 @@ export async function getPythonPath(): Promise<string> {
 export async function getPythonVenvOpts(): Promise<ExecOptions> {
   const fnLogTrace = [...logTrace, "getPythonVenvOpts"];
   const pythonPath = await getPythonPath();
-  const env: Record<string, string> = process.env;
+  const env = process.env;
 
   if (pythonPath !== "python" && process.env.PATH) {
     // Python bin directory

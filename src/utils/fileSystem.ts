@@ -347,9 +347,10 @@ export function getSimulatorSummaries(
 ): (LocalExecutionSummary | RemoteExecutionSummary)[] {
   const summariesJson = path.join(context.globalStorageUri.fsPath, "summaries.json");
   return (
-    JSON.parse(readFileSync(summariesJson).toString()) as Partial<
-      LocalExecutionSummary | RemoteExecutionSummary
-    >[]
+    JSON.parse(readFileSync(summariesJson).toString()) as (
+      | LocalExecutionSummary
+      | RemoteExecutionSummary
+    )[]
   ).map(s => ({
     ...s,
     startTime: new Date(s.startTime),
@@ -370,7 +371,7 @@ export function cleanUpSimulatorLogs(context: vscode.ExtensionContext) {
     .get<number>("maximumLogFiles");
 
   // No clean-up is done if user disabled it
-  if (maxFiles < 0) return;
+  if (!maxFiles || maxFiles < 0) return;
 
   logger.debug(`Cleaning up simulator logs. Keeping only ${String(maxFiles)} files`, ...fnLogTrace);
 
@@ -381,16 +382,16 @@ export function cleanUpSimulatorLogs(context: vscode.ExtensionContext) {
     if (!summariesByWorkspace[s.workspace]) {
       summariesByWorkspace[s.workspace] = [];
     }
-    summariesByWorkspace[s.workspace].push(s);
+    summariesByWorkspace[s.workspace]?.push(s);
   });
 
   // Keep the summaries based on max number of files, delete the rest
   Object.values(summariesByWorkspace).forEach(summaryList => {
-    if (summaryList.length <= maxFiles - 1) {
-      newSummaries.push(...summaryList);
+    if ((summaryList ?? []).length <= maxFiles - 1) {
+      newSummaries.push(...(summaryList ?? []));
     } else {
       summaryList
-        .sort((a, b) => b.startTime.getTime() - a.startTime.getTime())
+        ?.sort((a, b) => b.startTime.getTime() - a.startTime.getTime())
         .forEach((summary, i) => {
           if (i < maxFiles - 1) {
             newSummaries.push(summary);
@@ -697,8 +698,12 @@ venv/
       writeFileSync(gitignore[0].fsPath, [...existingLines, ...gitignoreLines].join("\n"));
     }
   } else {
+    const workspaceFolders = vscode.workspace.workspaceFolders;
+    if (!workspaceFolders) {
+      return;
+    }
     writeFileSync(
-      path.join(vscode.workspace.workspaceFolders?.[0].uri.fsPath, ".gitignore"),
+      path.join(workspaceFolders[0].uri.fsPath, ".gitignore"),
       BASE_GITIGNORE + (includePython ? PYTHON_GITIGNORE : ""),
     );
   }
@@ -777,7 +782,7 @@ export async function migrateFromLegacyExtension(context: vscode.ExtensionContex
       }
 
       progress.report({ message: "Migrating workspace data" });
-      const genericWorkspaceStorage = path.resolve(context.storageUri?.fsPath, "..", "..");
+      const genericWorkspaceStorage = path.resolve(context.storageUri?.fsPath ?? "", "..", "..");
       // Move over all data stored in workspaces
       const workspaces = getAllWorkspaces(context);
       workspaces.forEach(workspace => {
@@ -818,7 +823,7 @@ export async function migrateFromLegacyExtension(context: vscode.ExtensionContex
       const legacyConfig = vscode.workspace.getConfiguration("dynatrace", null);
       const config = vscode.workspace.getConfiguration("dynatraceExtensions", null);
       for (const key of settingsKeys) {
-        const legacyValue = legacyConfig.inspect(key).globalValue;
+        const legacyValue = legacyConfig.inspect(key)?.globalValue;
         if (legacyValue) {
           await config.update(key, legacyValue, true);
         }

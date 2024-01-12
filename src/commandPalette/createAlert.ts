@@ -110,7 +110,7 @@ export async function createAlert(cachedData: CachedData) {
           }
           return null;
         },
-      })) ?? null;
+      })) ?? undefined;
   }
   if (primaryEntityType) {
     primaryEntityType = `dt.entity.${primaryEntityType}`;

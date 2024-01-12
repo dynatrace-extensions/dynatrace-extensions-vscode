@@ -259,7 +259,7 @@ export async function deleteEnvironment(
  */
 export async function changeConnection(
   context: vscode.ExtensionContext,
-): Promise<[boolean, DynatraceEnvironmentData]> {
+): Promise<[boolean, DynatraceEnvironmentData | undefined]> {
   const environments = getAllEnvironments(context);
   // No point showing a list of 1 or empty
   if (environments.length < 2) {
@@ -478,7 +478,7 @@ export async function addMonitoringConfiguration(
   if (extensionFilePath) {
     const workspaceExtension = readFileSync(extensionFilePath).toString();
     const nameMatch = /^name: (.*?)$/gm.exec(workspaceExtension);
-    if (nameMatch.length > 1) {
+    if (nameMatch && nameMatch.length > 1) {
       const workspaceExtensionName = nameMatch[1];
       workspaceMatch = workspaceExtensionName === extension.id;
     }

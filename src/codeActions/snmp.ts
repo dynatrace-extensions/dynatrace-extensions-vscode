@@ -116,7 +116,7 @@ export class SnmpActionProvider extends CachedDataProducer implements vscode.Cod
     const insertedMetrics = extension.metrics ? extension.metrics.map(m => m.key) : [];
     const metricsToInsert = metricInfos
       .filter(metric => !insertedMetrics.includes(metric.key))
-      .filter(metric => Object.keys(metric.info).length > 0);
+      .filter(metric => Object.keys(metric.info ?? {}).length > 0);
 
     // Create actions for all metrics in one go
     if (metricsToInsert.length > 1) {
@@ -127,8 +127,8 @@ export class SnmpActionProvider extends CachedDataProducer implements vscode.Cod
             .map(metric =>
               buildMetricMetadataSnippet(
                 metric.key,
-                metric.info.objectType ?? metric.key,
-                metric.info.description ?? "",
+                metric.info?.objectType ?? metric.key,
+                metric.info?.description ?? "",
                 -2,
                 false,
               ),
@@ -148,8 +148,8 @@ export class SnmpActionProvider extends CachedDataProducer implements vscode.Cod
             `Add metadata for ${metric.key}`,
             buildMetricMetadataSnippet(
               metric.key,
-              metric.info.objectType ?? metric.key,
-              metric.info.description ?? "",
+              metric.info?.objectType ?? metric.key,
+              metric.info?.description ?? "",
               -2,
               false,
             ),

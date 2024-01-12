@@ -30,7 +30,6 @@ export class SnmpCodeLensProvider implements vscode.CodeLensProvider {
   private regex: RegExp;
   private _onDidChangeCodeLenses: vscode.EventEmitter<void> = new vscode.EventEmitter<void>();
   public readonly onDidChangeCodeLenses: vscode.Event<void> = this._onDidChangeCodeLenses.event;
-  private readonly controlSetting: string;
   private cachedData: CachedData;
 
   constructor(cachedData: CachedData) {
@@ -63,12 +62,14 @@ export class SnmpCodeLensProvider implements vscode.CodeLensProvider {
     if (newFiles.length > 0) {
       await this.cachedData.loadLocalMibFiles(newFiles.map(f => f.fsPath)).then(() => {
         const snmpDir = getSnmpDirPath();
-        if (!existsSync(snmpDir)) {
-          mkdirSync(snmpDir);
+        if (snmpDir) {
+          if (!existsSync(snmpDir)) {
+            mkdirSync(snmpDir);
+          }
+          newFiles.forEach(file => {
+            copyFileSync(file.fsPath, path.resolve(snmpDir, path.basename(file.fsPath)));
+          });
         }
-        newFiles.forEach(file => {
-          copyFileSync(file.fsPath, path.resolve(snmpDir, path.basename(file.fsPath)));
-        });
       });
     } else {
       notify("INFO", "Selected files have already been imported.");
