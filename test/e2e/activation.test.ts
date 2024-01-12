@@ -22,8 +22,4 @@ describe("Extension", () => {
       expect(actualState()).toBe(true);
     });
   });
-
-  afterAll(done => {
-    done();
-  })
 });
