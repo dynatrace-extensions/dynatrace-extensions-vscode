@@ -1,16 +1,18 @@
-import { existsSync, readdirSync, readFileSync } from "fs";
+import * as fs from "fs";
 import * as path from "path";
 import mock = require("mock-fs");
 import * as vscode from "vscode";
+import { ExtensionWorkspace } from "../../../../src/interfaces/treeViewData";
 import {
   createValidFileName,
   initGlobalStorage,
   initWorkspaceStorage,
+  registerWorkspace,
   removeOldestFiles,
-} from "../../src/utils/fileSystem";
-import { MockExtensionContext } from "./mocks/vscode";
+} from "../../../../src/utils/fileSystem";
+import { MockExtensionContext, MockUri } from "../../mocks/vscode";
 
-jest.mock("../../src/utils/logging");
+jest.mock("../../../../src/utils/logging");
 
 describe("Filesystem Utils - createUniqueFileName", () => {
   const expectedRegex = /[a-zA-Z0-9]+([-_./][a-zA-Z0-9]+)*/;
@@ -48,10 +50,10 @@ describe("Filesystem Utils - initGlobalStorage", () => {
     it("should create folders and files", () => {
       initGlobalStorage(mockContext);
 
-      expect(existsSync(globalStoragePath)).toBe(true);
-      expect(existsSync(logsPath)).toBe(true);
+      expect(fs.existsSync(globalStoragePath)).toBe(true);
+      expect(fs.existsSync(logsPath)).toBe(true);
       expectedFiles.forEach(file => {
-        expect(existsSync(file.path)).toBe(true);
+        expect(fs.existsSync(file.path)).toBe(true);
       });
     });
 
@@ -59,7 +61,7 @@ describe("Filesystem Utils - initGlobalStorage", () => {
       initGlobalStorage(mockContext);
 
       expectedFiles.forEach(file => {
-        expect(readFileSync(file.path).toString()).toBe(file.default);
+        expect(fs.readFileSync(file.path).toString()).toBe(file.default);
       });
     });
   });
@@ -86,7 +88,7 @@ describe("Filesystem Utils - initGlobalStorage", () => {
       initGlobalStorage(mockContext);
 
       expectedFiles.forEach(file => {
-        expect(readFileSync(file.path).toString()).toBe(expectedValue);
+        expect(fs.readFileSync(file.path).toString()).toBe(expectedValue);
       });
     });
   });
@@ -114,25 +116,25 @@ describe("Filesystem Utils - removeOldestFiles", () => {
   it("should remove extra files by age and count", () => {
     removeOldestFiles("mock", 1);
 
-    expect(existsSync("mock/f1")).toBe(false);
-    expect(existsSync("mock/f2")).toBe(false);
-    expect(existsSync("mock/f3")).toBe(true);
+    expect(fs.existsSync("mock/f1")).toBe(false);
+    expect(fs.existsSync("mock/f2")).toBe(false);
+    expect(fs.existsSync("mock/f3")).toBe(true);
   });
 
   it("should not remove files within limit", () => {
     removeOldestFiles("mock", 3);
 
-    expect(existsSync("mock/f1")).toBe(true);
-    expect(existsSync("mock/f2")).toBe(true);
-    expect(existsSync("mock/f3")).toBe(true);
+    expect(fs.existsSync("mock/f1")).toBe(true);
+    expect(fs.existsSync("mock/f2")).toBe(true);
+    expect(fs.existsSync("mock/f3")).toBe(true);
   });
 
   it("should not remove any files if a negative count given", () => {
     removeOldestFiles("mock", -2);
 
-    expect(existsSync("mock/f1")).toBe(true);
-    expect(existsSync("mock/f2")).toBe(true);
-    expect(existsSync("mock/f3")).toBe(true);
+    expect(fs.existsSync("mock/f1")).toBe(true);
+    expect(fs.existsSync("mock/f2")).toBe(true);
+    expect(fs.existsSync("mock/f3")).toBe(true);
   });
 });
 
@@ -152,10 +154,16 @@ describe("Filesystem Utils - initWorkspaceStorage", () => {
       mockContext = new MockExtensionContext(undefined, undefined);
     });
 
+    afterEach(() => {
+      jest.restoreAllMocks();
+    });
+
     it("shouldn't do anything if no path provided", () => {
+      const mockMkDirSync = jest.spyOn(fs, "mkdirSync");
       initWorkspaceStorage(mockContext);
 
-      expect(readdirSync("mock").length).toBe(0);
+      expect(mockMkDirSync).not.toHaveBeenCalled();
+      expect(fs.readdirSync("mock").length).toBe(0);
     });
   });
 
@@ -168,7 +176,7 @@ describe("Filesystem Utils - initWorkspaceStorage", () => {
       it("should create directories", () => {
         initWorkspaceStorage(mockContext);
 
-        expect(existsSync("mock/workspace")).toBe(true);
+        expect(fs.existsSync("mock/workspace")).toBe(true);
       });
     });
 
@@ -179,9 +187,60 @@ describe("Filesystem Utils - initWorkspaceStorage", () => {
       it("should leave content as is", () => {
         initWorkspaceStorage(mockContext);
 
-        expect(existsSync("mock/workspace/f1")).toBe(true);
-        expect(readFileSync("mock/workspace/f1").toString()).toBe("AAA");
+        expect(fs.existsSync("mock/workspace/f1")).toBe(true);
+        expect(fs.readFileSync("mock/workspace/f1").toString()).toBe("AAA");
       });
     });
+  });
+});
+
+describe("Filesystem Utils - registerWorkspace", () => {
+  let mockContext: vscode.ExtensionContext;
+  const mockGlobalStoragePath = "mock/globalStorage";
+  const mockWorkspaceStoragePath = "mock/workspaceStorage";
+  const mockWorkspacesJsonPath = path.join(mockGlobalStoragePath, "extensionWorkspaces.json");
+  const mockWorkspaceFolders: vscode.WorkspaceFolder[] = [
+    {
+      index: 0,
+      name: "MockWorkspace",
+      uri: new MockUri("mock/my-workspace"),
+    },
+  ];
+
+  beforeAll(() => {
+    mockContext = new MockExtensionContext(mockGlobalStoragePath, mockWorkspaceStoragePath);
+  });
+  beforeEach(() => {
+    mock({
+      mock: {
+        "globalStorage": {
+          "extensionWorkspaces.json": "[]",
+        },
+        "workspaceStorage": {},
+        "my-workspace": {},
+      },
+    });
+    jest.spyOn(vscode.workspace, "name", "get").mockReturnValue("MockWorkspace");
+    jest.spyOn(vscode.workspace, "workspaceFolders", "get").mockReturnValue(mockWorkspaceFolders);
+  });
+
+  afterEach(() => {
+    jest.resetAllMocks();
+  });
+
+  afterAll(() => {
+    mock.restore();
+  });
+
+  it("should add a new workspace to the list", async () => {
+    await registerWorkspace(mockContext);
+    const actualWorkspaces = JSON.parse(
+      fs.readFileSync(mockWorkspacesJsonPath).toString(),
+    ) as ExtensionWorkspace[];
+
+    expect(actualWorkspaces).toHaveLength(1);
+    expect(actualWorkspaces[0].name).toBe("MockWorkspace");
+    expect(actualWorkspaces[0].folder).toBe("mock/my-workspace");
+    expect(actualWorkspaces[0].id).toBe("mock");
   });
 });

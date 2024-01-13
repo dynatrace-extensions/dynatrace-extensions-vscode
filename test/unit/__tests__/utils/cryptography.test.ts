@@ -1,9 +1,9 @@
 import { readFileSync } from "fs";
 import * as path from "path";
 import mock = require("mock-fs");
-import { sign } from "../../src/utils/cryptography";
+import { sign } from "../../../../src/utils/cryptography";
 
-jest.mock("../../src/utils/logging");
+jest.mock("../../../../src/utils/logging");
 
 describe("Cryptography Utils - Sign", () => {
   let expectedCms: string;
@@ -11,11 +11,11 @@ describe("Cryptography Utils - Sign", () => {
 
   beforeAll(() => {
     developerCertKey = readFileSync(
-      path.resolve(__dirname, "test_data", "cryptography", "test_developer.pem"),
+      path.resolve(__dirname, "..", "..", "test_data", "cryptography", "test_developer.pem"),
     ).toString();
 
     expectedCms = readFileSync(
-      path.resolve(__dirname, "test_data", "cryptography", "expected_cms.pem"),
+      path.resolve(__dirname, "..", "..", "test_data", "cryptography", "expected_cms.pem"),
     ).toString();
 
     mock({

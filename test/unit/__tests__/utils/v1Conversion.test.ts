@@ -17,8 +17,8 @@
 import { readFileSync, readdirSync } from "fs";
 import * as path from "path";
 import { describe, expect, test } from "@jest/globals";
-import { convertPluginJsonToActivationSchema } from "../../src/commandPalette/python/pythonConversion";
-import { ExtensionV1 } from "../../src/interfaces/extensionMeta";
+import { convertPluginJsonToActivationSchema } from "../../../../src/commandPalette/python/pythonConversion";
+import { ExtensionV1 } from "../../../../src/interfaces/extensionMeta";
 
 const samplePluginJson: ExtensionV1 = {
   name: "custom.remote.python.rabbit_mq",
@@ -99,10 +99,11 @@ describe("V1 Plugin Conversion Utils - Python", () => {
   });
   test("test converting real plugin.json files", async () => {
     // Loop through files of testData/pluginJsonTestFiles
-    const pluginJsonFiles = readdirSync(path.resolve(__dirname, "./test_data/plugin_json"));
+    const jsonDirPath = path.resolve(__dirname, "..", "..", "test_data", "plugin_json");
+    const pluginJsonFiles = readdirSync(jsonDirPath);
     for (const pluginJsonFile of pluginJsonFiles) {
       const pluginJson = JSON.parse(
-        readFileSync(path.resolve(__dirname, `./test_data/plugin_json/${pluginJsonFile}`), "utf8"),
+        readFileSync(path.resolve(jsonDirPath, pluginJsonFile), "utf8"),
       ) as ExtensionV1;
       const converted = await convertPluginJsonToActivationSchema(pluginJson);
 

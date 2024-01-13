@@ -4,7 +4,7 @@ const config = {
   preset: 'ts-jest',
   testEnvironment: 'node',
   testMatch: [
-    "<rootDir>/*.test.ts"
+    "<rootDir>/__tests__/**/*.test.ts"
   ],
 };
 

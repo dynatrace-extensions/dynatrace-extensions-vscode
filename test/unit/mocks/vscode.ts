@@ -1,15 +1,24 @@
 import * as vscode from "vscode";
 
-const blankUri: vscode.Uri = {
-  scheme: "",
-  authority: "",
-  path: "",
-  query: "",
-  fragment: "",
-  fsPath: "",
-  with: jest.fn(),
-  toJSON: jest.fn(),
-};
+export class MockUri implements vscode.Uri {
+  path;
+  fsPath;
+  scheme = "";
+  authority = "";
+  query = "";
+  fragment = "";
+  with = jest.fn();
+  toJSON = jest.fn();
+
+  constructor(path?: string) {
+    this.path = path ?? "";
+    this.fsPath = path ?? "";
+  }
+
+  toString(): string {
+    return this.fsPath;
+  }
+}
 
 export class MockExtensionContext implements vscode.ExtensionContext {
   workspaceState = {
@@ -32,10 +41,8 @@ export class MockExtensionContext implements vscode.ExtensionContext {
     onDidChange: jest.fn(),
   };
 
-  extensionUri = blankUri;
-
+  extensionUri = new MockUri();
   extensionPath = "";
-
   environmentVariableCollection = {
     getScoped: jest.fn(),
     persistent: false,
@@ -51,24 +58,16 @@ export class MockExtensionContext implements vscode.ExtensionContext {
   };
 
   asAbsolutePath = jest.fn();
-
   storageUri;
-
   storagePath;
-
   globalStorageUri;
-
   globalStoragePath;
-
-  logUri = blankUri;
-
+  logUri = new MockUri();
   logPath = "";
-
   extensionMode = 3;
-
   extension = {
     id: "DynatracePlatformExtensions.dynatrace-extensions",
-    extensionUri: blankUri,
+    extensionUri: new MockUri(),
     extensionPath: "",
     isActive: true,
     packageJSON: {},
@@ -81,11 +80,11 @@ export class MockExtensionContext implements vscode.ExtensionContext {
 
   constructor(globalStoragePath?: string, workspaceStoragePath?: string) {
     this.globalStoragePath = globalStoragePath ?? "";
-    this.globalStorageUri = { ...blankUri, fsPath: this.globalStoragePath } as vscode.Uri;
+    this.globalStorageUri = new MockUri(this.globalStoragePath);
 
     this.storagePath = workspaceStoragePath;
     if (workspaceStoragePath) {
-      this.storageUri = { ...blankUri, fsPath: this.storagePath } as vscode.Uri;
+      this.storageUri = new MockUri(this.storagePath);
     }
   }
 }
