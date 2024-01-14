@@ -5,34 +5,36 @@ import { sign } from "../../../../src/utils/cryptography";
 
 jest.mock("../../../../src/utils/logging");
 
-describe("Cryptography Utils - Sign", () => {
-  let expectedCms: string;
-  let developerCertKey: string;
+describe("Cryptography Utils", () => {
+  describe("sign", () => {
+    let expectedCms: string;
+    let developerCertKey: string;
 
-  beforeAll(() => {
-    developerCertKey = readFileSync(
-      path.resolve(__dirname, "..", "..", "test_data", "cryptography", "test_developer.pem"),
-    ).toString();
+    beforeAll(() => {
+      developerCertKey = readFileSync(
+        path.resolve(__dirname, "..", "..", "test_data", "cryptography", "test_developer.pem"),
+      ).toString();
 
-    expectedCms = readFileSync(
-      path.resolve(__dirname, "..", "..", "test_data", "cryptography", "expected_cms.pem"),
-    ).toString();
+      expectedCms = readFileSync(
+        path.resolve(__dirname, "..", "..", "test_data", "cryptography", "expected_cms.pem"),
+      ).toString();
 
-    mock({
-      mock: {
-        "extension.zip": "AAA",
-        "developer.pem": developerCertKey,
-      },
+      mock({
+        mock: {
+          "extension.zip": "AAA",
+          "developer.pem": developerCertKey,
+        },
+      });
     });
-  });
 
-  it("should create expected signature", () => {
-    // Sign and normalize line endings
-    const cms = sign("mock/extension.zip", "mock/developer.pem").replace(/\r?\n|\r/g, "\n");
-    expect(cms).toEqual(expectedCms);
-  });
+    it("should create expected signature", () => {
+      // Sign and normalize line endings
+      const cms = sign("mock/extension.zip", "mock/developer.pem").replace(/\r?\n|\r/g, "\n");
+      expect(cms).toEqual(expectedCms);
+    });
 
-  afterAll(() => {
-    mock.restore();
+    afterAll(() => {
+      mock.restore();
+    });
   });
 });
