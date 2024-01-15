@@ -70,7 +70,7 @@ export class CachedDataConsumer {
 
   public updateCachedData(dataType: CachedDataType, data: unknown) {
     if (Object.keys(this).includes(dataType)) {
-      /* @ts-expect-error */
+      // @ts-ignore
       this[dataType.toString()] = data;
     }
   }
@@ -128,7 +128,7 @@ export class CachedData {
   public subscribeConsumers(subscription: Partial<Record<CachedDataType, CachedDataConsumer[]>>) {
     Object.entries(subscription).forEach(([dataType, consumers]) => {
       consumers.forEach(consumer => {
-        /* @ts-expect-error */
+        /* @ts-ignore */
         (this[dataType] as BehaviorSubject<unknown>).subscribe({
           next: data => consumer.updateCachedData(dataType as CachedDataType, data),
         });
@@ -215,7 +215,7 @@ export class CachedData {
     })
       .pipe(
         // Skip some expensive processing by only parsing the last text after 200 ms
-        /* @ts-expect-error */
+        // @ts-ignore
         switchMap((value: string) => of(value).pipe(delay(200))),
         map((manifestText: string) => {
           try {
@@ -401,10 +401,10 @@ export class CachedData {
         return [t, this.entityInstances.getValue()[t] ?? []];
       });
       const entityLists = await Promise.all(entityPromises);
-      const nextEntityInstances = {
-        ...this.entityInstances.getValue(),
-        ...Object.fromEntries(entityLists),
-      };
+      const nextEntityInstances = this.entityInstances.getValue();
+      entityLists.forEach(([type, entities]) => {
+        nextEntityInstances[type] = entities;
+      });
 
       this.entityInstances.next(nextEntityInstances);
     }
@@ -450,10 +450,10 @@ export class CachedData {
   public async updateSnmpData(oids: string[]) {
     const oidPromises = oids.map(oid => this.collectSingleOid(oid));
     const oidData = await Promise.all(oidPromises);
-    const nextSnmpData = {
-      ...this.snmpData.getValue(),
-      ...Object.fromEntries(oidData),
-    };
+    const nextSnmpData = this.snmpData.getValue();
+    oidData.forEach(([oid, info]) => {
+      nextSnmpData[oid] = info;
+    });
     this.snmpData.next(nextSnmpData);
   }
 
