@@ -18,7 +18,12 @@ import { readFileSync, readdirSync, rmSync, writeFileSync } from "fs";
 import * as path from "path";
 import * as vscode from "vscode";
 import { DynatraceAPIError } from "../../dynatrace-api/errors";
-import { DynatraceEnvironmentData } from "../../interfaces/treeViewData";
+import {
+  DeployedExtension,
+  DynatraceEnvironmentData,
+  DynatraceTenant,
+  MonitoringConfiguration,
+} from "../../interfaces/treeViews";
 import { checkUrlReachable } from "../../utils/conditionCheckers";
 import { encryptToken } from "../../utils/cryptography";
 import {
@@ -30,11 +35,6 @@ import {
 } from "../../utils/fileSystem";
 import { notify } from "../../utils/logging";
 import { createObjectFromSchema } from "../../utils/schemaParsing";
-import {
-  DeployedExtension,
-  DynatraceEnvironment,
-  MonitoringConfiguration,
-} from "../tenantsTreeView";
 
 export interface MinimalConfiguration {
   scope: string;
@@ -162,7 +162,7 @@ export async function addEnvironment(context: vscode.ExtensionContext) {
  */
 export async function editEnvironment(
   context: vscode.ExtensionContext,
-  environment: DynatraceEnvironment,
+  environment: DynatraceTenant,
 ) {
   const fnLogTrace = [...logTrace, "editEnvironment"];
   let url = await vscode.window.showInputBox({
@@ -232,7 +232,7 @@ export async function editEnvironment(
  */
 export async function deleteEnvironment(
   context: vscode.ExtensionContext,
-  environment: DynatraceEnvironment,
+  environment: DynatraceTenant,
 ) {
   const confirm = await vscode.window.showQuickPick(["Yes", "No"], {
     title: `Delete environment ${environment.label?.toString() ?? environment.id}?`,

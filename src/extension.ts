@@ -54,7 +54,10 @@ import { SnmpHoverProvider } from "./hover/snmpHover";
 import { ConnectionStatusManager } from "./statusBar/connection";
 import { FastModeStatus } from "./statusBar/fastMode";
 import { SimulatorManager } from "./statusBar/simulator";
-import { ExtensionsTreeDataProvider } from "./treeViews/extensionsTreeView";
+import {
+  getWorkspacesTreeDataProvider,
+  refreshWorkspacesTreeData,
+} from "./treeViews/extensionsTreeView";
 import {
   getConnectedTenant,
   getDynatraceClient,
@@ -139,14 +142,12 @@ function registerCompletionProviders(
 /**
  * Registers this extension's Commands for the VSCode Command Palette.
  * This is so that all commands can be created in one function, keeping the activation function more tidy.
- * @param extensionWorkspacesProvider a provider for extension workspaces tree data
  * @param diagnosticsProvider a provider for diagnostics
  * @param outputChannel a JSON output channel for communicating data
  * @param context {@link vscode.ExtensionContext}
  * @returns list commands as disposables
  */
 function registerCommandPaletteCommands(
-  extensionWorkspacesProvider: ExtensionsTreeDataProvider,
   diagnosticsProvider: DiagnosticsProvider,
   outputChannel: vscode.OutputChannel,
   context: vscode.ExtensionContext,
@@ -176,7 +177,7 @@ function registerCommandPaletteCommands(
           const dtClient = await getDynatraceClient();
           if (dtClient) {
             await initWorkspace(context, dtClient, () => {
-              extensionWorkspacesProvider.refresh();
+              refreshWorkspacesTreeData();
             });
           }
         } finally {
@@ -684,7 +685,7 @@ export async function activate(context: vscode.ExtensionContext) {
   );
   await initializeCache(context.globalStorageUri.fsPath);
   const webviewPanelManager = new WebviewPanelManager(context.extensionUri);
-  const extensionsTreeViewProvider = new ExtensionsTreeDataProvider(context);
+  const extensionsTreeViewProvider = getWorkspacesTreeDataProvider(context);
   simulatorManager = new SimulatorManager(context, webviewPanelManager);
   const metricLensProvider = new SelectorCodeLensProvider(
     "metricSelector:",
@@ -723,12 +724,7 @@ export async function activate(context: vscode.ExtensionContext) {
   // Perform all feature registrations
   context.subscriptions.push(
     // Commands for the Command Palette
-    ...registerCommandPaletteCommands(
-      extensionsTreeViewProvider,
-      diagnosticsProvider,
-      genericChannel,
-      context,
-    ),
+    ...registerCommandPaletteCommands(diagnosticsProvider, genericChannel, context),
     // Commands for enabling/disabling features
     ...registerFeatureSwitchCommands(),
     // Auto-completion providers

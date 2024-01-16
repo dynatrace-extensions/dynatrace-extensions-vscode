@@ -15,7 +15,7 @@
  */
 
 import * as vscode from "vscode";
-import { DynatraceEnvironmentData } from "../interfaces/treeViewData";
+import { DynatraceEnvironmentData } from "../interfaces/treeViews";
 import { checkUrlReachable } from "../utils/conditionCheckers";
 
 /**

@@ -18,7 +18,7 @@ import * as fs from "fs";
 import * as path from "path";
 import mock = require("mock-fs");
 import * as vscode from "vscode";
-import { ExtensionWorkspace } from "../../../../src/interfaces/treeViewData";
+import { ExtensionWorkspace } from "../../../../src/interfaces/treeViews";
 import {
   createValidFileName,
   findWorkspace,

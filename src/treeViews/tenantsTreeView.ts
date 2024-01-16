@@ -17,7 +17,14 @@
 import path = require("path");
 import * as vscode from "vscode";
 import { Dynatrace } from "../dynatrace-api/dynatrace";
-import { DynatraceEnvironmentData } from "../interfaces/treeViewData";
+import {
+  DeployedExtension,
+  DynatraceEnvironmentData,
+  DynatraceTenant,
+  MonitoringConfiguration,
+  TenantsTreeDataProvider,
+  TenantsTreeItem,
+} from "../interfaces/treeViews";
 import { ConnectionStatusManager } from "../statusBar/connection";
 import { decryptToken, encryptToken } from "../utils/cryptography";
 import { getAllEnvironments, registerEnvironment } from "../utils/fileSystem";
@@ -49,146 +56,96 @@ const ICONS: Record<string, { light: string; dark: string }> = {
     dark: path.join(ICONS_PATH, "platform_current_dark.png"),
   },
 };
-
-interface IDynatraceEnvironment extends EnvironmentsTreeItem {
-  url: string;
-  token: string;
-  current: boolean;
-  contextValue: "currentDynatraceEnvironment" | "dynatraceEnvironment";
-}
-
-/**
- * Represents a Dynatrace (SaaS, Managed, Platform) Environment registered with the add-on.
- */
-export class DynatraceEnvironment extends vscode.TreeItem implements IDynatraceEnvironment {
-  id: string;
-  dt: Dynatrace;
-  url: string;
-  apiUrl: string;
-  token: string;
-  current: boolean;
-  contextValue: "currentDynatraceEnvironment" | "dynatraceEnvironment";
-
-  /**
-   * @param collapsibleState defines whether this item can be expanded further or not
-   * @param url the URL to this environment
-   * @param token a Dynatrace API Token to use when authenticating with this environment
-   * @param id the ID of id of this environment (Tenant ID)
-   * @param label an optional label for displaying this environment (otherwise will use ID)
-   * @param current whether this environment should be used for API operations currently
-   */
-  constructor(
-    collapsibleState: vscode.TreeItemCollapsibleState,
-    url: string,
-    token: string,
-    id: string,
-    label?: string,
-    current: boolean = false,
-    apiUrl?: string,
-  ) {
-    super(label ?? id, collapsibleState);
-    this.url = url;
-    this.apiUrl = apiUrl ?? url;
-    this.token = token;
-    this.id = id;
-    this.dt = new Dynatrace(this.apiUrl, this.token);
-    this.tooltip = id;
-    this.current = current;
-    this.contextValue = this.current ? "currentDynatraceEnvironment" : "dynatraceEnvironment";
-    this.iconPath = this.current ? ICONS.ENVIRONMENT_CURRENT : ICONS.ENVIRONMENT;
-  }
-}
-
-interface IDeployedExtension extends EnvironmentsTreeItem {
-  extensionVersion: string;
-  contextValue: "deployedExtension";
-}
+type ConfigStatus = "ERROR" | "OK" | "UNKNOWN";
+const CONFIG_STATUS_COLORS: Record<ConfigStatus, string> = {
+  ERROR: "🔴",
+  OK: "🟢",
+  UNKNOWN: "⚫",
+};
 
 /**
- * Represents an Extension 2.0 that is deployed to the connected Dynatrace Environment.
+ * Creates a TreeItem object that represents a Dynatrace (SaaS, Managed, Platform) tenant registered
+ * with the VSCode Extension.
+ * @param collapsibleState defines whether this item can be expanded further or not
+ * @param url the URL to this tenant
+ * @param token a Dynatrace API Token to use when authenticating with this tenant
+ * @param id the id of this tenant
+ * @param label an optional label for displaying this tenant (defaults to id)
+ * @param current whether this tenant should be used for API operations currently
  */
-export class DeployedExtension extends vscode.TreeItem implements IDeployedExtension {
-  id: string;
-  dt: Dynatrace;
-  tenantUrl: string;
-  extensionVersion: string;
-  contextValue: "deployedExtension";
-
-  /**
-   * @param collapsibleState defines whether this item can be expanded further or not
-   * @param extensionName the name (ID) of the extension it represents
-   * @param extensionVersion the latest activated version of this extension
-   * @param dt the Dyntrace Client instance to use for API Operations
-   */
-  constructor(
-    collapsibleState: vscode.TreeItemCollapsibleState,
-    extensionName: string,
-    extensionVersion: string,
-    dt: Dynatrace,
-    tenantUrl: string,
-  ) {
-    super(`${extensionName} (${extensionVersion})`, collapsibleState);
-    this.id = extensionName;
-    this.dt = dt;
-    this.tenantUrl = tenantUrl;
-    this.extensionVersion = extensionVersion;
-    this.contextValue = "deployedExtension";
-    this.iconPath = ICONS.DEPLOYED_EXTENSION;
-  }
-}
-
-interface IMonitoringConfiguration extends EnvironmentsTreeItem {
-  extensionName: string;
-  contextValue: "monitoringConfiguration";
-}
+const createDynatraceTenantTreeItem = (
+  collapsibleState: vscode.TreeItemCollapsibleState,
+  url: string,
+  token: string,
+  id: string,
+  label?: string,
+  current: boolean = false,
+  apiUrl?: string,
+): DynatraceTenant => ({
+  ...new vscode.TreeItem(label ?? id, collapsibleState),
+  url: url,
+  apiUrl: apiUrl ?? url,
+  token: token,
+  id: id,
+  dt: new Dynatrace(apiUrl ?? url, token),
+  tooltip: id,
+  current: current,
+  contextValue: current ? "currentDynatraceEnvironment" : "dynatraceEnvironment",
+  iconPath: current ? ICONS.ENVIRONMENT_CURRENT : ICONS.ENVIRONMENT,
+});
 
 /**
- * Represents an instance of an Extension 2.0 configuration that is present on the connected
- * Dynatrace Environment.
+ * Creates a TreeItem object that represents an Extension 2.0 that is deployed to the connected
+ * Dynatrace tenant.
+ * @param collapsibleState defines whether this item can be expanded further or not
+ * @param extensionName the name (ID) of the extension it represents
+ * @param extensionVersion the latest activated version of this extension
+ * @param dt the Dyntrace Client instance to use for API Operations
  */
-export class MonitoringConfiguration extends vscode.TreeItem implements IMonitoringConfiguration {
-  id: string;
-  dt: Dynatrace;
-  extensionName: string;
-  contextValue: "monitoringConfiguration";
+const createDeployedExtension = (
+  collapsibleState: vscode.TreeItemCollapsibleState,
+  extensionName: string,
+  extensionVersion: string,
+  dt: Dynatrace,
+  tenantUrl: string,
+): DeployedExtension => ({
+  ...new vscode.TreeItem(`${extensionName} (${extensionVersion})`, collapsibleState),
+  id: extensionName,
+  dt: dt,
+  tenantUrl: tenantUrl,
+  extensionVersion: extensionVersion,
+  contextValue: "deployedExtension",
+  iconPath: ICONS.DEPLOYED_EXTENSION,
+});
 
-  /**
-   * @param configurationId the ID of the monitoring configuration object
-   * @param version the version of the extension it is configured for
-   * @param description the description the user entered
-   * @param extensionName the name of the extension it configures
-   * @param monitoringStatus the last known status of this configuraation
-   * @param dt the Dyntrace Client instance to use for API Operations
-   */
-  constructor(
-    configurationId: string,
-    version: string,
-    description: string,
-    extensionName: string,
-    monitoringStatus: "ERROR" | "OK" | "UNKNOWN",
-    dt: Dynatrace,
-  ) {
-    const statusSymbol = (() => {
-      switch (monitoringStatus) {
-        case "ERROR":
-          return "🔴";
-        case "OK":
-          return "🟢";
-        case "UNKNOWN":
-          return "⚫";
-        default:
-          return "⚪";
-      }
-    })();
-
-    super(`${description} (${version}) ${statusSymbol}`, vscode.TreeItemCollapsibleState.None);
-    this.id = configurationId;
-    this.extensionName = extensionName;
-    this.contextValue = "monitoringConfiguration";
-    this.iconPath = new vscode.ThemeIcon("gear");
-    this.dt = dt;
-  }
-}
+/**
+ * Creates an object that represents an instance of an Extension 2.0 monitoring configuration that
+ * is present on the connected Dynatrace tenant.
+ * @param configurationId the ID of the monitoring configuration object
+ * @param version the version of the extension it is configured for
+ * @param description the description the user entered
+ * @param extensionName the name of the extension it configures
+ * @param monitoringStatus the last known status of this configuraation
+ * @param dt the Dyntrace Client instance to use for API Operations
+ */
+const createMonitoringConfiguration = (
+  configurationId: string,
+  version: string,
+  description: string,
+  extensionName: string,
+  monitoringStatus: ConfigStatus,
+  dt: Dynatrace,
+): MonitoringConfiguration => ({
+  ...new vscode.TreeItem(
+    `${description} (${version}) ${CONFIG_STATUS_COLORS[monitoringStatus]}`,
+    vscode.TreeItemCollapsibleState.None,
+  ),
+  id: configurationId,
+  extensionName: extensionName,
+  contextValue: "monitoringConfiguration",
+  iconPath: new vscode.ThemeIcon("gear"),
+  dt: dt,
+});
 
 /**
  * A tree data provider that renders all Dynatrace Environments that have been registered
@@ -201,10 +158,10 @@ class TenantsTreeDataProviderImpl implements TenantsTreeDataProvider {
   context: vscode.ExtensionContext;
   connectionStatus: ConnectionStatusManager;
   oc: vscode.OutputChannel;
-  private _onDidChangeTreeData: vscode.EventEmitter<EnvironmentsTreeItem | undefined> =
-    new vscode.EventEmitter<EnvironmentsTreeItem | undefined>();
+  private _onDidChangeTreeData: vscode.EventEmitter<TenantsTreeItem | undefined> =
+    new vscode.EventEmitter<TenantsTreeItem | undefined>();
 
-  readonly onDidChangeTreeData: vscode.Event<EnvironmentsTreeItem | undefined> =
+  readonly onDidChangeTreeData: vscode.Event<TenantsTreeItem | undefined> =
     this._onDidChangeTreeData.event;
 
   /**
@@ -221,7 +178,7 @@ class TenantsTreeDataProviderImpl implements TenantsTreeDataProvider {
     this.oc = errorChannel;
     this.getChildren()
       .then(children =>
-        (children as DynatraceEnvironment[]).filter(
+        (children as DynatraceTenant[]).filter(
           c => c.contextValue === "currentDynatraceEnvironment",
         ),
       )
@@ -256,7 +213,7 @@ class TenantsTreeDataProviderImpl implements TenantsTreeDataProvider {
     );
     vscode.commands.registerCommand(
       "dynatrace-extensions-environments.useEnvironment",
-      async (environment: DynatraceEnvironment) => {
+      async (environment: DynatraceTenant) => {
         await registerEnvironment(
           context,
           environment.url,
@@ -274,13 +231,13 @@ class TenantsTreeDataProviderImpl implements TenantsTreeDataProvider {
     );
     vscode.commands.registerCommand(
       "dynatrace-extensions-environments.editEnvironment",
-      async (environment: DynatraceEnvironment) => {
+      async (environment: DynatraceTenant) => {
         await editEnvironment(context, environment).then(() => this.refresh());
       },
     );
     vscode.commands.registerCommand(
       "dynatrace-extensions-environments.deleteEnvironment",
-      async (environment: DynatraceEnvironment) => {
+      async (environment: DynatraceTenant) => {
         await deleteEnvironment(context, environment).then(() => this.refresh());
       },
     );
@@ -365,7 +322,7 @@ class TenantsTreeDataProviderImpl implements TenantsTreeDataProvider {
    * @param element the element to retrieve
    * @returns the tree item
    */
-  getTreeItem(element: EnvironmentsTreeItem): vscode.TreeItem {
+  getTreeItem(element: TenantsTreeItem): vscode.TreeItem {
     return element;
   }
 
@@ -375,8 +332,8 @@ class TenantsTreeDataProviderImpl implements TenantsTreeDataProvider {
    * @param element parent element, if any
    * @returns list of tree items
    */
-  async getChildren(element?: EnvironmentsTreeItem): Promise<EnvironmentsTreeItem[]> {
-    const children: EnvironmentsTreeItem[] = [];
+  async getChildren(element?: TenantsTreeItem): Promise<TenantsTreeItem[]> {
+    const children: TenantsTreeItem[] = [];
     if (element) {
       switch (element.contextValue) {
         // For Dynatrace Environments, Extensions are the children items
@@ -386,15 +343,14 @@ class TenantsTreeDataProviderImpl implements TenantsTreeDataProvider {
             .list()
             .then(list =>
               children.push(
-                ...list.map(
-                  extension =>
-                    new DeployedExtension(
-                      vscode.TreeItemCollapsibleState.Collapsed,
-                      extension.extensionName,
-                      extension.version,
-                      element.dt,
-                      (element as DynatraceEnvironment).url,
-                    ),
+                ...list.map(extension =>
+                  createDeployedExtension(
+                    vscode.TreeItemCollapsibleState.Collapsed,
+                    extension.extensionName,
+                    extension.version,
+                    element.dt,
+                    (element as DynatraceTenant).url,
+                  ),
                 ),
               ),
             );
@@ -410,7 +366,7 @@ class TenantsTreeDataProviderImpl implements TenantsTreeDataProvider {
                     element.id,
                     config.objectId ?? "",
                   );
-                  return new MonitoringConfiguration(
+                  return createMonitoringConfiguration(
                     config.objectId ?? "",
                     config.value.version,
                     config.value.description,
@@ -435,7 +391,7 @@ class TenantsTreeDataProviderImpl implements TenantsTreeDataProvider {
       if (environment.current) {
         this.connectionStatus.updateStatusBar(true, environment).catch(() => {});
       }
-      return new DynatraceEnvironment(
+      return createDynatraceTenantTreeItem(
         vscode.TreeItemCollapsibleState.Collapsed,
         environment.url,
         decryptToken(environment.token),
@@ -448,26 +404,10 @@ class TenantsTreeDataProviderImpl implements TenantsTreeDataProvider {
   }
 }
 
-/**
- * Represents a Tree Item for the Environments tree view of the add-on.
- * These are the minimum details every other object should include.
- */
-export interface EnvironmentsTreeItem extends vscode.TreeItem {
-  id: string;
-  contextValue: string;
-  dt: Dynatrace;
-}
-
-export interface TenantsTreeDataProvider extends vscode.TreeDataProvider<EnvironmentsTreeItem> {
-  refresh: () => void;
-  getTreeItem: (element: EnvironmentsTreeItem) => vscode.TreeItem;
-  getChildren: (element?: EnvironmentsTreeItem) => Promise<EnvironmentsTreeItem[]>;
-}
-
-let instance: TenantsTreeDataProviderImpl | undefined;
+let instance: TenantsTreeDataProvider | undefined;
 
 /**
- * Provides a singleton instance of the EnvironmentsTreeDataProvider.
+ * Returns a singleton instance of the EnvironmentsTreeDataProvider.
  */
 export const getTenantsTreeDataProvider = (() => {
   return (
@@ -489,7 +429,7 @@ export const getTenantsTreeDataProvider = (() => {
  * @param environment specific environment to get the client for
  * @return API Client instance or undefined if none could be created
  */
-export const getDynatraceClient = async (environment?: EnvironmentsTreeItem) => {
+export const getDynatraceClient = async (environment?: TenantsTreeItem) => {
   if (!instance) return undefined;
   const client = environment ? environment.dt : await getConnectedTenant().then(e => e?.dt);
   return client;
@@ -504,9 +444,7 @@ export const getConnectedTenant = async () => {
   const environment = await instance
     .getChildren()
     .then(children =>
-      (children as DynatraceEnvironment[]).filter(
-        c => c.contextValue === "currentDynatraceEnvironment",
-      ),
+      (children as DynatraceTenant[]).filter(c => c.contextValue === "currentDynatraceEnvironment"),
     )
     .then(children => children.pop());
   return environment;

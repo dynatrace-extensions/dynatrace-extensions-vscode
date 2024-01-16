@@ -17,7 +17,7 @@
 import * as vscode from "vscode";
 import { removeWorkspace } from "../../utils/fileSystem";
 import { notify } from "../../utils/logging";
-import { ExtensionProjectItem } from "../extensionsTreeView";
+import { WorkspaceTreeItem } from "../extensionsTreeView";
 
 /**
  * Removes an Extensions Workspace from the tree view. The user is prompted for
@@ -29,7 +29,7 @@ import { ExtensionProjectItem } from "../extensionsTreeView";
  */
 export async function deleteWorkspace(
   context: vscode.ExtensionContext,
-  workspace: ExtensionProjectItem,
+  workspace: WorkspaceTreeItem,
 ) {
   const fnLogTrace = ["treeViews", "commands", "workspaces", "deleteWorkspace"];
   const confirm = await vscode.window.showQuickPick(["Yes", "No"], {

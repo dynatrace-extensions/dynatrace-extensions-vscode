@@ -20,7 +20,11 @@ import * as glob from "glob";
 import * as vscode from "vscode";
 import * as yaml from "yaml";
 import { ExtensionStub } from "../interfaces/extensionMeta";
-import { ExtensionWorkspace } from "../interfaces/treeViewData";
+import {
+  WorkspaceTreeItem,
+  WorkspacesTreeContextValue,
+  WorkspacesTreeDataProvider,
+} from "../interfaces/treeViews";
 import { getAllWorkspaces } from "../utils/fileSystem";
 import { deleteWorkspace } from "./commands/workspaces";
 
@@ -41,60 +45,49 @@ const ICONS: Record<string, { light: string; dark: string }> = {
 };
 
 /**
- * Represents an item within the Extensions Tree View. Can be used to represent
- * either an extensions workspace or an actual extension within the workspace.
+ * Creates a TreeItem that can be used to represent either an extensions workspace
+ * or an extension manifest within that workspace.
+ * @param label the label to be shown in the tree view (as node)
+ * @param collapsibleState whether the item supports and is either collapsed or expanded
+ * @param path the path to the workspace or extension (depending on item type)
+ * @param icon the icon to display next to the label
+ * @param contextValue a keyword that can be referenced in package.json to single out this item type
+ * @param version if item represents an extension, what version is it
  */
-export class ExtensionProjectItem extends vscode.TreeItem {
-  id: string;
-  path: vscode.Uri;
-  version?: string;
-
-  /**
-   * @param label the label to be shown in the tree view (as node)
-   * @param collapsibleState whether the item supports and is either collapsed or expanded
-   * @param path the path to the workspace or extension (depending on item type)
-   * @param icon the icon to display next to the label
-   * @param contextValue a keyword that can be referenced in package.json to single out this
-   * item type
-   * @param version if item represents an extension, what version is it
-   */
-  constructor(
-    label: string,
-    collapsibleState: vscode.TreeItemCollapsibleState,
-    workspacePath: vscode.Uri,
-    icon:
-      | string
-      | vscode.Uri
-      | { light: string | vscode.Uri; dark: string | vscode.Uri }
-      | vscode.ThemeIcon,
-    contextValue: string,
-    id: string,
-    version?: string,
-  ) {
-    super(label, collapsibleState);
-
-    this.id = id;
-    this.version = version;
-    this.tooltip = version ? `${label}-${version}` : label;
-    this.description = this.version;
-    this.path = workspacePath;
-    this.iconPath = icon;
-
-    this.contextValue = contextValue;
-  }
-}
+const createWorkspacesTreeItem = (
+  label: string,
+  collapsibleState: vscode.TreeItemCollapsibleState,
+  workspacePath: vscode.Uri,
+  icon:
+    | string
+    | vscode.Uri
+    | { light: string | vscode.Uri; dark: string | vscode.Uri }
+    | vscode.ThemeIcon,
+  contextValue: WorkspacesTreeContextValue,
+  id: string,
+  version?: string,
+): WorkspaceTreeItem => ({
+  ...new vscode.TreeItem(label, collapsibleState),
+  id: id,
+  version: version,
+  tooltip: version ? `${label}-${version}` : label,
+  description: version,
+  path: workspacePath,
+  iconPath: icon,
+  contextValue: contextValue,
+});
 
 /**
  * A tree data provider that renders all Extensions 2.0 project workspaces that have been
  * initialized with our VSCode Extension. Any Dynatrace extensions detected within are
  * rendered as children of the workspace.
  */
-export class ExtensionsTreeDataProvider implements vscode.TreeDataProvider<ExtensionProjectItem> {
+class WorkspacesTreeDataProviderImpl implements WorkspacesTreeDataProvider {
   context: vscode.ExtensionContext;
-  private _onDidChangeTreeData: vscode.EventEmitter<ExtensionProjectItem | undefined> =
-    new vscode.EventEmitter<ExtensionProjectItem | undefined>();
+  private _onDidChangeTreeData: vscode.EventEmitter<WorkspaceTreeItem | undefined> =
+    new vscode.EventEmitter<WorkspaceTreeItem | undefined>();
 
-  readonly onDidChangeTreeData: vscode.Event<ExtensionProjectItem | undefined> =
+  readonly onDidChangeTreeData: vscode.Event<WorkspaceTreeItem | undefined> =
     this._onDidChangeTreeData.event;
 
   /**
@@ -122,19 +115,19 @@ export class ExtensionsTreeDataProvider implements vscode.TreeDataProvider<Exten
     });
     vscode.commands.registerCommand(
       "dynatrace-extensions-workspaces.openWorkspace",
-      async (workspace: ExtensionProjectItem) => {
+      async (workspace: WorkspaceTreeItem) => {
         await vscode.commands.executeCommand("vscode.openFolder", workspace.path);
       },
     );
     vscode.commands.registerCommand(
       "dynatrace-extensions-workspaces.deleteWorkspace",
-      async (workspace: ExtensionProjectItem) => {
+      async (workspace: WorkspaceTreeItem) => {
         await deleteWorkspace(context, workspace).then(() => this.refresh());
       },
     );
     vscode.commands.registerCommand(
       "dynatrace-extensions-workspaces.editExtension",
-      async (extension: ExtensionProjectItem) => {
+      async (extension: WorkspaceTreeItem) => {
         await vscode.commands.executeCommand("vscode.open", extension.path);
       },
     );
@@ -152,7 +145,7 @@ export class ExtensionsTreeDataProvider implements vscode.TreeDataProvider<Exten
    * @param element the element to retrieve
    * @returns the tree item
    */
-  getTreeItem(element: ExtensionProjectItem): vscode.TreeItem {
+  getTreeItem(element: WorkspaceTreeItem): vscode.TreeItem {
     return element;
   }
 
@@ -162,10 +155,10 @@ export class ExtensionsTreeDataProvider implements vscode.TreeDataProvider<Exten
    * @param element parent element, if any
    * @returns list of tree items
    */
-  getChildren(element?: ExtensionProjectItem | undefined): ExtensionProjectItem[] {
+  getChildren(element?: WorkspaceTreeItem): WorkspaceTreeItem[] {
     if (element) {
       // Workspaces have Extensions as children items
-      const extensions: ExtensionProjectItem[] = [];
+      const extensions: WorkspaceTreeItem[] = [];
       const workspacePath = element.path.fsPath;
       const extensionFiles = [
         ...glob.sync("extension/extension.yaml", { cwd: workspacePath }),
@@ -176,7 +169,7 @@ export class ExtensionsTreeDataProvider implements vscode.TreeDataProvider<Exten
           readFileSync(path.join(workspacePath, filepath)).toString(),
         ) as ExtensionStub;
         extensions.push(
-          new ExtensionProjectItem(
+          createWorkspacesTreeItem(
             extension.name,
             vscode.TreeItemCollapsibleState.None,
             vscode.Uri.file(path.join(workspacePath, filepath)),
@@ -190,20 +183,36 @@ export class ExtensionsTreeDataProvider implements vscode.TreeDataProvider<Exten
       return extensions;
     }
     // If not item specified, grab all workspaces from global storage
-    return getAllWorkspaces(this.context).map(
-      (workspace: ExtensionWorkspace) =>
-        new ExtensionProjectItem(
-          workspace.name.toUpperCase(),
-          vscode.TreeItemCollapsibleState.Collapsed,
-          workspace.folder as vscode.Uri,
-          vscode.workspace.workspaceFolders &&
+    return getAllWorkspaces(this.context).map(workspace =>
+      createWorkspacesTreeItem(
+        workspace.name.toUpperCase(),
+        vscode.TreeItemCollapsibleState.Collapsed,
+        workspace.folder as vscode.Uri,
+        vscode.workspace.workspaceFolders &&
           vscode.workspace.workspaceFolders[0].uri.fsPath ===
             (workspace.folder as vscode.Uri).fsPath
-            ? ICONS.EXTENSION_CURRENT
-            : ICONS.EXTENSION,
-          "extensionWorkspace",
-          workspace.id,
-        ),
+          ? ICONS.EXTENSION_CURRENT
+          : ICONS.EXTENSION,
+        "extensionWorkspace",
+        workspace.id,
+      ),
     );
   }
 }
+
+let instance: WorkspacesTreeDataProvider | undefined;
+
+/**
+ * Returns a singleton instance of the WorkspacesTreeDataProvider.
+ */
+export const getWorkspacesTreeDataProvider = (() => {
+  return (context: vscode.ExtensionContext) => {
+    instance = instance === undefined ? new WorkspacesTreeDataProviderImpl(context) : instance;
+    return instance;
+  };
+})();
+
+export const refreshWorkspacesTreeData = () => {
+  if (!instance) return;
+  instance.refresh();
+};

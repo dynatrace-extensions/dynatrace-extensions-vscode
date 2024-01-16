@@ -39,7 +39,7 @@ import {
   RemoteExecutionSummary,
   RemoteTarget,
 } from "../interfaces/simulator";
-import { DynatraceEnvironmentData, ExtensionWorkspace } from "../interfaces/treeViewData";
+import { DynatraceEnvironmentData, ExtensionWorkspace } from "../interfaces/treeViews";
 import { notify } from "./logging";
 import * as logger from "./logging";
 
