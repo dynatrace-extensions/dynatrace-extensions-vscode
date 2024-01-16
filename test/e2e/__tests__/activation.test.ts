@@ -15,9 +15,9 @@
  */
 
 import * as vscode from "vscode";
-import { waitForCondition } from "../utils";
+import { waitForCondition } from "../../utils";
 
-jest.mock("../../src/utils/logging");
+jest.mock("../../../src/utils/logging");
 
 describe("Extension", () => {
   let extension: vscode.Extension<unknown> | undefined;
@@ -32,7 +32,7 @@ describe("Extension", () => {
     expect(extension).toBeDefined();
   });
 
-  it("should activate within 1 second", () => {
+  it("should activate within 1 second", async () => {
     const actualState = () => (extension ? extension.isActive : false);
     return waitForCondition(actualState, { timeout: 1000 }).then(() => {
       expect(actualState()).toBe(true);
