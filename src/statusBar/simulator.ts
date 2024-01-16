@@ -203,7 +203,7 @@ export class SimulatorManager extends CachedDataConsumer {
    * @param showUI whether to show the simulator panel after checking
    * @param config a simulation config to check
    */
-  public checkReady(showUI: boolean = true, config?: SimulationConfig) {
+  public async checkReady(showUI: boolean = true, config?: SimulationConfig) {
     const fnLogTrace = [...this.logTrace, "checkReady"];
     logger.info("Checking simulator readiness", ...fnLogTrace);
     // Let the panel know check is in progress
@@ -220,27 +220,23 @@ export class SimulatorManager extends CachedDataConsumer {
     // Check config if given, check further
     if (config) {
       this.currentConfiguration = config;
-      this.checkSimulationConfig(config.location, config.eecType, config.target).then(
-        ([status, statusMessage]) => {
-          logger.debug(
-            `Simulation config check result: ${status} (${statusMessage})`,
-            ...fnLogTrace,
-          );
-          this.refreshUI(showUI, status, statusMessage);
-        },
-        err => {
-          logger.error(
-            `Error checking simulation config: ${(err as Error).message}`,
-            ...fnLogTrace,
-          );
-          this.refreshUI(
-            showUI,
-            "NOTREADY",
-            `Error checking configuration: ${(err as Error).message}`,
-          );
-        },
-      );
-      return;
+
+      try {
+        const [status, statusMessage] = await this.checkSimulationConfig(
+          config.location,
+          config.eecType,
+          config.target,
+        );
+        logger.debug(`Simulation config check result: ${status} (${statusMessage})`, ...fnLogTrace);
+        return this.refreshUI(showUI, status, statusMessage);
+      } catch (err) {
+        logger.error(`Error checking simulation config: ${(err as Error).message}`, ...fnLogTrace);
+        this.refreshUI(
+          showUI,
+          "NOTREADY",
+          `Error checking configuration: ${(err as Error).message}`,
+        );
+      }
     }
 
     this.refreshUI(showUI, "READY");

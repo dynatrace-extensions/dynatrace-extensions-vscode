@@ -4,6 +4,8 @@ const path = require('path');
 const config = {
   version: "1.71.0",
   launchArgs: ["--new-window"],
+  openInFolder: true,
+  workspaceDir: path.resolve(__dirname, "test_workspace"),
   extensionDevelopmentPath: path.resolve(__dirname, "..", ".."),
 };
 

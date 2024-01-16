@@ -51,11 +51,12 @@ const logTrace = ["utils", "fileSystem"];
  * @param count number of files to keep
  */
 export function removeOldestFiles(dirPath: string, count: number) {
-  logger.debug(
-    `Cleaning files from "${dirPath}" to keep only ${count}.`,
-    ...logTrace,
-    "removeOldestFiles",
-  );
+  const fnLogTrace = [...logTrace, "removeOldestFiles"];
+  if (count < 0) {
+    logger.debug(`Cannot remove files, count parameter is negative: ${count}`, ...fnLogTrace);
+    return;
+  }
+  logger.debug(`Cleaning files from "${dirPath}" to keep only ${count}.`, ...fnLogTrace);
   // Sort files by date modified
   const files = readdirSync(dirPath).sort((f1: string, f2: string) => {
     const f1Stats = statSync(path.join(dirPath, f1));
@@ -137,7 +138,7 @@ export function initWorkspaceStorage(context: vscode.ExtensionContext) {
 
   if (!existsSync(storagePath)) {
     logger.info(`Workspace storage created at: ${storagePath}`, ...fnLogTrace);
-    mkdirSync(storagePath);
+    mkdirSync(storagePath, { recursive: true });
   }
 }
 

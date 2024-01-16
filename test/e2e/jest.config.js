@@ -13,7 +13,7 @@ const config = {
     ]
   },
   testMatch: [
-    "<rootDir>/*.test.ts",
+    "<rootDir>/__tests__/*.test.ts",
   ],
 }
 
