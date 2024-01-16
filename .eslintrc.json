@@ -48,6 +48,8 @@
     "@typescript-eslint/indent": [0],
     "prettier/prettier": "error",
     "lines-between-class-members": "off",
+    "no-use-before-define": "off",
+    "@typescript-eslint/no-use-before-define": "off",
     "no-underscore-dangle": ["error", { "allowAfterThis": true }],
     "prefer-const": "error",
     "no-fallthrough": "warn",
