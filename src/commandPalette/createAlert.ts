@@ -18,15 +18,15 @@ import * as crypto from "crypto";
 import { existsSync, mkdirSync, readFileSync, writeFileSync } from "fs";
 import path = require("path");
 import * as vscode from "vscode";
-import { ExtensionStub, MetricMetadata } from "../interfaces/extensionMeta";
-import { CachedData } from "../utils/dataCaching";
+import { MetricMetadata } from "../interfaces/extensionMeta";
+import { getCachedParsedExtension } from "../utils/caching";
 import { getAllMetricKeys, getEntityForMetric } from "../utils/extensionParsing";
 import { createUniqueFileName, getExtensionFilePath } from "../utils/fileSystem";
 import * as logger from "../utils/logging";
 
 const logTrace = ["commandPalette", "createAlert"];
 
-export async function createAlert(cachedData: CachedData) {
+export async function createAlert() {
   logger.info("Executing Create Alert command", ...logTrace);
   const extensionFile = getExtensionFilePath();
   if (!extensionFile) {
@@ -34,7 +34,11 @@ export async function createAlert(cachedData: CachedData) {
     return;
   }
   const extensionText = readFileSync(extensionFile).toString();
-  const extension = cachedData.getCached<ExtensionStub>("parsedExtension");
+  const extension = getCachedParsedExtension();
+  if (!extension) {
+    logger.error("Parsed extension does not exist in cache. Command aborted.", ...logTrace);
+    return;
+  }
 
   // TODO: we could ask the user if they want to create a new alert or edit an existing one?
 

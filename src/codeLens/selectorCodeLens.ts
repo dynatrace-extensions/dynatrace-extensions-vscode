@@ -16,7 +16,11 @@
 
 import * as vscode from "vscode";
 import { ExtensionStub } from "../interfaces/extensionMeta";
-import { CachedData, CachedDataProducer } from "../utils/dataCaching";
+import {
+  getCachedParsedExtension,
+  getCachedSelectorStatus,
+  setCachedSelectorStatus,
+} from "../utils/caching";
 import { resolveSelectorTemplate, ValidationStatus } from "./utils/selectorUtils";
 
 /**
@@ -112,10 +116,7 @@ class SelectorRunnerLens extends vscode.CodeLens {
  * Implementation of a Code Lens Provider to facilitate operations done on metric and entities
  * as well as their respective selectors.
  */
-export class SelectorCodeLensProvider
-  extends CachedDataProducer
-  implements vscode.CodeLensProvider
-{
+export class SelectorCodeLensProvider implements vscode.CodeLensProvider {
   private codeLenses: vscode.CodeLens[];
   private regex: RegExp;
   private _onDidChangeCodeLenses: vscode.EventEmitter<void> = new vscode.EventEmitter<void>();
@@ -127,10 +128,8 @@ export class SelectorCodeLensProvider
   /**
    * @param match the text to match and extract the selector by
    * @param controlSetting the vscode setting which controls this feature
-   * @param dataProvider a provider of cacheable data (i.e. selector statuses)
    */
-  constructor(match: string, controlSetting: string, cachedData: CachedData) {
-    super(cachedData);
+  constructor(match: string, controlSetting: string) {
     this.codeLenses = [];
     this.matchString = match;
     this.controlSetting = controlSetting;
@@ -147,16 +146,20 @@ export class SelectorCodeLensProvider
     this.codeLenses = [];
     const regex = new RegExp(this.regex);
     const text = document.getText();
+    const parsedExtension = getCachedParsedExtension();
 
-    // Honor the user's settings
-    if (!vscode.workspace.getConfiguration("dynatraceExtensions", null).get(this.controlSetting)) {
+    // Bail early if needed
+    if (
+      !parsedExtension ||
+      !vscode.workspace.getConfiguration("dynatraceExtensions", null).get(this.controlSetting)
+    ) {
       return [];
     }
 
     // Create lenses
     await Promise.all(
       Array.from(text.matchAll(regex)).map(match =>
-        this.createLenses(this.parsedExtension, match, document).then(lenses => {
+        this.createLenses(parsedExtension, match, document).then(lenses => {
           this.codeLenses.push(...lenses);
         }),
       ),
@@ -192,7 +195,7 @@ export class SelectorCodeLensProvider
           new ValidationStatusLens(
             range,
             selector,
-            this.selectorStatuses[selector] ?? { status: "unknown" },
+            getCachedSelectorStatus(selector) ?? { status: "unknown" },
           ),
         ];
       }
@@ -207,7 +210,7 @@ export class SelectorCodeLensProvider
    * @param status current validation status
    */
   public updateValidationStatus(selector: string, status: ValidationStatus) {
-    this.cachedData.updateSelectorStatus(selector, status);
+    setCachedSelectorStatus(selector, status);
     this._onDidChangeCodeLenses.fire();
   }
 }

@@ -18,12 +18,11 @@ import { readFileSync, readdirSync, writeFileSync } from "fs";
 import path = require("path");
 import * as vscode from "vscode";
 import { Dynatrace } from "../dynatrace-api/dynatrace";
-import { ExtensionStub } from "../interfaces/extensionMeta";
 import {
   MinimalConfiguration,
   getConfigurationDetailsViaFile,
 } from "../treeViews/commands/environments";
-import { CachedData } from "../utils/dataCaching";
+import { getCachedParsedExtension } from "../utils/caching";
 import { getDatasourceName } from "../utils/extensionParsing";
 import { createUniqueFileName, getExtensionFilePath } from "../utils/fileSystem";
 import * as logger from "../utils/logging";
@@ -38,12 +37,10 @@ import { createGenericConfigObject, createObjectFromSchema } from "../utils/sche
  * code completions for customizing the generated template.
  * @param dt Dyntrace client
  * @param context vscode Extension Context
- * @param cachedData cached data provider
  */
 export async function createMonitoringConfiguration(
   dt: Dynatrace,
   context: vscode.ExtensionContext,
-  cachedData: CachedData,
 ) {
   const fnLogTrace = ["commandPalette", "createConfiguration", "createMonitoringConfiguration"];
   logger.info("Executing Create Configuration command", ...fnLogTrace);
@@ -58,7 +55,11 @@ export async function createMonitoringConfiguration(
     return;
   }
   const configDir = path.join(workspaceRoot, "config");
-  const extension = cachedData.getCached<ExtensionStub>("parsedExtension");
+  const extension = getCachedParsedExtension();
+  if (!extension) {
+    logger.error("Parsed extension does not exist in cache. Command aborted.", ...fnLogTrace);
+    return;
+  }
   const deployedExtension = await dt.extensionsV2
     .getExtensionSchema(extension.name, extension.version)
     .catch(() => ({}));

@@ -20,7 +20,7 @@ import * as vscode from "vscode";
 import { Dashboard } from "../dynatrace-api/interfaces/dashboards";
 import { ExtensionStub } from "../interfaces/extensionMeta";
 import { getDynatraceClient } from "../treeViews/tenantsTreeView";
-import { CachedData } from "../utils/dataCaching";
+import { getCachedParsedExtension } from "../utils/caching";
 import { getEntityMetrics, getMetricDisplayName } from "../utils/extensionParsing";
 import { getExtensionFilePath } from "../utils/fileSystem";
 import * as logger from "../utils/logging";
@@ -482,14 +482,10 @@ function buildDashboard(
  * The extension should have topology defined otherwise the dashboard doesn't have much
  * data to render and is pointless. The extension yaml is adapted to include the newly
  * created dashboard. At the end, the user is prompted to upload the dashboard to Dynatrace
- * @param cachedData provider for cacheable data
  * @param outputChannel JSON output channel for communicating errors
  * @returns
  */
-export async function createOverviewDashboard(
-  cachedData: CachedData,
-  outputChannel: vscode.OutputChannel,
-) {
+export async function createOverviewDashboard(outputChannel: vscode.OutputChannel) {
   const fnLogTrace = ["commandPalette", "createDashboard", "createOverviewDashboard"];
   logger.info("Executing Create Dashboard command", ...fnLogTrace);
   const DASHBOARD_PATH = "dashboards/overview_dashboard.json";
@@ -499,7 +495,11 @@ export async function createOverviewDashboard(
     return;
   }
   const extensionText = readFileSync(extensionFile).toString();
-  const extension = cachedData.getCached<ExtensionStub>("parsedExtension");
+  const extension = getCachedParsedExtension();
+  if (!extension) {
+    logger.error("Parsed extension does not exist in cache. Command aborted.", ...fnLogTrace);
+    return;
+  }
   // Check topology. No topology = pointless dashboard
   if (!extension.topology) {
     logger.notify(

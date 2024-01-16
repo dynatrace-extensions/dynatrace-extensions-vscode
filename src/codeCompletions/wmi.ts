@@ -15,18 +15,16 @@
  */
 
 import * as vscode from "vscode";
-import { CachedDataConsumer } from "../utils/dataCaching";
+import { getCachedParsedExtension, getCachedWmiQueryResult } from "../utils/caching";
 
-export class WmiCompletionProvider
-  extends CachedDataConsumer
-  implements vscode.CompletionItemProvider
-{
+export class WmiCompletionProvider implements vscode.CompletionItemProvider {
   provideCompletionItems(
     document: vscode.TextDocument,
     position: vscode.Position,
   ): vscode.CompletionItem[] {
+    const parsedExtension = getCachedParsedExtension();
     // Exit early if different datasource
-    if (!this.parsedExtension.wmi) {
+    if (!parsedExtension?.wmi) {
       return [];
     }
 
@@ -47,7 +45,7 @@ export class WmiCompletionProvider
 
         // Find out if we have a query result for this query
         // This is only true if the query was executed by WmiCodeLens
-        const cachedQueryResults = this.wmiData[queryString];
+        const cachedQueryResults = getCachedWmiQueryResult(queryString);
         if (!cachedQueryResults || cachedQueryResults.results.length === 0) {
           return [];
         }

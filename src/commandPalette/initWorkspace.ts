@@ -20,8 +20,8 @@ import { TextEncoder } from "util";
 import AdmZip = require("adm-zip");
 import * as vscode from "vscode";
 import { Dynatrace } from "../dynatrace-api/dynatrace";
+import { pushManifestTextForParsing } from "../utils/caching";
 import { checkDtSdkPresent, checkSettings } from "../utils/conditionCheckers";
-import { CachedData } from "../utils/dataCaching";
 import {
   getExtensionFilePath,
   initWorkspaceStorage,
@@ -244,7 +244,6 @@ async function defaultExtensionSetup(schemaVersion: string, rootPath: string) {
  * @returns
  */
 export async function initWorkspace(
-  dataCache: CachedData,
   context: vscode.ExtensionContext,
   dt: Dynatrace,
   callback?: () => unknown,
@@ -436,7 +435,7 @@ export async function initWorkspace(
 
       // Update parsed extension in the cache
       logger.debug("Parsed extension now updated in cache.", ...fnLogTrace);
-      dataCache.updateParsedExtension();
+      pushManifestTextForParsing();
 
       // Create or update the .gitignore
       await writeGititnore(projectType === PROJECT_TYPES.pythonExtension);

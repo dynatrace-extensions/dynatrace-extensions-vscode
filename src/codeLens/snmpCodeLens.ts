@@ -17,7 +17,7 @@
 import { copyFileSync, existsSync, mkdirSync } from "fs";
 import * as path from "path";
 import * as vscode from "vscode";
-import { CachedData } from "../utils/dataCaching";
+import { getLoadedMibFiles, loadUserMibFiles } from "../utils/caching";
 import { getSnmpDirPath } from "../utils/fileSystem";
 import { notify } from "../utils/logging";
 
@@ -30,10 +30,8 @@ export class SnmpCodeLensProvider implements vscode.CodeLensProvider {
   private regex: RegExp;
   private _onDidChangeCodeLenses: vscode.EventEmitter<void> = new vscode.EventEmitter<void>();
   public readonly onDidChangeCodeLenses: vscode.Event<void> = this._onDidChangeCodeLenses.event;
-  private cachedData: CachedData;
 
-  constructor(cachedData: CachedData) {
-    this.cachedData = cachedData;
+  constructor() {
     this.codeLenses = [];
     this.regex = /^(snmp:)/gm;
     vscode.commands.registerCommand("dynatrace-extensions.codelens.importMib", async () => {
@@ -53,24 +51,23 @@ export class SnmpCodeLensProvider implements vscode.CodeLensProvider {
     }
     const newFiles = files.filter(
       f =>
-        this.cachedData.mibFilesLoaded.findIndex(
+        getLoadedMibFiles().findIndex(
           file =>
             file.name.toLowerCase() === path.basename(f.fsPath).toLowerCase() ||
             file.filePath === f.fsPath,
         ) === -1,
     );
     if (newFiles.length > 0) {
-      await this.cachedData.loadLocalMibFiles(newFiles.map(f => f.fsPath)).then(() => {
-        const snmpDir = getSnmpDirPath();
-        if (snmpDir) {
-          if (!existsSync(snmpDir)) {
-            mkdirSync(snmpDir);
-          }
-          newFiles.forEach(file => {
-            copyFileSync(file.fsPath, path.resolve(snmpDir, path.basename(file.fsPath)));
-          });
+      loadUserMibFiles(newFiles.map(f => f.fsPath));
+      const snmpDir = getSnmpDirPath();
+      if (snmpDir) {
+        if (!existsSync(snmpDir)) {
+          mkdirSync(snmpDir);
         }
-      });
+        newFiles.forEach(file => {
+          copyFileSync(file.fsPath, path.resolve(snmpDir, path.basename(file.fsPath)));
+        });
+      }
     } else {
       notify("INFO", "Selected files have already been imported.");
     }
@@ -88,6 +85,7 @@ export class SnmpCodeLensProvider implements vscode.CodeLensProvider {
     this.codeLenses = [];
     const regex = new RegExp(this.regex);
     const text = document.getText();
+    const mibFilesLoaded = getLoadedMibFiles();
 
     let matches;
     while ((matches = regex.exec(text)) !== null) {
@@ -100,8 +98,8 @@ export class SnmpCodeLensProvider implements vscode.CodeLensProvider {
         // File count lens
         this.codeLenses.push(
           new vscode.CodeLens(range, {
-            title: `${this.cachedData.mibFilesLoaded.length} MIB files`,
-            tooltip: `${this.cachedData.mibFilesLoaded.length} MIB files detected in your snmp folder`,
+            title: `${mibFilesLoaded.length} MIB files`,
+            tooltip: `${mibFilesLoaded.length} MIB files detected in your snmp folder`,
             command: "",
           }),
         );

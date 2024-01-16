@@ -27,7 +27,7 @@ import {
   MetricEntityMap,
 } from "../interfaces/extensionDocs";
 import { ExtensionStub } from "../interfaces/extensionMeta";
-import { CachedData } from "../utils/dataCaching";
+import { getCachedParsedExtension } from "../utils/caching";
 import { getAllMetricsByFeatureSet } from "../utils/extensionParsing";
 import { getExtensionFilePath } from "../utils/fileSystem";
 import * as logger from "../utils/logging";
@@ -304,10 +304,8 @@ function writeDocumentation(extension: ExtensionStub, extensionDir: string) {
  * Reads through the extension.yaml file and any associated alerts/dashboards JSONs and produces
  * content for a README.md file which is written in the workspace at the same level as the extension
  * folder.
- * @param cachedData provider for cacheable data
- * @returns void
  */
-export async function createDocumentation(cachedData: CachedData) {
+export async function createDocumentation() {
   const fnLogTrace = [...logTrace, "createDocumentation"];
   logger.info("Executing Create Documentation command", ...fnLogTrace);
   await vscode.window.withProgress(
@@ -320,7 +318,11 @@ export async function createDocumentation(cachedData: CachedData) {
         return;
       }
       const extensionDir = path.dirname(extensionFile);
-      const extension = cachedData.getCached<ExtensionStub>("parsedExtension");
+      const extension = getCachedParsedExtension();
+      if (!extension) {
+        logger.error("Parsed extension does not exist in cache. Command aborted.", ...fnLogTrace);
+        return;
+      }
 
       progress.report({ message: "Writing README.md" });
       writeDocumentation(extension, extensionDir);

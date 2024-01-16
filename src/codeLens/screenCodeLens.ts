@@ -16,14 +16,14 @@
 
 import * as vscode from "vscode";
 import { getConnectedTenant } from "../treeViews/tenantsTreeView";
-import { CachedDataConsumer } from "../utils/dataCaching";
+import { getCachedParsedExtension } from "../utils/caching";
 import * as logger from "../utils/logging";
 import { getBlockItemIndexAtLine, getParentBlocks } from "../utils/yamlParsing";
 
 /**
  * Implementation of a Code Lens Provider to allow opening Dynatrace screens in the browser.
  */
-export class ScreenLensProvider extends CachedDataConsumer implements vscode.CodeLensProvider {
+export class ScreenLensProvider implements vscode.CodeLensProvider {
   private readonly logTrace = ["codeLens", "screenCodeLens", this.constructor.name];
   private codeLenses: vscode.CodeLens[];
   private regex: RegExp;
@@ -31,7 +31,6 @@ export class ScreenLensProvider extends CachedDataConsumer implements vscode.Cod
   public readonly onDidChangeCodeLenses: vscode.Event<void> = this._onDidChangeCodeLenses.event;
 
   constructor() {
-    super();
     this.codeLenses = [];
     this.regex = /^ {2}- ./gm;
     vscode.commands.registerCommand(
@@ -53,9 +52,11 @@ export class ScreenLensProvider extends CachedDataConsumer implements vscode.Cod
     this.codeLenses = [];
     const regex = new RegExp(this.regex);
     const text = document.getText();
+    const parsedExtension = getCachedParsedExtension();
 
     // If no screens or feature disabled, don't continue
     if (
+      !parsedExtension ||
       !text.includes("screens:") ||
       !vscode.workspace.getConfiguration("dynatraceExtensions", null).get("screenCodeLens")
     ) {
@@ -76,7 +77,7 @@ export class ScreenLensProvider extends CachedDataConsumer implements vscode.Cod
       if (range) {
         // Get the entity type
         const screenIdx = getBlockItemIndexAtLine("screens", line.lineNumber, text);
-        const entityType = this.parsedExtension?.screens?.[screenIdx].entityType;
+        const entityType = parsedExtension.screens?.[screenIdx].entityType;
         if (entityType) {
           // Create the lenses
           this.codeLenses.push(

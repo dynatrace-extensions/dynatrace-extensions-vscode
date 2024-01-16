@@ -32,9 +32,9 @@ import {
   SimulatorStatus,
 } from "../interfaces/simulator";
 import { ToastOptions } from "../interfaces/webview";
+import { getCachedParsedExtension } from "../utils/caching";
 import { loopSafeWait } from "../utils/code";
 import { checkDtSdkPresent } from "../utils/conditionCheckers";
-import { CachedDataConsumer } from "../utils/dataCaching";
 import { getDatasourceName } from "../utils/extensionParsing";
 import {
   cleanUpSimulatorLogs,
@@ -69,7 +69,7 @@ const SIMULATOR_PANEL_DATA_TYPE = "SIMULATOR_DATA";
 /**
  * Helper class for managing the Extension Simulator, its UI, and data.
  */
-export class SimulatorManager extends CachedDataConsumer {
+export class SimulatorManager {
   public datasourceName: string;
   public simulatorStatus: SimulatorStatus;
   public currentConfiguration: SimulationConfig;
@@ -95,7 +95,6 @@ export class SimulatorManager extends CachedDataConsumer {
    * @param panelManager - webview panel manager
    */
   constructor(context: vscode.ExtensionContext, panelManager: WebviewPanelManager) {
-    super(); // Data cache access
     this.datasourceName = "unsupported";
     this.simulatorStatus = "UNSUPPORTED";
     this.failedChecks = [];
@@ -257,11 +256,16 @@ export class SimulatorManager extends CachedDataConsumer {
       this.extensionFile = extensionFile;
     }
     // Check extension has datasource
-    const datasourceName = getDatasourceName(this.parsedExtension);
-    if (datasourceName === "unsupported") {
+    const parsedExtension = getCachedParsedExtension();
+    if (!parsedExtension) {
       failedChecks.push("Datasource");
     } else {
-      this.datasourceName = datasourceName;
+      const datasourceName = getDatasourceName(parsedExtension);
+      if (datasourceName === "unsupported") {
+        failedChecks.push("Datasource");
+      } else {
+        this.datasourceName = datasourceName;
+      }
     }
     // Check activation file exists
     if (!vscode.workspace.workspaceFolders) {
@@ -275,7 +279,7 @@ export class SimulatorManager extends CachedDataConsumer {
         this.activationFile = activationFile;
       } else {
         // Python extensions may use "activation.json" as alternative
-        if (datasourceName === "python") {
+        if (this.datasourceName === "python") {
           const extDir = getExtensionWorkspaceDir();
           if (extDir) {
             const pyActivation = path.resolve(

@@ -16,16 +16,13 @@
 
 import * as vscode from "vscode";
 import { MinimalConfiguration } from "../treeViews/commands/environments";
-import { CachedDataProducer } from "../utils/dataCaching";
+import { getCachedEntityInstances, updateEntityInstances } from "../utils/caching";
 import { getExtensionFilePath } from "../utils/fileSystem";
 
 /**
  * Provider for code auto-completions related to monitoring configuration files.
  */
-export class ConfigurationCompletionProvider
-  extends CachedDataProducer
-  implements vscode.CompletionItemProvider
-{
+export class ConfigurationCompletionProvider implements vscode.CompletionItemProvider {
   async provideCompletionItems(
     document: vscode.TextDocument,
     position: vscode.Position,
@@ -56,9 +53,9 @@ export class ConfigurationCompletionProvider
 
   private async createLocalScopeCompletions(): Promise<vscode.CompletionItem[]> {
     const completions: vscode.CompletionItem[] = [];
-    await this.cachedData.addEntityInstances(["host", "host_group"]);
-    const hosts = this.entityInstances.host ?? [];
-    const hostGroups = this.entityInstances.host_group ?? [];
+    await updateEntityInstances(["host", "host_group"]);
+    const hosts = getCachedEntityInstances("host") ?? [];
+    const hostGroups = getCachedEntityInstances("host_group") ?? [];
 
     const localCompletion = new vscode.CompletionItem(
       "Local scope options",

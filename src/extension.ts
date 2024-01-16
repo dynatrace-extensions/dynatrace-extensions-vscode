@@ -60,6 +60,7 @@ import {
   getDynatraceClient,
   getTenantsTreeDataProvider,
 } from "./treeViews/tenantsTreeView";
+import { initializeCache } from "./utils/caching";
 import {
   checkCertificateExists,
   checkTenantConnected,
@@ -68,7 +69,6 @@ import {
   checkWorkspaceOpen,
   isExtensionsWorkspace,
 } from "./utils/conditionCheckers";
-import { CachedData } from "./utils/dataCaching";
 import {
   getAllEnvironments,
   getAllWorkspaces,
@@ -87,12 +87,10 @@ const logTrace = ["extension"];
  * Registers Completion Providers for this extension.
  * This is so that all providers can be created in one function, keeping the activation function more tidy.
  * @param documentSelector {@link vscode.DocumentSelector} matching the extension.yaml file
- * @param cachedData the data cache
  * @returns list of providers as disposables
  */
 function registerCompletionProviders(
   documentSelector: vscode.DocumentSelector,
-  cachedData: CachedData,
 ): vscode.Disposable[] {
   logger.debug("Registering completion providers", ...logTrace, "registerCompletionProviders");
   // Instantiate completion providers
@@ -102,21 +100,7 @@ function registerCompletionProviders(
   const prometheusCompletionProvider = new PrometheusCompletionProvider();
   const screensMetaCompletionProvider = new ScreensMetaCompletionProvider();
   const wmiCompletionProvider = new WmiCompletionProvider();
-  const configurationCompletionProvider = new ConfigurationCompletionProvider(cachedData);
-
-  // Subscribe them to cached data
-  cachedData.subscribeConsumers({
-    builtinEntityTypes: [topologyCompletionProvider, entitySelectorCompletionProvider],
-    parsedExtension: [
-      topologyCompletionProvider,
-      prometheusCompletionProvider,
-      wmiCompletionProvider,
-    ],
-    baristaIcons: [iconCompletionProvider],
-    prometheusData: [prometheusCompletionProvider],
-    wmiData: [wmiCompletionProvider],
-    entityInstances: [configurationCompletionProvider],
-  });
+  const configurationCompletionProvider = new ConfigurationCompletionProvider();
 
   // Register with vscode.languages and return disposables
   return [
@@ -157,7 +141,6 @@ function registerCompletionProviders(
  * This is so that all commands can be created in one function, keeping the activation function more tidy.
  * @param extensionWorkspacesProvider a provider for extension workspaces tree data
  * @param diagnosticsProvider a provider for diagnostics
- * @param cachedData the data cache
  * @param outputChannel a JSON output channel for communicating data
  * @param context {@link vscode.ExtensionContext}
  * @returns list commands as disposables
@@ -165,7 +148,6 @@ function registerCompletionProviders(
 function registerCommandPaletteCommands(
   extensionWorkspacesProvider: ExtensionsTreeDataProvider,
   diagnosticsProvider: DiagnosticsProvider,
-  cachedData: CachedData,
   outputChannel: vscode.OutputChannel,
   context: vscode.ExtensionContext,
 ): vscode.Disposable[] {
@@ -193,7 +175,7 @@ function registerCommandPaletteCommands(
         try {
           const dtClient = await getDynatraceClient();
           if (dtClient) {
-            await initWorkspace(cachedData, context, dtClient, () => {
+            await initWorkspace(context, dtClient, () => {
               extensionWorkspacesProvider.refresh();
             });
           }
@@ -268,7 +250,7 @@ function registerCommandPaletteCommands(
           const dtClient = await getDynatraceClient();
           const currentEnv = await getConnectedTenant();
           if (dtClient && currentEnv) {
-            await activateExtension(dtClient, cachedData, currentEnv.url, version);
+            await activateExtension(dtClient, currentEnv.url, version);
           }
         }
       },
@@ -277,21 +259,21 @@ function registerCommandPaletteCommands(
     vscode.commands.registerCommand("dynatrace-extensions.createDocumentation", async () => {
       logger.info("Command 'createDocumentation' called.", ...logTrace);
       if ((await checkWorkspaceOpen()) && (await isExtensionsWorkspace(context))) {
-        await createDocumentation(cachedData);
+        await createDocumentation();
       }
     }),
     // Create Overview dashboard
     vscode.commands.registerCommand("dynatrace-extensions.createDashboard", async () => {
       logger.info("Command 'createDashboard' called.", ...logTrace);
       if ((await checkWorkspaceOpen()) && (await isExtensionsWorkspace(context))) {
-        await createOverviewDashboard(cachedData, outputChannel);
+        await createOverviewDashboard(outputChannel);
       }
     }),
     // Create Alert
     vscode.commands.registerCommand("dynatrace-extensions.createAlert", async () => {
       logger.info("Command 'createAlert' called.", ...logTrace);
       if ((await checkWorkspaceOpen()) && (await isExtensionsWorkspace(context))) {
-        await createAlert(cachedData);
+        await createAlert();
       }
     }),
     // Convert JMX Extension from 1.0 to 2.0
@@ -304,13 +286,12 @@ function registerCommandPaletteCommands(
           const extensionDir = getExtensionWorkspaceDir();
           if (extensionDir) {
             await convertJMXExtension(
-              cachedData,
               await getDynatraceClient(),
               path.resolve(extensionDir, "extension.yaml"),
             );
           }
         } else {
-          await convertJMXExtension(cachedData, await getDynatraceClient(), outputPath);
+          await convertJMXExtension(await getDynatraceClient(), outputPath);
         }
       },
     ),
@@ -324,16 +305,15 @@ function registerCommandPaletteCommands(
           const extensionDir = getExtensionWorkspaceDir();
           if (extensionDir) {
             await convertPythonExtension(
-              cachedData,
               await getDynatraceClient(),
               path.resolve(extensionDir, "activationSchema.json"),
             );
           } else {
             // No activationSchema.json found
-            await convertPythonExtension(cachedData, await getDynatraceClient());
+            await convertPythonExtension(await getDynatraceClient());
           }
         } else {
-          await convertPythonExtension(cachedData, await getDynatraceClient(), outputPath);
+          await convertPythonExtension(await getDynatraceClient(), outputPath);
         }
       },
     ),
@@ -349,7 +329,7 @@ function registerCommandPaletteCommands(
         ) {
           const dtClient = await getDynatraceClient();
           if (dtClient) {
-            await createMonitoringConfiguration(dtClient, context, cachedData);
+            await createMonitoringConfiguration(dtClient, context);
           }
         }
       },
@@ -702,55 +682,32 @@ export async function activate(context: vscode.ExtensionContext) {
     connectionStatusManager,
     genericChannel,
   );
-  const cachedData = new CachedData(context.globalStorageUri.fsPath);
-  await cachedData.initialize();
+  await initializeCache(context.globalStorageUri.fsPath);
   const webviewPanelManager = new WebviewPanelManager(context.extensionUri);
   const extensionsTreeViewProvider = new ExtensionsTreeDataProvider(context);
   simulatorManager = new SimulatorManager(context, webviewPanelManager);
   const metricLensProvider = new SelectorCodeLensProvider(
     "metricSelector:",
     "metricSelectorsCodeLens",
-    cachedData,
   );
   const entityLensProvider = new SelectorCodeLensProvider(
     "entitySelectorTemplate:",
     "entitySelectorsCodeLens",
-    cachedData,
   );
   const snippetCodeActionProvider = new SnippetGenerator();
   const simulatorLensProvider = new SimulatorLensProvider(simulatorManager);
   const screensLensProvider = new ScreenLensProvider();
-  const prometheusLensProvider = new PrometheusCodeLensProvider(cachedData);
+  const prometheusLensProvider = new PrometheusCodeLensProvider();
   const prometheusActionProvider = new PrometheusActionProvider();
-  const snmpActionProvider = new SnmpActionProvider(cachedData);
-  const wmiLensProvider = new WmiCodeLensProvider(cachedData);
-  const snmpLensProvider = new SnmpCodeLensProvider(cachedData);
-  const snmpHoverProvider = new SnmpHoverProvider(cachedData);
+  const snmpActionProvider = new SnmpActionProvider();
+  const wmiLensProvider = new WmiCodeLensProvider();
+  const snmpLensProvider = new SnmpCodeLensProvider();
+  const snmpHoverProvider = new SnmpHoverProvider();
   const fastModeChannel = vscode.window.createOutputChannel("Dynatrace Fast Mode", "json");
   const fastModeStatus = new FastModeStatus(fastModeChannel);
-  const diagnosticsProvider = new DiagnosticsProvider(cachedData);
+  const diagnosticsProvider = new DiagnosticsProvider();
   const diagnosticFixProvider = new DiagnosticFixProvider(diagnosticsProvider);
   let editTimeout: NodeJS.Timeout | undefined;
-
-  // Subscribe feature providers as consumers of cached data
-  logger.debug("Subscribing feature providers to cached data", ...fnLogTrace);
-  cachedData.subscribeConsumers({
-    parsedExtension: [
-      snippetCodeActionProvider,
-      screensLensProvider,
-      diagnosticsProvider,
-      snmpActionProvider,
-      metricLensProvider,
-      entityLensProvider,
-      prometheusActionProvider,
-      simulatorManager,
-    ],
-    prometheusData: [prometheusLensProvider, prometheusActionProvider],
-    snmpData: [snmpActionProvider, diagnosticsProvider, snmpHoverProvider],
-    selectorStatuses: [metricLensProvider, entityLensProvider],
-    wmiData: [wmiLensProvider],
-    wmiStatuses: [wmiLensProvider],
-  });
 
   // The check for the simulator's initial status (must happen once cached data is available)
   vscode.commands.executeCommand("dynatrace-extensions.simulator.checkReady", false).then(
@@ -769,14 +726,13 @@ export async function activate(context: vscode.ExtensionContext) {
     ...registerCommandPaletteCommands(
       extensionsTreeViewProvider,
       diagnosticsProvider,
-      cachedData,
       genericChannel,
       context,
     ),
     // Commands for enabling/disabling features
     ...registerFeatureSwitchCommands(),
     // Auto-completion providers
-    ...registerCompletionProviders(extension2selector, cachedData),
+    ...registerCompletionProviders(extension2selector),
     // Extension 2.0 Workspaces Tree View
     vscode.window.registerTreeDataProvider(
       "dynatrace-extensions-workspaces",
@@ -867,15 +823,9 @@ export async function activate(context: vscode.ExtensionContext) {
     vscode.commands.registerCommand(
       "dynatrace-extensions.codelens.runWMIQuery",
       async (query: string) => {
-        runWMIQuery(
-          query,
-          genericChannel,
-          webviewPanelManager,
-          cachedData,
-          (checkedQuery, status, result) => {
-            wmiLensProvider.updateQueryData(checkedQuery, status, result);
-          },
-        ).catch(err => {
+        runWMIQuery(query, genericChannel, webviewPanelManager, (checkedQuery, status, result) => {
+          wmiLensProvider.updateQueryData(checkedQuery, status, result);
+        }).catch(err => {
           logger.info(`Running WMI Query failed unexpectedly. ${(err as Error).message}`);
         });
       },

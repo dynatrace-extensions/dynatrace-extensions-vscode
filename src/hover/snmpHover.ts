@@ -16,13 +16,13 @@
 
 import * as path from "path";
 import * as vscode from "vscode";
-import { CachedDataProducer } from "../utils/dataCaching";
+import { getCachedOid, updateCachedOid } from "../utils/caching";
 import { getMibStoragePath } from "../utils/snmp";
 
 /**
  * Simple hover provider to bring out details behind SNMP OIDs
  */
-export class SnmpHoverProvider extends CachedDataProducer implements vscode.HoverProvider {
+export class SnmpHoverProvider implements vscode.HoverProvider {
   public async provideHover(
     document: vscode.TextDocument,
     position: vscode.Position,
@@ -36,8 +36,8 @@ export class SnmpHoverProvider extends CachedDataProducer implements vscode.Hove
         ? hoverText.slice(4, hoverText.length - 2)
         : hoverText.slice(4);
 
-      await this.cachedData.updateSnmpOid(oid);
-      const oidInfo = this.snmpData[oid];
+      await updateCachedOid(oid);
+      const oidInfo = getCachedOid(oid);
 
       if (!oidInfo) {
         return undefined;

@@ -17,8 +17,7 @@
 import * as vscode from "vscode";
 import { Dynatrace } from "../dynatrace-api/dynatrace";
 import { DynatraceAPIError } from "../dynatrace-api/errors";
-import { ExtensionStub } from "../interfaces/extensionMeta";
-import { CachedData } from "../utils/dataCaching";
+import { getCachedParsedExtension } from "../utils/caching";
 import { getExtensionFilePath } from "../utils/fileSystem";
 import * as logger from "../utils/logging";
 
@@ -29,12 +28,7 @@ import * as logger from "../utils/logging";
  * @param cachedData provider for cacheable data
  * @param version optional version to activate
  */
-export async function activateExtension(
-  dt: Dynatrace,
-  cachedData: CachedData,
-  tenantUrl: string,
-  version?: string,
-) {
+export async function activateExtension(dt: Dynatrace, tenantUrl: string, version?: string) {
   const fnLogTrace = ["commandPalette", "activateExtension"];
   logger.info("Executing Activate Extension command", ...fnLogTrace);
 
@@ -44,7 +38,11 @@ export async function activateExtension(
     return;
   }
 
-  const extension = cachedData.getCached<ExtensionStub>("parsedExtension");
+  const extension = getCachedParsedExtension();
+  if (!extension) {
+    logger.error("Parsed extension does not exist in cache. Command aborted.", ...fnLogTrace);
+    return;
+  }
 
   // If version was not provided, prompt user for selection
   if (!version) {

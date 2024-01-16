@@ -15,7 +15,7 @@
  */
 
 import * as vscode from "vscode";
-import { CachedDataProducer } from "../utils/dataCaching";
+import { getCachedWmiStatus, setCachedWmiStatus, setCachedWmiQueryResult } from "../utils/caching";
 import { getBlockRange } from "../utils/yamlParsing";
 import { ValidationStatus } from "./utils/selectorUtils";
 import { WmiQueryResult } from "./utils/wmiUtils";
@@ -93,7 +93,7 @@ class WmiQueryExecutionLens extends vscode.CodeLens {
  * Implementation of a Code Lens provider for WMI Queries. It creates two lenses, for executing a
  * WMI Query against the local Windows machine and checking the last execution status.
  */
-export class WmiCodeLensProvider extends CachedDataProducer implements vscode.CodeLensProvider {
+export class WmiCodeLensProvider implements vscode.CodeLensProvider {
   private codeLenses: vscode.CodeLens[] = [];
   private _onDidChangeCodeLenses: vscode.EventEmitter<void> = new vscode.EventEmitter<void>();
   public readonly onDidChangeCodeLenses: vscode.Event<void> = this._onDidChangeCodeLenses.event;
@@ -154,7 +154,7 @@ export class WmiCodeLensProvider extends CachedDataProducer implements vscode.Co
         const query = line.text.split("query: ")[1];
         return [
           new WmiQueryExecutionLens(range, query),
-          new WmiQueryStatusLens(range, query, this.wmiStatuses[query] ?? { status: "unknown" }),
+          new WmiQueryStatusLens(range, query, getCachedWmiStatus(query) ?? { status: "unknown" }),
         ];
       }
     }
@@ -170,9 +170,9 @@ export class WmiCodeLensProvider extends CachedDataProducer implements vscode.Co
    * @param result the query execution result, if new
    */
   public updateQueryData(query: string, status: ValidationStatus, result?: WmiQueryResult) {
-    this.cachedData.updateWmiStatus(query, status);
+    setCachedWmiStatus(query, status);
     if (result) {
-      this.cachedData.updateWmiQueryResult(result);
+      setCachedWmiQueryResult(result);
     }
     this._onDidChangeCodeLenses.fire();
   }
