@@ -18,11 +18,17 @@ import mock = require("mock-fs");
 import { DirectoryItems } from "mock-fs/lib/filesystem";
 import * as vscode from "vscode";
 import { DatasourceName } from "../../../../src/interfaces/extensionMeta";
-import { SimulatorData } from "../../../../src/interfaces/simulator";
+import {
+  RemoteTarget,
+  SimulationConfig,
+  SimulatorData,
+} from "../../../../src/interfaces/simulator";
 import { SimulatorManager } from "../../../../src/statusBar/simulator";
 import * as conditionCheckers from "../../../../src/utils/conditionCheckers";
 import * as extensionPartsingUtils from "../../../../src/utils/extensionParsing";
 import * as fileSystemUtils from "../../../../src/utils/fileSystem";
+import * as otherExtensionsUtils from "../../../../src/utils/otherExtensions";
+import * as simulatorUtils from "../../../../src/utils/simulator";
 import * as webviewPanel from "../../../../src/webviews/webviewPanel";
 import { MockExtensionContext, MockUri } from "../../mocks/vscode";
 
@@ -121,18 +127,186 @@ describe("Simulator Manager", () => {
   });
 
   describe("checkSimulationConfig", () => {
-    beforeEach(() => {
-      jest.spyOn(conditionCheckers, "checkDtSdkPresent").mockReturnValue(new Promise(() => true));
+    const mockTarget: RemoteTarget = {
+      name: "mockTarget",
+      address: "mockHost",
+      eecType: "ONEAGENT",
+      osType: "LINUX",
+      privateKey: "mockKey",
+      username: "mockUser",
+    };
+
+    it("should fail check on LOCAL for python extension if dt-sdk not found", async () => {
+      jest.replaceProperty(simulatorManager, "datasourceName", "python");
+      jest.spyOn(otherExtensionsUtils, "getPythonVenvOpts").mockReturnValue(Promise.resolve({}));
+      jest.spyOn(conditionCheckers, "checkDtSdkPresent").mockReturnValue(Promise.resolve(false));
+      const expectedStatus = "NOTREADY";
+      const expectedMessage = "Python SDK not found";
+
+      const [actualStatus, actualMessage] = await simulatorManager.checkSimulationConfig(
+        "LOCAL",
+        "ONEAGENT",
+      );
+
+      expect(actualStatus).toBe(expectedStatus);
+      expect(actualMessage).toBe(expectedMessage);
+    });
+
+    it("should fail check on LOCAL for non-python extension if DS can't be simulated", async () => {
+      jest.replaceProperty(simulatorManager, "datasourceName", "mockDS");
+      jest.spyOn(simulatorUtils, "canSimulateDatasource").mockReturnValue(false);
+      const expectedStatus = "NOTREADY";
+      const expectedMessage = "Datasource mockDS cannot be simulated on this OS";
+
+      const [actualStatus, actualMessage] = await simulatorManager.checkSimulationConfig(
+        "LOCAL",
+        "ONEAGENT",
+      );
+
+      expect(actualStatus).toBe(expectedStatus);
+      expect(actualMessage).toBe(expectedMessage);
+    });
+
+    it("should fail check on LOCAL for non-python extension if DS exe doesn't exist", async () => {
+      jest.replaceProperty(simulatorManager, "datasourceName", "mockDS");
+      jest.spyOn(simulatorUtils, "canSimulateDatasource").mockReturnValue(true);
+      jest.spyOn(simulatorUtils, "getDatasourcePath").mockReturnValue("mock/dsLocation");
+      const expectedStatus = "NOTREADY";
+      const expectedMessage = "Could not find datasource executable at mock/dsLocation";
+
+      const [actualStatus, actualMessage] = await simulatorManager.checkSimulationConfig(
+        "LOCAL",
+        "ONEAGENT",
+      );
+
+      expect(actualStatus).toBe(expectedStatus);
+      expect(actualMessage).toBe(expectedMessage);
+
+      mock.restore();
+    });
+
+    it("should fail check on REMOTE for python extension", async () => {
+      jest.replaceProperty(simulatorManager, "datasourceName", "python");
+      const expectedStatus = "NOTREADY";
+      const expectedMessage = "Python datasource can only be simulated on local machine";
+
+      const [actualStatus, actualMessage] = await simulatorManager.checkSimulationConfig(
+        "REMOTE",
+        "ONEAGENT",
+      );
+
+      expect(actualStatus).toBe(expectedStatus);
+      expect(actualMessage).toBe(expectedMessage);
+    });
+
+    it("should fail check on REMOTE for non-python if target missing", async () => {
+      jest.replaceProperty(simulatorManager, "datasourceName", "mockDS");
+      const expectedStatus = "NOTREADY";
+      const expectedMessage = "No target given for remote simulation";
+
+      const [actualStatus, actualMessage] = await simulatorManager.checkSimulationConfig(
+        "REMOTE",
+        "ONEAGENT",
+      );
+
+      expect(actualStatus).toBe(expectedStatus);
+      expect(actualMessage).toBe(expectedMessage);
+    });
+
+    it("should fail check on REMOTE for non-python if DS can't be simulated", async () => {
+      const canSimulateDatasourceSpy = jest.spyOn(simulatorUtils, "canSimulateDatasource");
+      canSimulateDatasourceSpy.mockReturnValue(false);
+      jest.replaceProperty(simulatorManager, "datasourceName", "mockDS");
+      const expectedStatus = "NOTREADY";
+      const expectedMessage = `Datasource mockDS cannot be simulated on ${mockTarget.osType}`;
+
+      const [actualStatus, actualMessage] = await simulatorManager.checkSimulationConfig(
+        "REMOTE",
+        "ONEAGENT",
+        mockTarget,
+      );
+
+      expect(canSimulateDatasourceSpy).toHaveBeenCalledWith(
+        mockTarget.osType,
+        mockTarget.eecType,
+        "mockDS",
+      );
+      expect(actualStatus).toBe(expectedStatus);
+      expect(actualMessage).toBe(expectedMessage);
+    });
+
+    it("should pass check on LOCAL for python if dt-sdk exists", async () => {
+      jest.replaceProperty(simulatorManager, "datasourceName", "python");
+      jest.spyOn(otherExtensionsUtils, "getPythonVenvOpts").mockReturnValue(Promise.resolve({}));
+      jest.spyOn(conditionCheckers, "checkDtSdkPresent").mockReturnValue(Promise.resolve(true));
+      const expectedStatus = "READY";
+      const expectedMessage = "";
+
+      const [actualStatus, actualMessage] = await simulatorManager.checkSimulationConfig(
+        "LOCAL",
+        "ONEAGENT",
+      );
+
+      expect(actualStatus).toBe(expectedStatus);
+      expect(actualMessage).toBe(expectedMessage);
+    });
+
+    it("should pass check on LOCAL for non-python if DS exists and can be simulated", async () => {
+      mock({ mock: { dsLocation: "" } });
+      jest.replaceProperty(simulatorManager, "datasourceName", "mockDS");
+      jest.spyOn(simulatorUtils, "canSimulateDatasource").mockReturnValue(true);
+      jest.spyOn(simulatorUtils, "getDatasourcePath").mockReturnValue("mock/dsLocation");
+      const expectedStatus = "READY";
+      const expectedMessage = "";
+
+      const [actualStatus, actualMessage] = await simulatorManager.checkSimulationConfig(
+        "LOCAL",
+        "ONEAGENT",
+      );
+
+      expect(actualStatus).toBe(expectedStatus);
+      expect(actualMessage).toBe(expectedMessage);
+
+      mock.restore();
+    });
+
+    it("should pass check on REMOTE for non-python if target exists and DS can be simulated", async () => {
+      mock({ mock: { dsLocation: "" } });
+      const canSimulateDatasourceSpy = jest.spyOn(simulatorUtils, "canSimulateDatasource");
+      canSimulateDatasourceSpy.mockReturnValue(true);
+      jest.replaceProperty(simulatorManager, "datasourceName", "mockDS");
+      jest.spyOn(simulatorUtils, "getDatasourcePath").mockReturnValue("mock/dsLocation");
+      const expectedStatus = "READY";
+      const expectedMessage = "";
+
+      const [actualStatus, actualMessage] = await simulatorManager.checkSimulationConfig(
+        "REMOTE",
+        "ONEAGENT",
+        mockTarget,
+      );
+
+      expect(canSimulateDatasourceSpy).toHaveBeenCalledWith(
+        mockTarget.osType,
+        mockTarget.eecType,
+        "mockDS",
+      );
+      expect(actualStatus).toBe(expectedStatus);
+      expect(actualMessage).toBe(expectedMessage);
     });
   });
 
   describe("checkReady", () => {
     let renderSpy: jest.SpyInstance;
     let postMessageSpy: jest.SpyInstance;
+    const fallbackConfigValue: SimulationConfig = {
+      eecType: "ONEAGENT",
+      location: "LOCAL",
+      sendMetrics: false,
+    };
     const mockPanelData: SimulatorData = {
       targets: [],
       summaries: [],
-      currentConfiguration: { eecType: "ONEAGENT", location: "LOCAL", sendMetrics: false },
+      currentConfiguration: fallbackConfigValue,
       specs: {
         isPython: false,
         dsSupportsActiveGateEec: false,
@@ -152,10 +326,10 @@ describe("Simulator Manager", () => {
       postMessageSpy = jest.spyOn(panelManager, "postMessage").mockImplementation(() => {});
     });
 
-    it("first updates the panel with CHECKING status (render)", () => {
+    it("first updates the panel with CHECKING status (render)", async () => {
       jest.spyOn(simulatorManager, "checkMantatoryRequirements").mockReturnValue([true, []]);
 
-      simulatorManager.checkReady(true);
+      await simulatorManager.checkReady(true);
 
       expect(renderSpy).toHaveBeenCalledTimes(2);
       expect(renderSpy).toHaveBeenNthCalledWith(
@@ -166,10 +340,10 @@ describe("Simulator Manager", () => {
       );
     });
 
-    it("first updates the panel with CHECKING status (postMessage)", () => {
+    it("first updates the panel with CHECKING status (postMessage)", async () => {
       jest.spyOn(simulatorManager, "checkMantatoryRequirements").mockReturnValue([true, []]);
 
-      simulatorManager.checkReady(false);
+      await simulatorManager.checkReady(false);
 
       expect(postMessageSpy).toHaveBeenCalledTimes(2);
       expect(postMessageSpy).toHaveBeenNthCalledWith(
@@ -182,10 +356,10 @@ describe("Simulator Manager", () => {
       );
     });
 
-    it("then updates the panel with READY state and panel data", () => {
+    it("then updates the panel with READY state and panel data", async () => {
       jest.spyOn(simulatorManager, "checkMantatoryRequirements").mockReturnValue([true, []]);
 
-      simulatorManager.checkReady(true);
+      await simulatorManager.checkReady(true);
 
       expect(renderSpy).toHaveBeenNthCalledWith(
         2,
@@ -195,13 +369,13 @@ describe("Simulator Manager", () => {
       );
     });
 
-    it("updates the panel with UNSUPPORTED for mandatory check failures", () => {
+    it("updates the panel with UNSUPPORTED for mandatory check failures", async () => {
       const mockFailedChecks = ["a", "b", "c"];
       jest
         .spyOn(simulatorManager, "checkMantatoryRequirements")
         .mockReturnValue([false, mockFailedChecks]);
 
-      simulatorManager.checkReady(true);
+      await simulatorManager.checkReady(true);
 
       expect(renderSpy).toHaveBeenCalledTimes(2);
       expect(renderSpy).toHaveBeenNthCalledWith(
@@ -211,6 +385,26 @@ describe("Simulator Manager", () => {
         {
           dataType: "SIMULATOR_DATA",
           data: { ...mockPanelData, status: "UNSUPPORTED", failedChecks: mockFailedChecks },
+        },
+      );
+    });
+
+    it("updates the panel with NOTREADY for simulation config check failures", async () => {
+      jest.spyOn(simulatorManager, "checkMantatoryRequirements").mockReturnValue([true, []]);
+      jest
+        .spyOn(simulatorManager, "checkSimulationConfig")
+        .mockReturnValue(Promise.resolve(["NOTREADY", "mockMessage"]));
+
+      await simulatorManager.checkReady(true, fallbackConfigValue);
+
+      expect(renderSpy).toHaveBeenCalledTimes(2);
+      expect(renderSpy).toHaveBeenNthCalledWith(
+        2,
+        webviewPanel.REGISTERED_PANELS.SIMULATOR_UI,
+        "Extension Simulator",
+        {
+          dataType: "SIMULATOR_DATA",
+          data: { ...mockPanelData, status: "NOTREADY", statusMessage: "mockMessage" },
         },
       );
     });
