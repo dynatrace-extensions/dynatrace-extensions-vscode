@@ -78,7 +78,7 @@ export class SimulatorLensProvider implements vscode.CodeLensProvider {
 
       // If we don't know the status yet, check if the simulator is ready
       if (this.lastKnownStatus === "UNKNOWN") {
-        const readyCheck = this.simulator.checkMantatoryRequirements();
+        const readyCheck = this.simulator.checkMandatoryRequirements();
         if (readyCheck[0]) {
           this.lastKnownStatus = "READY";
           const configCheck = await this.simulator.checkSimulationConfig(

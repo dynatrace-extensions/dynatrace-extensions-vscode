@@ -209,7 +209,7 @@ export class SimulatorManager {
     this.refreshUI(showUI, "CHECKING");
 
     // First check mandatory requirements
-    const [result, failedChecks] = this.checkMantatoryRequirements();
+    const [result, failedChecks] = this.checkMandatoryRequirements();
     if (!result) {
       this.refreshUI(showUI, "UNSUPPORTED", undefined, failedChecks);
       logger.warn(`Mandatory checks failed: ${failedChecks.join(", ")}`, ...fnLogTrace);
@@ -246,7 +246,7 @@ export class SimulatorManager {
    * Without these, there's no point going any further in the process.
    * @returns tuple of [check result, failed checks]
    */
-  public checkMantatoryRequirements(): [boolean, string[]] {
+  public checkMandatoryRequirements(): [boolean, string[]] {
     const failedChecks: string[] = [];
     // Check extension file exists
     const extensionFile = getExtensionFilePath();
