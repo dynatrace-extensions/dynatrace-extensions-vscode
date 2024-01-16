@@ -34,7 +34,7 @@ import {
   DeployedExtension,
   DynatraceEnvironment,
   MonitoringConfiguration,
-} from "../environmentsTreeView";
+} from "../tenantsTreeView";
 
 export interface MinimalConfiguration {
   scope: string;

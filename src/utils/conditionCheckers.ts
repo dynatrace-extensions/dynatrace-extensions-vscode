@@ -23,7 +23,7 @@ import { existsSync, readdirSync, readFileSync } from "fs";
 import * as path from "path";
 import axios from "axios";
 import * as vscode from "vscode";
-import { EnvironmentsTreeDataProvider } from "../treeViews/environmentsTreeView";
+import { getConnectedTenant } from "../treeViews/tenantsTreeView";
 import { getExtensionFilePath, resolveRealPath } from "./fileSystem";
 import * as logger from "./logging";
 import { runCommand } from "./subprocesses";
@@ -70,12 +70,10 @@ export async function checkSettings(...settings: string[]): Promise<boolean> {
  * @param environmentsTree environments tree data provider
  * @returns check status
  */
-export async function checkEnvironmentConnected(
-  environmentsTree: EnvironmentsTreeDataProvider,
-): Promise<boolean> {
+export async function checkTenantConnected(): Promise<boolean> {
   const fnLogTrace = [...logTrace, "checkEnvironmentConnected"];
   let status = true;
-  if (!(await environmentsTree.getCurrentEnvironment())) {
+  if (!(await getConnectedTenant())) {
     logger.notify(
       "ERROR",
       "You must be connected to a Dynatrace Environment to use this command.",

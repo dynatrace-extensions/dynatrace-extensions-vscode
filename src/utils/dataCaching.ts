@@ -29,7 +29,7 @@ import { ValidationStatus } from "../codeLens/utils/selectorUtils";
 import { WmiQueryResult } from "../codeLens/utils/wmiUtils";
 import { Entity, EntityType } from "../dynatrace-api/interfaces/monitoredEntities";
 import { ExtensionStub } from "../interfaces/extensionMeta";
-import { EnvironmentsTreeDataProvider } from "../treeViews/environmentsTreeView";
+import { getDynatraceClient } from "../treeViews/tenantsTreeView";
 import { loopSafeWait } from "./code";
 import { getExtensionFilePath, getSnmpMibFiles } from "./fileSystem";
 import * as logger from "./logging";
@@ -102,7 +102,6 @@ type LoadedFile = { name: string; filePath: string };
 export class CachedData {
   private readonly globalStorage: string;
   private readonly logTrace = ["utils", "dataCaching", this.constructor.name];
-  private readonly environments: EnvironmentsTreeDataProvider;
   private builtinEntityTypes = new BehaviorSubject<EntityType[]>([]);
   private parsedExtension = new BehaviorSubject<ExtensionStub | undefined>(undefined);
   private baristaIcons = new BehaviorSubject<string[]>([]);
@@ -119,9 +118,8 @@ export class CachedData {
   /**
    * @param environments a Dynatrace Environments provider
    */
-  constructor(environments: EnvironmentsTreeDataProvider, globalStorage: string) {
+  constructor(globalStorage: string) {
     logger.info("Data Cache created.", ...this.logTrace);
-    this.environments = environments;
     this.globalStorage = globalStorage;
   }
 
@@ -258,7 +256,7 @@ export class CachedData {
    * Fetches the list of Dynatrace built-in entity types from the currently connected environment.
    */
   private async fetchBuiltinEntityTypes(): Promise<EntityType[]> {
-    const dtClient = await this.environments.getDynatraceClient();
+    const dtClient = await getDynatraceClient();
     if (dtClient) {
       const entityTypes = await dtClient.entitiesV2.listTypes().catch(() => []);
       return entityTypes;
@@ -392,7 +390,7 @@ export class CachedData {
    * On demand update of Entity Instances
    */
   public async addEntityInstances(types: string[]) {
-    const dtClient = await this.environments.getDynatraceClient();
+    const dtClient = await getDynatraceClient();
     if (dtClient) {
       const entityPromises = types.map(async (t: string): Promise<[string, Entity[]]> => {
         if (!(t in this.entityInstances.getValue())) {

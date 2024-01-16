@@ -54,11 +54,15 @@ import { SnmpHoverProvider } from "./hover/snmpHover";
 import { ConnectionStatusManager } from "./statusBar/connection";
 import { FastModeStatus } from "./statusBar/fastMode";
 import { SimulatorManager } from "./statusBar/simulator";
-import { EnvironmentsTreeDataProvider } from "./treeViews/environmentsTreeView";
 import { ExtensionsTreeDataProvider } from "./treeViews/extensionsTreeView";
 import {
+  getConnectedTenant,
+  getDynatraceClient,
+  getTenantsTreeDataProvider,
+} from "./treeViews/tenantsTreeView";
+import {
   checkCertificateExists,
-  checkEnvironmentConnected,
+  checkTenantConnected,
   checkExtensionZipExists,
   checkOverwriteCertificates,
   checkWorkspaceOpen,
@@ -151,7 +155,6 @@ function registerCompletionProviders(
 /**
  * Registers this extension's Commands for the VSCode Command Palette.
  * This is so that all commands can be created in one function, keeping the activation function more tidy.
- * @param tenantsProvider a provider for environments tree data
  * @param extensionWorkspacesProvider a provider for extension workspaces tree data
  * @param diagnosticsProvider a provider for diagnostics
  * @param cachedData the data cache
@@ -160,7 +163,6 @@ function registerCompletionProviders(
  * @returns list commands as disposables
  */
 function registerCommandPaletteCommands(
-  tenantsProvider: EnvironmentsTreeDataProvider,
   extensionWorkspacesProvider: ExtensionsTreeDataProvider,
   diagnosticsProvider: DiagnosticsProvider,
   cachedData: CachedData,
@@ -176,8 +178,8 @@ function registerCommandPaletteCommands(
     // Load extension schemas of a given version
     vscode.commands.registerCommand("dynatrace-extensions.loadSchemas", async () => {
       logger.info("Command 'loadSchemas' called.", ...logTrace);
-      if (await checkEnvironmentConnected(tenantsProvider)) {
-        const dtClient = await tenantsProvider.getDynatraceClient();
+      if (await checkTenantConnected()) {
+        const dtClient = await getDynatraceClient();
         if (dtClient) {
           await loadSchemas(context, dtClient);
         }
@@ -186,10 +188,10 @@ function registerCommandPaletteCommands(
     // Initialize a new workspace for extension development
     vscode.commands.registerCommand("dynatrace-extensions.initWorkspace", async () => {
       logger.info("Command 'initWorkspace' called.", ...logTrace);
-      if ((await checkWorkspaceOpen()) && (await checkEnvironmentConnected(tenantsProvider))) {
+      if ((await checkWorkspaceOpen()) && (await checkTenantConnected())) {
         initWorkspaceStorage(context);
         try {
-          const dtClient = await tenantsProvider.getDynatraceClient();
+          const dtClient = await getDynatraceClient();
           if (dtClient) {
             await initWorkspace(cachedData, context, dtClient, () => {
               extensionWorkspacesProvider.refresh();
@@ -217,9 +219,9 @@ function registerCommandPaletteCommands(
     // Distribute CA certificate to Dynatrace credential vault & OneAgents/ActiveGates
     vscode.commands.registerCommand("dynatrace-extensions.distributeCertificate", async () => {
       logger.info("Command 'distributeCertificate' called.", ...logTrace);
-      if ((await checkWorkspaceOpen()) && (await checkEnvironmentConnected(tenantsProvider))) {
+      if ((await checkWorkspaceOpen()) && (await checkTenantConnected())) {
         initWorkspaceStorage(context);
-        const dtClient = await tenantsProvider.getDynatraceClient();
+        const dtClient = await getDynatraceClient();
         if ((await checkCertificateExists("ca")) && dtClient) {
           await distributeCertificate(context, dtClient);
         }
@@ -234,7 +236,7 @@ function registerCommandPaletteCommands(
         (await checkCertificateExists("dev")) &&
         (await diagnosticsProvider.isValidForBuilding())
       ) {
-        await buildExtension(context, outputChannel, await tenantsProvider.getDynatraceClient());
+        await buildExtension(context, outputChannel, await getDynatraceClient());
       }
     }),
     // Upload an extension to the tenant
@@ -243,11 +245,11 @@ function registerCommandPaletteCommands(
       if (
         (await checkWorkspaceOpen()) &&
         (await isExtensionsWorkspace(context)) &&
-        (await checkEnvironmentConnected(tenantsProvider)) &&
+        (await checkTenantConnected()) &&
         (await checkExtensionZipExists())
       ) {
-        const dtClient = await tenantsProvider.getDynatraceClient();
-        const currentEnv = await tenantsProvider.getCurrentEnvironment();
+        const dtClient = await getDynatraceClient();
+        const currentEnv = await getConnectedTenant();
         if (dtClient && currentEnv) {
           await uploadExtension(dtClient, currentEnv.url);
         }
@@ -261,10 +263,10 @@ function registerCommandPaletteCommands(
         if (
           (await checkWorkspaceOpen()) &&
           (await isExtensionsWorkspace(context)) &&
-          (await checkEnvironmentConnected(tenantsProvider))
+          (await checkTenantConnected())
         ) {
-          const dtClient = await tenantsProvider.getDynatraceClient();
-          const currentEnv = await tenantsProvider.getCurrentEnvironment();
+          const dtClient = await getDynatraceClient();
+          const currentEnv = await getConnectedTenant();
           if (dtClient && currentEnv) {
             await activateExtension(dtClient, cachedData, currentEnv.url, version);
           }
@@ -282,7 +284,7 @@ function registerCommandPaletteCommands(
     vscode.commands.registerCommand("dynatrace-extensions.createDashboard", async () => {
       logger.info("Command 'createDashboard' called.", ...logTrace);
       if ((await checkWorkspaceOpen()) && (await isExtensionsWorkspace(context))) {
-        await createOverviewDashboard(tenantsProvider, cachedData, outputChannel);
+        await createOverviewDashboard(cachedData, outputChannel);
       }
     }),
     // Create Alert
@@ -303,16 +305,12 @@ function registerCommandPaletteCommands(
           if (extensionDir) {
             await convertJMXExtension(
               cachedData,
-              await tenantsProvider.getDynatraceClient(),
+              await getDynatraceClient(),
               path.resolve(extensionDir, "extension.yaml"),
             );
           }
         } else {
-          await convertJMXExtension(
-            cachedData,
-            await tenantsProvider.getDynatraceClient(),
-            outputPath,
-          );
+          await convertJMXExtension(cachedData, await getDynatraceClient(), outputPath);
         }
       },
     ),
@@ -327,19 +325,15 @@ function registerCommandPaletteCommands(
           if (extensionDir) {
             await convertPythonExtension(
               cachedData,
-              await tenantsProvider.getDynatraceClient(),
+              await getDynatraceClient(),
               path.resolve(extensionDir, "activationSchema.json"),
             );
           } else {
             // No activationSchema.json found
-            await convertPythonExtension(cachedData, await tenantsProvider.getDynatraceClient());
+            await convertPythonExtension(cachedData, await getDynatraceClient());
           }
         } else {
-          await convertPythonExtension(
-            cachedData,
-            await tenantsProvider.getDynatraceClient(),
-            outputPath,
-          );
+          await convertPythonExtension(cachedData, await getDynatraceClient(), outputPath);
         }
       },
     ),
@@ -351,9 +345,9 @@ function registerCommandPaletteCommands(
         if (
           (await checkWorkspaceOpen()) &&
           (await isExtensionsWorkspace(context)) &&
-          (await checkEnvironmentConnected(tenantsProvider))
+          (await checkTenantConnected())
         ) {
-          const dtClient = await tenantsProvider.getDynatraceClient();
+          const dtClient = await getDynatraceClient();
           if (dtClient) {
             await createMonitoringConfiguration(dtClient, context, cachedData);
           }
@@ -703,12 +697,12 @@ export async function activate(context: vscode.ExtensionContext) {
   // Create feature/data providers
   const genericChannel = vscode.window.createOutputChannel("Dynatrace", "json");
   const connectionStatusManager = new ConnectionStatusManager();
-  const tenantsTreeViewProvider = new EnvironmentsTreeDataProvider(
+  const tenantsTreeViewProvider = getTenantsTreeDataProvider(
     context,
     connectionStatusManager,
     genericChannel,
   );
-  const cachedData = new CachedData(tenantsTreeViewProvider, context.globalStorageUri.fsPath);
+  const cachedData = new CachedData(context.globalStorageUri.fsPath);
   await cachedData.initialize();
   const webviewPanelManager = new WebviewPanelManager(context.extensionUri);
   const extensionsTreeViewProvider = new ExtensionsTreeDataProvider(context);
@@ -725,7 +719,7 @@ export async function activate(context: vscode.ExtensionContext) {
   );
   const snippetCodeActionProvider = new SnippetGenerator();
   const simulatorLensProvider = new SimulatorLensProvider(simulatorManager);
-  const screensLensProvider = new ScreenLensProvider(tenantsTreeViewProvider);
+  const screensLensProvider = new ScreenLensProvider();
   const prometheusLensProvider = new PrometheusCodeLensProvider(cachedData);
   const prometheusActionProvider = new PrometheusActionProvider();
   const snmpActionProvider = new SnmpActionProvider(cachedData);
@@ -773,7 +767,6 @@ export async function activate(context: vscode.ExtensionContext) {
   context.subscriptions.push(
     // Commands for the Command Palette
     ...registerCommandPaletteCommands(
-      tenantsTreeViewProvider,
       extensionsTreeViewProvider,
       diagnosticsProvider,
       cachedData,
@@ -833,8 +826,8 @@ export async function activate(context: vscode.ExtensionContext) {
     vscode.commands.registerCommand(
       "dynatrace-extensions.codelens.validateSelector",
       async (selector: string, type: "metric" | "entity") => {
-        if (await checkEnvironmentConnected(tenantsTreeViewProvider)) {
-          const dtClient = await tenantsTreeViewProvider.getDynatraceClient();
+        if (await checkTenantConnected()) {
+          const dtClient = await getDynatraceClient();
           if (dtClient) {
             const status = await validateSelector(selector, type, dtClient);
             return type === "metric"
@@ -854,8 +847,8 @@ export async function activate(context: vscode.ExtensionContext) {
             entityLensProvider.updateValidationStatus(checkedSelector, status);
           }
         };
-        if (await checkEnvironmentConnected(tenantsTreeViewProvider)) {
-          const dtClient = await tenantsTreeViewProvider.getDynatraceClient();
+        if (await checkTenantConnected()) {
+          const dtClient = await getDynatraceClient();
           if (dtClient) {
             runSelector(
               selector,
@@ -903,9 +896,9 @@ export async function activate(context: vscode.ExtensionContext) {
         vscode.workspace.getConfiguration("dynatraceExtensions", null).get("fastDevelopmentMode") &&
         doc.fileName.endsWith("extension.yaml") &&
         (await isExtensionsWorkspace(context, false)) &&
-        (await checkEnvironmentConnected(tenantsTreeViewProvider))
+        (await checkTenantConnected())
       ) {
-        const dt = await tenantsTreeViewProvider.getDynatraceClient();
+        const dt = await getDynatraceClient();
         await buildExtension(context, fastModeChannel, dt, {
           status: fastModeStatus,
           document: doc,

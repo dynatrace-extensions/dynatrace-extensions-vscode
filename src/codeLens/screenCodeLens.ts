@@ -15,7 +15,7 @@
  */
 
 import * as vscode from "vscode";
-import { EnvironmentsTreeDataProvider } from "../treeViews/environmentsTreeView";
+import { getConnectedTenant } from "../treeViews/tenantsTreeView";
 import { CachedDataConsumer } from "../utils/dataCaching";
 import * as logger from "../utils/logging";
 import { getBlockItemIndexAtLine, getParentBlocks } from "../utils/yamlParsing";
@@ -29,16 +29,11 @@ export class ScreenLensProvider extends CachedDataConsumer implements vscode.Cod
   private regex: RegExp;
   private _onDidChangeCodeLenses: vscode.EventEmitter<void> = new vscode.EventEmitter<void>();
   public readonly onDidChangeCodeLenses: vscode.Event<void> = this._onDidChangeCodeLenses.event;
-  private readonly environments: EnvironmentsTreeDataProvider;
 
-  /**
-   * @param environmentsProvider - a provider of Dynatrace environments data
-   */
-  constructor(environmentsProvider: EnvironmentsTreeDataProvider) {
+  constructor() {
     super();
     this.codeLenses = [];
     this.regex = /^ {2}- ./gm;
-    this.environments = environmentsProvider;
     vscode.commands.registerCommand(
       "dynatrace-extensions.openScreen",
       async (entityType: string, screenType: "list" | "details") => {
@@ -81,7 +76,7 @@ export class ScreenLensProvider extends CachedDataConsumer implements vscode.Cod
       if (range) {
         // Get the entity type
         const screenIdx = getBlockItemIndexAtLine("screens", line.lineNumber, text);
-        const entityType = this.parsedExtension.screens?.[screenIdx].entityType;
+        const entityType = this.parsedExtension?.screens?.[screenIdx].entityType;
         if (entityType) {
           // Create the lenses
           this.codeLenses.push(
@@ -113,7 +108,7 @@ export class ScreenLensProvider extends CachedDataConsumer implements vscode.Cod
    */
   private async openScreen(entityType: string, screenType: "list" | "details") {
     try {
-      const tenant = await this.environments.getCurrentEnvironment();
+      const tenant = await getConnectedTenant();
       if (tenant) {
         const baseUrl = tenant.url.includes(".apps")
           ? `${tenant.url}/ui/apps/dynatrace.classic.technologies`

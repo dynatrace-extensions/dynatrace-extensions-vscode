@@ -196,8 +196,8 @@ export class MonitoringConfiguration extends vscode.TreeItem implements IMonitor
  * monitoring configurations are rendered as children.
  * Any environment in the list may be used for API-based operations.
  */
-export class EnvironmentsTreeDataProvider implements vscode.TreeDataProvider<EnvironmentsTreeItem> {
-  private readonly logTrace = ["treeViews", "environmentsTreeView", this.constructor.name];
+class TenantsTreeDataProviderImpl implements TenantsTreeDataProvider {
+  private readonly logTrace = ["treeViews", "environmentsTreeView", "EnvironmentsTreeDataProvider"];
   context: vscode.ExtensionContext;
   connectionStatus: ConnectionStatusManager;
   oc: vscode.OutputChannel;
@@ -219,7 +219,13 @@ export class EnvironmentsTreeDataProvider implements vscode.TreeDataProvider<Env
     this.context = context;
     this.connectionStatus = connectionStatus;
     this.oc = errorChannel;
-    this.getCurrentEnvironment()
+    this.getChildren()
+      .then(children =>
+        (children as DynatraceEnvironment[]).filter(
+          c => c.contextValue === "currentDynatraceEnvironment",
+        ),
+      )
+      .then(children => children.pop())
       .then(environment => {
         if (environment) {
           this.connectionStatus
@@ -440,34 +446,6 @@ export class EnvironmentsTreeDataProvider implements vscode.TreeDataProvider<Env
       );
     });
   }
-
-  /**
-   * Gets the currently conneted environment (if any).
-   * @return environment or undefined if none is connected
-   */
-  async getCurrentEnvironment(): Promise<DynatraceEnvironment | undefined> {
-    const environment = await this.getChildren()
-      .then(children =>
-        (children as DynatraceEnvironment[]).filter(
-          c => c.contextValue === "currentDynatraceEnvironment",
-        ),
-      )
-      .then(children => children.pop());
-    return environment;
-  }
-
-  /**
-   * Gets an instance of a Dynatrace API Client.
-   * If no environment is specified, the currently connected environment is used.
-   * @param environment specific environment to get the client for
-   * @return API Client instance or undefined if none could be created
-   */
-  async getDynatraceClient(environment?: EnvironmentsTreeItem): Promise<Dynatrace | undefined> {
-    const client = environment
-      ? environment.dt
-      : await this.getCurrentEnvironment().then(e => e?.dt);
-    return client;
-  }
 }
 
 /**
@@ -479,3 +457,57 @@ export interface EnvironmentsTreeItem extends vscode.TreeItem {
   contextValue: string;
   dt: Dynatrace;
 }
+
+export interface TenantsTreeDataProvider extends vscode.TreeDataProvider<EnvironmentsTreeItem> {
+  refresh: () => void;
+  getTreeItem: (element: EnvironmentsTreeItem) => vscode.TreeItem;
+  getChildren: (element?: EnvironmentsTreeItem) => Promise<EnvironmentsTreeItem[]>;
+}
+
+let instance: TenantsTreeDataProviderImpl | undefined;
+
+/**
+ * Provides a singleton instance of the EnvironmentsTreeDataProvider.
+ */
+export const getTenantsTreeDataProvider = (() => {
+  return (
+    context: vscode.ExtensionContext,
+    connectionStatus: ConnectionStatusManager,
+    errorChannel: vscode.OutputChannel,
+  ) => {
+    instance =
+      instance === undefined
+        ? new TenantsTreeDataProviderImpl(context, connectionStatus, errorChannel)
+        : instance;
+    return instance;
+  };
+})();
+
+/**
+ * Gets an instance of a Dynatrace API Client.
+ * If no environment is specified, the currently connected environment is used.
+ * @param environment specific environment to get the client for
+ * @return API Client instance or undefined if none could be created
+ */
+export const getDynatraceClient = async (environment?: EnvironmentsTreeItem) => {
+  if (!instance) return undefined;
+  const client = environment ? environment.dt : await getConnectedTenant().then(e => e?.dt);
+  return client;
+};
+
+/**
+ * Gets the currently conneted environment (if any).
+ * @return environment or undefined if none is connected
+ */
+export const getConnectedTenant = async () => {
+  if (!instance) return undefined;
+  const environment = await instance
+    .getChildren()
+    .then(children =>
+      (children as DynatraceEnvironment[]).filter(
+        c => c.contextValue === "currentDynatraceEnvironment",
+      ),
+    )
+    .then(children => children.pop());
+  return environment;
+};
