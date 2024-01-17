@@ -275,18 +275,21 @@ export const updateCachedOid = async (oid: string) => {
 };
 
 const fetchAndUpdateOidInformation = async (oid: string) => {
-  // Check it's not in the cached data or local database
-  if (snmpOIDs.has(oid) || localDatabaseHasOid(oid)) return;
-  // Only ASN.1 notation is supported for online fetching
-  snmpOIDs.set(oid, await fetchOID(oid));
+  if (!snmpOIDs.has(oid)) {
+    const localIndex = getLocalDatabaseOidIndex(oid);
+    if (localIndex !== -1) {
+      snmpOIDs.set(oid, localSnmpDatabase[localIndex]);
+    } else {
+      // Only ASN.1 notation is supported for online fetching
+      snmpOIDs.set(oid, await fetchOID(oid));
+    }
+  }
 };
 
-const localDatabaseHasOid = (oid: string) => {
+const getLocalDatabaseOidIndex = (oid: string) => {
   const nameNotation = /^[\da-zA-Z]+$/.test(oid);
-  return (
-    localSnmpDatabase.findIndex(obj =>
-      nameNotation ? obj.objectType === oid : obj.oid === oid,
-    ) !== -1
+  return localSnmpDatabase.findIndex(obj =>
+    nameNotation ? obj.objectType === oid : obj.oid === oid,
   );
 };
 
