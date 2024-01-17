@@ -15,6 +15,7 @@
  */
 
 import * as vscode from "vscode";
+import { getDiagnosticFixProvider } from "./codeActions/diagnosticFixProvider";
 import { getPrometheusActionProvider } from "./codeActions/prometheus";
 import { getSnippetGenerator } from "./codeActions/snippetGenerator";
 import { getSnmpActionProvider } from "./codeActions/snmp";
@@ -55,8 +56,6 @@ import {
   QUICK_FIX_PROVIDER_METADATA,
   TEMP_CONFIG_DOC_SELECTOR,
 } from "./constants";
-import { DiagnosticFixProvider } from "./diagnostics/diagnosticFixProvider";
-import { DiagnosticsProvider } from "./diagnostics/diagnostics";
 import { SnmpHoverProvider } from "./hover/snmpHover";
 import { ConnectionStatusManager } from "./statusBar/connection";
 import { FastModeStatus } from "./statusBar/fastMode";
@@ -65,6 +64,7 @@ import { getDynatraceClient, getTenantsTreeDataProvider } from "./treeViews/tena
 import { getWorkspacesTreeDataProvider } from "./treeViews/workspacesTreeView";
 import { initializeCache } from "./utils/caching";
 import { checkTenantConnected, isExtensionsWorkspace } from "./utils/conditionCheckers";
+import { updateDiagnosticsCollection } from "./utils/diagnostics";
 import {
   getAllEnvironments,
   getAllWorkspaces,
@@ -112,7 +112,6 @@ export async function activate(context: vscode.ExtensionContext) {
   const snmpHoverProvider = new SnmpHoverProvider();
   const fastModeChannel = vscode.window.createOutputChannel("Dynatrace Fast Mode", "json");
   const fastModeStatus = new FastModeStatus(fastModeChannel);
-  const diagnosticsProvider = new DiagnosticsProvider();
   let editTimeout: NodeJS.Timeout | undefined;
 
   // The check for the simulator's initial status (must happen once cached data is available)
@@ -134,7 +133,7 @@ export async function activate(context: vscode.ExtensionContext) {
     registerWorkflowCommand("generateCertificates", () => generateCertificatesWorkflow(context)),
     registerWorkflowCommand("distributeCertificate", () => distributeCertificateWorkflow(context)),
     registerWorkflowCommand("buildExtension", () =>
-      buildExtensionWorkflow(context, diagnosticsProvider, genericChannel),
+      buildExtensionWorkflow(context, genericChannel),
     ),
     registerWorkflowCommand("uploadExtension", () => uploadExtensionWorkflow(context)),
     registerWorkflowCommand("activateExtension", () => activateExtensionWorkflow(context)),
@@ -192,7 +191,7 @@ export async function activate(context: vscode.ExtensionContext) {
     registerCodeActionsProvider(getSnippetGenerator()),
     registerCodeActionsProvider(getSnmpActionProvider()),
     registerCodeActionsProvider(getPrometheusActionProvider()),
-    registerCodeActionsProvider(new DiagnosticFixProvider(diagnosticsProvider)),
+    registerCodeActionsProvider(getDiagnosticFixProvider()),
     // Connection Status Bar Item
     connectionStatusManager.getStatusBarItem(),
     // FastMode Status Bar Item
@@ -282,7 +281,7 @@ export async function activate(context: vscode.ExtensionContext) {
     // Activity on active document changed
     vscode.window.onDidChangeActiveTextEditor(editor => {
       if (editor?.document.fileName.endsWith("extension.yaml")) {
-        diagnosticsProvider.provideDiagnostics(editor.document).catch(err => {
+        updateDiagnosticsCollection(editor.document).catch(err => {
           logger.info(`Could not provide diagnostics. ${(err as Error).message}`);
         });
       }
@@ -296,7 +295,7 @@ export async function activate(context: vscode.ExtensionContext) {
           editTimeout = undefined;
         }
         editTimeout = setTimeout(() => {
-          diagnosticsProvider.provideDiagnostics(change.document).catch(err => {
+          updateDiagnosticsCollection(change.document).catch(err => {
             logger.info(`Could not provide diagnostics. ${(err as Error).message}`);
           });
           editTimeout = undefined;

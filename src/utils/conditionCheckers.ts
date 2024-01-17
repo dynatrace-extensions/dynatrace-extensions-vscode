@@ -24,6 +24,7 @@ import * as path from "path";
 import axios from "axios";
 import * as vscode from "vscode";
 import { getConnectedTenant } from "../treeViews/tenantsTreeView";
+import { getDiagnostics } from "./diagnostics";
 import { getExtensionFilePath, resolveRealPath } from "./fileSystem";
 import * as logger from "./logging";
 import { runCommand } from "./subprocesses";
@@ -400,3 +401,34 @@ export async function checkDtSdkPresent(
 
   return status;
 }
+
+/**
+ * Checks whether VSCode has any diagnostics (problems) registered on the extension manifest
+ * with severity "Error". This can be used if to check if extension should be built or not.
+ * @returns true if no problems, false otherwise
+ */
+export const checkNoProblemsInManifest = async (): Promise<boolean> => {
+  const fnLogTrace = [...logTrace, "checkNoProblemsInManifest"];
+  let status = true;
+
+  const extensionYamlFile = getExtensionFilePath();
+  if (!extensionYamlFile) return false;
+  const extensionYamlFileUri = vscode.Uri.file(extensionYamlFile);
+
+  const diagnostics = [
+    ...getDiagnostics(extensionYamlFileUri),
+    ...vscode.languages.getDiagnostics(extensionYamlFileUri),
+  ];
+
+  if (
+    diagnostics.length > 0 &&
+    diagnostics.findIndex(diag => diag.severity === vscode.DiagnosticSeverity.Error) > -1
+  ) {
+    logger.notify("ERROR", "Extension cannot be built. Fix problems first.", ...fnLogTrace);
+    await vscode.commands.executeCommand("workbench.action.problems.focus");
+    status = false;
+  }
+
+  logger.info(`Are there problems in the manifest? ${String(status)}`, ...fnLogTrace);
+  return status;
+};

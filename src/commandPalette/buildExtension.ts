@@ -28,7 +28,6 @@ import * as path from "path";
 import AdmZip = require("adm-zip");
 import { glob } from "glob";
 import * as vscode from "vscode";
-import { DiagnosticsProvider } from "../diagnostics/diagnostics";
 import { Dynatrace } from "../dynatrace-api/dynatrace";
 import { DynatraceAPIError } from "../dynatrace-api/errors";
 import { FastModeStatus } from "../statusBar/fastMode";
@@ -37,6 +36,7 @@ import { loopSafeWait } from "../utils/code";
 import {
   checkCertificateExists,
   checkDtSdkPresent,
+  checkNoProblemsInManifest,
   checkWorkspaceOpen,
   isExtensionsWorkspace,
 } from "../utils/conditionCheckers";
@@ -56,14 +56,13 @@ type FastModeOptions = {
 
 export const buildExtensionWorkflow = async (
   context: vscode.ExtensionContext,
-  diagnosticsProvider: DiagnosticsProvider,
   outputChannel: vscode.OutputChannel,
 ) => {
   if (
     (await checkWorkspaceOpen()) &&
     (await isExtensionsWorkspace(context)) &&
     (await checkCertificateExists("dev")) &&
-    (await diagnosticsProvider.isValidForBuilding())
+    (await checkNoProblemsInManifest())
   ) {
     await buildExtension(context, outputChannel, await getDynatraceClient());
   }
