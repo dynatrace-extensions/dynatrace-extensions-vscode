@@ -31,6 +31,7 @@ import {
   isExtensionsWorkspace,
 } from "../utils/conditionCheckers";
 import * as logger from "../utils/logging";
+import { activateExtension } from "./activateExtension";
 
 export const uploadExtensionWorkflow = async (context: vscode.ExtensionContext) => {
   if (
@@ -197,11 +198,7 @@ export async function uploadExtension(dt: Dynatrace, tenantUrl: string) {
       return;
     }
     logger.debug("User chose to activate extension will trigger separate flow.", ...fnLogTrace);
-    await vscode.commands.executeCommand(
-      "dynatrace-extensions.activateExtension",
-      context,
-      extensionVersion,
-    );
+    await activateExtension(dt, tenantUrl, extensionVersion);
   } else {
     logger.notify("ERROR", status, ...fnLogTrace);
     logger.notify("ERROR", "Extension upload failed.", ...fnLogTrace);
