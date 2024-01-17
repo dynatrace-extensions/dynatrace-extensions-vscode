@@ -17,9 +17,32 @@
 import * as vscode from "vscode";
 import { Dynatrace } from "../dynatrace-api/dynatrace";
 import { DynatraceAPIError } from "../dynatrace-api/errors";
+import { getConnectedTenant, getDynatraceClient } from "../treeViews/tenantsTreeView";
 import { getCachedParsedExtension } from "../utils/caching";
+import {
+  checkTenantConnected,
+  checkWorkspaceOpen,
+  isExtensionsWorkspace,
+} from "../utils/conditionCheckers";
 import { getExtensionFilePath } from "../utils/fileSystem";
 import * as logger from "../utils/logging";
+
+export const activateExtensionWorkflow = async (
+  context: vscode.ExtensionContext,
+  version?: string,
+) => {
+  if (
+    (await checkWorkspaceOpen()) &&
+    (await isExtensionsWorkspace(context)) &&
+    (await checkTenantConnected())
+  ) {
+    const dtClient = await getDynatraceClient();
+    const currentEnv = await getConnectedTenant();
+    if (dtClient && currentEnv) {
+      await activateExtension(dtClient, currentEnv.url, version);
+    }
+  }
+};
 
 /**
  * Activates the extension found in the currently open workspace. If a version is not provided
@@ -30,8 +53,6 @@ import * as logger from "../utils/logging";
  */
 export async function activateExtension(dt: Dynatrace, tenantUrl: string, version?: string) {
   const fnLogTrace = ["commandPalette", "activateExtension"];
-  logger.info("Executing Activate Extension command", ...fnLogTrace);
-
   const extensionFile = getExtensionFilePath();
   if (!extensionFile) {
     logger.error("Missing extension file. Command aborted.", ...fnLogTrace);

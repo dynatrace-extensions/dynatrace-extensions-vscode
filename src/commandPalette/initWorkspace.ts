@@ -20,8 +20,15 @@ import { TextEncoder } from "util";
 import AdmZip = require("adm-zip");
 import * as vscode from "vscode";
 import { Dynatrace } from "../dynatrace-api/dynatrace";
+import { getDynatraceClient } from "../treeViews/tenantsTreeView";
+import { refreshWorkspacesTreeData } from "../treeViews/workspacesTreeView";
 import { pushManifestTextForParsing } from "../utils/caching";
-import { checkDtSdkPresent, checkSettings } from "../utils/conditionCheckers";
+import {
+  checkDtSdkPresent,
+  checkSettings,
+  checkTenantConnected,
+  checkWorkspaceOpen,
+} from "../utils/conditionCheckers";
 import {
   getExtensionFilePath,
   initWorkspaceStorage,
@@ -54,6 +61,22 @@ const PROJECT_TYPES = {
     label: "Existing 2.0 Extension",
     detail: "Start by downloading an extension already deployed in your tenant.",
   },
+};
+
+export const initWorkspaceWorkflow = async (context: vscode.ExtensionContext) => {
+  if ((await checkWorkspaceOpen()) && (await checkTenantConnected())) {
+    initWorkspaceStorage(context);
+    try {
+      const dtClient = await getDynatraceClient();
+      if (dtClient) {
+        await initWorkspace(context, dtClient, () => {
+          refreshWorkspacesTreeData();
+        });
+      }
+    } finally {
+      await context.globalState.update("dynatrace-extensions.initPending", undefined);
+    }
+  }
 };
 
 /**

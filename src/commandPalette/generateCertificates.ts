@@ -18,9 +18,24 @@ import { existsSync, mkdirSync, writeFileSync } from "fs";
 import path = require("path");
 import { md, pki, random, util } from "node-forge";
 import * as vscode from "vscode";
+import { checkOverwriteCertificates, checkWorkspaceOpen } from "../utils/conditionCheckers";
+import { initWorkspaceStorage } from "../utils/fileSystem";
 import * as logger from "../utils/logging";
 
 const logTrace = ["commandPalette", "generateCertificates"];
+
+export const generateCertificatesWorkflow = async (context: vscode.ExtensionContext) => {
+  if (await checkWorkspaceOpen()) {
+    initWorkspaceStorage(context);
+    return checkOverwriteCertificates(context).then(async approved => {
+      if (approved) {
+        return generateCerts(context);
+      }
+      return false;
+    });
+  }
+  return false;
+};
 
 /**
  * Generates a random serial number, valid for X.509 Certificates.

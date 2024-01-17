@@ -28,11 +28,18 @@ import {
 } from "../interfaces/extensionDocs";
 import { ExtensionStub } from "../interfaces/extensionMeta";
 import { getCachedParsedExtension } from "../utils/caching";
+import { checkWorkspaceOpen, isExtensionsWorkspace } from "../utils/conditionCheckers";
 import { getAllMetricsByFeatureSet } from "../utils/extensionParsing";
 import { getExtensionFilePath } from "../utils/fileSystem";
 import * as logger from "../utils/logging";
 
 const logTrace = ["commandPalette", "createDocumentation"];
+
+export const createDocumentationWorkflow = async (context: vscode.ExtensionContext) => {
+  if ((await checkWorkspaceOpen()) && (await isExtensionsWorkspace(context))) {
+    await createDocumentation();
+  }
+};
 
 /**
  * Reads extension.yaml data and extracts relevant details for documenting custom events for

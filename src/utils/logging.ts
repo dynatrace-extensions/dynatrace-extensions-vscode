@@ -61,19 +61,21 @@ function checkFileSize() {
  * @param stack the stack trace
  */
 function extractScope(stack: string) {
-  return stack
-    .split("\n")
-    .map(l => {
-      if (l.includes("dynatrace-extensions-vscode")) {
-        const match = l.match(/at (.*?) \(/);
-        return match ? match[1] : "";
-      }
-      return "";
-    })
-    .filter(l => l !== "")
-    .slice(3)
-    .reverse()
-    .join(" > ");
+  return (
+    stack
+      .split("\n")
+      .map(l => {
+        if (l.includes(path.resolve(__dirname, "..", ".."))) {
+          const match = l.match(/at (.*?) \(/);
+          return match ? match[1] : "";
+        }
+        return "";
+      })
+      .filter(l => l !== "")
+      .slice(3)
+      .reverse()
+      .join(" > ") || "vscode-api"
+  );
 }
 
 /**

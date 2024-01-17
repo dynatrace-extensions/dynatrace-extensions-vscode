@@ -22,11 +22,30 @@ import {
   MinimalConfiguration,
   getConfigurationDetailsViaFile,
 } from "../treeViews/commands/environments";
+import { getDynatraceClient } from "../treeViews/tenantsTreeView";
 import { getCachedParsedExtension } from "../utils/caching";
+import {
+  checkTenantConnected,
+  checkWorkspaceOpen,
+  isExtensionsWorkspace,
+} from "../utils/conditionCheckers";
 import { getDatasourceName } from "../utils/extensionParsing";
 import { createUniqueFileName, getExtensionFilePath } from "../utils/fileSystem";
 import * as logger from "../utils/logging";
 import { createGenericConfigObject, createObjectFromSchema } from "../utils/schemaParsing";
+
+export const createMonitoringConfigurationWorkflow = async (context: vscode.ExtensionContext) => {
+  if (
+    (await checkWorkspaceOpen()) &&
+    (await isExtensionsWorkspace(context)) &&
+    (await checkTenantConnected())
+  ) {
+    const dtClient = await getDynatraceClient();
+    if (dtClient) {
+      await createMonitoringConfiguration(dtClient, context);
+    }
+  }
+};
 
 /**
  * Command implements workflow for creating a Monitoring Configuration file for the extension in

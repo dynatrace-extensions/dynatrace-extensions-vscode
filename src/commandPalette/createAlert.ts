@@ -20,11 +20,18 @@ import path = require("path");
 import * as vscode from "vscode";
 import { MetricMetadata } from "../interfaces/extensionMeta";
 import { getCachedParsedExtension } from "../utils/caching";
+import { checkWorkspaceOpen, isExtensionsWorkspace } from "../utils/conditionCheckers";
 import { getAllMetricKeys, getEntityForMetric } from "../utils/extensionParsing";
 import { createUniqueFileName, getExtensionFilePath } from "../utils/fileSystem";
 import * as logger from "../utils/logging";
 
 const logTrace = ["commandPalette", "createAlert"];
+
+export const createAlertWorkflow = async (context: vscode.ExtensionContext) => {
+  if ((await checkWorkspaceOpen()) && (await isExtensionsWorkspace(context))) {
+    await createAlert();
+  }
+};
 
 export async function createAlert() {
   logger.info("Executing Create Alert command", ...logTrace);

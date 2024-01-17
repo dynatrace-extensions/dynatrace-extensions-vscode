@@ -28,11 +28,18 @@ import * as path from "path";
 import AdmZip = require("adm-zip");
 import { glob } from "glob";
 import * as vscode from "vscode";
+import { DiagnosticsProvider } from "../diagnostics/diagnostics";
 import { Dynatrace } from "../dynatrace-api/dynatrace";
 import { DynatraceAPIError } from "../dynatrace-api/errors";
 import { FastModeStatus } from "../statusBar/fastMode";
+import { getDynatraceClient } from "../treeViews/tenantsTreeView";
 import { loopSafeWait } from "../utils/code";
-import { checkDtSdkPresent } from "../utils/conditionCheckers";
+import {
+  checkCertificateExists,
+  checkDtSdkPresent,
+  checkWorkspaceOpen,
+  isExtensionsWorkspace,
+} from "../utils/conditionCheckers";
 import { sign } from "../utils/cryptography";
 import { normalizeExtensionVersion, incrementExtensionVersion } from "../utils/extensionParsing";
 import { getExtensionFilePath, removeOldestFiles, resolveRealPath } from "../utils/fileSystem";
@@ -45,6 +52,21 @@ const logTrace = ["commandPalette", "buildExtension"];
 type FastModeOptions = {
   status: FastModeStatus;
   document: vscode.TextDocument;
+};
+
+export const buildExtensionWorkflow = async (
+  context: vscode.ExtensionContext,
+  diagnosticsProvider: DiagnosticsProvider,
+  outputChannel: vscode.OutputChannel,
+) => {
+  if (
+    (await checkWorkspaceOpen()) &&
+    (await isExtensionsWorkspace(context)) &&
+    (await checkCertificateExists("dev")) &&
+    (await diagnosticsProvider.isValidForBuilding())
+  ) {
+    await buildExtension(context, outputChannel, await getDynatraceClient());
+  }
 };
 
 /**

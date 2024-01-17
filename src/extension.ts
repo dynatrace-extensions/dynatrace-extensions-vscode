@@ -14,7 +14,6 @@
   limitations under the  License.
  */
 
-import path = require("path");
 import * as vscode from "vscode";
 import { getPrometheusActionProvider } from "./codeActions/prometheus";
 import { getSnippetGenerator } from "./codeActions/snippetGenerator";
@@ -37,20 +36,20 @@ import { getSnmpCodeLensProvider } from "./codeLens/snmpCodeLens";
 import { ValidationStatus, runSelector, validateSelector } from "./codeLens/utils/selectorUtils";
 import { runWMIQuery } from "./codeLens/utils/wmiUtils";
 import { getWmiCodeLensProvider, updateWmiValidationStatus } from "./codeLens/wmiCodeLens";
-import { activateExtension } from "./commandPalette/activateExtension";
-import { buildExtension } from "./commandPalette/buildExtension";
-import { convertJMXExtension } from "./commandPalette/convertJMXExtension";
-import { convertPythonExtension } from "./commandPalette/convertPythonExtension";
-import { createAlert } from "./commandPalette/createAlert";
-import { createMonitoringConfiguration } from "./commandPalette/createConfiguration";
-import { createOverviewDashboard } from "./commandPalette/createDashboard";
-import { createDocumentation } from "./commandPalette/createDocumentation";
-import { distributeCertificate } from "./commandPalette/distributeCertificate";
-import { downloadSupportArchive } from "./commandPalette/downloadSupportArchive";
-import { generateCerts } from "./commandPalette/generateCertificates";
-import { initWorkspace } from "./commandPalette/initWorkspace";
-import { loadSchemas } from "./commandPalette/loadSchemas";
-import { uploadExtension } from "./commandPalette/uploadExtension";
+import { activateExtensionWorkflow } from "./commandPalette/activateExtension";
+import { buildExtension, buildExtensionWorkflow } from "./commandPalette/buildExtension";
+import { convertJmxExtensionWorkflow } from "./commandPalette/convertJMXExtension";
+import { convertPythonExtensionWorkflow } from "./commandPalette/convertPythonExtension";
+import { createAlertWorkflow } from "./commandPalette/createAlert";
+import { createMonitoringConfigurationWorkflow } from "./commandPalette/createConfiguration";
+import { createDashboardWorkflow } from "./commandPalette/createDashboard";
+import { createDocumentationWorkflow } from "./commandPalette/createDocumentation";
+import { distributeCertificateWorkflow } from "./commandPalette/distributeCertificate";
+import { downloadSupportArchiveWorkflow } from "./commandPalette/downloadSupportArchive";
+import { generateCertificatesWorkflow } from "./commandPalette/generateCertificates";
+import { initWorkspaceWorkflow } from "./commandPalette/initWorkspace";
+import { loadSchemasWorkflow } from "./commandPalette/loadSchemas";
+import { uploadExtensionWorkflow } from "./commandPalette/uploadExtension";
 import {
   MANIFEST_DOC_SELECTOR,
   QUICK_FIX_PROVIDER_METADATA,
@@ -62,297 +61,23 @@ import { SnmpHoverProvider } from "./hover/snmpHover";
 import { ConnectionStatusManager } from "./statusBar/connection";
 import { FastModeStatus } from "./statusBar/fastMode";
 import { SimulatorManager } from "./statusBar/simulator";
-import {
-  getConnectedTenant,
-  getDynatraceClient,
-  getTenantsTreeDataProvider,
-} from "./treeViews/tenantsTreeView";
-import {
-  getWorkspacesTreeDataProvider,
-  refreshWorkspacesTreeData,
-} from "./treeViews/workspacesTreeView";
+import { getDynatraceClient, getTenantsTreeDataProvider } from "./treeViews/tenantsTreeView";
+import { getWorkspacesTreeDataProvider } from "./treeViews/workspacesTreeView";
 import { initializeCache } from "./utils/caching";
-import {
-  checkCertificateExists,
-  checkTenantConnected,
-  checkExtensionZipExists,
-  checkOverwriteCertificates,
-  checkWorkspaceOpen,
-  isExtensionsWorkspace,
-} from "./utils/conditionCheckers";
+import { checkTenantConnected, isExtensionsWorkspace } from "./utils/conditionCheckers";
 import {
   getAllEnvironments,
   getAllWorkspaces,
-  getExtensionWorkspaceDir,
   initGlobalStorage,
-  initWorkspaceStorage,
   migrateFromLegacyExtension,
 } from "./utils/fileSystem";
 import * as logger from "./utils/logging";
 import { REGISTERED_PANELS, WebviewPanelManager } from "./webviews/webviewPanel";
 
+// eslint-disable-next-line @typescript-eslint/no-explicit-any
+type WorkflowFunction<T extends any[] = []> = (...args: T) => PromiseLike<unknown>;
 let simulatorManager: SimulatorManager;
 const logTrace = ["extension"];
-
-/**
- * Registers this extension's Commands for the VSCode Command Palette.
- * This is so that all commands can be created in one function, keeping the activation function more tidy.
- * @param diagnosticsProvider a provider for diagnostics
- * @param outputChannel a JSON output channel for communicating data
- * @param context {@link vscode.ExtensionContext}
- * @returns list commands as disposables
- */
-function registerCommandPaletteCommands(
-  diagnosticsProvider: DiagnosticsProvider,
-  outputChannel: vscode.OutputChannel,
-  context: vscode.ExtensionContext,
-): vscode.Disposable[] {
-  logger.debug(
-    "Registering commands for the command palette",
-    ...logTrace,
-    "registerCommandPaletteCommands",
-  );
-  return [
-    // Load extension schemas of a given version
-    vscode.commands.registerCommand("dynatrace-extensions.loadSchemas", async () => {
-      logger.info("Command 'loadSchemas' called.", ...logTrace);
-      if (await checkTenantConnected()) {
-        const dtClient = await getDynatraceClient();
-        if (dtClient) {
-          await loadSchemas(context, dtClient);
-        }
-      }
-    }),
-    // Initialize a new workspace for extension development
-    vscode.commands.registerCommand("dynatrace-extensions.initWorkspace", async () => {
-      logger.info("Command 'initWorkspace' called.", ...logTrace);
-      if ((await checkWorkspaceOpen()) && (await checkTenantConnected())) {
-        initWorkspaceStorage(context);
-        try {
-          const dtClient = await getDynatraceClient();
-          if (dtClient) {
-            await initWorkspace(context, dtClient, () => {
-              refreshWorkspacesTreeData();
-            });
-          }
-        } finally {
-          await context.globalState.update("dynatrace-extensions.initPending", undefined);
-        }
-      }
-    }),
-    // Generate the certificates required for extension signing
-    vscode.commands.registerCommand("dynatrace-extensions.generateCertificates", async () => {
-      logger.info("Command 'generateCertificates' called.", ...logTrace);
-      if (await checkWorkspaceOpen()) {
-        initWorkspaceStorage(context);
-        return checkOverwriteCertificates(context).then(async approved => {
-          if (approved) {
-            return generateCerts(context);
-          }
-          return false;
-        });
-      }
-      return false;
-    }),
-    // Distribute CA certificate to Dynatrace credential vault & OneAgents/ActiveGates
-    vscode.commands.registerCommand("dynatrace-extensions.distributeCertificate", async () => {
-      logger.info("Command 'distributeCertificate' called.", ...logTrace);
-      if ((await checkWorkspaceOpen()) && (await checkTenantConnected())) {
-        initWorkspaceStorage(context);
-        const dtClient = await getDynatraceClient();
-        if ((await checkCertificateExists("ca")) && dtClient) {
-          await distributeCertificate(context, dtClient);
-        }
-      }
-    }),
-    // Build Extension 2.0 package
-    vscode.commands.registerCommand("dynatrace-extensions.buildExtension", async () => {
-      logger.info("Command 'buildExtension' called.", ...logTrace);
-      if (
-        (await checkWorkspaceOpen()) &&
-        (await isExtensionsWorkspace(context)) &&
-        (await checkCertificateExists("dev")) &&
-        (await diagnosticsProvider.isValidForBuilding())
-      ) {
-        await buildExtension(context, outputChannel, await getDynatraceClient());
-      }
-    }),
-    // Upload an extension to the tenant
-    vscode.commands.registerCommand("dynatrace-extensions.uploadExtension", async () => {
-      logger.info("Command 'uploadExtension' called.", ...logTrace);
-      if (
-        (await checkWorkspaceOpen()) &&
-        (await isExtensionsWorkspace(context)) &&
-        (await checkTenantConnected()) &&
-        (await checkExtensionZipExists())
-      ) {
-        const dtClient = await getDynatraceClient();
-        const currentEnv = await getConnectedTenant();
-        if (dtClient && currentEnv) {
-          await uploadExtension(dtClient, currentEnv.url);
-        }
-      }
-    }),
-    // Activate a given version of extension 2.0
-    vscode.commands.registerCommand(
-      "dynatrace-extensions.activateExtension",
-      async (version?: string) => {
-        logger.info("Command 'activateExtension' called.", ...logTrace);
-        if (
-          (await checkWorkspaceOpen()) &&
-          (await isExtensionsWorkspace(context)) &&
-          (await checkTenantConnected())
-        ) {
-          const dtClient = await getDynatraceClient();
-          const currentEnv = await getConnectedTenant();
-          if (dtClient && currentEnv) {
-            await activateExtension(dtClient, currentEnv.url, version);
-          }
-        }
-      },
-    ),
-    // Create Extension documentation
-    vscode.commands.registerCommand("dynatrace-extensions.createDocumentation", async () => {
-      logger.info("Command 'createDocumentation' called.", ...logTrace);
-      if ((await checkWorkspaceOpen()) && (await isExtensionsWorkspace(context))) {
-        await createDocumentation();
-      }
-    }),
-    // Create Overview dashboard
-    vscode.commands.registerCommand("dynatrace-extensions.createDashboard", async () => {
-      logger.info("Command 'createDashboard' called.", ...logTrace);
-      if ((await checkWorkspaceOpen()) && (await isExtensionsWorkspace(context))) {
-        await createOverviewDashboard(outputChannel);
-      }
-    }),
-    // Create Alert
-    vscode.commands.registerCommand("dynatrace-extensions.createAlert", async () => {
-      logger.info("Command 'createAlert' called.", ...logTrace);
-      if ((await checkWorkspaceOpen()) && (await isExtensionsWorkspace(context))) {
-        await createAlert();
-      }
-    }),
-    // Convert JMX Extension from 1.0 to 2.0
-    vscode.commands.registerCommand(
-      "dynatrace-extensions.convertJmxExtension",
-      async (outputPath?: string) => {
-        logger.info("Command 'convertJmxExtension' called.", ...logTrace);
-        // Unless explicitly specified, try to detect output path
-        if (!outputPath) {
-          const extensionDir = getExtensionWorkspaceDir();
-          if (extensionDir) {
-            await convertJMXExtension(
-              await getDynatraceClient(),
-              path.resolve(extensionDir, "extension.yaml"),
-            );
-          }
-        } else {
-          await convertJMXExtension(await getDynatraceClient(), outputPath);
-        }
-      },
-    ),
-    // Convert Python extension plugin.json to activationSchema.json
-    vscode.commands.registerCommand(
-      "dynatrace-extensions.convertPythonExtension",
-      async (outputPath?: string) => {
-        logger.info("Command 'convertPythonExtension' called.", ...logTrace);
-        // Unless explicitly specified, try to detect output path
-        if (!outputPath) {
-          const extensionDir = getExtensionWorkspaceDir();
-          if (extensionDir) {
-            await convertPythonExtension(
-              await getDynatraceClient(),
-              path.resolve(extensionDir, "activationSchema.json"),
-            );
-          } else {
-            // No activationSchema.json found
-            await convertPythonExtension(await getDynatraceClient());
-          }
-        } else {
-          await convertPythonExtension(await getDynatraceClient(), outputPath);
-        }
-      },
-    ),
-    // Create monitoring configuration files
-    vscode.commands.registerCommand(
-      "dynatrace-extensions.createMonitoringConfiguration",
-      async () => {
-        logger.info("Command 'createMonitoringConfiguration' called.", ...logTrace);
-        if (
-          (await checkWorkspaceOpen()) &&
-          (await isExtensionsWorkspace(context)) &&
-          (await checkTenantConnected())
-        ) {
-          const dtClient = await getDynatraceClient();
-          if (dtClient) {
-            await createMonitoringConfiguration(dtClient, context);
-          }
-        }
-      },
-    ),
-    // Download support archive
-    vscode.commands.registerCommand("dynatrace-extensions.downloadSupportArchive", async () => {
-      // eslint-disable-next-line no-secrets/no-secrets
-      logger.info("Command 'downloadSupportArchive' called.", ...logTrace);
-      const logsDir = path.join(context.globalStorageUri.fsPath, "logs");
-      await downloadSupportArchive(logsDir);
-    }),
-  ];
-}
-
-const registerUpdateConfigCommand = (
-  commandId: string,
-  settingValue: string | boolean | number,
-  ...settingIds: string[]
-) =>
-  vscode.commands.registerCommand(commandId, () => {
-    settingIds.forEach(settingId => {
-      const settingName = `dynatraceExtensions.${settingId}`;
-      vscode.workspace
-        .getConfiguration()
-        .update(settingName, settingValue)
-        .then(
-          () =>
-            logger.debug(`Changed setting ${settingName} to ${String(settingValue)}`, commandId),
-          () => logger.warn(`Failed to change setting ${settingName}`, commandId),
-        );
-    });
-  });
-
-const registerFeatureSwitchCommands = (featureName: string, ...settingIds: string[]) => {
-  const enableCommandId = `dynatrace-extensions-workspaces.enable${featureName}`;
-  const disableCommandId = `dynatrace-extensions-workspaces.disable${featureName}`;
-  return [
-    registerUpdateConfigCommand(enableCommandId, true, ...settingIds),
-    registerUpdateConfigCommand(disableCommandId, false, ...settingIds),
-  ];
-};
-const setContextProperty = (key: string, value: string | number | boolean) => {
-  const fnLogTrace = [...logTrace, "setContextProperty"];
-  const contextPrefix = "dynatrace-extensions";
-  vscode.commands.executeCommand("setContext", `${contextPrefix}.${key}`, value).then(
-    () => logger.debug(`Set context property ${key} to ${String(value)}`),
-    () => logger.warn("Could not set context for number of registered workspaces.", ...fnLogTrace),
-  );
-};
-
-const registerCompletionProvider = (
-  provider: vscode.CompletionItemProvider,
-  documentSelector: vscode.DocumentSelector,
-  ...triggerCharacters: string[]
-) =>
-  vscode.languages.registerCompletionItemProvider(documentSelector, provider, ...triggerCharacters);
-
-const registerCodeActionsProvider = (
-  provider: vscode.CodeActionProvider,
-  documentSelector: vscode.DocumentSelector = MANIFEST_DOC_SELECTOR,
-  providerMetadata: vscode.CodeActionProviderMetadata = QUICK_FIX_PROVIDER_METADATA,
-) => vscode.languages.registerCodeActionsProvider(documentSelector, provider, providerMetadata);
-
-const registerCodeLensProvider = (
-  provider: vscode.CodeLensProvider,
-  documentSelector: vscode.DocumentSelector = MANIFEST_DOC_SELECTOR,
-) => vscode.languages.registerCodeLensProvider(documentSelector, provider);
 
 /**
  * Sets up the VSCode extension by registering all the available functionality as disposable objects.
@@ -403,8 +128,29 @@ export async function activate(context: vscode.ExtensionContext) {
   logger.debug("Registering commands and feature providers", ...fnLogTrace);
   // Perform all feature registrations
   context.subscriptions.push(
-    // Commands for the Command Palette
-    ...registerCommandPaletteCommands(diagnosticsProvider, genericChannel, context),
+    // Commands for the Command Palette (workflows)
+    registerWorkflowCommand("loadSchemas", () => loadSchemasWorkflow(context)),
+    registerWorkflowCommand("initWorkspace", () => initWorkspaceWorkflow(context)),
+    registerWorkflowCommand("generateCertificates", () => generateCertificatesWorkflow(context)),
+    registerWorkflowCommand("distributeCertificate", () => distributeCertificateWorkflow(context)),
+    registerWorkflowCommand("buildExtension", () =>
+      buildExtensionWorkflow(context, diagnosticsProvider, genericChannel),
+    ),
+    registerWorkflowCommand("uploadExtension", () => uploadExtensionWorkflow(context)),
+    registerWorkflowCommand("activateExtension", () => activateExtensionWorkflow(context)),
+    registerWorkflowCommand("createDocumentation", () => createDocumentationWorkflow(context)),
+    registerWorkflowCommand("createDashboard", () =>
+      createDashboardWorkflow(context, genericChannel),
+    ),
+    registerWorkflowCommand("createAlert", () => createAlertWorkflow(context)),
+    registerWorkflowCommand("convertJmxExtension", () => convertJmxExtensionWorkflow()),
+    registerWorkflowCommand("convertPythonExtension", () => convertPythonExtensionWorkflow()),
+    registerWorkflowCommand("createMonitoringConfiguration", () =>
+      createMonitoringConfigurationWorkflow(context),
+    ),
+    registerWorkflowCommand("downloadSupportArchive", () =>
+      downloadSupportArchiveWorkflow(context),
+    ),
     // Commands for enabling/disabling features
     ...registerFeatureSwitchCommands("MetricSelectors", "metricSelectorsCodeLens"),
     ...registerFeatureSwitchCommands("EntitySelectors", "entitySelectorsCodeLens"),
@@ -592,3 +338,72 @@ export function deactivate() {
   logger.info("Dynatrace Extensions is now deactivated.", ...fnLogTrace);
   logger.disposeLogger();
 }
+
+// eslint-disable-next-line @typescript-eslint/no-explicit-any
+const registerWorkflowCommand = <T extends any[]>(
+  workflowName: string,
+  workflow: WorkflowFunction<T>,
+) => {
+  const commandId = `dynatrace-extensions.${workflowName}`;
+  return vscode.commands.registerCommand(commandId, async (...args: T) => {
+    logger.info("Command called.", commandId);
+    await workflow(...args).then(
+      () => logger.info("Completed normally", commandId),
+      err => logger.notify("ERROR", `Unexpected error: ${(err as Error).message}`, commandId),
+    );
+  });
+};
+
+const registerUpdateConfigCommand = (
+  commandId: string,
+  settingValue: string | boolean | number,
+  ...settingIds: string[]
+) =>
+  vscode.commands.registerCommand(commandId, () => {
+    settingIds.forEach(settingId => {
+      const settingName = `dynatraceExtensions.${settingId}`;
+      vscode.workspace
+        .getConfiguration()
+        .update(settingName, settingValue)
+        .then(
+          () =>
+            logger.debug(`Changed setting ${settingName} to ${String(settingValue)}`, commandId),
+          () => logger.warn(`Failed to change setting ${settingName}`, commandId),
+        );
+    });
+  });
+
+const registerFeatureSwitchCommands = (featureName: string, ...settingIds: string[]) => {
+  const enableCommandId = `dynatrace-extensions-workspaces.enable${featureName}`;
+  const disableCommandId = `dynatrace-extensions-workspaces.disable${featureName}`;
+  return [
+    registerUpdateConfigCommand(enableCommandId, true, ...settingIds),
+    registerUpdateConfigCommand(disableCommandId, false, ...settingIds),
+  ];
+};
+const setContextProperty = (key: string, value: string | number | boolean) => {
+  const fnLogTrace = [...logTrace, "setContextProperty"];
+  const contextPrefix = "dynatrace-extensions";
+  vscode.commands.executeCommand("setContext", `${contextPrefix}.${key}`, value).then(
+    () => logger.debug(`Set context property ${key} to ${String(value)}`),
+    () => logger.warn("Could not set context for number of registered workspaces.", ...fnLogTrace),
+  );
+};
+
+const registerCompletionProvider = (
+  provider: vscode.CompletionItemProvider,
+  documentSelector: vscode.DocumentSelector,
+  ...triggerCharacters: string[]
+) =>
+  vscode.languages.registerCompletionItemProvider(documentSelector, provider, ...triggerCharacters);
+
+const registerCodeActionsProvider = (
+  provider: vscode.CodeActionProvider,
+  documentSelector: vscode.DocumentSelector = MANIFEST_DOC_SELECTOR,
+  providerMetadata: vscode.CodeActionProviderMetadata = QUICK_FIX_PROVIDER_METADATA,
+) => vscode.languages.registerCodeActionsProvider(documentSelector, provider, providerMetadata);
+
+const registerCodeLensProvider = (
+  provider: vscode.CodeLensProvider,
+  documentSelector: vscode.DocumentSelector = MANIFEST_DOC_SELECTOR,
+) => vscode.languages.registerCodeLensProvider(documentSelector, provider);

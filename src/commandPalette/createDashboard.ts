@@ -21,9 +21,19 @@ import { Dashboard } from "../dynatrace-api/interfaces/dashboards";
 import { ExtensionStub } from "../interfaces/extensionMeta";
 import { getDynatraceClient } from "../treeViews/tenantsTreeView";
 import { getCachedParsedExtension } from "../utils/caching";
+import { checkWorkspaceOpen, isExtensionsWorkspace } from "../utils/conditionCheckers";
 import { getEntityMetrics, getMetricDisplayName } from "../utils/extensionParsing";
 import { getExtensionFilePath } from "../utils/fileSystem";
 import * as logger from "../utils/logging";
+
+export const createDashboardWorkflow = async (
+  context: vscode.ExtensionContext,
+  outputChannel: vscode.OutputChannel,
+) => {
+  if ((await checkWorkspaceOpen()) && (await isExtensionsWorkspace(context))) {
+    await createOverviewDashboard(outputChannel);
+  }
+};
 
 /*======================================================*
  * TEMPLATES THAT CREATE VARIOUS PARTS OF THE DASHBOARD *

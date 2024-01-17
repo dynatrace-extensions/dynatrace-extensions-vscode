@@ -15,9 +15,12 @@
  */
 
 import { writeFileSync } from "fs";
+import * as path from "path";
 import * as vscode from "vscode";
 import { Dynatrace } from "../dynatrace-api/dynatrace";
+import { getDynatraceClient } from "../treeViews/tenantsTreeView";
 import { pushManifestTextForParsing } from "../utils/caching";
+import { getExtensionWorkspaceDir } from "../utils/fileSystem";
 import * as logger from "../utils/logging";
 import { extractV1FromRemote, extractv1ExtensionFromLocal } from "./convertJMXExtension";
 import { convertPluginJsonToActivationSchema } from "./python/pythonConversion";
@@ -30,6 +33,24 @@ const OPTION_LOCAL_FILE: vscode.QuickPickItem = {
 const OPTION_DYNATRACE_ENVIRONMENT: vscode.QuickPickItem = {
   label: "Remotely",
   description: "Browse your Dynatrace environment for a Python extension",
+};
+
+export const convertPythonExtensionWorkflow = async (outputPath?: string) => {
+  // Unless explicitly specified, try to detect output path
+  if (!outputPath) {
+    const extensionDir = getExtensionWorkspaceDir();
+    if (extensionDir) {
+      await convertPythonExtension(
+        await getDynatraceClient(),
+        path.resolve(extensionDir, "activationSchema.json"),
+      );
+    } else {
+      // No activationSchema.json found
+      await convertPythonExtension(await getDynatraceClient());
+    }
+  } else {
+    await convertPythonExtension(await getDynatraceClient(), outputPath);
+  }
 };
 
 /**

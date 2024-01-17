@@ -15,6 +15,7 @@
  */
 
 import { readFileSync, writeFileSync } from "fs";
+import * as path from "path";
 import * as jszip from "jszip";
 import * as vscode from "vscode";
 import * as yaml from "yaml";
@@ -40,7 +41,9 @@ import {
   SourceDto,
   V1UI,
 } from "../interfaces/extensionMeta";
+import { getDynatraceClient } from "../treeViews/tenantsTreeView";
 import { pushManifestTextForParsing } from "../utils/caching";
+import { getExtensionWorkspaceDir } from "../utils/fileSystem";
 import * as logger from "../utils/logging";
 
 const logTrace = ["commandPalette", "convertJMXExtension"];
@@ -125,6 +128,21 @@ const TECH_OPTIONS = [
   { label: "Quarkus", id: "QUARKUS" },
   { label: "Micronaut", id: "MICRONAUT" },
 ];
+
+export const convertJmxExtensionWorkflow = async (outputPath?: string) => {
+  // Unless explicitly specified, try to detect output path
+  if (!outputPath) {
+    const extensionDir = getExtensionWorkspaceDir();
+    if (extensionDir) {
+      await convertJMXExtension(
+        await getDynatraceClient(),
+        path.resolve(extensionDir, "extension.yaml"),
+      );
+    }
+  } else {
+    await convertJMXExtension(await getDynatraceClient(), outputPath);
+  }
+};
 
 /**
  * Get the contents of the plugin.json file from a zip file binary data

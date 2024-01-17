@@ -70,6 +70,13 @@ export const initializeCache = async (globalStoragePath: string) => {
   const fnLogTrace = [...logTrace, "initializeCache"];
   logger.info("Initializing Data Cache...", ...fnLogTrace);
 
+  const initialManifestContent = readExtensionManifest();
+  createManifestProcessingPipeline(initialManifestContent);
+  setManifestChangeListeners();
+
+  // Wait for the parsed extension to be available before completing the init
+  await waitForCondition(() => parsedExtension.getValue() !== undefined);
+
   globalStorage = globalStoragePath;
   loadBuiltinEntityTypes().then(
     () => logger.debug("Built-in entity types loaded", ...fnLogTrace),
@@ -79,18 +86,13 @@ export const initializeCache = async (globalStoragePath: string) => {
     () => logger.debug("Barista Icons loaded", ...fnLogTrace),
     () => logger.debug("Barista Icons unavailable", ...fnLogTrace),
   );
-  const initialManifestContent = readExtensionManifest();
   if (/^snmp:.*?$/gm.test(initialManifestContent)) {
     loadSnmpData().then(
       () => logger.debug("SNMP data loaded in cache", ...fnLogTrace),
       () => logger.debug("SNMP data unavailable, will use online server", ...fnLogTrace),
     );
   }
-  createManifestProcessingPipeline(initialManifestContent);
-  setManifestChangeListeners();
 
-  // Wait for the parsed extension to be available before completing the init
-  await waitForCondition(() => parsedExtension.getValue() !== undefined);
   logger.info("Data Cache initialized.", ...fnLogTrace);
   initialized = true;
 };

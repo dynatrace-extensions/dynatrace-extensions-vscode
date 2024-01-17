@@ -18,9 +18,26 @@ import { readFileSync } from "fs";
 import * as vscode from "vscode";
 import { Dynatrace } from "../dynatrace-api/dynatrace";
 import { DynatraceAPIError } from "../dynatrace-api/errors";
-import { checkActiveGateInstalled, checkOneAgentInstalled } from "../utils/conditionCheckers";
-import { resolveRealPath, uploadComponentCert } from "../utils/fileSystem";
+import { getDynatraceClient } from "../treeViews/tenantsTreeView";
+import {
+  checkActiveGateInstalled,
+  checkCertificateExists,
+  checkOneAgentInstalled,
+  checkTenantConnected,
+  checkWorkspaceOpen,
+} from "../utils/conditionCheckers";
+import { initWorkspaceStorage, resolveRealPath, uploadComponentCert } from "../utils/fileSystem";
 import * as logger from "../utils/logging";
+
+export const distributeCertificateWorkflow = async (context: vscode.ExtensionContext) => {
+  if ((await checkWorkspaceOpen()) && (await checkTenantConnected())) {
+    initWorkspaceStorage(context);
+    const dtClient = await getDynatraceClient();
+    if ((await checkCertificateExists("ca")) && dtClient) {
+      await distributeCertificate(context, dtClient);
+    }
+  }
+};
 
 /**
  * Delivers the "Distribute certificate" command functionality.

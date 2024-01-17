@@ -22,8 +22,30 @@ import * as yaml from "yaml";
 import { Dynatrace } from "../dynatrace-api/dynatrace";
 import { DynatraceAPIError } from "../dynatrace-api/errors";
 import { ExtensionStub } from "../interfaces/extensionMeta";
+import { getConnectedTenant, getDynatraceClient } from "../treeViews/tenantsTreeView";
 import { loopSafeWait } from "../utils/code";
+import {
+  checkExtensionZipExists,
+  checkTenantConnected,
+  checkWorkspaceOpen,
+  isExtensionsWorkspace,
+} from "../utils/conditionCheckers";
 import * as logger from "../utils/logging";
+
+export const uploadExtensionWorkflow = async (context: vscode.ExtensionContext) => {
+  if (
+    (await checkWorkspaceOpen()) &&
+    (await isExtensionsWorkspace(context)) &&
+    (await checkTenantConnected()) &&
+    (await checkExtensionZipExists())
+  ) {
+    const dtClient = await getDynatraceClient();
+    const currentEnv = await getConnectedTenant();
+    if (dtClient && currentEnv) {
+      await uploadExtension(dtClient, currentEnv.url);
+    }
+  }
+};
 
 /**
  * Uploads the latest avaialable extension 2.0 package from the `dist` folder of
@@ -177,6 +199,7 @@ export async function uploadExtension(dt: Dynatrace, tenantUrl: string) {
     logger.debug("User chose to activate extension will trigger separate flow.", ...fnLogTrace);
     await vscode.commands.executeCommand(
       "dynatrace-extensions.activateExtension",
+      context,
       extensionVersion,
     );
   } else {

@@ -1,6 +1,12 @@
+import * as path from "path";
 import AdmZip = require("adm-zip");
 import * as vscode from "vscode";
 import * as logger from "../utils/logging";
+
+export const downloadSupportArchiveWorkflow = async (context: vscode.ExtensionContext) => {
+  const logsDir = path.join(context.globalStorageUri.fsPath, "logs");
+  await downloadSupportArchive(logsDir);
+};
 
 /**
  * Packages the logs directory into a zip file and prompts the user to save it.
