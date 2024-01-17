@@ -23,6 +23,7 @@ import { removeOldestFiles } from "./fileSystem";
 type LogLevel = "DEBUG" | "INFO" | "WARN" | "ERROR" | "NONE";
 type NotificationLevel = Extract<LogLevel, "INFO" | "WARN" | "ERROR">;
 
+let initialized = false;
 let logLevel: LogLevel = "INFO";
 let maxFileSize: number = 10;
 let maxFiles: number = 10;
@@ -150,6 +151,7 @@ function logMessage(data: unknown, level: LogLevel, ...trace: string[]) {
  * @param ctx the extension context
  */
 export function initializeLogging(ctx: vscode.ExtensionContext) {
+  if (initialized) return;
   context = ctx;
 
   // Load the configuration
@@ -162,6 +164,7 @@ export function initializeLogging(ctx: vscode.ExtensionContext) {
   outputChannel = vscode.window.createOutputChannel("Dynatrace Log", "log");
   startNewLogFile();
   removeOldestFiles(path.join(context.globalStorageUri.fsPath, "logs"), maxFiles);
+  initialized = true;
 }
 
 /**

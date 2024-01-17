@@ -49,27 +49,28 @@ interface BaristaMeta {
 }
 
 const logTrace = ["utils", "caching"];
+let initialized = false;
 let globalStorage: string;
-let builtinEntityTypes: EntityType[];
-let parsedExtension: BehaviorSubject<ExtensionStub | undefined>;
-let baristaIcons: string[];
-let selectorStatuses: Map<string, ValidationStatus>;
-let prometheusData: PromData;
-let wmiQueryResults: Map<string, WmiQueryResult>;
-let wmiQueryStatuses: Map<string, ValidationStatus>;
-let snmpOIDs: Map<string, OidInformation>;
-let entityInstances: Map<string, Entity[]>;
-let localSnmpDatabase: OidInformation[];
+let builtinEntityTypes: EntityType[] = [];
+const parsedExtension = new BehaviorSubject<ExtensionStub | undefined>(undefined);
+let baristaIcons: string[] = [];
+const selectorStatuses = new Map<string, ValidationStatus>();
+let prometheusData: PromData = {};
+const wmiQueryResults = new Map<string, WmiQueryResult>();
+const wmiQueryStatuses = new Map<string, ValidationStatus>();
+const snmpOIDs = new Map<string, OidInformation>();
+const entityInstances = new Map<string, Entity[]>();
+let localSnmpDatabase: OidInformation[] = [];
 let mibStore: MibModuleStore;
-let mibFilesLoaded: LoadedMibFile[];
+const mibFilesLoaded: LoadedMibFile[] = [];
 let manifestParsingPipeline: Subscriber<string>;
 
 export const initializeCache = async (globalStoragePath: string) => {
+  if (initialized) return;
   const fnLogTrace = [...logTrace, "initializeCache"];
   logger.info("Initializing Data Cache...", ...fnLogTrace);
 
   globalStorage = globalStoragePath;
-  setDefaultValues();
   loadBuiltinEntityTypes().then(
     () => logger.debug("Built-in entity types loaded", ...fnLogTrace),
     () => logger.debug("Built-in entity types unavailable", ...fnLogTrace),
@@ -91,21 +92,7 @@ export const initializeCache = async (globalStoragePath: string) => {
   // Wait for the parsed extension to be available before completing the init
   await waitForCondition(() => parsedExtension.getValue() !== undefined);
   logger.info("Data Cache initialized.", ...fnLogTrace);
-};
-
-const setDefaultValues = () => {
-  builtinEntityTypes = [];
-  parsedExtension = new BehaviorSubject<ExtensionStub | undefined>(undefined);
-  baristaIcons = [];
-  selectorStatuses = new Map<string, ValidationStatus>();
-  prometheusData = {};
-  wmiQueryResults = new Map<string, WmiQueryResult>();
-  wmiQueryStatuses = new Map<string, ValidationStatus>();
-  snmpOIDs = new Map<string, OidInformation>();
-  entityInstances = new Map<string, Entity[]>();
-  localSnmpDatabase = [];
-  mibStore = new MibModuleStore();
-  mibFilesLoaded = [];
+  initialized = true;
 };
 
 const loadBuiltinEntityTypes = async () => {
