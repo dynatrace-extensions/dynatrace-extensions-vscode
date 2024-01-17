@@ -23,100 +23,37 @@ import {
 } from "../utils/caching";
 import { resolveSelectorTemplate, ValidationStatus } from "./utils/selectorUtils";
 
-/**
- * A Code Lens to display the status of validating a selector.
- */
-class ValidationStatusLens extends vscode.CodeLens {
-  selector: string;
-
-  /**
-   * @param range VSCode Range at which lens should be created
-   * @param selector selector relevant to this lens
-   * @param status the last known status to be displayed
-   */
-  constructor(range: vscode.Range, selector: string, status: ValidationStatus) {
-    super(range);
-    this.selector = selector;
-    this.command = this.getStatusAsCommand(status);
-  }
-
-  /**
-   * Interprets a ValidationStatus and translates it to a vscode.Command to be used
-   * inside the code lens.
-   * @param status status of the selector
-   * @returns command object
-   */
-  private getStatusAsCommand(status: ValidationStatus): vscode.Command {
-    switch (status.status) {
-      case "valid":
-        return {
-          title: "✅",
-          tooltip: "Selector is valid",
-          command: "",
-        };
-      case "invalid":
-        return {
-          title: `❌ (${status.error?.code ?? ""})`,
-          tooltip: `Selector is invalid. ${status.error?.message ?? ""}`,
-          command: "",
-        };
-      default:
-        return {
-          title: "❔",
-          tooltip: "Selector has not been validated yet.",
-          command: "",
-        };
-    }
-  }
-}
+const instances = new Map<string, SelectorCodeLensProvider>();
 
 /**
- * A Code Lens which allows validating a selector and updating its status.
+ * Allows updating the validation status of a selector.
  */
-class SelectorValidationLens extends vscode.CodeLens {
-  selector: string;
-
-  /**
-   * @param range VSCode Range at which lens should be created
-   * @param selector selector relevant to this lens
-   */
-  constructor(range: vscode.Range, selector: string, selectorType: string) {
-    super(range, {
-      title: "Validate selector",
-      tooltip: "Run a query and check if the selector is valid",
-      command: "dynatrace-extensions.codelens.validateSelector",
-      arguments: [selector, selectorType],
-    });
-    this.selector = selector;
-  }
-}
+export const updateSelectorValidationStatus = (
+  selectorType: string,
+  selector: string,
+  status: ValidationStatus,
+) => {
+  instances.forEach(instance => instance.updateValidationStatus(selectorType, selector, status));
+};
 
 /**
- * A Code Lens which allows running a query with the given selector.
+ * Creates singleton access to the SelectorCodeLensProvider based on matcher and setting ID
  */
-class SelectorRunnerLens extends vscode.CodeLens {
-  selector: string;
-
-  /**
-   * @param range VSCode Range at which lens should be created
-   * @param selector selector relevant to this lens
-   */
-  constructor(range: vscode.Range, selector: string, selectorType: string) {
-    super(range, {
-      title: "Query data",
-      tooltip: "Run the query and visualize its results",
-      command: "dynatrace-extensions.codelens.runSelector",
-      arguments: [selector, selectorType],
-    });
-    this.selector = selector;
-  }
-}
+export const getSelectorCodeLensProvider = (() => {
+  return (match: string, controlSetting: string) => {
+    const instance =
+      instances.get(`${match}${controlSetting}`) ??
+      new SelectorCodeLensProvider(match, controlSetting);
+    instances.set(`${match}${controlSetting}`, instance);
+    return instance;
+  };
+})();
 
 /**
  * Implementation of a Code Lens Provider to facilitate operations done on metric and entities
  * as well as their respective selectors.
  */
-export class SelectorCodeLensProvider implements vscode.CodeLensProvider {
+class SelectorCodeLensProvider implements vscode.CodeLensProvider {
   private codeLenses: vscode.CodeLens[];
   private regex: RegExp;
   private _onDidChangeCodeLenses: vscode.EventEmitter<void> = new vscode.EventEmitter<void>();
@@ -206,11 +143,102 @@ export class SelectorCodeLensProvider implements vscode.CodeLensProvider {
   /**
    * Updates the cached validation status for a given selector and notifies this
    * provider that code lenses have changed.
+   * @param selectorType type of selector so that unnecessary updates can be avoided
    * @param selector selector to update status for
    * @param status current validation status
    */
-  public updateValidationStatus(selector: string, status: ValidationStatus) {
+  public updateValidationStatus(selectorType: string, selector: string, status: ValidationStatus) {
+    if (selectorType !== this.selectorType) return;
     setCachedSelectorStatus(selector, status);
     this._onDidChangeCodeLenses.fire();
+  }
+}
+
+/**
+ * A Code Lens to display the status of validating a selector.
+ */
+class ValidationStatusLens extends vscode.CodeLens {
+  selector: string;
+
+  /**
+   * @param range VSCode Range at which lens should be created
+   * @param selector selector relevant to this lens
+   * @param status the last known status to be displayed
+   */
+  constructor(range: vscode.Range, selector: string, status: ValidationStatus) {
+    super(range);
+    this.selector = selector;
+    this.command = this.getStatusAsCommand(status);
+  }
+
+  /**
+   * Interprets a ValidationStatus and translates it to a vscode.Command to be used
+   * inside the code lens.
+   * @param status status of the selector
+   * @returns command object
+   */
+  private getStatusAsCommand(status: ValidationStatus): vscode.Command {
+    switch (status.status) {
+      case "valid":
+        return {
+          title: "✅",
+          tooltip: "Selector is valid",
+          command: "",
+        };
+      case "invalid":
+        return {
+          title: `❌ (${status.error?.code ?? ""})`,
+          tooltip: `Selector is invalid. ${status.error?.message ?? ""}`,
+          command: "",
+        };
+      default:
+        return {
+          title: "❔",
+          tooltip: "Selector has not been validated yet.",
+          command: "",
+        };
+    }
+  }
+}
+
+/**
+ * A Code Lens which allows validating a selector and updating its status.
+ */
+class SelectorValidationLens extends vscode.CodeLens {
+  selector: string;
+
+  /**
+   * @param range VSCode Range at which lens should be created
+   * @param selector selector relevant to this lens
+   */
+  constructor(range: vscode.Range, selector: string, selectorType: string) {
+    super(range, {
+      title: "Validate selector",
+      tooltip: "Run a query and check if the selector is valid",
+      command: "dynatrace-extensions.codelens.validateSelector",
+      arguments: [selector, selectorType],
+    });
+    this.selector = selector;
+  }
+}
+
+/**
+ * A Code Lens which allows running a query with the given selector.
+ */
+class SelectorRunnerLens extends vscode.CodeLens {
+  selector: string;
+
+  /**
+   * @param range VSCode Range at which lens should be created
+   * @param selector selector relevant to this lens
+   */
+  constructor(range: vscode.Range, selector: string, selectorType: string) {
+    super(range, {
+      title: "Query data",
+      tooltip: "Run the query and visualize its results",
+      command: "dynatrace-extensions.codelens.runSelector",
+      arguments: [selector, selectorType],
+    });
+    this.selector = selector;
   }
 }

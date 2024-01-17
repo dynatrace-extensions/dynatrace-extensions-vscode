@@ -21,11 +21,23 @@ import { getLoadedMibFiles, loadUserMibFiles } from "../utils/caching";
 import { getSnmpDirPath } from "../utils/fileSystem";
 import { notify } from "../utils/logging";
 
+let instance: SnmpCodeLensProvider | undefined;
+
+/**
+ * Provides singleton access to the SnmpCodeLensProvider
+ */
+export const getSnmpCodeLensProvider = (() => {
+  return () => {
+    instance = instance === undefined ? new SnmpCodeLensProvider() : instance;
+    return instance;
+  };
+})();
+
 /**
  * Implementation of a Code Lens Provider to facilitate importing custom MIBs and keeping track of
  * SNMP operations that VSCode may perform behind the scenes.
  */
-export class SnmpCodeLensProvider implements vscode.CodeLensProvider {
+class SnmpCodeLensProvider implements vscode.CodeLensProvider {
   private codeLenses: vscode.CodeLens[];
   private regex: RegExp;
   private _onDidChangeCodeLenses: vscode.EventEmitter<void> = new vscode.EventEmitter<void>();

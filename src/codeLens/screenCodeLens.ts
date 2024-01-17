@@ -20,10 +20,22 @@ import { getCachedParsedExtension } from "../utils/caching";
 import * as logger from "../utils/logging";
 import { getBlockItemIndexAtLine, getParentBlocks } from "../utils/yamlParsing";
 
+let instance: ScreenLensProvider | undefined;
+
+/**
+ * Provides singleton access to the ScreenLensProvider
+ */
+export const getScreenLensProvider = (() => {
+  return () => {
+    instance = instance === undefined ? new ScreenLensProvider() : instance;
+    return instance;
+  };
+})();
+
 /**
  * Implementation of a Code Lens Provider to allow opening Dynatrace screens in the browser.
  */
-export class ScreenLensProvider implements vscode.CodeLensProvider {
+class ScreenLensProvider implements vscode.CodeLensProvider {
   private readonly logTrace = ["codeLens", "screenCodeLens", this.constructor.name];
   private codeLenses: vscode.CodeLens[];
   private regex: RegExp;

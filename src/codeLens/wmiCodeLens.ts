@@ -20,80 +20,35 @@ import { getBlockRange } from "../utils/yamlParsing";
 import { ValidationStatus } from "./utils/selectorUtils";
 import { WmiQueryResult } from "./utils/wmiUtils";
 
-/**
- * Implements a Code Lens that shows the status of a WMI Query execution
- */
-class WmiQueryStatusLens extends vscode.CodeLens {
-  query: string;
-
-  /**
-   * @param range range at which the lens should be created
-   * @param query the query associated with this lens
-   * @param status the last known status to be displayed
-   */
-  constructor(range: vscode.Range, query: string, status: ValidationStatus) {
-    super(range);
-    this.query = query;
-    this.command = this.getStatusAsCommand(status);
-  }
-
-  /**
-   * Interprets a ValidationStatus and translates it to a vscode.Command to be used inside the lens.
-   * @param status status of the query
-   * @returns command object
-   */
-  private getStatusAsCommand(status: ValidationStatus): vscode.Command {
-    switch (status.status) {
-      case "valid":
-        return {
-          title: "✅",
-          tooltip: "Query is valid",
-          command: "",
-        };
-      case "invalid":
-        return {
-          title: "❌",
-          tooltip: "Query is invalid",
-          command: "",
-        };
-      case "loading":
-        return {
-          title: "⌛ Running query...",
-          tooltip: "Query exeucution in progress.",
-          command: "",
-        };
-      default:
-        return {
-          title: "❔",
-          tooltip: "Run the query to validate it.",
-          command: "",
-        };
-    }
-  }
-}
+let instance: WmiCodeLensProvider | undefined;
 
 /**
- * Implements a Code Lens that can be used to execute a WMI Query
+ * Allows updating the validation status of a WMI query.
  */
-class WmiQueryExecutionLens extends vscode.CodeLens {
-  query: string;
+export const updateWmiValidationStatus = (
+  query: string,
+  status: ValidationStatus,
+  result?: WmiQueryResult,
+) => {
+  if (!instance) return;
+  instance.updateQueryData(query, status, result);
+};
 
-  constructor(range: vscode.Range, query: string) {
-    super(range, {
-      title: "▶️ Run WMI Query",
-      tooltip: "Run a WMI query on this host",
-      command: "dynatrace-extensions.codelens.runWMIQuery",
-      arguments: [query],
-    });
-    this.query = query;
-  }
-}
+/**
+ * Provides singleton access to the WmiCodeLensProvider
+ */
+export const getWmiCodeLensProvider = (() => {
+  return () => {
+    instance = instance === undefined ? new WmiCodeLensProvider() : instance;
+    return instance;
+  };
+})();
 
 /**
  * Implementation of a Code Lens provider for WMI Queries. It creates two lenses, for executing a
  * WMI Query against the local Windows machine and checking the last execution status.
  */
-export class WmiCodeLensProvider implements vscode.CodeLensProvider {
+class WmiCodeLensProvider implements vscode.CodeLensProvider {
   private codeLenses: vscode.CodeLens[] = [];
   private _onDidChangeCodeLenses: vscode.EventEmitter<void> = new vscode.EventEmitter<void>();
   public readonly onDidChangeCodeLenses: vscode.Event<void> = this._onDidChangeCodeLenses.event;
@@ -175,5 +130,73 @@ export class WmiCodeLensProvider implements vscode.CodeLensProvider {
       setCachedWmiQueryResult(result);
     }
     this._onDidChangeCodeLenses.fire();
+  }
+}
+/**
+ * Implements a Code Lens that shows the status of a WMI Query execution
+ */
+class WmiQueryStatusLens extends vscode.CodeLens {
+  query: string;
+
+  /**
+   * @param range range at which the lens should be created
+   * @param query the query associated with this lens
+   * @param status the last known status to be displayed
+   */
+  constructor(range: vscode.Range, query: string, status: ValidationStatus) {
+    super(range);
+    this.query = query;
+    this.command = this.getStatusAsCommand(status);
+  }
+
+  /**
+   * Interprets a ValidationStatus and translates it to a vscode.Command to be used inside the lens.
+   * @param status status of the query
+   * @returns command object
+   */
+  private getStatusAsCommand(status: ValidationStatus): vscode.Command {
+    switch (status.status) {
+      case "valid":
+        return {
+          title: "✅",
+          tooltip: "Query is valid",
+          command: "",
+        };
+      case "invalid":
+        return {
+          title: "❌",
+          tooltip: "Query is invalid",
+          command: "",
+        };
+      case "loading":
+        return {
+          title: "⌛ Running query...",
+          tooltip: "Query exeucution in progress.",
+          command: "",
+        };
+      default:
+        return {
+          title: "❔",
+          tooltip: "Run the query to validate it.",
+          command: "",
+        };
+    }
+  }
+}
+
+/**
+ * Implements a Code Lens that can be used to execute a WMI Query
+ */
+class WmiQueryExecutionLens extends vscode.CodeLens {
+  query: string;
+
+  constructor(range: vscode.Range, query: string) {
+    super(range, {
+      title: "▶️ Run WMI Query",
+      tooltip: "Run a WMI query on this host",
+      command: "dynatrace-extensions.codelens.runWMIQuery",
+      arguments: [query],
+    });
+    this.query = query;
   }
 }

@@ -29,11 +29,23 @@ type PromDetails = {
 type PromAuth = "No authentication" | "Bearer token" | "Username & password" | "AWS key";
 type ScrapingMethod = "Endpoint" | "File";
 
+let instance: PrometheusCodeLensProvider | undefined;
+
+/**
+ * Provides singleton access to the PrometheusCodeLensProvider
+ */
+export const getPrometheusCodeLensProvider = (() => {
+  return () => {
+    instance = instance === undefined ? new PrometheusCodeLensProvider() : instance;
+    return instance;
+  };
+})();
+
 /**
  * Code Lens Provider implementation to facilitate loading Prometheus metrics and data
  * from an external endpoint and leveraging it in other parts of the extension.
  */
-export class PrometheusCodeLensProvider implements vscode.CodeLensProvider {
+class PrometheusCodeLensProvider implements vscode.CodeLensProvider {
   private readonly logTrace = ["codeLens", "prometheusScraper", "PrometheusCodeLensProvider"];
   private codeLenses: vscode.CodeLens[];
   private regex: RegExp;
