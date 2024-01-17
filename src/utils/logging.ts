@@ -23,6 +23,7 @@ import { removeOldestFiles } from "./fileSystem";
 type LogLevel = "DEBUG" | "INFO" | "WARN" | "ERROR" | "NONE";
 type NotificationLevel = Extract<LogLevel, "INFO" | "WARN" | "ERROR">;
 
+const genericChannel = vscode.window.createOutputChannel("Dynatrace", "json");
 let initialized = false;
 let logLevel: LogLevel = "INFO";
 let maxFileSize: number = 10;
@@ -34,7 +35,7 @@ let context: vscode.ExtensionContext;
 /**
  * Starts a new log file with the current timestamp.
  */
-function startNewLogFile() {
+const startNewLogFile = () => {
   const logsDir = path.join(context.globalStorageUri.fsPath, "logs");
   const workspaceName = vscode.workspace.workspaceFolders?.[0].name ?? "no-workspace";
   const fileName = `${workspaceName}_${new Date()
@@ -43,24 +44,24 @@ function startNewLogFile() {
     .replace(/:/g, "-")}_log.log`;
   currentLogFile = path.join(logsDir, fileName);
   writeFileSync(currentLogFile, "");
-}
+};
 
 /**
  * Checks the size of the current log file and starts a new one if needed.
  */
-function checkFileSize() {
+const checkFileSize = () => {
   const size = statSync(currentLogFile).size / (1024 * 1024);
   if (size > maxFileSize) {
     startNewLogFile();
   }
-}
+};
 
 /**
  * Extracts the log scope (trace breadcrumbs) from the stack trace.
  * NOTE: This only works in development mode.
  * @param stack the stack trace
  */
-function extractScope(stack: string) {
+const extractScope = (stack: string) => {
   return (
     stack
       .split("\n")
@@ -76,7 +77,7 @@ function extractScope(stack: string) {
       .reverse()
       .join(" > ") || "vscode-api"
   );
-}
+};
 
 /**
  * Logs a message to the developer tools console. The message is formatted with colors by
@@ -86,7 +87,7 @@ function extractScope(stack: string) {
  * @param scope the scope (trace breadcrumbs) of the log message
  * @param level the log level
  */
-function logToConsole(timestamp: string, data: string, scope: string, level: LogLevel) {
+const logToConsole = (timestamp: string, data: string, scope: string, level: LogLevel) => {
   const fmtPrefix = chalk.black.bgCyan("[Dynatrace]");
   const fmtTimestamp = chalk.cyan(timestamp);
   const fmtLevel = ((lvl: LogLevel) => {
@@ -113,7 +114,7 @@ function logToConsole(timestamp: string, data: string, scope: string, level: Log
     `${fmtTimestamp} ${fmtPrefix}${fmtLevel}${fmtScope} ` +
       (level === "DEBUG" ? `${chalk.gray(data)}\n` : `${data}`),
   );
-}
+};
 
 /**
  * Logs a message at the appropriate level with the given trace breadcrumbs.
@@ -123,7 +124,7 @@ function logToConsole(timestamp: string, data: string, scope: string, level: Log
  * @param trace any trace breadcrumbs for internal logging
  * @param level the log level
  */
-function logMessage(data: unknown, level: LogLevel, ...trace: string[]) {
+const logMessage = (data: unknown, level: LogLevel, ...trace: string[]) => {
   const message = typeof data === "string" ? data : JSON.stringify(data, null, 2);
   const timestamp = new Date().toISOString();
   const scope = trace.join(".");
@@ -145,14 +146,14 @@ function logMessage(data: unknown, level: LogLevel, ...trace: string[]) {
   // File log will always capture all messages
   writeFileSync(currentLogFile, `${formattedMessage}\n`, { flag: "a" });
   checkFileSize();
-}
+};
 
 /**
  * Initializes the logging system. This must be called before any other logging statements.
  * It creates the output channel and starts a new log file.
  * @param ctx the extension context
  */
-export function initializeLogging(ctx: vscode.ExtensionContext) {
+export const initializeLogging = (ctx: vscode.ExtensionContext) => {
   if (initialized) return;
   context = ctx;
 
@@ -167,15 +168,15 @@ export function initializeLogging(ctx: vscode.ExtensionContext) {
   startNewLogFile();
   removeOldestFiles(path.join(context.globalStorageUri.fsPath, "logs"), maxFiles);
   initialized = true;
-}
+};
 
 /**
  * Disposes the output channel and cleans up old log files.
  */
-export function disposeLogger() {
+export const disposeLogger = () => {
   outputChannel.dispose();
   removeOldestFiles(path.join(context.globalStorageUri.fsPath, "logs"), maxFiles);
-}
+};
 
 /**
  * Log a message without a level. These messages are only logged to
@@ -183,45 +184,45 @@ export function disposeLogger() {
  * @param data the data to log; objects will be JSON stringified
  * @param trace any trace breadcrumbs for internal logging
  */
-export function log(data: unknown, ...trace: string[]) {
+export const log = (data: unknown, ...trace: string[]) => {
   logMessage(data, "NONE", ...trace);
-}
+};
 
 /**
  * Log a message with DEBUG level.
  * @param data the data to log; objects will be JSON stringified
  * @param trace any trace breadcrumbs for internal logging
  */
-export function debug(data: unknown, ...trace: string[]) {
+export const debug = (data: unknown, ...trace: string[]) => {
   logMessage(data, "DEBUG", ...trace);
-}
+};
 
 /**
  * Log a message with INFO level.
  * @param data the data to log; objects will be JSON stringified
  * @param trace any trace breadcrumbs for internal logging
  */
-export function info(data: unknown, ...trace: string[]) {
+export const info = (data: unknown, ...trace: string[]) => {
   logMessage(data, "INFO", ...trace);
-}
+};
 
 /**
  * Log a message with WARN level.
  * @param data the data to log; objects will be JSON stringified
  * @param trace any trace breadcrumbs for internal logging
  */
-export function warn(data: unknown, ...trace: string[]) {
+export const warn = (data: unknown, ...trace: string[]) => {
   logMessage(data, "WARN", ...trace);
-}
+};
 
 /**
  * Log a message with ERROR level. This will always be logged.
  * @param data the data to log; objects will be JSON stringified
  * @param trace any trace breadcrumbs for internal logging
  */
-export function error(data: unknown, ...trace: string[]) {
+export const error = (data: unknown, ...trace: string[]) => {
   logMessage(data, "ERROR", ...trace);
-}
+};
 
 /**
  * Sends a notitification at the specified level to the UI. It also logs the message internally.
@@ -229,7 +230,7 @@ export function error(data: unknown, ...trace: string[]) {
  * @param message message of the notification
  * @param trace any trace breadcrumbs for internal logging
  */
-export function notify(level: NotificationLevel, message: string, ...trace: string[]) {
+export const notify = (level: NotificationLevel, message: string, ...trace: string[]) => {
   switch (level) {
     case "INFO":
       vscode.window.showInformationMessage(message).then(
@@ -250,4 +251,6 @@ export function notify(level: NotificationLevel, message: string, ...trace: stri
       );
       break;
   }
-}
+};
+
+export const getGenericChannel = () => genericChannel;

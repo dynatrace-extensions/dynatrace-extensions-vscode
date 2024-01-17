@@ -26,12 +26,9 @@ import { getEntityMetrics, getMetricDisplayName } from "../utils/extensionParsin
 import { getExtensionFilePath } from "../utils/fileSystem";
 import * as logger from "../utils/logging";
 
-export const createDashboardWorkflow = async (
-  context: vscode.ExtensionContext,
-  outputChannel: vscode.OutputChannel,
-) => {
+export const createDashboardWorkflow = async (context: vscode.ExtensionContext) => {
   if ((await checkWorkspaceOpen()) && (await isExtensionsWorkspace(context))) {
-    await createOverviewDashboard(outputChannel);
+    await createOverviewDashboard();
   }
 };
 
@@ -492,12 +489,12 @@ function buildDashboard(
  * The extension should have topology defined otherwise the dashboard doesn't have much
  * data to render and is pointless. The extension yaml is adapted to include the newly
  * created dashboard. At the end, the user is prompted to upload the dashboard to Dynatrace
- * @param outputChannel JSON output channel for communicating errors
  * @returns
  */
-export async function createOverviewDashboard(outputChannel: vscode.OutputChannel) {
+export async function createOverviewDashboard() {
   const fnLogTrace = ["commandPalette", "createDashboard", "createOverviewDashboard"];
   logger.info("Executing Create Dashboard command", ...fnLogTrace);
+  const outputChannel = logger.getGenericChannel();
   const DASHBOARD_PATH = "dashboards/overview_dashboard.json";
   // Read extension.yaml
   const extensionFile = getExtensionFilePath();

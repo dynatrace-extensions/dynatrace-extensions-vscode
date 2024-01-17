@@ -20,8 +20,12 @@ import { DynatraceAPIError } from "../../dynatrace-api/errors";
 import { MetricSeriesCollection } from "../../dynatrace-api/interfaces/metrics";
 import { Entity } from "../../dynatrace-api/interfaces/monitoredEntities";
 import { ExtensionStub } from "../../interfaces/extensionMeta";
+import { getDynatraceClient } from "../../treeViews/tenantsTreeView";
+import { checkTenantConnected } from "../../utils/conditionCheckers";
+import * as logger from "../../utils/logging";
 import { getBlockItemIndexAtLine, getParentBlocks } from "../../utils/yamlParsing";
 import { REGISTERED_PANELS, renderPanel } from "../../webviews/webviewPanel";
+import { updateSelectorValidationStatus } from "../selectorCodeLens";
 
 export interface ValidationStatus {
   status: "valid" | "invalid" | "unknown" | "loading";
@@ -30,6 +34,40 @@ export interface ValidationStatus {
     message: string;
   };
 }
+
+export const registerSelectorCommands = () => {
+  return [
+    vscode.commands.registerCommand(
+      "dynatrace-extensions.codelens.validateSelector",
+      async (selector: string, type: "metric" | "entity") => {
+        if (await checkTenantConnected()) {
+          const dtClient = await getDynatraceClient();
+          if (dtClient) {
+            const status = await validateSelector(selector, type, dtClient);
+            updateSelectorValidationStatus(type, selector, status);
+          }
+        }
+      },
+    ),
+    vscode.commands.registerCommand(
+      "dynatrace-extensions.codelens.runSelector",
+      async (selector: string, type: "metric" | "entity") => {
+        const updateCallback = (checkedSelector: string, status: ValidationStatus) =>
+          updateSelectorValidationStatus(type, checkedSelector, status);
+        if (await checkTenantConnected()) {
+          const dtClient = await getDynatraceClient();
+          if (dtClient) {
+            runSelector(selector, type, dtClient, logger.getGenericChannel(), updateCallback).catch(
+              err => {
+                logger.info(`Running selector failed unexpectedly. ${(err as Error).message}`);
+              },
+            );
+          }
+        }
+      },
+    ),
+  ];
+};
 
 /**
  * Runs a query and reports the status of validating the result.

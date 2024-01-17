@@ -54,17 +54,14 @@ type FastModeOptions = {
   document: vscode.TextDocument;
 };
 
-export const buildExtensionWorkflow = async (
-  context: vscode.ExtensionContext,
-  outputChannel: vscode.OutputChannel,
-) => {
+export const buildExtensionWorkflow = async (context: vscode.ExtensionContext) => {
   if (
     (await checkWorkspaceOpen()) &&
     (await isExtensionsWorkspace(context)) &&
     (await checkCertificateExists("dev")) &&
     (await checkNoProblemsInManifest())
   ) {
-    await buildExtension(context, outputChannel, await getDynatraceClient());
+    await buildExtension(context, logger.getGenericChannel(), await getDynatraceClient());
   }
 };
 

@@ -69,14 +69,10 @@ let instance: TenantsTreeDataProvider | undefined;
  * Returns a singleton instance of the EnvironmentsTreeDataProvider.
  */
 export const getTenantsTreeDataProvider = (() => {
-  return (
-    context: vscode.ExtensionContext,
-    connectionStatus: ConnectionStatusManager,
-    errorChannel: vscode.OutputChannel,
-  ) => {
+  return (context: vscode.ExtensionContext, connectionStatus: ConnectionStatusManager) => {
     instance =
       instance === undefined
-        ? new TenantsTreeDataProviderImpl(context, connectionStatus, errorChannel)
+        ? new TenantsTreeDataProviderImpl(context, connectionStatus)
         : instance;
     return instance;
   };
@@ -214,14 +210,10 @@ class TenantsTreeDataProviderImpl implements TenantsTreeDataProvider {
    * @param context VSCode Extension Context
    * @param connectionStatus a connection status manager, to update the status bar
    */
-  constructor(
-    context: vscode.ExtensionContext,
-    connectionStatus: ConnectionStatusManager,
-    errorChannel: vscode.OutputChannel,
-  ) {
+  constructor(context: vscode.ExtensionContext, connectionStatus: ConnectionStatusManager) {
     this.context = context;
     this.connectionStatus = connectionStatus;
-    this.oc = errorChannel;
+    this.oc = logger.getGenericChannel();
     this.getChildren()
       .then(children =>
         (children as DynatraceTenant[]).filter(

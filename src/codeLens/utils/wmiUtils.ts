@@ -15,7 +15,6 @@
  */
 
 import { exec } from "child_process";
-import * as vscode from "vscode";
 import { getCachedWmiQueryResult } from "../../utils/caching";
 import * as logger from "../../utils/logging";
 import { REGISTERED_PANELS, renderPanel } from "../../webviews/webviewPanel";
@@ -45,10 +44,10 @@ export interface WmiQueryResult {
  */
 export async function runWMIQuery(
   query: string,
-  oc: vscode.OutputChannel,
   updateCallback: (query: string, status: ValidationStatus, result?: WmiQueryResult) => void,
 ) {
   const fnLogTrace = [...logTrace, "runWMIQuery"];
+  const oc = logger.getGenericChannel();
   updateCallback(query, { status: "loading" });
 
   // First check for cached data...

@@ -28,13 +28,10 @@ import { getTopologyCompletionProvider } from "./codeCompletions/topology";
 import { getWmiCompletionProvider } from "./codeCompletions/wmi";
 import { getPrometheusCodeLensProvider } from "./codeLens/prometheusScraper";
 import { getScreenLensProvider } from "./codeLens/screenCodeLens";
-import {
-  getSelectorCodeLensProvider,
-  updateSelectorValidationStatus,
-} from "./codeLens/selectorCodeLens";
+import { getSelectorCodeLensProvider } from "./codeLens/selectorCodeLens";
 import { getSimulatorLensProvider } from "./codeLens/simulatorCodeLens";
 import { getSnmpCodeLensProvider } from "./codeLens/snmpCodeLens";
-import { ValidationStatus, runSelector, validateSelector } from "./codeLens/utils/selectorUtils";
+import { registerSelectorCommands } from "./codeLens/utils/selectorUtils";
 import { runWMIQuery } from "./codeLens/utils/wmiUtils";
 import { getWmiCodeLensProvider, updateWmiValidationStatus } from "./codeLens/wmiCodeLens";
 import { activateExtensionWorkflow } from "./commandPalette/activateExtension";
@@ -56,7 +53,7 @@ import {
   QUICK_FIX_PROVIDER_METADATA,
   TEMP_CONFIG_DOC_SELECTOR,
 } from "./constants";
-import { SnmpHoverProvider } from "./hover/snmpHover";
+import { getSnmpHoverProvider } from "./hover/snmpHover";
 import { ConnectionStatusManager } from "./statusBar/connection";
 import { FastModeStatus } from "./statusBar/fastMode";
 import { SimulatorManager } from "./statusBar/simulator";
@@ -104,11 +101,9 @@ export async function activate(context: vscode.ExtensionContext) {
 
   logger.debug("Instantiating feature providers", ...fnLogTrace);
   // Create feature/data providers
-  const genericChannel = vscode.window.createOutputChannel("Dynatrace", "json");
   const connectionStatusManager = new ConnectionStatusManager();
   await initializeCache(context.globalStorageUri.fsPath);
   simulatorManager = new SimulatorManager(context);
-  const snmpHoverProvider = new SnmpHoverProvider();
   const fastModeChannel = vscode.window.createOutputChannel("Dynatrace Fast Mode", "json");
   const fastModeStatus = new FastModeStatus(fastModeChannel);
   let editTimeout: NodeJS.Timeout | undefined;
@@ -131,15 +126,11 @@ export async function activate(context: vscode.ExtensionContext) {
     registerWorkflowCommand("initWorkspace", () => initWorkspaceWorkflow(context)),
     registerWorkflowCommand("generateCertificates", () => generateCertificatesWorkflow(context)),
     registerWorkflowCommand("distributeCertificate", () => distributeCertificateWorkflow(context)),
-    registerWorkflowCommand("buildExtension", () =>
-      buildExtensionWorkflow(context, genericChannel),
-    ),
+    registerWorkflowCommand("buildExtension", () => buildExtensionWorkflow(context)),
     registerWorkflowCommand("uploadExtension", () => uploadExtensionWorkflow(context)),
     registerWorkflowCommand("activateExtension", () => activateExtensionWorkflow(context)),
     registerWorkflowCommand("createDocumentation", () => createDocumentationWorkflow(context)),
-    registerWorkflowCommand("createDashboard", () =>
-      createDashboardWorkflow(context, genericChannel),
-    ),
+    registerWorkflowCommand("createDashboard", () => createDashboardWorkflow(context)),
     registerWorkflowCommand("createAlert", () => createAlertWorkflow(context)),
     registerWorkflowCommand("convertJmxExtension", () => convertJmxExtensionWorkflow()),
     registerWorkflowCommand("convertPythonExtension", () => convertPythonExtensionWorkflow()),
@@ -182,10 +173,10 @@ export async function activate(context: vscode.ExtensionContext) {
     ),
     vscode.window.registerTreeDataProvider(
       "dynatrace-extensions-environments",
-      getTenantsTreeDataProvider(context, connectionStatusManager, genericChannel),
+      getTenantsTreeDataProvider(context, connectionStatusManager),
     ),
     // Hover provider for SNMP OIDs
-    vscode.languages.registerHoverProvider(MANIFEST_DOC_SELECTOR, snmpHoverProvider),
+    vscode.languages.registerHoverProvider(MANIFEST_DOC_SELECTOR, getSnmpHoverProvider()),
     // Code action providers
     registerCodeActionsProvider(getSnippetGenerator()),
     registerCodeActionsProvider(getSnmpActionProvider()),
@@ -207,38 +198,12 @@ export async function activate(context: vscode.ExtensionContext) {
     registerCodeLensProvider(getScreenLensProvider()),
     registerCodeLensProvider(getWmiCodeLensProvider()),
     registerCodeLensProvider(getSnmpCodeLensProvider()),
+    ...registerSelectorCommands(),
     // Commands for metric and entity selector Code Lenses
-    vscode.commands.registerCommand(
-      "dynatrace-extensions.codelens.validateSelector",
-      async (selector: string, type: "metric" | "entity") => {
-        if (await checkTenantConnected()) {
-          const dtClient = await getDynatraceClient();
-          if (dtClient) {
-            const status = await validateSelector(selector, type, dtClient);
-            updateSelectorValidationStatus(type, selector, status);
-          }
-        }
-      },
-    ),
-    vscode.commands.registerCommand(
-      "dynatrace-extensions.codelens.runSelector",
-      async (selector: string, type: "metric" | "entity") => {
-        const updateCallback = (checkedSelector: string, status: ValidationStatus) =>
-          updateSelectorValidationStatus(type, checkedSelector, status);
-        if (await checkTenantConnected()) {
-          const dtClient = await getDynatraceClient();
-          if (dtClient) {
-            runSelector(selector, type, dtClient, genericChannel, updateCallback).catch(err => {
-              logger.info(`Running selector failed unexpectedly. ${(err as Error).message}`);
-            });
-          }
-        }
-      },
-    ),
     vscode.commands.registerCommand(
       "dynatrace-extensions.codelens.runWMIQuery",
       async (query: string) => {
-        runWMIQuery(query, genericChannel, (checkedQuery, status, result) => {
+        runWMIQuery(query, (checkedQuery, status, result) => {
           updateWmiValidationStatus(checkedQuery, status, result);
         }).catch(err => {
           logger.info(`Running WMI Query failed unexpectedly. ${(err as Error).message}`);
