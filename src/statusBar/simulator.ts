@@ -55,7 +55,7 @@ import {
   getDatasourcePath,
   loadDefaultSimulationConfig,
 } from "../utils/simulator";
-import { REGISTERED_PANELS, WebviewPanelManager } from "../webviews/webviewPanel";
+import { REGISTERED_PANELS, postMessageToPanel, renderPanel } from "../webviews/webviewPanel";
 
 const SIMULATOR_START_CMD = "dynatrace-extensions.simulator.start";
 const SIMULATOR_STOP_CMD = "dynatrace-extensions.simulator.stop";
@@ -88,13 +88,12 @@ export class SimulatorManager {
   private readonly context: vscode.ExtensionContext;
   private readonly outputChannel: vscode.OutputChannel;
   private readonly statusBar: vscode.StatusBarItem;
-  private readonly panelManager: WebviewPanelManager;
 
   /**
    * @param context - extension context
    * @param panelManager - webview panel manager
    */
-  constructor(context: vscode.ExtensionContext, panelManager: WebviewPanelManager) {
+  constructor(context: vscode.ExtensionContext) {
     this.datasourceName = "unsupported";
     this.simulatorStatus = "UNSUPPORTED";
     this.failedChecks = [];
@@ -107,7 +106,6 @@ export class SimulatorManager {
     this.context = context;
     this.idToken = path.join(context.globalStorageUri.fsPath, "idToken.txt");
     this.localOs = process.platform === "win32" ? "WINDOWS" : "LINUX";
-    this.panelManager = panelManager;
     this.simulationSpecs = {
       isPython: false,
       dsSupportsActiveGateEec: false,
@@ -165,7 +163,7 @@ export class SimulatorManager {
     logger.info(`Deleting target ${target.name}`, ...this.logTrace, "deleteTarget");
     // This will always succeed
     deleteSimulatorTarget(this.context, target);
-    this.panelManager.postMessage(REGISTERED_PANELS.SIMULATOR_UI, {
+    postMessageToPanel(REGISTERED_PANELS.SIMULATOR_UI, {
       messageType: "showToast",
       data: {
         title: "Target deleted",
@@ -184,7 +182,7 @@ export class SimulatorManager {
   private addTarget(target: RemoteTarget) {
     logger.info(`Adding target ${target.name}`, ...this.logTrace, "addTarget");
     registerSimulatorTarget(this.context, target);
-    this.panelManager.postMessage(REGISTERED_PANELS.SIMULATOR_UI, {
+    postMessageToPanel(REGISTERED_PANELS.SIMULATOR_UI, {
       messageType: "showToast",
       data: {
         title: "Target registered",
@@ -718,9 +716,9 @@ export class SimulatorManager {
     );
 
     if (show) {
-      this.panelManager.render(REGISTERED_PANELS.SIMULATOR_UI, "Extension Simulator", panelData);
+      renderPanel(REGISTERED_PANELS.SIMULATOR_UI, "Extension Simulator", panelData);
     } else {
-      this.panelManager.postMessage(REGISTERED_PANELS.SIMULATOR_UI, {
+      postMessageToPanel(REGISTERED_PANELS.SIMULATOR_UI, {
         messageType: "updateData",
         data: panelData,
       });
@@ -734,7 +732,7 @@ export class SimulatorManager {
 
     const logContent = readFileSync(logFilePath.fsPath).toString();
 
-    this.panelManager.postMessage(REGISTERED_PANELS.SIMULATOR_UI, {
+    postMessageToPanel(REGISTERED_PANELS.SIMULATOR_UI, {
       messageType: "openLog",
       data: logContent,
     });

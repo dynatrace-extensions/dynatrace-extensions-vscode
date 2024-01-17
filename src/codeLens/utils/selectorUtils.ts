@@ -21,7 +21,7 @@ import { MetricSeriesCollection } from "../../dynatrace-api/interfaces/metrics";
 import { Entity } from "../../dynatrace-api/interfaces/monitoredEntities";
 import { ExtensionStub } from "../../interfaces/extensionMeta";
 import { getBlockItemIndexAtLine, getParentBlocks } from "../../utils/yamlParsing";
-import { REGISTERED_PANELS, WebviewPanelManager } from "../../webviews/webviewPanel";
+import { REGISTERED_PANELS, renderPanel } from "../../webviews/webviewPanel";
 
 export interface ValidationStatus {
   status: "valid" | "invalid" | "unknown" | "loading";
@@ -92,14 +92,13 @@ export async function runSelector(
   selectorType: "metric" | "entity",
   dt: Dynatrace,
   oc: vscode.OutputChannel,
-  panelManager: WebviewPanelManager,
   statusCallback: (selector: string, status: ValidationStatus) => void,
 ) {
   try {
     if (selectorType === "metric") {
       await dt.metrics.query(selector, "5m").then((res: MetricSeriesCollection[]) => {
         statusCallback(selector, { status: "valid" });
-        panelManager.render(REGISTERED_PANELS.METRIC_RESULTS, "Metric selector results", {
+        renderPanel(REGISTERED_PANELS.METRIC_RESULTS, "Metric selector results", {
           dataType: "METRIC_RESULTS",
           data: res,
         });

@@ -72,7 +72,7 @@ import {
   migrateFromLegacyExtension,
 } from "./utils/fileSystem";
 import * as logger from "./utils/logging";
-import { REGISTERED_PANELS, WebviewPanelManager } from "./webviews/webviewPanel";
+import { REGISTERED_PANELS, getWebviewPanelManager } from "./webviews/webviewPanel";
 
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
 type WorkflowFunction<T extends any[] = []> = (...args: T) => PromiseLike<unknown>;
@@ -107,8 +107,7 @@ export async function activate(context: vscode.ExtensionContext) {
   const genericChannel = vscode.window.createOutputChannel("Dynatrace", "json");
   const connectionStatusManager = new ConnectionStatusManager();
   await initializeCache(context.globalStorageUri.fsPath);
-  const webviewPanelManager = new WebviewPanelManager(context.extensionUri);
-  simulatorManager = new SimulatorManager(context, webviewPanelManager);
+  simulatorManager = new SimulatorManager(context);
   const snmpHoverProvider = new SnmpHoverProvider();
   const fastModeChannel = vscode.window.createOutputChannel("Dynatrace Fast Mode", "json");
   const fastModeStatus = new FastModeStatus(fastModeChannel);
@@ -229,14 +228,7 @@ export async function activate(context: vscode.ExtensionContext) {
         if (await checkTenantConnected()) {
           const dtClient = await getDynatraceClient();
           if (dtClient) {
-            runSelector(
-              selector,
-              type,
-              dtClient,
-              genericChannel,
-              webviewPanelManager,
-              updateCallback,
-            ).catch(err => {
+            runSelector(selector, type, dtClient, genericChannel, updateCallback).catch(err => {
               logger.info(`Running selector failed unexpectedly. ${(err as Error).message}`);
             });
           }
@@ -246,7 +238,7 @@ export async function activate(context: vscode.ExtensionContext) {
     vscode.commands.registerCommand(
       "dynatrace-extensions.codelens.runWMIQuery",
       async (query: string) => {
-        runWMIQuery(query, genericChannel, webviewPanelManager, (checkedQuery, status, result) => {
+        runWMIQuery(query, genericChannel, (checkedQuery, status, result) => {
           updateWmiValidationStatus(checkedQuery, status, result);
         }).catch(err => {
           logger.info(`Running WMI Query failed unexpectedly. ${(err as Error).message}`);
@@ -256,11 +248,11 @@ export async function activate(context: vscode.ExtensionContext) {
     // Default WebView Panel Serializers
     vscode.window.registerWebviewPanelSerializer(
       REGISTERED_PANELS.METRIC_RESULTS,
-      webviewPanelManager,
+      getWebviewPanelManager(context.extensionUri),
     ),
     vscode.window.registerWebviewPanelSerializer(
       REGISTERED_PANELS.WMI_RESULTS,
-      webviewPanelManager,
+      getWebviewPanelManager(context.extensionUri),
     ),
     // Activity on every document save
     vscode.workspace.onDidSaveTextDocument(async (doc: vscode.TextDocument) => {

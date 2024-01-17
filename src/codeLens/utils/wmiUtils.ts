@@ -18,7 +18,7 @@ import { exec } from "child_process";
 import * as vscode from "vscode";
 import { getCachedWmiQueryResult } from "../../utils/caching";
 import * as logger from "../../utils/logging";
-import { REGISTERED_PANELS, WebviewPanelManager } from "../../webviews/webviewPanel";
+import { REGISTERED_PANELS, renderPanel } from "../../webviews/webviewPanel";
 import { ValidationStatus } from "./selectorUtils";
 
 const logTrace = ["codeLens", "utils", "wmiUtils"];
@@ -46,7 +46,6 @@ export interface WmiQueryResult {
 export async function runWMIQuery(
   query: string,
   oc: vscode.OutputChannel,
-  panelManager: WebviewPanelManager,
   updateCallback: (query: string, status: ValidationStatus, result?: WmiQueryResult) => void,
 ) {
   const fnLogTrace = [...logTrace, "runWMIQuery"];
@@ -62,7 +61,7 @@ export async function runWMIQuery(
       oc.show();
     } else {
       updateCallback(query, { status: "valid" });
-      panelManager.render(REGISTERED_PANELS.WMI_RESULTS, "WMI query results", {
+      renderPanel(REGISTERED_PANELS.WMI_RESULTS, "WMI query results", {
         dataType: "WMI_RESULT",
         data: cachedWmiQueryResult,
       });
@@ -129,7 +128,7 @@ export async function runWMIQuery(
           results: jsonResponse,
           responseTime,
         };
-        panelManager.render(REGISTERED_PANELS.WMI_RESULTS, "WMI query results", {
+        renderPanel(REGISTERED_PANELS.WMI_RESULTS, "WMI query results", {
           dataType: "WMI_RESULT",
           data: queryResult,
         });

@@ -53,13 +53,32 @@ function getColumn() {
   return vscode.window.activeTextEditor ? vscode.ViewColumn.Beside : vscode.ViewColumn.One;
 }
 
+let instance: WebviewPanelManager | undefined;
+
+export const renderPanel = (viewType: REGISTERED_PANELS, title: string, data: PanelData) => {
+  if (!instance) return;
+  instance.render(viewType, title, data);
+};
+
+export const postMessageToPanel = (viewType: REGISTERED_PANELS, message: WebviewMessage) => {
+  if (!instance) return;
+  instance.postMessage(viewType, message);
+};
+
+export const getWebviewPanelManager = (() => {
+  return (extensionUri: vscode.Uri) => {
+    instance = instance === undefined ? new WebviewPanelManager(extensionUri) : instance;
+    return instance;
+  };
+})();
+
 /**
  * This class manages the state and behavior of webview panels rendered as a React app.
  * There will be a single global instance of this class managing all panels.
  * Handling of each data type individually should be done within the React components.
  */
-export class WebviewPanelManager implements vscode.WebviewPanelSerializer {
-  private readonly logTrace = ["webviews", "webviewPanel", this.constructor.name];
+class WebviewPanelManager implements vscode.WebviewPanelSerializer {
+  private readonly logTrace = ["webviews", "webviewPanel", "WebviewPanelManager"];
   private currentPanels: Map<REGISTERED_PANELS, vscode.WebviewPanel>;
   private disposables: Map<REGISTERED_PANELS, vscode.Disposable[]>;
 
