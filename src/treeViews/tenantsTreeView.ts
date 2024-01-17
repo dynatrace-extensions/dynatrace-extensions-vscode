@@ -63,6 +63,52 @@ const CONFIG_STATUS_COLORS: Record<ConfigStatus, string> = {
   UNKNOWN: "⚫",
 };
 
+let instance: TenantsTreeDataProvider | undefined;
+
+/**
+ * Returns a singleton instance of the EnvironmentsTreeDataProvider.
+ */
+export const getTenantsTreeDataProvider = (() => {
+  return (
+    context: vscode.ExtensionContext,
+    connectionStatus: ConnectionStatusManager,
+    errorChannel: vscode.OutputChannel,
+  ) => {
+    instance =
+      instance === undefined
+        ? new TenantsTreeDataProviderImpl(context, connectionStatus, errorChannel)
+        : instance;
+    return instance;
+  };
+})();
+
+/**
+ * Gets an instance of a Dynatrace API Client.
+ * If no environment is specified, the currently connected environment is used.
+ * @param environment specific environment to get the client for
+ * @return API Client instance or undefined if none could be created
+ */
+export const getDynatraceClient = async (environment?: TenantsTreeItem) => {
+  if (!instance) return undefined;
+  const client = environment ? environment.dt : await getConnectedTenant().then(e => e?.dt);
+  return client;
+};
+
+/**
+ * Gets the currently conneted environment (if any).
+ * @return environment or undefined if none is connected
+ */
+export const getConnectedTenant = async () => {
+  if (!instance) return undefined;
+  const environment = await instance
+    .getChildren()
+    .then(children =>
+      (children as DynatraceTenant[]).filter(c => c.contextValue === "currentDynatraceEnvironment"),
+    )
+    .then(children => children.pop());
+  return environment;
+};
+
 /**
  * Creates a TreeItem object that represents a Dynatrace (SaaS, Managed, Platform) tenant registered
  * with the VSCode Extension.
@@ -403,49 +449,3 @@ class TenantsTreeDataProviderImpl implements TenantsTreeDataProvider {
     });
   }
 }
-
-let instance: TenantsTreeDataProvider | undefined;
-
-/**
- * Returns a singleton instance of the EnvironmentsTreeDataProvider.
- */
-export const getTenantsTreeDataProvider = (() => {
-  return (
-    context: vscode.ExtensionContext,
-    connectionStatus: ConnectionStatusManager,
-    errorChannel: vscode.OutputChannel,
-  ) => {
-    instance =
-      instance === undefined
-        ? new TenantsTreeDataProviderImpl(context, connectionStatus, errorChannel)
-        : instance;
-    return instance;
-  };
-})();
-
-/**
- * Gets an instance of a Dynatrace API Client.
- * If no environment is specified, the currently connected environment is used.
- * @param environment specific environment to get the client for
- * @return API Client instance or undefined if none could be created
- */
-export const getDynatraceClient = async (environment?: TenantsTreeItem) => {
-  if (!instance) return undefined;
-  const client = environment ? environment.dt : await getConnectedTenant().then(e => e?.dt);
-  return client;
-};
-
-/**
- * Gets the currently conneted environment (if any).
- * @return environment or undefined if none is connected
- */
-export const getConnectedTenant = async () => {
-  if (!instance) return undefined;
-  const environment = await instance
-    .getChildren()
-    .then(children =>
-      (children as DynatraceTenant[]).filter(c => c.contextValue === "currentDynatraceEnvironment"),
-    )
-    .then(children => children.pop());
-  return environment;
-};

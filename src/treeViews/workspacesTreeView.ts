@@ -44,6 +44,23 @@ const ICONS: Record<string, { light: string; dark: string }> = {
   },
 };
 
+let instance: WorkspacesTreeDataProvider | undefined;
+
+/**
+ * Returns a singleton instance of the WorkspacesTreeDataProvider.
+ */
+export const getWorkspacesTreeDataProvider = (() => {
+  return (context: vscode.ExtensionContext) => {
+    instance = instance === undefined ? new WorkspacesTreeDataProviderImpl(context) : instance;
+    return instance;
+  };
+})();
+
+export const refreshWorkspacesTreeData = () => {
+  if (!instance) return;
+  instance.refresh();
+};
+
 /**
  * Creates a TreeItem that can be used to represent either an extensions workspace
  * or an extension manifest within that workspace.
@@ -199,20 +216,3 @@ class WorkspacesTreeDataProviderImpl implements WorkspacesTreeDataProvider {
     );
   }
 }
-
-let instance: WorkspacesTreeDataProvider | undefined;
-
-/**
- * Returns a singleton instance of the WorkspacesTreeDataProvider.
- */
-export const getWorkspacesTreeDataProvider = (() => {
-  return (context: vscode.ExtensionContext) => {
-    instance = instance === undefined ? new WorkspacesTreeDataProviderImpl(context) : instance;
-    return instance;
-  };
-})();
-
-export const refreshWorkspacesTreeData = () => {
-  if (!instance) return;
-  instance.refresh();
-};

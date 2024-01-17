@@ -15,9 +15,9 @@
  */
 
 import * as vscode from "vscode";
+import { WorkspaceTreeItem } from "../../interfaces/treeViews";
 import { removeWorkspace } from "../../utils/fileSystem";
 import { notify } from "../../utils/logging";
-import { WorkspaceTreeItem } from "../extensionsTreeView";
 
 /**
  * Removes an Extensions Workspace from the tree view. The user is prompted for
