@@ -26,25 +26,23 @@ import {
 import { getBlockItemIndexAtLine, getParentBlocks } from "../utils/yamlParsing";
 import { buildMetricMetadataSnippet, indentSnippet } from "./utils/snippetBuildingUtils";
 
+let instance: PrometheusActionProvider | undefined;
+
 /**
- * Splits a metric key on underscore ("_") and puts together all parts with first
- * character in upper case, providing a sort of title.
- * @param metricKey metric key
- * @returns metric key as title case
+ * Provides singleton access to the PrometheusActionProvider.
  */
-function titleCase(metricKey: string): string {
-  return metricKey
-    .toLowerCase()
-    .split("_")
-    .map(part => `${part.charAt(0).toUpperCase()}${part.substring(1)}`)
-    .join(" ");
-}
+export const getPrometheusActionProvider = (() => {
+  return () => {
+    instance = instance === undefined ? new PrometheusActionProvider() : instance;
+    return instance;
+  };
+})();
 
 /**
  * Provider for Code Actions that work with scraped Prometheus data to automatically
  * insert it in the Extension yaml.
  */
-export class PrometheusActionProvider implements vscode.CodeActionProvider {
+class PrometheusActionProvider implements vscode.CodeActionProvider {
   /**
    * Provides the Code Actions that insert details based on Prometheus scraped data.
    * @param document document that activated the provider
@@ -312,4 +310,18 @@ export class PrometheusActionProvider implements vscode.CodeActionProvider {
 
     return codeActions;
   }
+}
+
+/**
+ * Splits a metric key on underscore ("_") and puts together all parts with first
+ * character in upper case, providing a sort of title.
+ * @param metricKey metric key
+ * @returns metric key as title case
+ */
+function titleCase(metricKey: string): string {
+  return metricKey
+    .toLowerCase()
+    .split("_")
+    .map(part => `${part.charAt(0).toUpperCase()}${part.substring(1)}`)
+    .join(" ");
 }

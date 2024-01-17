@@ -50,10 +50,22 @@ import {
   slugify,
 } from "./utils/snippetBuildingUtils";
 
+let instance: SnippetGenerator | undefined;
+
+/**
+ * Provides singleton access to the SnippetGenerator action provider.
+ */
+export const getSnippetGenerator = (() => {
+  return () => {
+    instance = instance === undefined ? new SnippetGenerator() : instance;
+    return instance;
+  };
+})();
+
 /**
  * Provider for Code Actions that insert snippets of code into the existing extension yaml.
  */
-export class SnippetGenerator implements vscode.CodeActionProvider {
+class SnippetGenerator implements vscode.CodeActionProvider {
   /**
    * Provides Code Actions that insert code snippets relevant to the triggered context.
    * @param document document that activated the provider

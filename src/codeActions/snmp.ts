@@ -22,10 +22,22 @@ import { oidFromMetriValue } from "../utils/snmp";
 import { getIndent } from "../utils/yamlParsing";
 import { buildMetricMetadataSnippet, indentSnippet } from "./utils/snippetBuildingUtils";
 
+let instance: SnmpActionProvider | undefined;
+
+/**
+ * Provides singleton access to the SnmpActionProvider
+ */
+export const getSnmpActionProvider = (() => {
+  return () => {
+    instance = instance === undefined ? new SnmpActionProvider() : instance;
+    return instance;
+  };
+})();
+
 /**
  * Provider for Code Actions for SNMP-based extensions, leveraging online OID information.
  */
-export class SnmpActionProvider implements vscode.CodeActionProvider {
+class SnmpActionProvider implements vscode.CodeActionProvider {
   /**
    * Provides the Code Actions that insert details based on SNMP data.
    * @param document document that activated the provider
