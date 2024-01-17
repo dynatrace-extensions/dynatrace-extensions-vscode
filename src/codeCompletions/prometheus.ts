@@ -25,11 +25,23 @@ import {
 } from "../utils/extensionParsing";
 import { getBlockItemIndexAtLine, getParentBlocks } from "../utils/yamlParsing";
 
+let instance: PrometheusCompletionProvider | undefined;
+
+/**
+ * Singleton access to PrometheusCompletionProvider
+ */
+export const getPrometheusCompletionProvider = (() => {
+  return () => {
+    instance = instance === undefined ? new PrometheusCompletionProvider() : instance;
+    return instance;
+  };
+})();
+
 /**
  * Provider for code auto-completions related to Prometheus data.
  * Is dependent on scraped metrics for suggestions.
  */
-export class PrometheusCompletionProvider implements vscode.CompletionItemProvider {
+class PrometheusCompletionProvider implements vscode.CompletionItemProvider {
   /**
    * Provides the actual completion items related to Prometheus data.
    * @param document {@link vscode.TextDocument} that triggered the provider

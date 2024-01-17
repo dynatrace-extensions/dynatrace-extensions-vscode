@@ -17,7 +17,19 @@
 import * as vscode from "vscode";
 import { getCachedParsedExtension, getCachedWmiQueryResult } from "../utils/caching";
 
-export class WmiCompletionProvider implements vscode.CompletionItemProvider {
+let instance: WmiCompletionProvider | undefined;
+
+/**
+ * Singleton access to WmiCompletionProvider
+ */
+export const getWmiCompletionProvider = (() => {
+  return () => {
+    instance = instance === undefined ? new WmiCompletionProvider() : instance;
+    return instance;
+  };
+})();
+
+class WmiCompletionProvider implements vscode.CompletionItemProvider {
   provideCompletionItems(
     document: vscode.TextDocument,
     position: vscode.Position,

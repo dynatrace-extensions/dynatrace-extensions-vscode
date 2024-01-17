@@ -20,7 +20,19 @@ import { getCachedParsedExtension } from "../utils/caching";
 import { getReferencedCardsMeta, getDefinedCardsMeta } from "../utils/extensionParsing";
 import { getBlockItemIndexAtLine, getParentBlocks } from "../utils/yamlParsing";
 
-export class ScreensMetaCompletionProvider implements vscode.CompletionItemProvider {
+let instance: ScreensCompletionProvider | undefined;
+
+/**
+ * Singleton access to ScreensCompletionProvider
+ */
+export const getScreensCompletionProvider = (() => {
+  return () => {
+    instance = instance === undefined ? new ScreensCompletionProvider() : instance;
+    return instance;
+  };
+})();
+
+class ScreensCompletionProvider implements vscode.CompletionItemProvider {
   provideCompletionItems(
     document: vscode.TextDocument,
     position: vscode.Position,

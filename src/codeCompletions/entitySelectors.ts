@@ -30,10 +30,22 @@ const TRIGGER_SUGGEST_CMD: vscode.Command = {
   title: "Re-trigger suggestions...",
 };
 
+let instance: EntitySelectorCompletionProvider | undefined;
+
+/**
+ * Singleton access to EntitySelectorCompletionProvider
+ */
+export const getEntitySelectorCompletionProvider = (() => {
+  return () => {
+    instance = instance === undefined ? new EntitySelectorCompletionProvider() : instance;
+    return instance;
+  };
+})();
+
 /**
  * Provider for code auto-completions within entity selectors.
  */
-export class EntitySelectorCompletionProvider implements vscode.CompletionItemProvider {
+class EntitySelectorCompletionProvider implements vscode.CompletionItemProvider {
   /**
    * Provides the actual completion items related to the currently typed entity selector.
    * @param document

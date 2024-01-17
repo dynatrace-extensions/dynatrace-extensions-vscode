@@ -19,10 +19,22 @@ import { MinimalConfiguration } from "../treeViews/commands/environments";
 import { getCachedEntityInstances, updateEntityInstances } from "../utils/caching";
 import { getExtensionFilePath } from "../utils/fileSystem";
 
+let instance: ConfigurationCompletionProvider | undefined;
+
+/**
+ * Singleton access to ConfigurationCompletionProvider
+ */
+export const getConfigurationCompletionProvider = (() => {
+  return () => {
+    instance = instance === undefined ? new ConfigurationCompletionProvider() : instance;
+    return instance;
+  };
+})();
+
 /**
  * Provider for code auto-completions related to monitoring configuration files.
  */
-export class ConfigurationCompletionProvider implements vscode.CompletionItemProvider {
+class ConfigurationCompletionProvider implements vscode.CompletionItemProvider {
   async provideCompletionItems(
     document: vscode.TextDocument,
     position: vscode.Position,

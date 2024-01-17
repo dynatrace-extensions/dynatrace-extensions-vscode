@@ -18,10 +18,22 @@ import * as vscode from "vscode";
 import { getCachedBaristaIcons } from "../utils/caching";
 import { getParentBlocks } from "../utils/yamlParsing";
 
+let instance: IconCompletionProvider | undefined;
+
+/**
+ * Singleton access to IconCompletionProvider
+ */
+export const getIconCompletionProvider = (() => {
+  return () => {
+    instance = instance === undefined ? new IconCompletionProvider() : instance;
+    return instance;
+  };
+})();
+
 /**
  * Provider for code auto-completion related to Barista icons
  */
-export class IconCompletionProvider implements vscode.CompletionItemProvider {
+class IconCompletionProvider implements vscode.CompletionItemProvider {
   async provideCompletionItems(
     document: vscode.TextDocument,
     position: vscode.Position,

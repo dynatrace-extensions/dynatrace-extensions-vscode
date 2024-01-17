@@ -25,10 +25,22 @@ import {
 } from "../utils/extensionParsing";
 import { getBlockItemIndexAtLine, getParentBlocks } from "../utils/yamlParsing";
 
+let instance: TopologyCompletionProvider | undefined;
+
+/**
+ * Singleton access to TopologyCompletionProvider
+ */
+export const getTopologyCompletionProvider = (() => {
+  return () => {
+    instance = instance === undefined ? new TopologyCompletionProvider() : instance;
+    return instance;
+  };
+})();
+
 /**
  * Provider for code auto-completion related to entities and entity types.
  */
-export class TopologyCompletionProvider implements vscode.CompletionItemProvider {
+class TopologyCompletionProvider implements vscode.CompletionItemProvider {
   /**
    * Provides the actual completion items related to topology section of the extension YAML.
    * @param document {@link vscode.TextDocument} that triggered the provider
