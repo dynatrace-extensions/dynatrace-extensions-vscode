@@ -16,28 +16,16 @@
 
 import * as vscode from "vscode";
 import { getCachedWmiStatus, setCachedWmiStatus, setCachedWmiQueryResult } from "../utils/caching";
+import * as logger from "../utils/logging";
 import { getBlockRange } from "../utils/yamlParsing";
 import { ValidationStatus } from "./utils/selectorUtils";
-import { WmiQueryResult } from "./utils/wmiUtils";
-
-let instance: WmiCodeLensProvider | undefined;
-
-/**
- * Allows updating the validation status of a WMI query.
- */
-export const updateWmiValidationStatus = (
-  query: string,
-  status: ValidationStatus,
-  result?: WmiQueryResult,
-) => {
-  if (!instance) return;
-  instance.updateQueryData(query, status, result);
-};
+import { WmiQueryResult, runWMIQuery } from "./utils/wmiUtils";
 
 /**
  * Provides singleton access to the WmiCodeLensProvider
  */
 export const getWmiCodeLensProvider = (() => {
+  let instance: WmiCodeLensProvider | undefined;
   return () => {
     instance = instance === undefined ? new WmiCodeLensProvider() : instance;
     return instance;
@@ -55,11 +43,21 @@ class WmiCodeLensProvider implements vscode.CodeLensProvider {
   private readonly controlSetting = "wmiCodeLens";
   private readonly regex = new RegExp("query:", "g");
 
-  /**
-   * Provides the actual code lenses relevant to each valid section of the extension yaml.
-   * @param document the extension manifest
-   * @returns list of code lenses
-   */
+  constructor() {
+    this.registerCommands();
+  }
+
+  private registerCommands() {
+    const commandId = "dynatrace-extensions.codelens.runWMIQuery";
+    vscode.commands.registerCommand(commandId, async (query: string) => {
+      runWMIQuery(query, (checkedQuery, status, result) => {
+        this.updateQueryData(checkedQuery, status, result);
+      }).catch(err =>
+        logger.error(`Running WMI Query failed unexpectedly. ${(err as Error).message}`, commandId),
+      );
+    });
+  }
+
   public async provideCodeLenses(document: vscode.TextDocument): Promise<vscode.CodeLens[]> {
     this.codeLenses = [];
     const regex = new RegExp(this.regex);

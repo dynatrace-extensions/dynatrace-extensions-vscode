@@ -27,13 +27,10 @@ import {
 import { getExtensionFilePath } from "../utils/fileSystem";
 import * as logger from "../utils/logging";
 
-export const activateExtensionWorkflow = async (
-  context: vscode.ExtensionContext,
-  version?: string,
-) => {
+export const activateExtensionWorkflow = async (version?: string) => {
   if (
     (await checkWorkspaceOpen()) &&
-    (await isExtensionsWorkspace(context)) &&
+    (await isExtensionsWorkspace()) &&
     (await checkTenantConnected())
   ) {
     const dtClient = await getDynatraceClient();

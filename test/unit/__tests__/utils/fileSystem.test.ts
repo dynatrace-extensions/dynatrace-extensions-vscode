@@ -18,12 +18,13 @@ import * as fs from "fs";
 import * as path from "path";
 import mock = require("mock-fs");
 import * as vscode from "vscode";
+import * as extension from "../../../../src/extension";
 import { ExtensionWorkspace } from "../../../../src/interfaces/treeViews";
 import {
   createValidFileName,
   findWorkspace,
   getAllWorkspaces,
-  initGlobalStorage,
+  initializeGlobalStorage,
   initWorkspaceStorage,
   registerWorkspace,
   removeOldestFiles,
@@ -46,7 +47,6 @@ describe("Filesystem Utils", () => {
   });
 
   describe("initGlobalStorage", () => {
-    let mockContext: vscode.ExtensionContext;
     const globalStoragePath = "mock/globalStorage";
     const logsPath = path.join(globalStoragePath, "logs");
     const expectedFiles = [
@@ -58,17 +58,20 @@ describe("Filesystem Utils", () => {
     ];
 
     beforeAll(() => {
-      mockContext = new MockExtensionContext(globalStoragePath);
+      jest
+        .spyOn(extension, "getActivationContext")
+        .mockReturnValue(new MockExtensionContext(globalStoragePath));
     });
 
     afterAll(() => {
       mock.restore();
+      jest.restoreAllMocks();
     });
 
     it("should create folders and files on new init", () => {
       mock({ mock: {} });
 
-      initGlobalStorage(mockContext);
+      initializeGlobalStorage();
 
       expect(fs.existsSync(globalStoragePath)).toBe(true);
       expect(fs.existsSync(logsPath)).toBe(true);
@@ -80,7 +83,7 @@ describe("Filesystem Utils", () => {
     it("should create content with default values on new init", () => {
       mock({ mock: {} });
 
-      initGlobalStorage(mockContext);
+      initializeGlobalStorage();
 
       expectedFiles.forEach(file => {
         expect(fs.readFileSync(file.path).toString()).toBe(file.default);
@@ -102,7 +105,7 @@ describe("Filesystem Utils", () => {
         },
       });
 
-      initGlobalStorage(mockContext);
+      initializeGlobalStorage();
 
       expectedFiles.forEach(file => {
         expect(fs.readFileSync(file.path).toString()).toBe(expectedValue);
@@ -151,8 +154,6 @@ describe("Filesystem Utils", () => {
   });
 
   describe("initWorkspaceStorage", () => {
-    let mockContext: vscode.ExtensionContext;
-
     beforeEach(() => {
       mock({ mock: {} });
     });
@@ -162,48 +163,51 @@ describe("Filesystem Utils", () => {
     });
 
     it("shouldn't do anything if no workspace is open", () => {
-      mockContext = new MockExtensionContext(undefined, undefined);
-      const mockMkDirSync = jest.spyOn(fs, "mkdirSync");
+      jest
+        .spyOn(extension, "getActivationContext")
+        .mockReturnValue(new MockExtensionContext(undefined, undefined));
 
-      initWorkspaceStorage(mockContext);
+      initWorkspaceStorage();
 
-      expect(mockMkDirSync).not.toHaveBeenCalled();
       expect(fs.readdirSync("mock").length).toBe(0);
-
-      jest.restoreAllMocks();
     });
 
     it("should create directories if workspace path doesn't exist", () => {
-      mockContext = new MockExtensionContext(undefined, "mock/workspace");
+      jest
+        .spyOn(extension, "getActivationContext")
+        .mockReturnValue(new MockExtensionContext(undefined, "mock/workspace"));
 
-      initWorkspaceStorage(mockContext);
+      initWorkspaceStorage();
 
       expect(fs.existsSync("mock/workspace")).toBe(true);
+      jest.restoreAllMocks();
     });
 
     it("should preserve content if workspace path already exists", () => {
-      mockContext = new MockExtensionContext(undefined, "mock/workspace");
+      jest
+        .spyOn(extension, "getActivationContext")
+        .mockReturnValue(new MockExtensionContext(undefined, "mock/workspace"));
       mock({ mock: { workspace: { f1: "AAA" } } });
 
-      initWorkspaceStorage(mockContext);
+      initWorkspaceStorage();
 
       expect(fs.existsSync("mock/workspace/f1")).toBe(true);
       expect(fs.readFileSync("mock/workspace/f1").toString()).toBe("AAA");
+      jest.restoreAllMocks();
     });
   });
 
   describe("registerWorkspace", () => {
     let executeCommandSpy: jest.SpyInstance;
-    let mockContext: vscode.ExtensionContext;
     const mockGlobalStoragePath = "mock/globalStorage";
     const mockWorkspaceStoragePath = "mock/workspaceStorage";
     const mockWorkspacesJsonPath = path.join(mockGlobalStoragePath, "extensionWorkspaces.json");
 
-    beforeAll(() => {
-      mockContext = new MockExtensionContext(mockGlobalStoragePath, mockWorkspaceStoragePath);
-    });
-
     beforeEach(() => {
+      mock({ mock: {} });
+      jest
+        .spyOn(extension, "getActivationContext")
+        .mockReturnValue(new MockExtensionContext(mockGlobalStoragePath, mockWorkspaceStoragePath));
       jest.spyOn(vscode.workspace, "name", "get").mockReturnValue("MockWorkspace");
       jest.spyOn(vscode.workspace, "workspaceFolders", "get").mockReturnValue([
         {
@@ -224,12 +228,16 @@ describe("Filesystem Utils", () => {
     });
 
     it("should bail early if no storage URI available", async () => {
-      const writeFileSpy = jest.spyOn(fs, "writeFileSync");
+      jest
+        .spyOn(extension, "getActivationContext")
+        .mockReturnValue(new MockExtensionContext(undefined, undefined));
 
-      await registerWorkspace(new MockExtensionContext(undefined, undefined));
+      await registerWorkspace();
 
-      expect(writeFileSpy).not.toHaveBeenCalled();
+      expect(fs.readdirSync("mock").length).toBe(0);
       expect(executeCommandSpy).not.toHaveBeenCalled();
+
+      jest.restoreAllMocks();
     });
 
     it("should add a new workspace to the list", async () => {
@@ -241,7 +249,7 @@ describe("Filesystem Utils", () => {
         },
       });
 
-      await registerWorkspace(mockContext);
+      await registerWorkspace();
 
       const actualWorkspaces = JSON.parse(
         fs.readFileSync(mockWorkspacesJsonPath).toString(),
@@ -268,7 +276,7 @@ describe("Filesystem Utils", () => {
         },
       });
 
-      await registerWorkspace(mockContext);
+      await registerWorkspace();
 
       const actualWorkspaces = JSON.parse(
         fs.readFileSync(mockWorkspacesJsonPath).toString(),
@@ -295,7 +303,7 @@ describe("Filesystem Utils", () => {
         },
       });
 
-      await registerWorkspace(mockContext);
+      await registerWorkspace();
 
       const actualWorkspaces = JSON.parse(
         fs.readFileSync(mockWorkspacesJsonPath).toString(),
@@ -323,6 +331,12 @@ describe("Filesystem Utils", () => {
       { name: "OtherWorkspace", folder: "file://mock/other-workspace", id: "other" },
     ];
 
+    beforeAll(() => {
+      jest
+        .spyOn(extension, "getActivationContext")
+        .mockReturnValue(new MockExtensionContext("mock/globalStorage"));
+    });
+
     afterAll(() => {
       mock.restore();
       jest.restoreAllMocks();
@@ -334,10 +348,9 @@ describe("Filesystem Utils", () => {
       { content: JSON.stringify(twoWorkspaces), expected: twoWorkspaces },
     ])("%# workspaces should return expected value", ({ content, expected }) => {
       mock({ mock: { globalStorage: { "extensionWorkspaces.json": content } } });
-      const mockContext = new MockExtensionContext("mock/globalStorage");
       jest.spyOn(vscode.Uri, "parse").mockImplementation((val: string) => new MockUri(val));
 
-      const actual = getAllWorkspaces(mockContext);
+      const actual = getAllWorkspaces();
 
       expect(actual.length).toBe(expected.length);
       actual.forEach((actualWorkspace, index) => {
@@ -349,17 +362,18 @@ describe("Filesystem Utils", () => {
   });
 
   describe("findWorkspace", () => {
-    let mockContext: vscode.ExtensionContext;
     const oneWorkspace: ExtensionWorkspace[] = [
       { name: "MockWorkspace", folder: "file://mock/my-workspace", id: "mock" },
     ];
 
     beforeEach(() => {
-      mockContext = new MockExtensionContext("mock/globalStorage");
       mock({
         mock: { globalStorage: { "extensionWorkspaces.json": JSON.stringify(oneWorkspace) } },
       });
       jest.spyOn(vscode.Uri, "parse").mockImplementation((val: string) => new MockUri(val));
+      jest
+        .spyOn(extension, "getActivationContext")
+        .mockReturnValue(new MockExtensionContext("mock/globalStorage"));
     });
 
     afterAll(() => {
@@ -368,7 +382,7 @@ describe("Filesystem Utils", () => {
     });
 
     it("should find workspace by name", () => {
-      const actual = findWorkspace(mockContext, "MockWorkspace");
+      const actual = findWorkspace("MockWorkspace");
 
       expect(actual).toBeDefined();
       expect(actual?.name).toBe(oneWorkspace[0].name);
@@ -377,7 +391,7 @@ describe("Filesystem Utils", () => {
     });
 
     it("should find workspace by id", () => {
-      const actual = findWorkspace(mockContext, undefined, "mock");
+      const actual = findWorkspace(undefined, "mock");
 
       expect(actual).toBeDefined();
       expect(actual?.name).toBe(oneWorkspace[0].name);
@@ -388,13 +402,13 @@ describe("Filesystem Utils", () => {
     it("should return undefined if no workspaces exist", () => {
       mock({ mock: { globalStorage: { "extensionWorkspaces.json": "[]" } } });
 
-      const actual = findWorkspace(mockContext, "notExisting");
+      const actual = findWorkspace("notExisting");
 
       expect(actual).toBeUndefined();
     });
 
     it("should return undefinedd list if no workspace found", () => {
-      const actual = findWorkspace(mockContext, "notExisting");
+      const actual = findWorkspace("notExisting");
 
       expect(actual).toBeUndefined();
     });

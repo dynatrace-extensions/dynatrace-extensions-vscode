@@ -19,6 +19,7 @@ import * as path from "path";
 import axios from "axios";
 import * as vscode from "vscode";
 import { Dynatrace } from "../dynatrace-api/dynatrace";
+import { getActivationContext } from "../extension";
 import { getDynatraceClient } from "../treeViews/tenantsTreeView";
 import { checkTenantConnected } from "../utils/conditionCheckers";
 import { getExtensionFilePath } from "../utils/fileSystem";
@@ -26,13 +27,13 @@ import * as logger from "../utils/logging";
 
 const logTrace = ["commandPalette", "loadSchemas"];
 
-export const loadSchemasWorkflow = async (context: vscode.ExtensionContext) => {
+export const loadSchemasWorkflow = async () => {
   if (await checkTenantConnected()) {
     const dtClient = await getDynatraceClient();
     if (!dtClient) {
       throw Error("Cannot continue without Dynatrace API client.");
     }
-    await loadSchemas(context, dtClient);
+    await loadSchemas(dtClient);
   }
 };
 
@@ -40,14 +41,11 @@ export const loadSchemasWorkflow = async (context: vscode.ExtensionContext) => {
  * Delivers the "Load schemas" command functionality.
  * Prompts the user to select a schema version, then downloads all schema files for that version.
  * Files are written in the global shared storage.
- * @param context VSCode Extension Context
  * @param dt Dynatrace API Client
  * @returns boolean - the success of the command
  */
-export async function loadSchemas(
-  context: vscode.ExtensionContext,
-  dt: Dynatrace,
-): Promise<boolean> {
+export async function loadSchemas(dt: Dynatrace): Promise<boolean> {
+  const context = getActivationContext();
   logger.info("Executing Load Schemas command", ...logTrace);
   // Fetch available schema versions from cluster
   const availableVersions = await dt.extensionsV2.listSchemaVersions().catch(async err => {

@@ -27,8 +27,8 @@ import * as logger from "../utils/logging";
 
 const logTrace = ["commandPalette", "createAlert"];
 
-export const createAlertWorkflow = async (context: vscode.ExtensionContext) => {
-  if ((await checkWorkspaceOpen()) && (await isExtensionsWorkspace(context))) {
+export const createAlertWorkflow = async () => {
+  if ((await checkWorkspaceOpen()) && (await isExtensionsWorkspace())) {
     await createAlert();
   }
 };

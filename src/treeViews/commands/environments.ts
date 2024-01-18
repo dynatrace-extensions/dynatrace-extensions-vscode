@@ -18,6 +18,7 @@ import { readFileSync, readdirSync, rmSync, writeFileSync } from "fs";
 import * as path from "path";
 import * as vscode from "vscode";
 import { DynatraceAPIError } from "../../dynatrace-api/errors";
+import { getActivationContext } from "../../extension";
 import {
   DeployedExtension,
   DynatraceEnvironmentData,
@@ -33,7 +34,7 @@ import {
   registerEnvironment,
   removeEnvironment,
 } from "../../utils/fileSystem";
-import { notify } from "../../utils/logging";
+import * as logger from "../../utils/logging";
 import { createObjectFromSchema } from "../../utils/schemaParsing";
 
 export interface MinimalConfiguration {
@@ -91,10 +92,9 @@ export function validateEnvironmentUrl(value: string): string | null {
  * A workflow for registering a new Dynatrace Environment within the VSCode extension.
  * URL, Token, and an optional label are collected. The user can also set this as the
  * currently used environment.
- * @param context VSCode Extension Context
  * @returns
  */
-export async function addEnvironment(context: vscode.ExtensionContext) {
+export async function addEnvironment() {
   const fnLogTrace = [...logTrace, "addEnvironment"];
   let url = await vscode.window.showInputBox({
     title: "Add a Dynatrace environment (1/3)",
@@ -104,7 +104,7 @@ export async function addEnvironment(context: vscode.ExtensionContext) {
     validateInput: value => validateEnvironmentUrl(value),
   });
   if (!url || url === "") {
-    notify("ERROR", "URL cannot be blank. Operation was cancelled.", ...fnLogTrace);
+    logger.notify("ERROR", "URL cannot be blank. Operation was cancelled.", ...fnLogTrace);
     return;
   }
   if (url.endsWith("/")) {
@@ -119,7 +119,7 @@ export async function addEnvironment(context: vscode.ExtensionContext) {
 
   const reachable = await checkUrlReachable(`${apiUrl}/api/v1/time`, true);
   if (!reachable) {
-    notify("ERROR", "The environment URL entered is not reachable.", ...fnLogTrace);
+    logger.notify("ERROR", "The environment URL entered is not reachable.", ...fnLogTrace);
     return;
   }
 
@@ -131,7 +131,7 @@ export async function addEnvironment(context: vscode.ExtensionContext) {
     password: true,
   });
   if (!token || token === "") {
-    notify("ERROR", "Token cannot be blank. Operation was cancelled", ...fnLogTrace);
+    logger.notify("ERROR", "Token cannot be blank. Operation was cancelled", ...fnLogTrace);
     return;
   }
 
@@ -148,7 +148,7 @@ export async function addEnvironment(context: vscode.ExtensionContext) {
     ignoreFocusOut: true,
   });
 
-  await registerEnvironment(context, url, apiUrl, encryptToken(token), name, current === "Yes");
+  await registerEnvironment(url, apiUrl, encryptToken(token), name, current === "Yes");
 }
 
 /**
@@ -156,14 +156,10 @@ export async function addEnvironment(context: vscode.ExtensionContext) {
  * the VS Code extension. The users walks through providing URL, Token, and optionally
  * a label, but the fields are pre-populated with the current details of the environment.
  * At the end, this can also be set as the currently used environment.
- * @param context VSCode Extension Context
  * @param environment the existing environment
  * @returns
  */
-export async function editEnvironment(
-  context: vscode.ExtensionContext,
-  environment: DynatraceTenant,
-) {
+export async function editEnvironment(environment: DynatraceTenant) {
   const fnLogTrace = [...logTrace, "editEnvironment"];
   let url = await vscode.window.showInputBox({
     title: "The new URL for this environment",
@@ -174,7 +170,7 @@ export async function editEnvironment(
     validateInput: value => validateEnvironmentUrl(value),
   });
   if (!url || url === "") {
-    notify("ERROR", "URL cannot be blank. Operation was cancelled.", ...fnLogTrace);
+    logger.notify("ERROR", "URL cannot be blank. Operation was cancelled.", ...fnLogTrace);
     return;
   }
   if (url.endsWith("/")) {
@@ -189,7 +185,7 @@ export async function editEnvironment(
 
   const reachable = await checkUrlReachable(`${apiUrl}/api/v1/time`, true);
   if (!reachable) {
-    notify("ERROR", "The environment URL entered is not reachable.", ...fnLogTrace);
+    logger.notify("ERROR", "The environment URL entered is not reachable.", ...fnLogTrace);
     return;
   }
 
@@ -202,7 +198,7 @@ export async function editEnvironment(
     ignoreFocusOut: true,
   });
   if (!token || token === "") {
-    notify("ERROR", "Token cannot be blank. Operation was cancelled", ...fnLogTrace);
+    logger.notify("ERROR", "Token cannot be blank. Operation was cancelled", ...fnLogTrace);
     return;
   }
 
@@ -220,20 +216,16 @@ export async function editEnvironment(
     ignoreFocusOut: true,
   });
 
-  await registerEnvironment(context, url, apiUrl, encryptToken(token), name, current === "Yes");
+  await registerEnvironment(url, apiUrl, encryptToken(token), name, current === "Yes");
 }
 
 /**
  * Removes a Dynatrace environment from the tree view. The user is prompted for
  * confirmation before the saved details are deleted from the global storage.
- * @param context VSCode Extension Context
  * @param environment the existing environment
  * @returns
  */
-export async function deleteEnvironment(
-  context: vscode.ExtensionContext,
-  environment: DynatraceTenant,
-) {
+export async function deleteEnvironment(environment: DynatraceTenant) {
   const confirm = await vscode.window.showQuickPick(["Yes", "No"], {
     title: `Delete environment ${environment.label?.toString() ?? environment.id}?`,
     canPickMany: false,
@@ -241,11 +233,11 @@ export async function deleteEnvironment(
   });
 
   if (confirm !== "Yes") {
-    notify("INFO", "Operation cancelled.", ...logTrace, "deleteEnvironment");
+    logger.notify("INFO", "Operation cancelled.", ...logTrace, "deleteEnvironment");
     return;
   }
 
-  await removeEnvironment(context, environment.id);
+  await removeEnvironment(environment.id);
 }
 
 /**
@@ -254,16 +246,13 @@ export async function deleteEnvironment(
  * as the currently connected one.
  * This is useful when you don't want to visit the Dynatrace Activity Bar item - for example
  * when triggered from the global status bar.
- * @param context VSCode Extension Context
  * @returns the selected status as boolean, and name of connected environment or "" as string
  */
-export async function changeConnection(
-  context: vscode.ExtensionContext,
-): Promise<[boolean, DynatraceEnvironmentData | undefined]> {
-  const environments = getAllEnvironments(context);
+export async function changeConnection(): Promise<[boolean, DynatraceEnvironmentData | undefined]> {
+  const environments = getAllEnvironments();
   // No point showing a list of 1 or empty
   if (environments.length < 2) {
-    notify(
+    logger.notify(
       "INFO",
       "No other environments available. Add one first",
       ...logTrace,
@@ -287,7 +276,6 @@ export async function changeConnection(
     const environment = environments.find(e => e.name === choice);
     if (environment) {
       await registerEnvironment(
-        context,
         environment.url,
         environment.apiUrl,
         environment.token,
@@ -311,17 +299,16 @@ export async function changeConnection(
  * @param headerContent informational content (comments) to inform the user about usage
  * @param defaultDetails existing details as stringified JSON
  * @param rejectNoChanges if true, the promise is rejected if the file content is unchanged
- * @param context vscode.ExtensionContext
  * @returns a Promise that will either resolve with the stringified content of the configuration
  * or will reject with the message "No changes.".
  */
 export async function getConfigurationDetailsViaFile(
   headerContent: string,
   defaultDetails: string,
-  context: vscode.ExtensionContext,
   rejectNoChanges: boolean = true,
 ): Promise<string> {
   // Create a file to act as an interface for making changes
+  const context = getActivationContext();
   const tempConfigFile = path.resolve(context.globalStorageUri.fsPath, "tempConfigFile.jsonc");
   const configFileContent = headerContent + "\n" + defaultDetails;
   writeFileSync(tempConfigFile, configFileContent);
@@ -364,16 +351,13 @@ export async function getConfigurationDetailsViaFile(
  * Make changes to the monitoring configuration associated with the MonitoringConfiguration tree
  * item. Changes are collected via a temporary file.
  * @param config the MonitoringConfiguration to be updated
- * @param context vscode.ExtensionContext
- * @param oc a JSON output channel to communicate errors to
  * @returns success of the command
  */
 export async function editMonitoringConfiguration(
   config: MonitoringConfiguration,
-  context: vscode.ExtensionContext,
-  oc: vscode.OutputChannel,
 ): Promise<boolean> {
   const fnLogTrace = [...logTrace, "editMonitoringConfiguration"];
+  const oc = logger.getGenericChannel();
   // Fetch the current configuration details
   const existingConfig = await config.dt.extensionsV2
     .getMonitoringConfiguration(config.extensionName, config.id)
@@ -390,7 +374,7 @@ export async function editMonitoringConfiguration(
     "once you save and close this tab.";
 
   // Allow the user to make changes
-  const status = await getConfigurationDetailsViaFile(headerContent, existingConfig, context).then(
+  const status = await getConfigurationDetailsViaFile(headerContent, existingConfig).then(
     // Push the changes
     response =>
       config.dt.extensionsV2
@@ -400,11 +384,11 @@ export async function editMonitoringConfiguration(
           JSON.parse(response) as Record<string, unknown>,
         )
         .then(() => {
-          notify("INFO", "Configuration updated successfully.", ...fnLogTrace);
+          logger.notify("INFO", "Configuration updated successfully.", ...fnLogTrace);
           return true;
         })
         .catch((err: DynatraceAPIError) => {
-          notify("ERROR", `Update operation failed: ${err.message}`, ...fnLogTrace);
+          logger.notify("ERROR", `Update operation failed: ${err.message}`, ...fnLogTrace);
           oc.replace(JSON.stringify(err.errorParams, undefined, 2));
           oc.show();
           return false;
@@ -412,7 +396,7 @@ export async function editMonitoringConfiguration(
     // Otherwise cancel operation
     response => {
       if (response === "No changes.") {
-        notify("INFO", "No changes were made. Operation cancelled.", ...fnLogTrace);
+        logger.notify("INFO", "No changes were made. Operation cancelled.", ...fnLogTrace);
       }
       return false;
     },
@@ -438,18 +422,18 @@ export async function deleteMonitoringConfiguration(
   });
 
   if (confirm !== "Yes") {
-    notify("INFO", "Operation cancelled.", ...fnLogTrace);
+    logger.notify("INFO", "Operation cancelled.", ...fnLogTrace);
     return false;
   }
 
   return config.dt.extensionsV2
     .deleteMonitoringConfiguration(config.extensionName, config.id)
     .then(() => {
-      notify("INFO", "Configuration deleted successfully.", ...fnLogTrace);
+      logger.notify("INFO", "Configuration deleted successfully.", ...fnLogTrace);
       return true;
     })
     .catch((err: DynatraceAPIError) => {
-      notify("ERROR", `Delete operation failed: ${err.message}`, ...fnLogTrace);
+      logger.notify("ERROR", `Delete operation failed: ${err.message}`, ...fnLogTrace);
       return false;
     });
 }
@@ -461,16 +445,11 @@ export async function deleteMonitoringConfiguration(
  * monitoring configuration template that the user can edit before it's sent to Dynatrace. Once the
  * file is saved & closed, the details are POST-ed.
  * @param extension the deployed extension to add a configuration to
- * @param context vscode.ExtensionContext
- * @param oc a JSON output channel to communicate errors to
  * @returns success of the operation
  */
-export async function addMonitoringConfiguration(
-  extension: DeployedExtension,
-  context: vscode.ExtensionContext,
-  oc: vscode.OutputChannel,
-) {
+export async function addMonitoringConfiguration(extension: DeployedExtension) {
   const fnLogTrace = [...logTrace, "addMonitoringConfiguration"];
+  const oc = logger.getGenericChannel();
   let configObject: MinimalConfiguration | undefined;
   // Check if workspace matches the extension
   let workspaceMatch = false;
@@ -513,7 +492,7 @@ export async function addMonitoringConfiguration(
         ]);
 
         if (!choice) {
-          notify("INFO", "Operation cancelled.", ...fnLogTrace);
+          logger.notify("INFO", "Operation cancelled.", ...fnLogTrace);
           return false;
         }
 
@@ -547,7 +526,6 @@ export async function addMonitoringConfiguration(
       await getConfigurationDetailsViaFile(
         headerContent,
         JSON.stringify(configTemplate, undefined, 4),
-        context,
         false,
       ),
     ) as MinimalConfiguration;
@@ -557,11 +535,11 @@ export async function addMonitoringConfiguration(
   const status = await extension.dt.extensionsV2
     .postMonitoringConfiguration(extension.id, [configObject] as unknown as Record<string, unknown>)
     .then(() => {
-      notify("INFO", "Configuration successfully created.", ...fnLogTrace);
+      logger.notify("INFO", "Configuration successfully created.", ...fnLogTrace);
       return true;
     })
     .catch((err: DynatraceAPIError) => {
-      notify("ERROR", "Create operation failed.", ...fnLogTrace);
+      logger.notify("ERROR", "Create operation failed.", ...fnLogTrace);
       oc.replace(JSON.stringify(err.errorParams, undefined, 2));
       oc.show();
       return false;
@@ -605,11 +583,11 @@ export async function saveMoniotringConfiguration(config: MonitoringConfiguratio
     ignoreFocusOut: true,
   });
   if (!fileName) {
-    notify("INFO", "Operation cancelled.", ...fnLogTrace);
+    logger.notify("INFO", "Operation cancelled.", ...fnLogTrace);
     return;
   }
   writeFileSync(path.join(configDir, fileName), existingConfig);
-  notify("INFO", "Configuration file saved successfully.", ...fnLogTrace);
+  logger.notify("INFO", "Configuration file saved successfully.", ...fnLogTrace);
 }
 
 /**

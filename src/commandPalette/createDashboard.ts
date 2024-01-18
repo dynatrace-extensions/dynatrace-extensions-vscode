@@ -26,8 +26,8 @@ import { getEntityMetrics, getMetricDisplayName } from "../utils/extensionParsin
 import { getExtensionFilePath } from "../utils/fileSystem";
 import * as logger from "../utils/logging";
 
-export const createDashboardWorkflow = async (context: vscode.ExtensionContext) => {
-  if ((await checkWorkspaceOpen()) && (await isExtensionsWorkspace(context))) {
+export const createDashboardWorkflow = async () => {
+  if ((await checkWorkspaceOpen()) && (await isExtensionsWorkspace())) {
     await createOverviewDashboard();
   }
 };

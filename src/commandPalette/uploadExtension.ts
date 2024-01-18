@@ -33,10 +33,10 @@ import {
 import * as logger from "../utils/logging";
 import { activateExtension } from "./activateExtension";
 
-export const uploadExtensionWorkflow = async (context: vscode.ExtensionContext) => {
+export const uploadExtensionWorkflow = async () => {
   if (
     (await checkWorkspaceOpen()) &&
-    (await isExtensionsWorkspace(context)) &&
+    (await isExtensionsWorkspace()) &&
     (await checkTenantConnected()) &&
     (await checkExtensionZipExists())
   ) {

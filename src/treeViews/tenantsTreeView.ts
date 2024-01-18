@@ -69,11 +69,9 @@ let instance: TenantsTreeDataProvider | undefined;
  * Returns a singleton instance of the EnvironmentsTreeDataProvider.
  */
 export const getTenantsTreeDataProvider = (() => {
-  return (context: vscode.ExtensionContext, connectionStatus: ConnectionStatusManager) => {
+  return (connectionStatus: ConnectionStatusManager) => {
     instance =
-      instance === undefined
-        ? new TenantsTreeDataProviderImpl(context, connectionStatus)
-        : instance;
+      instance === undefined ? new TenantsTreeDataProviderImpl(connectionStatus) : instance;
     return instance;
   };
 })();
@@ -197,9 +195,7 @@ const createMonitoringConfiguration = (
  */
 class TenantsTreeDataProviderImpl implements TenantsTreeDataProvider {
   private readonly logTrace = ["treeViews", "environmentsTreeView", "EnvironmentsTreeDataProvider"];
-  context: vscode.ExtensionContext;
   connectionStatus: ConnectionStatusManager;
-  oc: vscode.OutputChannel;
   private _onDidChangeTreeData: vscode.EventEmitter<TenantsTreeItem | undefined> =
     new vscode.EventEmitter<TenantsTreeItem | undefined>();
 
@@ -207,13 +203,10 @@ class TenantsTreeDataProviderImpl implements TenantsTreeDataProvider {
     this._onDidChangeTreeData.event;
 
   /**
-   * @param context VSCode Extension Context
    * @param connectionStatus a connection status manager, to update the status bar
    */
-  constructor(context: vscode.ExtensionContext, connectionStatus: ConnectionStatusManager) {
-    this.context = context;
+  constructor(connectionStatus: ConnectionStatusManager) {
     this.connectionStatus = connectionStatus;
-    this.oc = logger.getGenericChannel();
     this.getChildren()
       .then(children =>
         (children as DynatraceTenant[]).filter(
@@ -234,26 +227,25 @@ class TenantsTreeDataProviderImpl implements TenantsTreeDataProvider {
       .catch(err => {
         logger.error((err as Error).message, ...this.logTrace);
       });
-    this.registerCommands(context);
+    this.registerCommands();
   }
 
   /**
    * Registers the commands that the Items in this Tree View needs to work with.
    * @param context {@link vscode.ExtensionContext}
    */
-  private registerCommands(context: vscode.ExtensionContext) {
+  private registerCommands() {
     // Commands for Environments
     vscode.commands.registerCommand("dynatrace-extensions-environments.refresh", () =>
       this.refresh(),
     );
     vscode.commands.registerCommand("dynatrace-extensions-environments.addEnvironment", () =>
-      addEnvironment(context).then(() => this.refresh()),
+      addEnvironment().then(() => this.refresh()),
     );
     vscode.commands.registerCommand(
       "dynatrace-extensions-environments.useEnvironment",
       async (environment: DynatraceTenant) => {
         await registerEnvironment(
-          context,
           environment.url,
           environment.apiUrl,
           encryptToken(environment.token),
@@ -270,19 +262,19 @@ class TenantsTreeDataProviderImpl implements TenantsTreeDataProvider {
     vscode.commands.registerCommand(
       "dynatrace-extensions-environments.editEnvironment",
       async (environment: DynatraceTenant) => {
-        await editEnvironment(context, environment).then(() => this.refresh());
+        await editEnvironment(environment).then(() => this.refresh());
       },
     );
     vscode.commands.registerCommand(
       "dynatrace-extensions-environments.deleteEnvironment",
       async (environment: DynatraceTenant) => {
-        await deleteEnvironment(context, environment).then(() => this.refresh());
+        await deleteEnvironment(environment).then(() => this.refresh());
       },
     );
     vscode.commands.registerCommand(
       "dynatrace-extensions-environments.changeConnection",
       async () => {
-        await changeConnection(context).then(([connected, environment]) => {
+        await changeConnection().then(([connected, environment]) => {
           this.connectionStatus.clearConnectionChecks();
           this.connectionStatus.updateStatusBar(connected, environment).catch(() => {});
           this.refresh();
@@ -293,7 +285,7 @@ class TenantsTreeDataProviderImpl implements TenantsTreeDataProvider {
     vscode.commands.registerCommand(
       "dynatrace-extensions-environments.addConfig",
       async (extension: DeployedExtension) => {
-        await addMonitoringConfiguration(extension, context, this.oc).then(success => {
+        await addMonitoringConfiguration(extension).then(success => {
           if (success) {
             this.refresh();
           }
@@ -303,7 +295,7 @@ class TenantsTreeDataProviderImpl implements TenantsTreeDataProvider {
     vscode.commands.registerCommand(
       "dynatrace-extensions-environments.editConfig",
       async (config: MonitoringConfiguration) => {
-        await editMonitoringConfiguration(config, context, this.oc).then(success => {
+        await editMonitoringConfiguration(config).then(success => {
           if (success) {
             this.refresh();
           }
@@ -425,7 +417,7 @@ class TenantsTreeDataProviderImpl implements TenantsTreeDataProvider {
     }
 
     // If no item specified, grab all environments from global storage
-    return getAllEnvironments(this.context).map((environment: DynatraceEnvironmentData) => {
+    return getAllEnvironments().map((environment: DynatraceEnvironmentData) => {
       if (environment.current) {
         this.connectionStatus.updateStatusBar(true, environment).catch(() => {});
       }

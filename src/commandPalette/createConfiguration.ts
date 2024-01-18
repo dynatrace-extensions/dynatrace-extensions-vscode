@@ -34,15 +34,15 @@ import { createUniqueFileName, getExtensionFilePath } from "../utils/fileSystem"
 import * as logger from "../utils/logging";
 import { createGenericConfigObject, createObjectFromSchema } from "../utils/schemaParsing";
 
-export const createMonitoringConfigurationWorkflow = async (context: vscode.ExtensionContext) => {
+export const createMonitoringConfigurationWorkflow = async () => {
   if (
     (await checkWorkspaceOpen()) &&
-    (await isExtensionsWorkspace(context)) &&
+    (await isExtensionsWorkspace()) &&
     (await checkTenantConnected())
   ) {
     const dtClient = await getDynatraceClient();
     if (dtClient) {
-      await createMonitoringConfiguration(dtClient, context);
+      await createMonitoringConfiguration(dtClient);
     }
   }
 };
@@ -55,12 +55,8 @@ export const createMonitoringConfigurationWorkflow = async (context: vscode.Exte
  * The user is prompted for LOCAL vs REMOTE context where applicable but otherwise should use
  * code completions for customizing the generated template.
  * @param dt Dyntrace client
- * @param context vscode Extension Context
  */
-export async function createMonitoringConfiguration(
-  dt: Dynatrace,
-  context: vscode.ExtensionContext,
-) {
+export async function createMonitoringConfiguration(dt: Dynatrace) {
   const fnLogTrace = ["commandPalette", "createConfiguration", "createMonitoringConfiguration"];
   logger.info("Executing Create Configuration command", ...fnLogTrace);
   const workspaceRoot = vscode.workspace.workspaceFolders?.[0].uri.fsPath;
@@ -144,7 +140,6 @@ export async function createMonitoringConfiguration(
     await getConfigurationDetailsViaFile(
       headerContent,
       JSON.stringify(initialConfig, undefined, 4),
-      context,
       false,
     ),
   ) as MinimalConfiguration;

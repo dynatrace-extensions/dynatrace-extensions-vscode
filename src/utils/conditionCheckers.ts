@@ -23,6 +23,7 @@ import { existsSync, readdirSync, readFileSync } from "fs";
 import * as path from "path";
 import axios from "axios";
 import * as vscode from "vscode";
+import { getActivationContext } from "../extension";
 import { getConnectedTenant } from "../treeViews/tenantsTreeView";
 import { getDiagnostics } from "./diagnostics";
 import { getExtensionFilePath, resolveRealPath } from "./fileSystem";
@@ -112,14 +113,11 @@ export async function checkWorkspaceOpen(suppressMessaging: boolean = false): Pr
 
 /**
  * Checks whether the currently opened workspace is an Extensions 2.0 workspace or not.
- * @param context VSCode Extension Context
  * @param showWarningMessage when true, displays a warning message to the user
  * @returns check status
  */
-export async function isExtensionsWorkspace(
-  context: vscode.ExtensionContext,
-  showWarningMessage: boolean = true,
-): Promise<boolean> {
+export async function isExtensionsWorkspace(showWarningMessage: boolean = true): Promise<boolean> {
+  const context = getActivationContext();
   const fnLogTrace = [...logTrace, "isExtensionsWorkspace"];
   let status = false;
   if (context.storageUri && existsSync(context.storageUri.fsPath)) {
@@ -145,13 +143,11 @@ export async function isExtensionsWorkspace(
 /**
  * Checks whether the workspace storage already has certificate files and prompts for overwriting.
  * Assumes the workspace storage has already been setup (i.e. path exists).
- * @param context
  * @returns true if operation should continue, false for cancellation
  */
-export async function checkOverwriteCertificates(
-  context: vscode.ExtensionContext,
-): Promise<boolean> {
+export async function checkOverwriteCertificates(): Promise<boolean> {
   let status = true;
+  const context = getActivationContext();
   const storageUri = context.storageUri?.fsPath;
   if (!storageUri) {
     return false;

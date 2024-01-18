@@ -35,8 +35,8 @@ import * as logger from "../utils/logging";
 
 const logTrace = ["commandPalette", "createDocumentation"];
 
-export const createDocumentationWorkflow = async (context: vscode.ExtensionContext) => {
-  if ((await checkWorkspaceOpen()) && (await isExtensionsWorkspace(context))) {
+export const createDocumentationWorkflow = async () => {
+  if ((await checkWorkspaceOpen()) && (await isExtensionsWorkspace())) {
     await createDocumentation();
   }
 };

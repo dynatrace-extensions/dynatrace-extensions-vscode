@@ -23,14 +23,10 @@ import { notify } from "../../utils/logging";
  * Removes an Extensions Workspace from the tree view. The user is prompted for
  * confirmation before the workspace is forgotten.
  * Note: this does not delete the workspace folders and files from the user machine.
- * @param context VSCode Extension Context
  * @param workspace the existing environment
  * @returns
  */
-export async function deleteWorkspace(
-  context: vscode.ExtensionContext,
-  workspace: WorkspaceTreeItem,
-) {
+export async function deleteWorkspace(workspace: WorkspaceTreeItem) {
   const fnLogTrace = ["treeViews", "commands", "workspaces", "deleteWorkspace"];
   const confirm = await vscode.window.showQuickPick(["Yes", "No"], {
     title: `Delete workspace ${workspace.label?.toString() ?? workspace.id}?`,
@@ -43,5 +39,5 @@ export async function deleteWorkspace(
     return;
   }
 
-  await removeWorkspace(context, workspace.id);
+  await removeWorkspace(workspace.id);
 }

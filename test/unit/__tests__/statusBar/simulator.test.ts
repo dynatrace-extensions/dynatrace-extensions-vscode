@@ -17,6 +17,7 @@
 import mock = require("mock-fs");
 import { DirectoryItems } from "mock-fs/lib/filesystem";
 import * as vscode from "vscode";
+import * as extension from "../../../../src/extension";
 import { DatasourceName, ExtensionStub } from "../../../../src/interfaces/extensionMeta";
 import {
   RemoteTarget,
@@ -36,18 +37,17 @@ import { MockExtensionContext, MockUri } from "../../mocks/vscode";
 jest.mock("../../../../src/utils/logging");
 
 describe("Simulator Manager", () => {
-  let mockContext: vscode.ExtensionContext;
-  let panelManager: webviewPanel.WebviewPanelManager;
   let simulatorManager: SimulatorManager;
+  const mockContext = new MockExtensionContext();
+  const panelManager = webviewPanel.getWebviewPanelManager(new MockUri("mock.extension.uri"));
 
   beforeAll(() => {
     mock({ mock: {} });
-    panelManager = new webviewPanel.WebviewPanelManager(new MockUri("mock.extension.uri"));
-    mockContext = new MockExtensionContext();
   });
 
   beforeEach(() => {
-    simulatorManager = new SimulatorManager(mockContext, panelManager);
+    jest.spyOn(extension, "getActivationContext").mockReturnValue(mockContext);
+    simulatorManager = new SimulatorManager();
   });
 
   afterEach(() => {

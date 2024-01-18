@@ -18,18 +18,19 @@ import { existsSync, mkdirSync, writeFileSync } from "fs";
 import path = require("path");
 import { md, pki, random, util } from "node-forge";
 import * as vscode from "vscode";
+import { getActivationContext } from "../extension";
 import { checkOverwriteCertificates, checkWorkspaceOpen } from "../utils/conditionCheckers";
 import { initWorkspaceStorage } from "../utils/fileSystem";
 import * as logger from "../utils/logging";
 
 const logTrace = ["commandPalette", "generateCertificates"];
 
-export const generateCertificatesWorkflow = async (context: vscode.ExtensionContext) => {
+export const generateCertificatesWorkflow = async () => {
   if (await checkWorkspaceOpen()) {
-    initWorkspaceStorage(context);
-    return checkOverwriteCertificates(context).then(async approved => {
+    initWorkspaceStorage();
+    return checkOverwriteCertificates().then(async approved => {
       if (approved) {
-        return generateCerts(context);
+        return generateCerts();
       }
       return false;
     });
@@ -95,12 +96,12 @@ function getCertAttributes(type: "ca" | "dev"): pki.CertificateField[] {
  * Will generate an RSA key pair and X.509 Ceritifcate both for Root (acting as CA) as well
  * as Developer. The resulting files are stored in the workspace shared storage.
  * The logic ends with a link to "Upload certificate" command.
- * @param context VSCode Extension Context
  * @returns boolean - success of the command
  */
-export async function generateCerts(context: vscode.ExtensionContext): Promise<boolean> {
+export async function generateCerts(): Promise<boolean> {
   const fnLogTrace = [...logTrace, "generateCerts"];
   logger.info("Executing Generate Certificates command", ...fnLogTrace);
+  const context = getActivationContext();
   const storagePath = context.storageUri?.fsPath;
   if (!storagePath) {
     logger.error("Workspace storage path missing. Aborting command.", ...fnLogTrace);

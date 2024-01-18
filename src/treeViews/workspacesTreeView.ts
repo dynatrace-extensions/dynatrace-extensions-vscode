@@ -19,6 +19,7 @@ import * as path from "path";
 import * as glob from "glob";
 import * as vscode from "vscode";
 import * as yaml from "yaml";
+import { getActivationContext } from "../extension";
 import { ExtensionStub } from "../interfaces/extensionMeta";
 import {
   WorkspaceTreeItem,
@@ -50,8 +51,8 @@ let instance: WorkspacesTreeDataProvider | undefined;
  * Returns a singleton instance of the WorkspacesTreeDataProvider.
  */
 export const getWorkspacesTreeDataProvider = (() => {
-  return (context: vscode.ExtensionContext) => {
-    instance = instance === undefined ? new WorkspacesTreeDataProviderImpl(context) : instance;
+  return () => {
+    instance = instance === undefined ? new WorkspacesTreeDataProviderImpl() : instance;
     return instance;
   };
 })();
@@ -100,7 +101,6 @@ const createWorkspacesTreeItem = (
  * rendered as children of the workspace.
  */
 class WorkspacesTreeDataProviderImpl implements WorkspacesTreeDataProvider {
-  context: vscode.ExtensionContext;
   private _onDidChangeTreeData: vscode.EventEmitter<WorkspaceTreeItem | undefined> =
     new vscode.EventEmitter<WorkspaceTreeItem | undefined>();
 
@@ -111,9 +111,8 @@ class WorkspacesTreeDataProviderImpl implements WorkspacesTreeDataProvider {
    * @param cachedDataProvider a provider for cacheable data
    * @param context VSCode Extension context
    */
-  constructor(context: vscode.ExtensionContext) {
-    this.context = context;
-    this.registerCommands(context);
+  constructor() {
+    this.registerCommands();
   }
 
   /**
@@ -122,12 +121,12 @@ class WorkspacesTreeDataProviderImpl implements WorkspacesTreeDataProvider {
    * refreshing this view.
    * @param context {@link vscode.ExtensionContext}
    */
-  private registerCommands(context: vscode.ExtensionContext) {
+  private registerCommands() {
     vscode.commands.registerCommand("dynatrace-extensions-workspaces.refresh", () =>
       this.refresh(),
     );
     vscode.commands.registerCommand("dynatrace-extensions-workspaces.addWorkspace", async () => {
-      await context.globalState.update("dynatrace-extensions.initPending", true);
+      await getActivationContext().globalState.update("dynatrace-extensions.initPending", true);
       await vscode.commands.executeCommand("vscode.openFolder");
     });
     vscode.commands.registerCommand(
@@ -139,7 +138,7 @@ class WorkspacesTreeDataProviderImpl implements WorkspacesTreeDataProvider {
     vscode.commands.registerCommand(
       "dynatrace-extensions-workspaces.deleteWorkspace",
       async (workspace: WorkspaceTreeItem) => {
-        await deleteWorkspace(context, workspace).then(() => this.refresh());
+        await deleteWorkspace(workspace).then(() => this.refresh());
       },
     );
     vscode.commands.registerCommand(
@@ -200,7 +199,7 @@ class WorkspacesTreeDataProviderImpl implements WorkspacesTreeDataProvider {
       return extensions;
     }
     // If not item specified, grab all workspaces from global storage
-    return getAllWorkspaces(this.context).map(workspace =>
+    return getAllWorkspaces().map(workspace =>
       createWorkspacesTreeItem(
         workspace.name.toUpperCase(),
         vscode.TreeItemCollapsibleState.Collapsed,

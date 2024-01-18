@@ -16,6 +16,7 @@
 
 import mock = require("mock-fs");
 import * as vscode from "vscode";
+import * as extension from "../../../../src/extension";
 import { EecType, OsType, SimulationConfig } from "../../../../src/interfaces/simulator";
 import {
   canSimulateDatasource,
@@ -156,7 +157,6 @@ describe("Simulator Utils", () => {
 
   describe("loadDefaultSimulationConfig", () => {
     let getConfigurationSpy: jest.SpyInstance;
-    let mockContext: vscode.ExtensionContext;
     const remoteTarget = {
       name: "mockTarget",
       address: "mockHost",
@@ -168,8 +168,13 @@ describe("Simulator Utils", () => {
 
     beforeAll(() => {
       getConfigurationSpy = jest.spyOn(vscode.workspace, "getConfiguration");
-      mockContext = new MockExtensionContext("mock/globalStorage");
       mock({ mock: { globalStorage: { "targets.json": "[]" } } });
+    });
+
+    beforeEach(() => {
+      jest
+        .spyOn(extension, "getActivationContext")
+        .mockReturnValue(new MockExtensionContext("mock/globalStorage"));
     });
 
     afterEach(() => {
@@ -189,7 +194,7 @@ describe("Simulator Utils", () => {
       const mockWorkspaceConfig = new MockWorkspaceConfiguration(expected);
       getConfigurationSpy.mockReturnValue(mockWorkspaceConfig);
 
-      const actual = loadDefaultSimulationConfig(mockContext);
+      const actual = loadDefaultSimulationConfig();
 
       expect(actual).toBeDefined();
       expect(actual.eecType).toBe(expected.defaultEecType);
@@ -209,7 +214,7 @@ describe("Simulator Utils", () => {
       getConfigurationSpy.mockReturnValue(mockWorkspaceConfig);
       mock({ mock: { globalStorage: { "targets.json": JSON.stringify([remoteTarget]) } } });
 
-      const actual = loadDefaultSimulationConfig(mockContext);
+      const actual = loadDefaultSimulationConfig();
 
       expect(actual).toBeDefined();
       expect(actual.eecType).toBe(config.defaultEecType);
@@ -260,7 +265,7 @@ describe("Simulator Utils", () => {
       getConfigurationSpy.mockReturnValue(mockWorkspaceConfig);
       mock({ mock: { globalStorage: { "targets.json": JSON.stringify([remoteTarget]) } } });
 
-      const actual = loadDefaultSimulationConfig(mockContext);
+      const actual = loadDefaultSimulationConfig();
 
       expect(actual).toBeDefined();
       expect(actual).toEqual(expected);

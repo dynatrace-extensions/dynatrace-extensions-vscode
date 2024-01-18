@@ -15,6 +15,7 @@
  */
 
 import * as vscode from "vscode";
+import { getFastModeChannel } from "../utils/logging";
 
 /**
  * Helper class for managing status when in Fast Development Mode
@@ -24,12 +25,9 @@ export class FastModeStatus {
   private readonly statusBarItem: vscode.StatusBarItem;
   private readonly outputChannel: vscode.OutputChannel;
 
-  /**
-   * @param oc OutputChannel that captures build errors. This will be shown on click.
-   */
-  constructor(oc: vscode.OutputChannel) {
+  constructor() {
     this.statusBarItem = vscode.window.createStatusBarItem(vscode.StatusBarAlignment.Left, 2);
-    this.outputChannel = oc;
+    this.outputChannel = getFastModeChannel();
     vscode.commands.registerCommand(this.commandId, () => this.outputChannel.show());
     this.statusBarItem.command = this.commandId;
     this.updateStatusBar(

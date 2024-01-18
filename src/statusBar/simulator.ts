@@ -19,6 +19,7 @@ import { existsSync, mkdirSync, readFileSync, writeFileSync } from "fs";
 import * as path from "path";
 import pidtree = require("pidtree");
 import * as vscode from "vscode";
+import { getActivationContext } from "../extension";
 import {
   EecType,
   LocalExecutionSummary,
@@ -84,16 +85,14 @@ export class SimulatorManager {
   private datasourceDir: string;
   private datasourceExe: string;
   private pyEnvOptions: ExecOptions;
-  private readonly logTrace = ["statusBar", "simulator", this.constructor.name];
-  private readonly context: vscode.ExtensionContext;
+  private readonly logTrace = ["statusBar", "simulator", "SimulatorManager"];
   private readonly outputChannel: vscode.OutputChannel;
   private readonly statusBar: vscode.StatusBarItem;
 
   /**
-   * @param context - extension context
    * @param panelManager - webview panel manager
    */
-  constructor(context: vscode.ExtensionContext) {
+  constructor() {
     this.datasourceName = "unsupported";
     this.simulatorStatus = "UNSUPPORTED";
     this.failedChecks = [];
@@ -103,8 +102,7 @@ export class SimulatorManager {
     this.datasourceExe = "";
     this.pyEnvOptions = {};
     this.url = "file://CONSOLE";
-    this.context = context;
-    this.idToken = path.join(context.globalStorageUri.fsPath, "idToken.txt");
+    this.idToken = path.join(getActivationContext().globalStorageUri.fsPath, "idToken.txt");
     this.localOs = process.platform === "win32" ? "WINDOWS" : "LINUX";
     this.simulationSpecs = {
       isPython: false,
@@ -113,10 +111,10 @@ export class SimulatorManager {
       localActiveGateDsExists: false,
       localOneAgentDsExists: false,
     };
-    this.currentConfiguration = loadDefaultSimulationConfig(context);
+    this.currentConfiguration = loadDefaultSimulationConfig();
 
     // Initial clean-up of files
-    cleanUpSimulatorLogs(context);
+    cleanUpSimulatorLogs();
 
     // Create the output channel for logs
     this.outputChannel = vscode.window.createOutputChannel("Extension simulator", "log");
@@ -153,6 +151,13 @@ export class SimulatorManager {
     this.statusBar.text = "Extension simulator";
     this.statusBar.tooltip = "Click to open";
     this.statusBar.show();
+
+    // Initial check for configuration
+    this.checkReady(false).then(
+      () => {},
+      err =>
+        logger.warn(`Initial simulator status check: ${(err as Error).message}`, ...this.logTrace),
+    );
   }
 
   /**
@@ -162,7 +167,7 @@ export class SimulatorManager {
   private deleteTarget(target: RemoteTarget) {
     logger.info(`Deleting target ${target.name}`, ...this.logTrace, "deleteTarget");
     // This will always succeed
-    deleteSimulatorTarget(this.context, target);
+    deleteSimulatorTarget(target);
     postMessageToPanel(REGISTERED_PANELS.SIMULATOR_UI, {
       messageType: "showToast",
       data: {
@@ -181,7 +186,7 @@ export class SimulatorManager {
    */
   private addTarget(target: RemoteTarget) {
     logger.info(`Adding target ${target.name}`, ...this.logTrace, "addTarget");
-    registerSimulatorTarget(this.context, target);
+    registerSimulatorTarget(target);
     postMessageToPanel(REGISTERED_PANELS.SIMULATOR_UI, {
       messageType: "showToast",
       data: {
@@ -454,7 +459,7 @@ export class SimulatorManager {
     const startTime = new Date();
     let success = true;
     // If needed, make room for new log
-    cleanUpSimulatorLogs(this.context);
+    cleanUpSimulatorLogs();
     const logFilePath = path.join(
       workspaceFolders[0].uri.fsPath,
       "logs",
@@ -497,7 +502,7 @@ export class SimulatorManager {
 
     this.simulatorProcess.on("close", (code, signal) => {
       const duration = Math.round((new Date().getTime() - startTime.getTime()) / 1000);
-      registerSimulatorSummary(this.context, {
+      registerSimulatorSummary({
         ...staticDetails,
         startTime,
         duration,
@@ -699,8 +704,8 @@ export class SimulatorManager {
     const panelData: SimulatorPanelData = {
       dataType: SIMULATOR_PANEL_DATA_TYPE,
       data: {
-        targets: getSimulatorTargets(this.context),
-        summaries: getSimulatorSummaries(this.context),
+        targets: getSimulatorTargets(),
+        summaries: getSimulatorSummaries(),
         currentConfiguration: this.currentConfiguration,
         specs: this.simulationSpecs,
         status: status ?? this.simulatorStatus,

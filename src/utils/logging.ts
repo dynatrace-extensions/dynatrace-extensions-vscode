@@ -18,24 +18,26 @@ import { statSync, writeFileSync } from "fs";
 import * as path from "path";
 import * as chalk from "chalk";
 import * as vscode from "vscode";
+import { getActivationContext } from "../extension";
 import { removeOldestFiles } from "./fileSystem";
 
 type LogLevel = "DEBUG" | "INFO" | "WARN" | "ERROR" | "NONE";
 type NotificationLevel = Extract<LogLevel, "INFO" | "WARN" | "ERROR">;
 
 const genericChannel = vscode.window.createOutputChannel("Dynatrace", "json");
+const fastModeChannel = vscode.window.createOutputChannel("Dynatrace Fast Mode", "json");
 let initialized = false;
 let logLevel: LogLevel = "INFO";
 let maxFileSize: number = 10;
 let maxFiles: number = 10;
 let currentLogFile: string;
 let outputChannel: vscode.OutputChannel;
-let context: vscode.ExtensionContext;
 
 /**
  * Starts a new log file with the current timestamp.
  */
 const startNewLogFile = () => {
+  const context = getActivationContext();
   const logsDir = path.join(context.globalStorageUri.fsPath, "logs");
   const workspaceName = vscode.workspace.workspaceFolders?.[0].name ?? "no-workspace";
   const fileName = `${workspaceName}_${new Date()
@@ -153,9 +155,9 @@ const logMessage = (data: unknown, level: LogLevel, ...trace: string[]) => {
  * It creates the output channel and starts a new log file.
  * @param ctx the extension context
  */
-export const initializeLogging = (ctx: vscode.ExtensionContext) => {
+export const initializeLogging = () => {
   if (initialized) return;
-  context = ctx;
+  const context = getActivationContext();
 
   // Load the configuration
   const config = vscode.workspace.getConfiguration("dynatraceExtensions.logging", null);
@@ -174,6 +176,7 @@ export const initializeLogging = (ctx: vscode.ExtensionContext) => {
  * Disposes the output channel and cleans up old log files.
  */
 export const disposeLogger = () => {
+  const context = getActivationContext();
   outputChannel.dispose();
   removeOldestFiles(path.join(context.globalStorageUri.fsPath, "logs"), maxFiles);
 };
@@ -254,3 +257,4 @@ export const notify = (level: NotificationLevel, message: string, ...trace: stri
 };
 
 export const getGenericChannel = () => genericChannel;
+export const getFastModeChannel = () => fastModeChannel;
