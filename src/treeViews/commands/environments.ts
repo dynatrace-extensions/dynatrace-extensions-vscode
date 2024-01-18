@@ -255,10 +255,11 @@ export async function changeConnection() {
   // No point showing a list of 1 or empty
   if (environments.length < 2) {
     logger.notify("INFO", "No other environments available. Add one first", ...fnLogTrace);
+    return;
   }
   const currentEnv = environments.find(e => e.current);
   const choice = await vscode.window.showQuickPick(
-    environments.map(e => (e.current ? `⭐ ${e.name ?? e.id}` : e.name ?? e.id)),
+    environments.map(e => (e.current ? `⭐ ${e.label}` : e.label)),
     {
       canPickMany: false,
       ignoreFocusOut: true,
@@ -269,11 +270,12 @@ export async function changeConnection() {
 
   // Use the newly selected environment
   if (choice) {
-    const environment = environments.find(e => e.name === choice);
+    const environment = environments.find(e => e.label === choice);
     if (environment) {
-      const { url, apiUrl, token, name } = environment;
-      await registerEnvironment(url, apiUrl, token, name, true);
+      const { url, apiUrl, token, label } = environment;
+      await registerEnvironment(url, apiUrl, token, label, true);
       showConnectedStatusBar(environment).catch(() => {});
+      return;
     }
   }
 

@@ -77,10 +77,6 @@ let activationContext: vscode.ExtensionContext;
 
 export const getActivationContext = () => activationContext;
 
-const setActivationContext = (newContext: vscode.ExtensionContext) => {
-  activationContext = newContext;
-};
-
 /**
  * Sets up the VSCode extension by registering all the available functionality as disposable objects.
  * The extension automatically activates after editor start-up.
@@ -196,6 +192,10 @@ export function deactivate() {
   logger.info("Dynatrace Extensions is now deactivated.", ...fnLogTrace);
   logger.disposeLogger();
 }
+
+const setActivationContext = (newContext: vscode.ExtensionContext) => {
+  activationContext = newContext;
+};
 
 /**
  * Sets a VSCode context property that can be referenced in the package.json file.

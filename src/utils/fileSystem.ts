@@ -40,7 +40,7 @@ import {
   RemoteExecutionSummary,
   RemoteTarget,
 } from "../interfaces/simulator";
-import { DynatraceEnvironmentData, ExtensionWorkspace } from "../interfaces/treeViews";
+import { DynatraceTenantDto, ExtensionWorkspace } from "../interfaces/treeViews";
 import { notify } from "./logging";
 import * as logger from "./logging";
 
@@ -218,10 +218,10 @@ export function findWorkspace(
  * Gets metadata of all Dynatrace environments currently registered in the global storage.
  * @returns all environments
  */
-export function getAllEnvironments(): DynatraceEnvironmentData[] {
+export function getAllEnvironments(): DynatraceTenantDto[] {
   const context = getActivationContext();
   const environmentsJson = path.join(context.globalStorageUri.fsPath, "dynatraceEnvironments.json");
-  return JSON.parse(readFileSync(environmentsJson).toString()) as DynatraceEnvironmentData[];
+  return JSON.parse(readFileSync(environmentsJson).toString()) as DynatraceTenantDto[];
 }
 
 /**
@@ -242,13 +242,11 @@ export async function registerEnvironment(
 ) {
   const context = getActivationContext();
   const environmentsJson = path.join(context.globalStorageUri.fsPath, "dynatraceEnvironments.json");
-  let environments = JSON.parse(
-    readFileSync(environmentsJson).toString(),
-  ) as DynatraceEnvironmentData[];
   const id = url.includes("/e/") ? url.split("/e/")[1] : url.split("https://")[1].substring(0, 8);
-  const environment: DynatraceEnvironmentData = { id, url, apiUrl, token, name, current };
+  const environment: DynatraceTenantDto = { id, url, apiUrl, token, current, label: name ?? id };
 
   // If this will be the currently used environment, deactivate others
+  let environments = JSON.parse(readFileSync(environmentsJson).toString()) as DynatraceTenantDto[];
   if (current) {
     environments = environments.map(e => {
       e.current = e.current ? !e.current : e.current;
@@ -283,7 +281,7 @@ export async function removeEnvironment(environmentId: string) {
   const environmentsJson = path.join(context.globalStorageUri.fsPath, "dynatraceEnvironments.json");
   const environments = JSON.parse(
     readFileSync(environmentsJson).toString(),
-  ) as DynatraceEnvironmentData[];
+  ) as DynatraceTenantDto[];
 
   writeFileSync(environmentsJson, JSON.stringify(environments.filter(e => e.id !== environmentId)));
 

@@ -23,13 +23,13 @@ export interface ExtensionWorkspace {
   folder: string | vscode.Uri;
 }
 
-export interface DynatraceEnvironmentData {
+export interface DynatraceTenantDto {
   id: string;
   url: string;
   apiUrl: string;
   token: string;
   current: boolean;
-  name?: string;
+  label: string;
 }
 
 type TenantsTreeContextValue =

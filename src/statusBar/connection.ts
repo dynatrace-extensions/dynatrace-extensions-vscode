@@ -15,7 +15,7 @@
  */
 
 import * as vscode from "vscode";
-import { DynatraceEnvironmentData } from "../interfaces/treeViews";
+import { DynatraceTenantDto } from "../interfaces/treeViews";
 import { checkUrlReachable } from "../utils/conditionCheckers";
 
 /**
@@ -39,9 +39,9 @@ export const getConnectionStatusBar = (() => {
  * Updates the connection status bar to reflect a specific tenant. It performs a check for the
  * tenant's API endpoint to see if it is reachable.
  */
-export const showConnectedStatusBar = async (tenant: DynatraceEnvironmentData) => {
+export const showConnectedStatusBar = async (tenant: DynatraceTenantDto) => {
   const statusBar = getConnectionStatusBar();
-  statusBar.text = `$(dt-platform) Using ${tenant.name ?? tenant.id}`;
+  statusBar.text = `$(dt-platform) Using ${tenant.label}`;
   const reachable = await checkUrlReachable(`${tenant.apiUrl}/api/v1/time`);
   if (reachable) {
     statusBar.tooltip = "Using this environment for API calls";
@@ -72,7 +72,7 @@ export const showDisconnectedStatusBar = () => {
 
 let connectionInterval: NodeJS.Timer | undefined;
 
-const startConnectionChecks = (tenant: DynatraceEnvironmentData) => {
+const startConnectionChecks = (tenant: DynatraceTenantDto) => {
   if (!connectionInterval) {
     connectionInterval = setInterval(() => {
       showConnectedStatusBar(tenant).catch(() => {});

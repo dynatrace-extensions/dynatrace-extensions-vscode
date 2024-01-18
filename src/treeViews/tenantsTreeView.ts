@@ -19,7 +19,7 @@ import * as vscode from "vscode";
 import { Dynatrace } from "../dynatrace-api/dynatrace";
 import {
   DeployedExtension,
-  DynatraceEnvironmentData,
+  DynatraceTenantDto,
   DynatraceTenant,
   MonitoringConfiguration,
   TenantsTreeDataProvider,
@@ -77,11 +77,11 @@ export const getTenantsTreeDataProvider = (() => {
 /**
  * Gets an instance of a Dynatrace API Client.
  * If no environment is specified, the currently connected environment is used.
- * @param environment specific environment to get the client for
+ * @param tenant specific environment to get the client for
  * @return API Client instance or undefined if none could be created
  */
-export const getDynatraceClient = async (environment?: TenantsTreeItem) => {
-  const client = environment ? environment.dt : await getConnectedTenant().then(e => e?.dt);
+export const getDynatraceClient = async (tenant?: DynatraceTenant) => {
+  const client = tenant ? tenant.dt : await getConnectedTenant().then(t => t?.dt);
   return client;
 };
 
@@ -90,19 +90,18 @@ export const getDynatraceClient = async (environment?: TenantsTreeItem) => {
  * @return environment or undefined if none is connected
  */
 export const getConnectedTenant = async () => {
-  const environment = await getTenantsTreeDataProvider()
+  const tenant = await getTenantsTreeDataProvider()
     .getChildren()
     .then(children =>
       (children as DynatraceTenant[]).filter(c => c.contextValue === "currentDynatraceEnvironment"),
     )
     .then(children => children.pop());
-  return environment;
+  return tenant;
 };
 
 /**
  * Creates a TreeItem object that represents a Dynatrace (SaaS, Managed, Platform) tenant registered
  * with the VSCode Extension.
- * @param collapsibleState defines whether this item can be expanded further or not
  * @param url the URL to this tenant
  * @param token a Dynatrace API Token to use when authenticating with this tenant
  * @param id the id of this tenant
@@ -110,7 +109,6 @@ export const getConnectedTenant = async () => {
  * @param current whether this tenant should be used for API operations currently
  */
 const createDynatraceTenantTreeItem = (
-  collapsibleState: vscode.TreeItemCollapsibleState,
   url: string,
   token: string,
   id: string,
@@ -119,7 +117,7 @@ const createDynatraceTenantTreeItem = (
   apiUrl?: string,
 ): DynatraceTenant =>
   ({
-    ...new vscode.TreeItem(label ?? id, collapsibleState),
+    ...new vscode.TreeItem(label ?? id, vscode.TreeItemCollapsibleState.Collapsed),
     url: url,
     apiUrl: apiUrl ?? url,
     token: token,
@@ -237,34 +235,28 @@ class TenantsTreeDataProviderImpl implements TenantsTreeDataProvider {
     vscode.commands.registerCommand(
       "dynatrace-extensions-environments.useEnvironment",
       async (tenant: DynatraceTenant) => {
-        await registerEnvironment(
-          tenant.url,
-          tenant.apiUrl,
-          encryptToken(tenant.token),
-          tenant.label.toString(),
-          true,
-        );
+        const { url, apiUrl, token, label } = tenant;
+        await registerEnvironment(url, apiUrl, encryptToken(token), label, true);
         showConnectedStatusBar(tenant).catch(() => {});
         this.refresh();
       },
     );
     vscode.commands.registerCommand(
       "dynatrace-extensions-environments.editEnvironment",
-      async (environment: DynatraceTenant) => {
-        await editEnvironment(environment).then(() => this.refresh());
+      async (tenant: DynatraceTenant) => {
+        await editEnvironment(tenant).then(() => this.refresh());
       },
     );
     vscode.commands.registerCommand(
       "dynatrace-extensions-environments.deleteEnvironment",
-      async (environment: DynatraceTenant) => {
-        await deleteEnvironment(environment).then(() => this.refresh());
+      async (tenant: DynatraceTenant) => {
+        await deleteEnvironment(tenant).then(() => this.refresh());
       },
     );
     vscode.commands.registerCommand(
       "dynatrace-extensions-environments.changeConnection",
       async () => {
-        await changeConnection();
-        this.refresh();
+        await changeConnection().then(() => this.refresh());
       },
     );
     // Commands for monitoring configurations
@@ -403,19 +395,12 @@ class TenantsTreeDataProviderImpl implements TenantsTreeDataProvider {
     }
 
     // If no item specified, grab all environments from global storage
-    return getAllEnvironments().map((environment: DynatraceEnvironmentData) => {
-      if (environment.current) {
-        showConnectedStatusBar(environment).catch(() => {});
+    return getAllEnvironments().map((tenant: DynatraceTenantDto) => {
+      const { id, url, apiUrl, label, current, token } = tenant;
+      if (current) {
+        showConnectedStatusBar(tenant).catch(() => {});
       }
-      return createDynatraceTenantTreeItem(
-        vscode.TreeItemCollapsibleState.Collapsed,
-        environment.url,
-        decryptToken(environment.token),
-        environment.id,
-        environment.name,
-        environment.current,
-        environment.apiUrl,
-      );
+      return createDynatraceTenantTreeItem(url, decryptToken(token), id, label, current, apiUrl);
     });
   }
 }
