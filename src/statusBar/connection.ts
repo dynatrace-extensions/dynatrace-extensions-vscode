@@ -19,66 +19,70 @@ import { DynatraceEnvironmentData } from "../interfaces/treeViews";
 import { checkUrlReachable } from "../utils/conditionCheckers";
 
 /**
- * Helper class for managing the Connection Status Bar Item.
+ * Creates a status bar item to reflect the connectivity status of the Dynatrace tenant used for
+ * API operations (or lack of if none is selected).
  */
-export class ConnectionStatusManager {
-  statusBarItem: vscode.StatusBarItem;
-  connectionInterval: NodeJS.Timer | undefined;
+export const getConnectionStatusBar = (() => {
+  let connectionStatusBar: vscode.StatusBarItem | undefined;
 
-  constructor() {
-    this.statusBarItem = vscode.window.createStatusBarItem(vscode.StatusBarAlignment.Left, 0);
-    this.statusBarItem.command = "dynatrace-extensions-environments.changeConnection";
-    this.updateStatusBar(false).catch(() => {});
-  }
-
-  /**
-   * Gets an instance of {@link vscode.StatusBarItem} that will be used to
-   * keep track of the currently connected (in use) Dynatrace environment.
-   * @returns the status bar item
-   */
-  getStatusBarItem() {
-    return this.statusBarItem;
-  }
-
-  clearConnectionChecks() {
-    if (this.connectionInterval) {
-      clearInterval(this.connectionInterval);
-      this.connectionInterval = undefined;
+  return () => {
+    if (!connectionStatusBar) {
+      connectionStatusBar = vscode.window.createStatusBarItem(vscode.StatusBarAlignment.Left, 0);
+      connectionStatusBar.command = "dynatrace-extensions-environments.changeConnection";
+      showDisconnectedStatusBar();
     }
-  }
+    return connectionStatusBar;
+  };
+})();
 
-  /**
-   * Updates the status bar item to show whether any specific Dynatrace environment
-   * is currently being used or not.
-   * @param selected whether any environment is selected
-   * @param environment optional label for the environment, in case one is in use
-   */
-  async updateStatusBar(selected: boolean, environment?: DynatraceEnvironmentData) {
-    if (selected && environment) {
-      this.statusBarItem.text = `$(dt-platform) Using ${environment.name ?? environment.id}`;
-      const reachable = await checkUrlReachable(`${environment.apiUrl}/api/v1/time`);
-      if (reachable) {
-        this.statusBarItem.tooltip = "Using this environment for API calls";
-        this.statusBarItem.backgroundColor = undefined;
-        this.statusBarItem.color = undefined;
-        this.clearConnectionChecks();
-      } else {
-        this.statusBarItem.tooltip = "This environment is not reachable.";
-        this.statusBarItem.backgroundColor = new vscode.ThemeColor("statusBarItem.errorBackground");
-        this.statusBarItem.color = new vscode.ThemeColor("statusBarItem.errorForeground");
-        if (!this.connectionInterval) {
-          this.connectionInterval = setInterval(() => {
-            this.updateStatusBar(true, environment).catch(() => {});
-          }, 5_000);
-        }
-      }
-    } else {
-      this.clearConnectionChecks();
-      this.statusBarItem.text = "$(dt-platform) No environment selected";
-      this.statusBarItem.tooltip = "No API calls are currently possible";
-      this.statusBarItem.backgroundColor = new vscode.ThemeColor("statusBarItem.warningBackground");
-      this.statusBarItem.color = new vscode.ThemeColor("statusBarItem.warningForeground");
-    }
-    this.statusBarItem.show();
+/**
+ * Updates the connection status bar to reflect a specific tenant. It performs a check for the
+ * tenant's API endpoint to see if it is reachable.
+ */
+export const showConnectedStatusBar = async (tenant: DynatraceEnvironmentData) => {
+  const statusBar = getConnectionStatusBar();
+  statusBar.text = `$(dt-platform) Using ${tenant.name ?? tenant.id}`;
+  const reachable = await checkUrlReachable(`${tenant.apiUrl}/api/v1/time`);
+  if (reachable) {
+    statusBar.tooltip = "Using this environment for API calls";
+    statusBar.backgroundColor = undefined;
+    statusBar.color = undefined;
+    stopConnectionChecks();
+  } else {
+    statusBar.tooltip = "This environment is not reachable.";
+    statusBar.backgroundColor = new vscode.ThemeColor("statusBar.errorBackground");
+    statusBar.color = new vscode.ThemeColor("statusBar.errorForeground");
+    startConnectionChecks(tenant);
   }
-}
+  statusBar.show();
+};
+
+/**
+ * Updates the connection status bar to reflect that no tenant is selected.
+ */
+export const showDisconnectedStatusBar = () => {
+  const statusBar = getConnectionStatusBar();
+  stopConnectionChecks();
+  statusBar.text = "$(dt-platform) No environment selected";
+  statusBar.tooltip = "No API calls are currently possible";
+  statusBar.backgroundColor = new vscode.ThemeColor("statusBar.warningBackground");
+  statusBar.color = new vscode.ThemeColor("statusBar.warningForeground");
+  statusBar.show();
+};
+
+let connectionInterval: NodeJS.Timer | undefined;
+
+const startConnectionChecks = (tenant: DynatraceEnvironmentData) => {
+  if (!connectionInterval) {
+    connectionInterval = setInterval(() => {
+      showConnectedStatusBar(tenant).catch(() => {});
+    }, 5_000);
+  }
+};
+
+const stopConnectionChecks = () => {
+  if (connectionInterval) {
+    clearInterval(connectionInterval);
+    connectionInterval = undefined;
+  }
+};

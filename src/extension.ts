@@ -53,7 +53,7 @@ import {
   TEMP_CONFIG_DOC_SELECTOR,
 } from "./constants";
 import { getSnmpHoverProvider } from "./hover/snmpHover";
-import { ConnectionStatusManager } from "./statusBar/connection";
+import { getConnectionStatusBar } from "./statusBar/connection";
 import { FastModeStatus } from "./statusBar/fastMode";
 import { SimulatorManager } from "./statusBar/simulator";
 import { getTenantsTreeDataProvider } from "./treeViews/tenantsTreeView";
@@ -106,7 +106,6 @@ export async function activate(context: vscode.ExtensionContext) {
   setContextProperty("numEnvironments", getAllEnvironments().length);
 
   logger.debug("Instantiating feature providers", ...fnLogTrace);
-  const connectionStatusManager = new ConnectionStatusManager();
   await initializeCache(context.globalStorageUri.fsPath);
   simulatorManager = new SimulatorManager();
   const fastModeStatus = new FastModeStatus();
@@ -118,10 +117,10 @@ export async function activate(context: vscode.ExtensionContext) {
     ...registerCommandPaletteWorkflows(),
     ...registerFeatureSwitches(),
     ...registerCompletionProviders(),
-    ...registerTreeViews(connectionStatusManager),
+    ...registerTreeViews(),
     vscode.languages.registerHoverProvider(MANIFEST_DOC_SELECTOR, getSnmpHoverProvider()),
     ...registerCodeActionsProviders(),
-    connectionStatusManager.getStatusBarItem(),
+    getConnectionStatusBar(),
     fastModeStatus.getStatusBarItem(),
     ...registerSelectorCommands(),
     ...registerCodeLensProviders(),
@@ -328,16 +327,14 @@ const registerCompletionProvider = (
 ) =>
   vscode.languages.registerCompletionItemProvider(documentSelector, provider, ...triggerCharacters);
 
-const registerTreeViews = (
-  connectionStatusManager: ConnectionStatusManager,
-): vscode.Disposable[] => [
+const registerTreeViews = (): vscode.Disposable[] => [
   vscode.window.registerTreeDataProvider(
     "dynatrace-extensions-workspaces",
     getWorkspacesTreeDataProvider(),
   ),
   vscode.window.registerTreeDataProvider(
     "dynatrace-extensions-environments",
-    getTenantsTreeDataProvider(connectionStatusManager),
+    getTenantsTreeDataProvider(),
   ),
 ];
 

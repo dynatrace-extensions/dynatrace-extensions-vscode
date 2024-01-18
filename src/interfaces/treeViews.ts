@@ -38,6 +38,7 @@ type TenantsTreeContextValue =
   | "monitoringConfiguration"
   | "deployedExtension";
 export type TenantsTreeItem = vscode.TreeItem & {
+  label: string;
   id: string;
   contextValue: TenantsTreeContextValue;
   dt: Dynatrace;

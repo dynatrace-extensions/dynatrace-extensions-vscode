@@ -21,10 +21,10 @@ import { DynatraceAPIError } from "../../dynatrace-api/errors";
 import { getActivationContext } from "../../extension";
 import {
   DeployedExtension,
-  DynatraceEnvironmentData,
   DynatraceTenant,
   MonitoringConfiguration,
 } from "../../interfaces/treeViews";
+import { showConnectedStatusBar } from "../../statusBar/connection";
 import { checkUrlReachable } from "../../utils/conditionCheckers";
 import { encryptToken } from "../../utils/cryptography";
 import {
@@ -205,7 +205,7 @@ export async function editEnvironment(environment: DynatraceTenant) {
   const name = await vscode.window.showInputBox({
     title: "The new name or label for this environment",
     placeHolder: "A name or label for this environment...",
-    value: environment.label?.toString(),
+    value: environment.label.toString(),
     prompt: "Optional",
     ignoreFocusOut: true,
   });
@@ -227,7 +227,7 @@ export async function editEnvironment(environment: DynatraceTenant) {
  */
 export async function deleteEnvironment(environment: DynatraceTenant) {
   const confirm = await vscode.window.showQuickPick(["Yes", "No"], {
-    title: `Delete environment ${environment.label?.toString() ?? environment.id}?`,
+    title: `Delete environment ${environment.label}?`,
     canPickMany: false,
     ignoreFocusOut: true,
   });
@@ -248,17 +248,13 @@ export async function deleteEnvironment(environment: DynatraceTenant) {
  * when triggered from the global status bar.
  * @returns the selected status as boolean, and name of connected environment or "" as string
  */
-export async function changeConnection(): Promise<[boolean, DynatraceEnvironmentData | undefined]> {
+export async function changeConnection() {
+  const fnLogTrace = [...logTrace, "changeConnection"];
   const environments = getAllEnvironments();
+
   // No point showing a list of 1 or empty
   if (environments.length < 2) {
-    logger.notify(
-      "INFO",
-      "No other environments available. Add one first",
-      ...logTrace,
-      "changeConnection",
-    );
-    return [false, undefined];
+    logger.notify("INFO", "No other environments available. Add one first", ...fnLogTrace);
   }
   const currentEnv = environments.find(e => e.current);
   const choice = await vscode.window.showQuickPick(
@@ -275,22 +271,16 @@ export async function changeConnection(): Promise<[boolean, DynatraceEnvironment
   if (choice) {
     const environment = environments.find(e => e.name === choice);
     if (environment) {
-      await registerEnvironment(
-        environment.url,
-        environment.apiUrl,
-        environment.token,
-        environment.name,
-        true,
-      );
-      return [true, environment];
+      const { url, apiUrl, token, name } = environment;
+      await registerEnvironment(url, apiUrl, token, name, true);
+      showConnectedStatusBar(environment).catch(() => {});
     }
   }
 
   // If no choice made, persist the current connection if any
   if (currentEnv) {
-    return [true, currentEnv];
+    showConnectedStatusBar(currentEnv).catch(() => {});
   }
-  return [false, undefined];
 }
 
 /**
@@ -416,7 +406,7 @@ export async function deleteMonitoringConfiguration(
 ): Promise<boolean> {
   const fnLogTrace = [...logTrace, "deleteMonitoringConfiguration"];
   const confirm = await vscode.window.showQuickPick(["Yes", "No"], {
-    title: `Delete configuration ${config.label?.toString() ?? config.id}?`,
+    title: `Delete configuration ${config.label}?`,
     canPickMany: false,
     ignoreFocusOut: true,
   });

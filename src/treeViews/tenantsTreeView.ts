@@ -25,7 +25,7 @@ import {
   TenantsTreeDataProvider,
   TenantsTreeItem,
 } from "../interfaces/treeViews";
-import { ConnectionStatusManager } from "../statusBar/connection";
+import { showConnectedStatusBar } from "../statusBar/connection";
 import { decryptToken, encryptToken } from "../utils/cryptography";
 import { getAllEnvironments, registerEnvironment } from "../utils/fileSystem";
 import * as logger from "../utils/logging";
@@ -63,15 +63,13 @@ const CONFIG_STATUS_COLORS: Record<ConfigStatus, string> = {
   UNKNOWN: "⚫",
 };
 
-let instance: TenantsTreeDataProvider | undefined;
-
 /**
  * Returns a singleton instance of the EnvironmentsTreeDataProvider.
  */
 export const getTenantsTreeDataProvider = (() => {
-  return (connectionStatus: ConnectionStatusManager) => {
-    instance =
-      instance === undefined ? new TenantsTreeDataProviderImpl(connectionStatus) : instance;
+  let instance: TenantsTreeDataProvider | undefined;
+  return () => {
+    instance = instance === undefined ? new TenantsTreeDataProviderImpl() : instance;
     return instance;
   };
 })();
@@ -83,7 +81,6 @@ export const getTenantsTreeDataProvider = (() => {
  * @return API Client instance or undefined if none could be created
  */
 export const getDynatraceClient = async (environment?: TenantsTreeItem) => {
-  if (!instance) return undefined;
   const client = environment ? environment.dt : await getConnectedTenant().then(e => e?.dt);
   return client;
 };
@@ -93,8 +90,7 @@ export const getDynatraceClient = async (environment?: TenantsTreeItem) => {
  * @return environment or undefined if none is connected
  */
 export const getConnectedTenant = async () => {
-  if (!instance) return undefined;
-  const environment = await instance
+  const environment = await getTenantsTreeDataProvider()
     .getChildren()
     .then(children =>
       (children as DynatraceTenant[]).filter(c => c.contextValue === "currentDynatraceEnvironment"),
@@ -121,18 +117,19 @@ const createDynatraceTenantTreeItem = (
   label?: string,
   current: boolean = false,
   apiUrl?: string,
-): DynatraceTenant => ({
-  ...new vscode.TreeItem(label ?? id, collapsibleState),
-  url: url,
-  apiUrl: apiUrl ?? url,
-  token: token,
-  id: id,
-  dt: new Dynatrace(apiUrl ?? url, token),
-  tooltip: id,
-  current: current,
-  contextValue: current ? "currentDynatraceEnvironment" : "dynatraceEnvironment",
-  iconPath: current ? ICONS.ENVIRONMENT_CURRENT : ICONS.ENVIRONMENT,
-});
+): DynatraceTenant =>
+  ({
+    ...new vscode.TreeItem(label ?? id, collapsibleState),
+    url: url,
+    apiUrl: apiUrl ?? url,
+    token: token,
+    id: id,
+    dt: new Dynatrace(apiUrl ?? url, token),
+    tooltip: id,
+    current: current,
+    contextValue: current ? "currentDynatraceEnvironment" : "dynatraceEnvironment",
+    iconPath: current ? ICONS.ENVIRONMENT_CURRENT : ICONS.ENVIRONMENT,
+  } as DynatraceTenant);
 
 /**
  * Creates a TreeItem object that represents an Extension 2.0 that is deployed to the connected
@@ -148,15 +145,16 @@ const createDeployedExtension = (
   extensionVersion: string,
   dt: Dynatrace,
   tenantUrl: string,
-): DeployedExtension => ({
-  ...new vscode.TreeItem(`${extensionName} (${extensionVersion})`, collapsibleState),
-  id: extensionName,
-  dt: dt,
-  tenantUrl: tenantUrl,
-  extensionVersion: extensionVersion,
-  contextValue: "deployedExtension",
-  iconPath: ICONS.DEPLOYED_EXTENSION,
-});
+): DeployedExtension =>
+  ({
+    ...new vscode.TreeItem(`${extensionName} (${extensionVersion})`, collapsibleState),
+    id: extensionName,
+    dt: dt,
+    tenantUrl: tenantUrl,
+    extensionVersion: extensionVersion,
+    contextValue: "deployedExtension",
+    iconPath: ICONS.DEPLOYED_EXTENSION,
+  } as DeployedExtension);
 
 /**
  * Creates an object that represents an instance of an Extension 2.0 monitoring configuration that
@@ -175,17 +173,18 @@ const createMonitoringConfiguration = (
   extensionName: string,
   monitoringStatus: ConfigStatus,
   dt: Dynatrace,
-): MonitoringConfiguration => ({
-  ...new vscode.TreeItem(
-    `${description} (${version}) ${CONFIG_STATUS_COLORS[monitoringStatus]}`,
-    vscode.TreeItemCollapsibleState.None,
-  ),
-  id: configurationId,
-  extensionName: extensionName,
-  contextValue: "monitoringConfiguration",
-  iconPath: new vscode.ThemeIcon("gear"),
-  dt: dt,
-});
+): MonitoringConfiguration =>
+  ({
+    ...new vscode.TreeItem(
+      `${description} (${version}) ${CONFIG_STATUS_COLORS[monitoringStatus]}`,
+      vscode.TreeItemCollapsibleState.None,
+    ),
+    id: configurationId,
+    extensionName: extensionName,
+    contextValue: "monitoringConfiguration",
+    iconPath: new vscode.ThemeIcon("gear"),
+    dt: dt,
+  } as MonitoringConfiguration);
 
 /**
  * A tree data provider that renders all Dynatrace Environments that have been registered
@@ -195,7 +194,6 @@ const createMonitoringConfiguration = (
  */
 class TenantsTreeDataProviderImpl implements TenantsTreeDataProvider {
   private readonly logTrace = ["treeViews", "environmentsTreeView", "EnvironmentsTreeDataProvider"];
-  connectionStatus: ConnectionStatusManager;
   private _onDidChangeTreeData: vscode.EventEmitter<TenantsTreeItem | undefined> =
     new vscode.EventEmitter<TenantsTreeItem | undefined>();
 
@@ -205,8 +203,7 @@ class TenantsTreeDataProviderImpl implements TenantsTreeDataProvider {
   /**
    * @param connectionStatus a connection status manager, to update the status bar
    */
-  constructor(connectionStatus: ConnectionStatusManager) {
-    this.connectionStatus = connectionStatus;
+  constructor() {
     this.getChildren()
       .then(children =>
         (children as DynatraceTenant[]).filter(
@@ -214,14 +211,9 @@ class TenantsTreeDataProviderImpl implements TenantsTreeDataProvider {
         ),
       )
       .then(children => children.pop())
-      .then(environment => {
-        if (environment) {
-          this.connectionStatus
-            .updateStatusBar(Boolean(environment), {
-              ...{ ...environment },
-              name: environment.label?.toString(),
-            })
-            .catch(() => {});
+      .then(tenant => {
+        if (tenant) {
+          showConnectedStatusBar(tenant).catch(() => {});
         }
       })
       .catch(err => {
@@ -244,18 +236,15 @@ class TenantsTreeDataProviderImpl implements TenantsTreeDataProvider {
     );
     vscode.commands.registerCommand(
       "dynatrace-extensions-environments.useEnvironment",
-      async (environment: DynatraceTenant) => {
+      async (tenant: DynatraceTenant) => {
         await registerEnvironment(
-          environment.url,
-          environment.apiUrl,
-          encryptToken(environment.token),
-          environment.label?.toString(),
+          tenant.url,
+          tenant.apiUrl,
+          encryptToken(tenant.token),
+          tenant.label.toString(),
           true,
         );
-        this.connectionStatus.clearConnectionChecks();
-        this.connectionStatus
-          .updateStatusBar(true, { ...{ ...environment }, name: environment.label?.toString() })
-          .catch(() => {});
+        showConnectedStatusBar(tenant).catch(() => {});
         this.refresh();
       },
     );
@@ -274,11 +263,8 @@ class TenantsTreeDataProviderImpl implements TenantsTreeDataProvider {
     vscode.commands.registerCommand(
       "dynatrace-extensions-environments.changeConnection",
       async () => {
-        await changeConnection().then(([connected, environment]) => {
-          this.connectionStatus.clearConnectionChecks();
-          this.connectionStatus.updateStatusBar(connected, environment).catch(() => {});
-          this.refresh();
-        });
+        await changeConnection();
+        this.refresh();
       },
     );
     // Commands for monitoring configurations
@@ -419,7 +405,7 @@ class TenantsTreeDataProviderImpl implements TenantsTreeDataProvider {
     // If no item specified, grab all environments from global storage
     return getAllEnvironments().map((environment: DynatraceEnvironmentData) => {
       if (environment.current) {
-        this.connectionStatus.updateStatusBar(true, environment).catch(() => {});
+        showConnectedStatusBar(environment).catch(() => {});
       }
       return createDynatraceTenantTreeItem(
         vscode.TreeItemCollapsibleState.Collapsed,
