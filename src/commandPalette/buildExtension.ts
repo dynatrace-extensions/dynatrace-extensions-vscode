@@ -119,7 +119,7 @@ async function buildExtension(manifestFilePath: string, dt?: Dynatrace, fastMode
         if (isPythonExtension(manifestFileContent)) {
           await assemblePython(manifestFilePath, oc);
         } else {
-          assembleStandard(manifestFilePath, extensionVersion);
+          assembleStandard(manifestFilePath, manifestFileContent, extensionVersion);
         }
 
         if (fastMode) {
@@ -127,12 +127,12 @@ async function buildExtension(manifestFilePath: string, dt?: Dynatrace, fastMode
           if (!dt) {
             logger.warn("Dynatrace client unavailable. Upload not possible", ...fnLogTrace);
           } else {
-            await uploadAndActivate(manifestFilePath, extensionVersion, dt);
+            await uploadAndActivate(manifestFileContent, extensionVersion, dt);
           }
           return false;
         } else {
           progress.report({ message: "Validating extension" });
-          const zipFileName = getZipFilename(manifestFilePath, extensionVersion);
+          const zipFileName = getZipFilename(manifestFileContent, extensionVersion);
           const isValid = await validateExtension(zipFileName, oc, dt);
           return isValid;
         }
@@ -355,13 +355,17 @@ const getExtraPlatformsParameter = () => {
  * @param manifestFilePath path to the extension manifest
  * @param extensionVersion version of the extension being packaged
  */
-function assembleStandard(manifestFilePath: string, extensionVersion: string) {
+function assembleStandard(
+  manifestFilePath: string,
+  manifestFileContent: string,
+  extensionVersion: string,
+) {
   try {
     const fnLogTrace = [...logTrace, "assembleStandard"];
     logger.debug("Building package for a non-python extension", ...fnLogTrace);
 
     const workspaceStorage = getWorkspaceStorage();
-    const zipFileName = getZipFilename(manifestFilePath, extensionVersion);
+    const zipFileName = getZipFilename(manifestFileContent, extensionVersion);
 
     // Build the inner .zip archive
     const innerZip = new AdmZip();
@@ -394,8 +398,8 @@ const getExtensionName = (manifestFileContent: string) => {
   return nameMatch[1];
 };
 
-const getZipFilename = (manifestFilePath: string, version: string) =>
-  `${getExtensionName(manifestFilePath).replace(":", "_")}-${version}.zip`;
+const getZipFilename = (manifestFileContent: string, version: string) =>
+  `${getExtensionName(manifestFileContent).replace(":", "_")}-${version}.zip`;
 
 const removeOldBuildFiles = () => {
   const maxFiles = vscode.workspace
@@ -411,20 +415,20 @@ const removeOldBuildFiles = () => {
  * If the extension limit has been reached on tenant, either the first or the last version is
  * removed automatically, the extension uploaded, and immediately activated.
  * This skips any prompts compared to regular flow and does not preform any validation.
- * @param manifestFilePath path to the extension manifest
+ * @param manifestFileContent content of the extension manifest
  * @param extensionVersion version of the extension
  * @param dt Dynatrace API Client
  */
 async function uploadAndActivate(
-  manifestFilePath: string,
+  manifestFileContent: string,
   extensionVersion: string,
   dt: Dynatrace,
 ) {
   const fnLogTrace = [...logTrace, "uploadAndActivate"];
   const oc = logger.getFastModeChannel();
   const workspaceStorage = getWorkspaceStorage();
-  const extensionName = getExtensionName(manifestFilePath);
-  const zipFileName = getZipFilename(manifestFilePath, extensionVersion);
+  const extensionName = getExtensionName(manifestFileContent);
+  const zipFileName = getZipFilename(manifestFileContent, extensionVersion);
   try {
     await ensureVersionUploadPossible(dt, extensionName);
     await uploadExtension(dt, zipFileName);

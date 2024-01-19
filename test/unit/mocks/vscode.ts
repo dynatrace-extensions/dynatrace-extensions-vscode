@@ -16,6 +16,15 @@
 
 import * as vscode from "vscode";
 
+export class MockCancellationToken implements vscode.CancellationToken {
+  isCancellationRequested = false;
+  onCancellationRequested = jest.fn();
+}
+
+export class MockProgress implements vscode.Progress<{ message?: string; increment?: number }> {
+  report = jest.fn();
+}
+
 export class MockWorkspaceConfiguration implements vscode.WorkspaceConfiguration {
   [key: string]: unknown;
 
