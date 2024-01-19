@@ -18,12 +18,12 @@ import * as vscode from "vscode";
 import { getCachedBaristaIcons } from "../utils/caching";
 import { getParentBlocks } from "../utils/yamlParsing";
 
-let instance: IconCompletionProvider | undefined;
-
 /**
  * Singleton access to IconCompletionProvider
  */
 export const getIconCompletionProvider = (() => {
+  let instance: IconCompletionProvider | undefined;
+
   return () => {
     instance = instance === undefined ? new IconCompletionProvider() : instance;
     return instance;

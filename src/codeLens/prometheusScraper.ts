@@ -29,12 +29,12 @@ type PromDetails = {
 type PromAuth = "No authentication" | "Bearer token" | "Username & password" | "AWS key";
 type ScrapingMethod = "Endpoint" | "File";
 
-let instance: PrometheusCodeLensProvider | undefined;
-
 /**
  * Provides singleton access to the PrometheusCodeLensProvider
  */
 export const getPrometheusCodeLensProvider = (() => {
+  let instance: PrometheusCodeLensProvider | undefined;
+
   return () => {
     instance = instance === undefined ? new PrometheusCodeLensProvider() : instance;
     return instance;

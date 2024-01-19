@@ -17,12 +17,12 @@
 import * as vscode from "vscode";
 import { getCachedParsedExtension, getCachedWmiQueryResult } from "../utils/caching";
 
-let instance: WmiCompletionProvider | undefined;
-
 /**
  * Singleton access to WmiCompletionProvider
  */
 export const getWmiCompletionProvider = (() => {
+  let instance: WmiCompletionProvider | undefined;
+
   return () => {
     instance = instance === undefined ? new WmiCompletionProvider() : instance;
     return instance;

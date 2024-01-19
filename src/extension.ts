@@ -54,13 +54,15 @@ import {
 } from "./constants";
 import { getSnmpHoverProvider } from "./hover/snmpHover";
 import { getConnectionStatusBar } from "./statusBar/connection";
-import { FastModeStatus } from "./statusBar/fastMode";
+import { getFastModeStatusBar } from "./statusBar/fastMode";
 import { SimulatorManager } from "./statusBar/simulator";
+import { registerTenantsViewCommands } from "./treeViews/commands/environments";
+import { registerWorkspaceViewCommands } from "./treeViews/commands/workspaces";
 import { getTenantsTreeDataProvider } from "./treeViews/tenantsTreeView";
 import { getWorkspacesTreeDataProvider } from "./treeViews/workspacesTreeView";
 import { initializeCache } from "./utils/caching";
 import { isExtensionsWorkspace } from "./utils/conditionCheckers";
-import { updateDiagnosticsCollection } from "./utils/diagnostics";
+import { registerDiagnosticsEventListeners } from "./utils/diagnostics";
 import {
   getAllEnvironments,
   getAllWorkspaces,
@@ -75,8 +77,6 @@ type WorkflowFunction<T extends any[] = []> = (...args: T) => PromiseLike<unknow
 let simulatorManager: SimulatorManager;
 let activationContext: vscode.ExtensionContext;
 
-export const getActivationContext = () => activationContext;
-
 /**
  * Sets up the VSCode extension by registering all the available functionality as disposable objects.
  * The extension automatically activates after editor start-up.
@@ -86,7 +86,6 @@ export async function activate(context: vscode.ExtensionContext) {
 
   setActivationContext(context);
   initializeGlobalStorage();
-  logger.initializeLogging();
 
   const extensionVersion = (context.extension.packageJSON as { version: string }).version;
   logger.info(`dynatrace-extensions (version ${extensionVersion}) is activating...`, ...fnLogTrace);
@@ -104,93 +103,34 @@ export async function activate(context: vscode.ExtensionContext) {
   logger.debug("Instantiating feature providers", ...fnLogTrace);
   await initializeCache(context.globalStorageUri.fsPath);
   simulatorManager = new SimulatorManager();
-  const fastModeStatus = new FastModeStatus();
-  let editTimeout: NodeJS.Timeout | undefined;
 
   // Register all features and allow VSCode access to the disposables.
   logger.debug("Registering commands and feature providers", ...fnLogTrace);
   context.subscriptions.push(
     ...registerCommandPaletteWorkflows(),
-    ...registerFeatureSwitches(),
     ...registerCompletionProviders(),
     ...registerTreeViews(),
-    vscode.languages.registerHoverProvider(MANIFEST_DOC_SELECTOR, getSnmpHoverProvider()),
     ...registerCodeActionsProviders(),
-    getConnectionStatusBar(),
-    fastModeStatus.getStatusBarItem(),
     ...registerSelectorCommands(),
     ...registerCodeLensProviders(),
-    vscode.window.registerWebviewPanelSerializer(
+    ...registerDiagnosticsEventListeners(),
+    ...registerSerializersForPanels([
       REGISTERED_PANELS.METRIC_RESULTS,
-      getWebviewPanelManager(context.extensionUri),
-    ),
-    vscode.window.registerWebviewPanelSerializer(
       REGISTERED_PANELS.WMI_RESULTS,
-      getWebviewPanelManager(context.extensionUri),
-    ),
+    ]),
+    getFastModeStatusBar(),
+    getConnectionStatusBar(),
+    vscode.languages.registerHoverProvider(MANIFEST_DOC_SELECTOR, getSnmpHoverProvider()),
     vscode.workspace.onDidSaveTextDocument(async (doc: vscode.TextDocument) => {
-      await fastModeBuilWorkflow(doc, fastModeStatus);
-    }),
-    vscode.window.onDidChangeActiveTextEditor(editor => {
-      if (editor?.document.fileName.endsWith("extension.yaml")) {
-        updateDiagnosticsCollection(editor.document).catch(err => {
-          logger.info(`Could not provide diagnostics. ${(err as Error).message}`);
-        });
-      }
-    }),
-    vscode.workspace.onDidChangeTextDocument(change => {
-      if (change.document.fileName.endsWith("extension.yaml")) {
-        // Allow 0.5 sec after doc changes to reduce execution frequency
-        if (editTimeout) {
-          clearTimeout(editTimeout);
-          editTimeout = undefined;
-        }
-        editTimeout = setTimeout(() => {
-          updateDiagnosticsCollection(change.document).catch(err => {
-            logger.error(
-              `Could not provide diagnostics. ${(err as Error).message}`,
-              "updateDiagnosticsCollection",
-            );
-          });
-          editTimeout = undefined;
-        }, 500);
-      }
-    }),
-    // Activity on every configuration change
-    vscode.workspace.onDidChangeConfiguration(() => {
-      const fastModeEnabled = vscode.workspace
-        .getConfiguration("dynatraceExtensions", null)
-        .get("fastDevelopmentMode");
-      fastModeStatus.updateStatusBar(Boolean(fastModeEnabled));
+      await fastModeBuilWorkflow(doc);
     }),
   );
-  // We may have an initialization pending from previous window/activation.
-  const pendingInit = context.globalState.get("dynatrace-extensions.initPending");
-  if (pendingInit) {
-    logger.info(
-      "There is a workspace initialization pending from previous window/activation. Triggering the command now.",
-      ...fnLogTrace,
-    );
-    await vscode.commands.executeCommand("dynatrace-extensions.initWorkspace");
-  }
+
+  await handlePendingInitialization();
+
   logger.info("Dynatrace Extensions is now activated.", ...fnLogTrace);
   setActivationContext(context);
   return context;
-}
-
-/**
- * Performs any kind of necessary clean up.
- * Automatically called when the extension was deactivated.
- */
-export function deactivate() {
-  const fnLogTrace = ["extension", "deactivate"];
-  logger.info("Dynatrace Extensions is deactivating...", ...fnLogTrace);
-
-  // Kill any simulator processes left running
-  simulatorManager.stop();
-
-  logger.info("Dynatrace Extensions is now deactivated.", ...fnLogTrace);
-  logger.disposeLogger();
 }
 
 const setActivationContext = (newContext: vscode.ExtensionContext) => {
@@ -250,66 +190,6 @@ const registerWorkflowCommand = <T extends any[]>(
   });
 };
 
-/**
- * Registers feature switch commands. These commands are available from the extension workspace
- * context menu and will enable or disable a specific feature by modifying extension settings.
- */
-const registerFeatureSwitches = (): vscode.Disposable[] => [
-  ...registerFeatureSwitchCommands("MetricSelectors", "metricSelectorsCodeLens"),
-  ...registerFeatureSwitchCommands("EntitySelectors", "entitySelectorsCodeLens"),
-  ...registerFeatureSwitchCommands("WmiCodelens", "wmiCodeLens"),
-  ...registerFeatureSwitchCommands("ScreenCodelens", "screenCodeLens"),
-  ...registerFeatureSwitchCommands("FastDevelopment", "fastDevelopmentMode"),
-  ...registerFeatureSwitchCommands("NameDiagnostics", "diagnostics.extensionName"),
-  ...registerFeatureSwitchCommands("MetricKeyDiagnostics", "diagnostics.metricKeys"),
-  ...registerFeatureSwitchCommands("CardKeyDiagnostics", "diagnostics.cardKeys"),
-  ...registerFeatureSwitchCommands("SnmpDiagnostics", "diagnostics.snmp"),
-  ...registerFeatureSwitchCommands(
-    "AllDiagnostics",
-    "diagnostics.all",
-    "diagnostics.extensionName",
-    "diagnostics.metricKeys",
-    "diagnostics.cardKeys",
-    "diagnostics.snmp",
-  ),
-];
-
-/**
- * Registers two commands for enabling and disabling a feature by modifying extension settings.
- * The command IDs are automatically prefixed with `dynatrace-extensions-workspaces` and the
- * feature name will be prefixed with `enable` and `disable`.
- */
-const registerFeatureSwitchCommands = (featureName: string, ...settingIds: string[]) => {
-  const enableCommandId = `dynatrace-extensions-workspaces.enable${featureName}`;
-  const disableCommandId = `dynatrace-extensions-workspaces.disable${featureName}`;
-  return [
-    registerUpdateConfigCommand(enableCommandId, true, ...settingIds),
-    registerUpdateConfigCommand(disableCommandId, false, ...settingIds),
-  ];
-};
-
-/**
- * Registers a command that updates one or more configuration settings with a given value.
- * The setting ID is automatically prefixed with `dynatraceExtensions`
- */
-const registerUpdateConfigCommand = (
-  commandId: string,
-  settingValue: string | boolean | number,
-  ...settingNames: string[]
-) =>
-  vscode.commands.registerCommand(commandId, () => {
-    settingNames.forEach(settingName => {
-      const settingId = `dynatraceExtensions.${settingName}`;
-      vscode.workspace
-        .getConfiguration()
-        .update(settingId, settingValue)
-        .then(
-          () => logger.debug(`Changed setting ${settingId} to ${String(settingValue)}`, commandId),
-          () => logger.warn(`Failed to change setting ${settingId}`, commandId),
-        );
-    });
-  });
-
 const registerCompletionProviders = (): vscode.Disposable[] => [
   registerCompletionProvider(getTopologyCompletionProvider(), MANIFEST_DOC_SELECTOR, ":"),
   registerCompletionProvider(getEntitySelectorCompletionProvider(), MANIFEST_DOC_SELECTOR, ":"),
@@ -327,15 +207,20 @@ const registerCompletionProvider = (
 ) =>
   vscode.languages.registerCompletionItemProvider(documentSelector, provider, ...triggerCharacters);
 
+/**
+ * Registers tree view data providers and their associated commands.
+ */
 const registerTreeViews = (): vscode.Disposable[] => [
   vscode.window.registerTreeDataProvider(
     "dynatrace-extensions-workspaces",
     getWorkspacesTreeDataProvider(),
   ),
+  ...registerWorkspaceViewCommands(),
   vscode.window.registerTreeDataProvider(
     "dynatrace-extensions-environments",
     getTenantsTreeDataProvider(),
   ),
+  ...registerTenantsViewCommands(),
 ];
 
 const registerCodeActionsProviders = () => [
@@ -369,3 +254,43 @@ const registerCodeLensProvider = (
   provider: vscode.CodeLensProvider,
   documentSelector: vscode.DocumentSelector = MANIFEST_DOC_SELECTOR,
 ) => vscode.languages.registerCodeLensProvider(documentSelector, provider);
+
+const registerSerializersForPanels = (webviewPanels: string[]) =>
+  webviewPanels.map(panel =>
+    vscode.window.registerWebviewPanelSerializer(panel, getWebviewPanelManager()),
+  );
+
+/**
+ * Checks if there is workspace initialization pending from a previous window/activation and
+ * triggers the initWorkspace command. This happens when our user first opens a new workspace
+ * and then expects that workspace to get initialized.
+ */
+const handlePendingInitialization = async () => {
+  const pendingInit = getActivationContext().globalState.get("dynatrace-extensions.initPending");
+  if (pendingInit) {
+    logger.info(
+      "There is a workspace initialization pending from previous window/activation. Triggering the command now.",
+      "extension",
+      "activate",
+    );
+    await vscode.commands.executeCommand("dynatrace-extensions.initWorkspace");
+  }
+};
+
+/**
+ * Performs any kind of necessary clean up.
+ * Automatically called when the extension was deactivated.
+ */
+export function deactivate() {
+  const fnLogTrace = ["extension", "deactivate"];
+  logger.info("Dynatrace Extensions is deactivating...", ...fnLogTrace);
+
+  // Kill any simulator processes left running
+  simulatorManager.stop();
+
+  logger.info("Dynatrace Extensions is now deactivated.", ...fnLogTrace);
+  logger.disposeOutputChannels();
+  logger.cleanUpLogFiles();
+}
+
+export const getActivationContext = () => activationContext;

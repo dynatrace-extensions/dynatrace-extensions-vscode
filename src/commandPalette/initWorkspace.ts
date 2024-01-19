@@ -22,7 +22,7 @@ import * as vscode from "vscode";
 import { Dynatrace } from "../dynatrace-api/dynatrace";
 import { getActivationContext } from "../extension";
 import { getDynatraceClient } from "../treeViews/tenantsTreeView";
-import { refreshWorkspacesTreeData } from "../treeViews/workspacesTreeView";
+import { refreshWorkspacesTreeView } from "../treeViews/workspacesTreeView";
 import { pushManifestTextForParsing } from "../utils/caching";
 import {
   checkDtSdkPresent,
@@ -72,7 +72,7 @@ export const initWorkspaceWorkflow = async () => {
       const dtClient = await getDynatraceClient();
       if (dtClient) {
         await initWorkspace(dtClient, () => {
-          refreshWorkspacesTreeData();
+          refreshWorkspacesTreeView();
         });
       }
     } finally {

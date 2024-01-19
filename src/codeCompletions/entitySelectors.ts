@@ -30,12 +30,12 @@ const TRIGGER_SUGGEST_CMD: vscode.Command = {
   title: "Re-trigger suggestions...",
 };
 
-let instance: EntitySelectorCompletionProvider | undefined;
-
 /**
  * Singleton access to EntitySelectorCompletionProvider
  */
 export const getEntitySelectorCompletionProvider = (() => {
+  let instance: EntitySelectorCompletionProvider | undefined;
+
   return () => {
     instance = instance === undefined ? new EntitySelectorCompletionProvider() : instance;
     return instance;

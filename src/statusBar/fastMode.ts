@@ -18,61 +18,66 @@ import * as vscode from "vscode";
 import { getFastModeChannel } from "../utils/logging";
 
 /**
- * Helper class for managing status when in Fast Development Mode
+ * Creates a status bar item to reflect the status of builds when Fast Development Mode is enabled.
  */
-export class FastModeStatus {
-  private commandId = "dynatrace-extensions-fastmode.openOutput";
-  private readonly statusBarItem: vscode.StatusBarItem;
-  private readonly outputChannel: vscode.OutputChannel;
+export const getFastModeStatusBar = (() => {
+  let fastModeStatusBar: vscode.StatusBarItem | undefined;
+  const commandId = "dynatrace-extensions-fastmode.openOutput";
 
-  constructor() {
-    this.statusBarItem = vscode.window.createStatusBarItem(vscode.StatusBarAlignment.Left, 2);
-    this.outputChannel = getFastModeChannel();
-    vscode.commands.registerCommand(this.commandId, () => this.outputChannel.show());
-    this.statusBarItem.command = this.commandId;
-    this.updateStatusBar(
-      vscode.workspace
-        .getConfiguration("dynatraceExtensions", null)
-        .get<boolean>("fastDevelopmentMode") ?? false,
-    );
-  }
-
-  /**
-   * Get the StatusBarItem associated with this status bar.
-   * @returns StatusBarItem
-   */
-  getStatusBarItem() {
-    return this.statusBarItem;
-  }
-
-  /**
-   * Update the Fast Development Mode status bar.
-   * The status only shows when the mode is enabled, and can display the build version and last
-   * known build status.
-   * @param active Whether Fast Development Mode is enabled or not
-   * @param version The current version of the extension build
-   * @param passing Whether the build has completed successfully or not
-   */
-  updateStatusBar(active: boolean, version?: string, passing?: boolean) {
-    if (active) {
-      this.statusBarItem.text = "🔥 Fast Mode Enabled";
-      if (version !== undefined) {
-        this.statusBarItem.text += ` | Version ${version}`;
-      }
-      if (passing !== undefined) {
-        this.statusBarItem.text += ` | ${passing ? "✅" : "$(error)"}`;
-      }
-      this.statusBarItem.tooltip =
-        passing === undefined
-          ? "Builds are triggered whenever you save changes."
-          : passing
-          ? "Build passed!"
-          : "Build has failed. Click to see last known failure details.";
-      this.statusBarItem.backgroundColor =
-        passing === false ? new vscode.ThemeColor("statusBarItem.errorBackground") : undefined;
-      this.statusBarItem.show();
-    } else {
-      this.statusBarItem.hide();
+  return () => {
+    if (!fastModeStatusBar) {
+      vscode.commands.registerCommand(commandId, () => getFastModeChannel().show());
+      fastModeStatusBar = vscode.window.createStatusBarItem(vscode.StatusBarAlignment.Left, 2);
+      fastModeStatusBar.command = commandId;
+      updateBasedOnConfig();
+      vscode.workspace.onDidChangeConfiguration(() => updateBasedOnConfig());
     }
+    return fastModeStatusBar;
+  };
+})();
+
+const isFastModeEnabled = () =>
+  vscode.workspace
+    .getConfiguration("dynatraceExtensions", null)
+    .get<boolean>("fastDevelopmentMode");
+
+const updateBasedOnConfig = () => {
+  if (isFastModeEnabled()) {
+    showFastModeStatusBar();
+  } else {
+    hideFastModeStatusBar();
   }
-}
+};
+
+/**
+ * Hides the Fast Mode status bar.
+ */
+export const hideFastModeStatusBar = () => {
+  getFastModeStatusBar().hide();
+};
+
+/**
+ * Shows the Fast Mode status bar with a message to refelct the current status of builds.
+ * @param version The version of the last build attempted
+ * @param passing Whether the last build passed or not
+ */
+export const showFastModeStatusBar = (version?: string, passing?: boolean) => {
+  const statusBar = getFastModeStatusBar();
+
+  statusBar.text = "🔥 Fast Mode Enabled";
+  if (version !== undefined) {
+    statusBar.text += ` | Version ${version}`;
+  }
+  if (passing !== undefined) {
+    statusBar.text += ` | ${passing ? "✅" : "$(error)"}`;
+  }
+  statusBar.tooltip =
+    passing === undefined
+      ? "Builds are triggered whenever you save changes."
+      : passing
+      ? "Build passed!"
+      : "Build has failed. Click to see last known failure details.";
+  statusBar.backgroundColor =
+    passing === false ? new vscode.ThemeColor("statusBarItem.errorBackground") : undefined;
+  statusBar.show();
+};

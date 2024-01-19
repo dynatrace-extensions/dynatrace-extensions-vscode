@@ -20,12 +20,12 @@ import { getCachedParsedExtension } from "../utils/caching";
 import * as logger from "../utils/logging";
 import { getBlockItemIndexAtLine, getParentBlocks } from "../utils/yamlParsing";
 
-let instance: ScreenLensProvider | undefined;
-
 /**
  * Provides singleton access to the ScreenLensProvider
  */
 export const getScreenLensProvider = (() => {
+  let instance: ScreenLensProvider | undefined;
+
   return () => {
     instance = instance === undefined ? new ScreenLensProvider() : instance;
     return instance;

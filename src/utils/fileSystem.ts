@@ -500,6 +500,18 @@ export function uploadComponentCert(certPath: string, component: "OneAgent" | "A
 }
 
 /**
+ * Reads the extension manifest and returns the contents or an empty string
+ * if the file doesn't exist.
+ */
+export const readExtensionManifest = () => {
+  const manifestFilePath = getExtensionFilePath();
+  if (manifestFilePath && existsSync(manifestFilePath)) {
+    return readFileSync(manifestFilePath).toString();
+  }
+  return "";
+};
+
+/**
  * Searches the known extension workspace path for the extension.yaml file and returns the
  * found result so long as the extension directory is in the root of the workspace or one
  * directory deep (e.g. src/extension/extension.yaml)

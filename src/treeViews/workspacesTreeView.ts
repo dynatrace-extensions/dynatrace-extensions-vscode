@@ -19,7 +19,6 @@ import * as path from "path";
 import * as glob from "glob";
 import * as vscode from "vscode";
 import * as yaml from "yaml";
-import { getActivationContext } from "../extension";
 import { ExtensionStub } from "../interfaces/extensionMeta";
 import {
   WorkspaceTreeItem,
@@ -27,7 +26,6 @@ import {
   WorkspacesTreeDataProvider,
 } from "../interfaces/treeViews";
 import { getAllWorkspaces } from "../utils/fileSystem";
-import { deleteWorkspace } from "./commands/workspaces";
 
 const ICONS_PATH = path.join(__filename, "..", "..", "src", "assets", "icons");
 const ICONS: Record<string, { light: string; dark: string }> = {
@@ -45,21 +43,20 @@ const ICONS: Record<string, { light: string; dark: string }> = {
   },
 };
 
-let instance: WorkspacesTreeDataProvider | undefined;
-
 /**
  * Returns a singleton instance of the WorkspacesTreeDataProvider.
  */
 export const getWorkspacesTreeDataProvider = (() => {
+  let instance: WorkspacesTreeDataProvider | undefined;
+
   return () => {
     instance = instance === undefined ? new WorkspacesTreeDataProviderImpl() : instance;
     return instance;
   };
 })();
 
-export const refreshWorkspacesTreeData = () => {
-  if (!instance) return;
-  instance.refresh();
+export const refreshWorkspacesTreeView = () => {
+  getWorkspacesTreeDataProvider().refresh();
 };
 
 /**
@@ -106,48 +103,6 @@ class WorkspacesTreeDataProviderImpl implements WorkspacesTreeDataProvider {
 
   readonly onDidChangeTreeData: vscode.Event<WorkspaceTreeItem | undefined> =
     this._onDidChangeTreeData.event;
-
-  /**
-   * @param cachedDataProvider a provider for cacheable data
-   * @param context VSCode Extension context
-   */
-  constructor() {
-    this.registerCommands();
-  }
-
-  /**
-   * Registers the commands that this Tree View needs to work with.
-   * Commands include adding, opening, or deleting a workspace, opening an extension file, or
-   * refreshing this view.
-   * @param context {@link vscode.ExtensionContext}
-   */
-  private registerCommands() {
-    vscode.commands.registerCommand("dynatrace-extensions-workspaces.refresh", () =>
-      this.refresh(),
-    );
-    vscode.commands.registerCommand("dynatrace-extensions-workspaces.addWorkspace", async () => {
-      await getActivationContext().globalState.update("dynatrace-extensions.initPending", true);
-      await vscode.commands.executeCommand("vscode.openFolder");
-    });
-    vscode.commands.registerCommand(
-      "dynatrace-extensions-workspaces.openWorkspace",
-      async (workspace: WorkspaceTreeItem) => {
-        await vscode.commands.executeCommand("vscode.openFolder", workspace.path);
-      },
-    );
-    vscode.commands.registerCommand(
-      "dynatrace-extensions-workspaces.deleteWorkspace",
-      async (workspace: WorkspaceTreeItem) => {
-        await deleteWorkspace(workspace).then(() => this.refresh());
-      },
-    );
-    vscode.commands.registerCommand(
-      "dynatrace-extensions-workspaces.editExtension",
-      async (extension: WorkspaceTreeItem) => {
-        await vscode.commands.executeCommand("vscode.open", extension.path);
-      },
-    );
-  }
 
   /**
    * Refresh this view.

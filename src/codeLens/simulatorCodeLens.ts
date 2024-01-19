@@ -22,12 +22,12 @@ const START_COMMAND = "dynatraceExtensions.simulator.codelens.start";
 const STOP_COMMAND = "dynatraceExtensions.simulator.codelens.stop";
 const REFRESH = "dynatraceExtensions.simulator.codelens.refresh";
 
-let instance: SimulatorLensProvider | undefined;
-
 /**
  * Provides singleton access to the SimulatorLensProvider
  */
 export const getSimulatorLensProvider = (() => {
+  let instance: SimulatorLensProvider | undefined;
+
   return (simulator: SimulatorManager) => {
     instance = instance === undefined ? new SimulatorLensProvider(simulator) : instance;
     return instance;

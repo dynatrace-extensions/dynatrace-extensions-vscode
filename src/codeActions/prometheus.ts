@@ -26,12 +26,12 @@ import {
 import { getBlockItemIndexAtLine, getParentBlocks } from "../utils/yamlParsing";
 import { buildMetricMetadataSnippet, indentSnippet } from "./utils/snippetBuildingUtils";
 
-let instance: PrometheusActionProvider | undefined;
-
 /**
  * Provides singleton access to the PrometheusActionProvider.
  */
 export const getPrometheusActionProvider = (() => {
+  let instance: PrometheusActionProvider | undefined;
+
   return () => {
     instance = instance === undefined ? new PrometheusActionProvider() : instance;
     return instance;

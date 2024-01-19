@@ -22,12 +22,12 @@ import { oidFromMetriValue } from "../utils/snmp";
 import { getIndent } from "../utils/yamlParsing";
 import { buildMetricMetadataSnippet, indentSnippet } from "./utils/snippetBuildingUtils";
 
-let instance: SnmpActionProvider | undefined;
-
 /**
  * Provides singleton access to the SnmpActionProvider
  */
 export const getSnmpActionProvider = (() => {
+  let instance: SnmpActionProvider | undefined;
+
   return () => {
     instance = instance === undefined ? new SnmpActionProvider() : instance;
     return instance;

@@ -25,12 +25,12 @@ import {
 } from "../utils/extensionParsing";
 import { getBlockItemIndexAtLine, getParentBlocks } from "../utils/yamlParsing";
 
-let instance: TopologyCompletionProvider | undefined;
-
 /**
  * Singleton access to TopologyCompletionProvider
  */
 export const getTopologyCompletionProvider = (() => {
+  let instance: TopologyCompletionProvider | undefined;
+
   return () => {
     instance = instance === undefined ? new TopologyCompletionProvider() : instance;
     return instance;

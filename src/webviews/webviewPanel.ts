@@ -15,6 +15,7 @@
  */
 
 import * as vscode from "vscode";
+import { getActivationContext } from "../extension";
 import { PanelData, WebviewMessage } from "../interfaces/webview";
 import * as logger from "../utils/logging";
 
@@ -53,21 +54,19 @@ function getColumn() {
   return vscode.window.activeTextEditor ? vscode.ViewColumn.Beside : vscode.ViewColumn.One;
 }
 
-let instance: WebviewPanelManager | undefined;
-
 export const renderPanel = (viewType: REGISTERED_PANELS, title: string, data: PanelData) => {
-  if (!instance) return;
-  instance.render(viewType, title, data);
+  getWebviewPanelManager().render(viewType, title, data);
 };
 
 export const postMessageToPanel = (viewType: REGISTERED_PANELS, message: WebviewMessage) => {
-  if (!instance) return;
-  instance.postMessage(viewType, message);
+  getWebviewPanelManager().postMessage(viewType, message);
 };
 
 export const getWebviewPanelManager = (() => {
-  return (extensionUri: vscode.Uri) => {
-    instance = instance === undefined ? new WebviewPanelManager(extensionUri) : instance;
+  let instance: WebviewPanelManager | undefined;
+
+  return () => {
+    instance = instance === undefined ? new WebviewPanelManager() : instance;
     return instance;
   };
 })();
@@ -84,13 +83,10 @@ class WebviewPanelManager implements vscode.WebviewPanelSerializer {
 
   private readonly extensionUri: vscode.Uri;
 
-  /**
-   * @param extensionUri The URI of the directory containing the extension
-   */
-  constructor(extensionUri: vscode.Uri) {
+  constructor() {
     this.currentPanels = new Map<REGISTERED_PANELS, vscode.WebviewPanel>();
     this.disposables = new Map<REGISTERED_PANELS, vscode.Disposable[]>();
-    this.extensionUri = extensionUri;
+    this.extensionUri = getActivationContext().extensionUri;
   }
 
   /**

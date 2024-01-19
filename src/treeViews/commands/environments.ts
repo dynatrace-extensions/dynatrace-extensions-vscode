@@ -36,6 +36,9 @@ import {
 } from "../../utils/fileSystem";
 import * as logger from "../../utils/logging";
 import { createObjectFromSchema } from "../../utils/schemaParsing";
+import { refreshTenantsTreeView } from "../tenantsTreeView";
+
+const logTrace = ["treeViews", "commands", "environments"];
 
 export interface MinimalConfiguration {
   scope: string;
@@ -46,8 +49,6 @@ export interface MinimalConfiguration {
     featureSets?: string[];
   };
 }
-
-const logTrace = ["treeViews", "commands", "environments"];
 
 /**
  * Applies regular expressions for known Dynatrace environment URL schemes.
@@ -89,12 +90,105 @@ export function validateEnvironmentUrl(value: string): string | null {
 }
 
 /**
+ * Registers the commands that can be triggered on items of the Tenants tree view and returns
+ * the disposables created.
+ */
+export const registerTenantsViewCommands = () => {
+  const commandPrefix = "dynatrace-extensions-environments";
+  return [
+    vscode.commands.registerCommand(`${commandPrefix}.refresh`, () => refreshTenantsTreeView()),
+    vscode.commands.registerCommand(`${commandPrefix}.addEnvironment`, () =>
+      addEnvironment().then(() => refreshTenantsTreeView()),
+    ),
+    vscode.commands.registerCommand(
+      `${commandPrefix}.useEnvironment`,
+      async (tenant: DynatraceTenant) => {
+        const { url, apiUrl, token, label } = tenant;
+        await registerEnvironment(url, apiUrl, encryptToken(token), label, true);
+        showConnectedStatusBar(tenant).catch(() => {});
+        refreshTenantsTreeView();
+      },
+    ),
+    vscode.commands.registerCommand(
+      `${commandPrefix}.editEnvironment`,
+      async (tenant: DynatraceTenant) => {
+        await editEnvironment(tenant).then(() => refreshTenantsTreeView());
+      },
+    ),
+    vscode.commands.registerCommand(
+      `${commandPrefix}.deleteEnvironment`,
+      async (tenant: DynatraceTenant) => {
+        await deleteEnvironment(tenant).then(() => refreshTenantsTreeView());
+      },
+    ),
+    vscode.commands.registerCommand(`${commandPrefix}.changeConnection`, async () => {
+      await changeConnection().then(() => refreshTenantsTreeView());
+    }),
+    vscode.commands.registerCommand(
+      `${commandPrefix}.addConfig`,
+      async (extension: DeployedExtension) => {
+        await addMonitoringConfiguration(extension).then(success => {
+          if (success) {
+            refreshTenantsTreeView();
+          }
+        });
+      },
+    ),
+    vscode.commands.registerCommand(
+      `${commandPrefix}.editConfig`,
+      async (config: MonitoringConfiguration) => {
+        await editMonitoringConfiguration(config).then(success => {
+          if (success) {
+            refreshTenantsTreeView();
+          }
+        });
+      },
+    ),
+    vscode.commands.registerCommand(
+      `${commandPrefix}.deleteConfig`,
+      async (config: MonitoringConfiguration) => {
+        await deleteMonitoringConfiguration(config).then(success => {
+          if (success) {
+            refreshTenantsTreeView();
+          }
+        });
+      },
+    ),
+    vscode.commands.registerCommand(
+      `${commandPrefix}.saveConfig`,
+      async (config: MonitoringConfiguration) => {
+        await saveMoniotringConfiguration(config).catch(err => {
+          logger.notify(
+            "ERROR",
+            `Unable to save configuration. ${(err as Error).message}`,
+            ...logTrace,
+            "saveMoniotringConfiguration",
+          );
+        });
+      },
+    ),
+    vscode.commands.registerCommand(
+      `${commandPrefix}.openExtension`,
+      async (extension: DeployedExtension) => {
+        await openExtension(extension).catch(err => {
+          logger.warn(
+            `Couldn't open URL for extension ${extension.id}: ${(err as Error).message}`,
+            ...logTrace,
+            "openExtension",
+          );
+        });
+      },
+    ),
+  ];
+};
+
+/**
  * A workflow for registering a new Dynatrace Environment within the VSCode extension.
  * URL, Token, and an optional label are collected. The user can also set this as the
  * currently used environment.
  * @returns
  */
-export async function addEnvironment() {
+async function addEnvironment() {
   const fnLogTrace = [...logTrace, "addEnvironment"];
   let url = await vscode.window.showInputBox({
     title: "Add a Dynatrace environment (1/3)",
@@ -159,7 +253,7 @@ export async function addEnvironment() {
  * @param environment the existing environment
  * @returns
  */
-export async function editEnvironment(environment: DynatraceTenant) {
+async function editEnvironment(environment: DynatraceTenant) {
   const fnLogTrace = [...logTrace, "editEnvironment"];
   let url = await vscode.window.showInputBox({
     title: "The new URL for this environment",
@@ -225,7 +319,7 @@ export async function editEnvironment(environment: DynatraceTenant) {
  * @param environment the existing environment
  * @returns
  */
-export async function deleteEnvironment(environment: DynatraceTenant) {
+async function deleteEnvironment(environment: DynatraceTenant) {
   const confirm = await vscode.window.showQuickPick(["Yes", "No"], {
     title: `Delete environment ${environment.label}?`,
     canPickMany: false,
@@ -248,7 +342,7 @@ export async function deleteEnvironment(environment: DynatraceTenant) {
  * when triggered from the global status bar.
  * @returns the selected status as boolean, and name of connected environment or "" as string
  */
-export async function changeConnection() {
+async function changeConnection() {
   const fnLogTrace = [...logTrace, "changeConnection"];
   const environments = getAllEnvironments();
 
@@ -294,7 +388,7 @@ export async function changeConnection() {
  * @returns a Promise that will either resolve with the stringified content of the configuration
  * or will reject with the message "No changes.".
  */
-export async function getConfigurationDetailsViaFile(
+async function getConfigurationDetailsViaFile(
   headerContent: string,
   defaultDetails: string,
   rejectNoChanges: boolean = true,
@@ -345,9 +439,7 @@ export async function getConfigurationDetailsViaFile(
  * @param config the MonitoringConfiguration to be updated
  * @returns success of the command
  */
-export async function editMonitoringConfiguration(
-  config: MonitoringConfiguration,
-): Promise<boolean> {
+async function editMonitoringConfiguration(config: MonitoringConfiguration): Promise<boolean> {
   const fnLogTrace = [...logTrace, "editMonitoringConfiguration"];
   const oc = logger.getGenericChannel();
   // Fetch the current configuration details
@@ -403,9 +495,7 @@ export async function editMonitoringConfiguration(
  * @param config the MonitoringConfiguration to be deleted
  * @returns the success of the operation
  */
-export async function deleteMonitoringConfiguration(
-  config: MonitoringConfiguration,
-): Promise<boolean> {
+async function deleteMonitoringConfiguration(config: MonitoringConfiguration): Promise<boolean> {
   const fnLogTrace = [...logTrace, "deleteMonitoringConfiguration"];
   const confirm = await vscode.window.showQuickPick(["Yes", "No"], {
     title: `Delete configuration ${config.label}?`,
@@ -439,7 +529,7 @@ export async function deleteMonitoringConfiguration(
  * @param extension the deployed extension to add a configuration to
  * @returns success of the operation
  */
-export async function addMonitoringConfiguration(extension: DeployedExtension) {
+async function addMonitoringConfiguration(extension: DeployedExtension) {
   const fnLogTrace = [...logTrace, "addMonitoringConfiguration"];
   const oc = logger.getGenericChannel();
   let configObject: MinimalConfiguration | undefined;
@@ -545,7 +635,7 @@ export async function addMonitoringConfiguration(extension: DeployedExtension) {
  * The file will be placed in the config directory.
  * @param config the MonitoringConfiguration item to save
  */
-export async function saveMoniotringConfiguration(config: MonitoringConfiguration) {
+async function saveMoniotringConfiguration(config: MonitoringConfiguration) {
   const fnLogTrace = [...logTrace, "saveMoniotringConfiguration"];
   const workspaceRoot = vscode.workspace.workspaceFolders?.[0].uri.fsPath;
   if (!workspaceRoot) {
@@ -586,7 +676,7 @@ export async function saveMoniotringConfiguration(config: MonitoringConfiguratio
  * Opens the Extension configuration page in the browser.
  * @param extension extension clicked on
  */
-export async function openExtension(extension: DeployedExtension) {
+async function openExtension(extension: DeployedExtension) {
   const baseUrl = extension.tenantUrl.includes(".apps")
     ? `${extension.tenantUrl}/ui/apps/dynatrace.classic.extensions`
     : extension.tenantUrl;

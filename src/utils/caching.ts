@@ -14,7 +14,6 @@
   limitations under the License.
  */
 
-import { existsSync, readFileSync } from "fs";
 import * as path from "path";
 import Axios from "axios";
 import { BehaviorSubject, Observable, Subscriber, delay, map, of, switchMap } from "rxjs";
@@ -28,7 +27,7 @@ import { ExtensionStub } from "../interfaces/extensionMeta";
 import { getDynatraceClient } from "../treeViews/tenantsTreeView";
 import * as logger from "../utils/logging";
 import { waitForCondition } from "./code";
-import { getExtensionFilePath, getSnmpMibFiles } from "./fileSystem";
+import { getExtensionFilePath, getSnmpMibFiles, readExtensionManifest } from "./fileSystem";
 import {
   MibModuleStore,
   OidInformation,
@@ -129,14 +128,6 @@ const loadBaristaIconsFromUrl = async (url: string) => {
       return [];
     });
   return icons;
-};
-
-const readExtensionManifest = () => {
-  const manifestFilePath = getExtensionFilePath();
-  if (manifestFilePath && existsSync(manifestFilePath)) {
-    return readFileSync(manifestFilePath).toString();
-  }
-  return "";
 };
 
 const loadSnmpData = async () => {

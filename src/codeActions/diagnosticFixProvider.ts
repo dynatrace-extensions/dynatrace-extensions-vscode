@@ -35,12 +35,12 @@ interface DeleteOptions {
   editRange: vscode.Range;
 }
 
-let instance: DiagnosticFixProvider | undefined;
-
 /**
  * Provides singleton access to the DiagnosticFixProvider
  */
 export const getDiagnosticFixProvider = (() => {
+  let instance: DiagnosticFixProvider | undefined;
+
   return () => {
     instance = instance === undefined ? new DiagnosticFixProvider() : instance;
     return instance;

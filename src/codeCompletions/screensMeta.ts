@@ -20,12 +20,12 @@ import { getCachedParsedExtension } from "../utils/caching";
 import { getReferencedCardsMeta, getDefinedCardsMeta } from "../utils/extensionParsing";
 import { getBlockItemIndexAtLine, getParentBlocks } from "../utils/yamlParsing";
 
-let instance: ScreensCompletionProvider | undefined;
-
 /**
  * Singleton access to ScreensCompletionProvider
  */
 export const getScreensCompletionProvider = (() => {
+  let instance: ScreensCompletionProvider | undefined;
+
   return () => {
     instance = instance === undefined ? new ScreensCompletionProvider() : instance;
     return instance;

@@ -19,12 +19,12 @@ import * as vscode from "vscode";
 import { getCachedOid, updateCachedOid } from "../utils/caching";
 import { getMibStoragePath } from "../utils/snmp";
 
-let instance: SnmpHoverProvider | undefined;
-
 /**
  * Provides singleton access to the SnmpHoverProvider
  */
 export const getSnmpHoverProvider = (() => {
+  let instance: SnmpHoverProvider | undefined;
+
   return () => {
     instance = instance === undefined ? new SnmpHoverProvider() : instance;
     return instance;

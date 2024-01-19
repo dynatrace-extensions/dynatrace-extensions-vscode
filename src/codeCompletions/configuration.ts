@@ -19,12 +19,12 @@ import { MinimalConfiguration } from "../treeViews/commands/environments";
 import { getCachedEntityInstances, updateEntityInstances } from "../utils/caching";
 import { getExtensionFilePath } from "../utils/fileSystem";
 
-let instance: ConfigurationCompletionProvider | undefined;
-
 /**
  * Singleton access to ConfigurationCompletionProvider
  */
 export const getConfigurationCompletionProvider = (() => {
+  let instance: ConfigurationCompletionProvider | undefined;
+
   return () => {
     instance = instance === undefined ? new ConfigurationCompletionProvider() : instance;
     return instance;

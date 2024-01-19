@@ -25,12 +25,12 @@ import {
 } from "../utils/extensionParsing";
 import { getBlockItemIndexAtLine, getParentBlocks } from "../utils/yamlParsing";
 
-let instance: PrometheusCompletionProvider | undefined;
-
 /**
  * Singleton access to PrometheusCompletionProvider
  */
 export const getPrometheusCompletionProvider = (() => {
+  let instance: PrometheusCompletionProvider | undefined;
+
   return () => {
     instance = instance === undefined ? new PrometheusCompletionProvider() : instance;
     return instance;

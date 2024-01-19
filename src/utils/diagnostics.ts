@@ -57,49 +57,68 @@ import {
   getNextElementIdx,
   isSameList,
 } from "../utils/yamlParsing";
+import * as logger from "./logging";
 
-const diagnosticsCollection = vscode.languages.createDiagnosticCollection("DynatraceExtensions");
-
-export interface ExtensionDiagnostic {
+export interface ExtensionDiagnosticDto {
   code: string | number | { value: string | number; target: vscode.Uri } | undefined;
   severity: vscode.DiagnosticSeverity;
   message: string;
 }
 
 /**
- * Creates a {@link vscode.Diagnostic} from a known Extension Diagnostic
- * @param startPos VSCode Position marking the start of the highlight
- * @param endPos VSCode Position marking the end of the highlight
- * @param diagnostic one of the known Extension Diagnostics (defined below)
- * @returns VSCode Diagnostic
+ * Sets up event-based diagnostic updates. Our diagnostic collection will be updated whenever the
+ * extension manifest file is opened, or after every save (with a 0.5 sec delay to reduce frequency).
  */
-export function extensionDiagnostic(
-  startPos: vscode.Position,
-  endPos: vscode.Position,
-  diagnostic: ExtensionDiagnostic,
-): vscode.Diagnostic {
-  return {
-    range: new vscode.Range(startPos, endPos),
-    message: diagnostic.message,
-    code: diagnostic.code,
-    severity: diagnostic.severity,
-    source: "Dynatrace Extensions",
+export const registerDiagnosticsEventListeners = (() => {
+  let initialized = false;
+  let editTimeout: NodeJS.Timeout | undefined;
+
+  return () => {
+    if (!initialized) {
+      initialized = true;
+      return [
+        vscode.window.onDidChangeActiveTextEditor(editor => {
+          updateDiagnosticsCollection(editor?.document).catch(err => {
+            logger.error(
+              `Could not provide diagnostics. ${(err as Error).message}`,
+              "updateDiagnosticsCollection",
+            );
+          });
+        }),
+        vscode.workspace.onDidChangeTextDocument(change => {
+          if (editTimeout) {
+            clearTimeout(editTimeout);
+            editTimeout = undefined;
+          }
+          editTimeout = setTimeout(() => {
+            updateDiagnosticsCollection(change.document).catch(err => {
+              logger.error(
+                `Could not provide diagnostics. ${(err as Error).message}`,
+                "updateDiagnosticsCollection",
+              );
+            });
+            editTimeout = undefined;
+          }, 500);
+        }),
+      ];
+    }
+    return [];
   };
-}
+})();
 
 /**
  * Collects Extension 2.0 diagnostics and updates the collection managed by this module.
- * @param document text document to provide diagnostics for
  */
-export const updateDiagnosticsCollection = async (document: vscode.TextDocument) => {
-  const parsedExtension = getCachedParsedExtension();
+const updateDiagnosticsCollection = async (document?: vscode.TextDocument) => {
+  if (!document?.fileName.endsWith("extension.yaml")) return;
 
   // Bail early if needed
+  const parsedExtension = getCachedParsedExtension();
   if (
     !parsedExtension ||
     !vscode.workspace.getConfiguration("dynatraceExtensions", null).get("diagnostics")
   ) {
-    diagnosticsCollection.set(document.uri, []);
+    getDiagnosticsCollection().set(document.uri, []);
     return;
   }
 
@@ -112,16 +131,26 @@ export const updateDiagnosticsCollection = async (document: vscode.TextDocument)
     diagnoseDimensionOids(document, parsedExtension),
   ]).then(results => results.reduce((collection, result) => collection.concat(result), []));
 
-  diagnosticsCollection.set(document.uri, diagnostics);
+  getDiagnosticsCollection().set(document.uri, diagnostics);
 };
 
+const getDiagnosticsCollection = (() => {
+  let diagnosticsCollection: vscode.DiagnosticCollection | undefined;
+
+  return () => {
+    diagnosticsCollection =
+      diagnosticsCollection === undefined
+        ? vscode.languages.createDiagnosticCollection("DynatraceExtensions")
+        : diagnosticsCollection;
+    return diagnosticsCollection;
+  };
+})();
+
 /**
- * Retrieve the currently logged Diagnostics.
- * @param uri URI of the extension.yaml file
- * @returns list of diagnostic items
+ * Retrieve the Diagnostics for a given file.
  */
 export const getDiagnostics = (uri: vscode.Uri): vscode.Diagnostic[] => {
-  return [...(diagnosticsCollection.get(uri) ?? [])];
+  return [...(getDiagnosticsCollection().get(uri) ?? [])];
 };
 
 /**
@@ -148,7 +177,7 @@ const diagnoseExtensionName = async (
 
   if (lineNo === -1) {
     diagnostics.push(
-      extensionDiagnostic(
+      createExtensionDiagnostic(
         new vscode.Position(1, 0),
         new vscode.Position(1, 0),
         EXTENSION_NAME_MISSING,
@@ -160,17 +189,19 @@ const diagnoseExtensionName = async (
     const nameStart = new vscode.Position(lineNo, contentLines[lineNo].indexOf(extensionName));
     const nameEnd = new vscode.Position(lineNo, contentLines[lineNo].length);
     if (extensionName.length > 50) {
-      diagnostics.push(extensionDiagnostic(nameStart, nameEnd, EXTENSION_NAME_TOO_LONG));
+      diagnostics.push(createExtensionDiagnostic(nameStart, nameEnd, EXTENSION_NAME_TOO_LONG));
     }
     if (!nameRegex.test(extensionName)) {
-      diagnostics.push(extensionDiagnostic(nameStart, nameEnd, EXTENSION_NAME_INVALID));
+      diagnostics.push(createExtensionDiagnostic(nameStart, nameEnd, EXTENSION_NAME_INVALID));
     }
     const bitBucketRepo = await checkDtInternalProperties();
     if (!extensionName.startsWith("custom:") && !bitBucketRepo) {
-      diagnostics.push(extensionDiagnostic(nameStart, nameEnd, EXTENSION_NAME_NON_CUSTOM));
+      diagnostics.push(createExtensionDiagnostic(nameStart, nameEnd, EXTENSION_NAME_NON_CUSTOM));
     }
     if (extensionName.startsWith("custom:") && bitBucketRepo) {
-      diagnostics.push(extensionDiagnostic(nameStart, nameEnd, EXTENSION_NAME_CUSTOM_ON_BITBUCKET));
+      diagnostics.push(
+        createExtensionDiagnostic(nameStart, nameEnd, EXTENSION_NAME_CUSTOM_ON_BITBUCKET),
+      );
     }
   }
   return diagnostics;
@@ -212,7 +243,7 @@ const diagnoseMetricKeys = async (
       let match;
       while ((match = metricRegex.exec(content)) !== null) {
         diagnostics.push(
-          extensionDiagnostic(
+          createExtensionDiagnostic(
             document.positionAt(match.index + match[0].indexOf(m.key)),
             document.positionAt(match.index + match[0].indexOf(m.key) + m.key.length),
             m.type === "count" ? COUNT_METRIC_KEY_SUFFIX : GAUGE_METRIC_KEY_SUFFIX,
@@ -258,7 +289,7 @@ const diagnoseCardKeys = async (
       .forEach(rc => {
         const keyStart = content.indexOf(`key: ${rc.key}`, screenBounds[idx].start);
         diagnostics.push(
-          extensionDiagnostic(
+          createExtensionDiagnostic(
             document.positionAt(keyStart),
             document.positionAt(keyStart + `key: ${rc.key}`.length),
             REFERENCED_CARD_NOT_DEFINED,
@@ -270,7 +301,7 @@ const diagnoseCardKeys = async (
       .forEach(dc => {
         const keyStart = content.indexOf(`key: ${dc.key}`, screenBounds[idx].start);
         diagnostics.push(
-          extensionDiagnostic(
+          createExtensionDiagnostic(
             document.positionAt(keyStart),
             document.positionAt(keyStart + `key: ${dc.key}`.length),
             DEFINED_CARD_NOT_REFERENCED,
@@ -334,19 +365,19 @@ const diagnoseMetricOids = async (
 
       // Check if valid
       if (!/^\d[.\d]+\d$|^[\da-zA-Z]+$/.test(oid)) {
-        diagnostics.push(extensionDiagnostic(startPos, endPos, OID_SYNTAX_INVALID));
+        diagnostics.push(createExtensionDiagnostic(startPos, endPos, OID_SYNTAX_INVALID));
 
         // Check we have online data
       } else if (!metric.info?.objectType) {
-        diagnostics.push(extensionDiagnostic(startPos, endPos, OID_DOES_NOT_EXIST));
+        diagnostics.push(createExtensionDiagnostic(startPos, endPos, OID_DOES_NOT_EXIST));
 
         // Check things we can infer from online data
       } else {
         if (!isOidReadable(metric.info)) {
-          diagnostics.push(extensionDiagnostic(startPos, endPos, OID_NOT_READABLE));
+          diagnostics.push(createExtensionDiagnostic(startPos, endPos, OID_NOT_READABLE));
         }
         if (metric.info.syntax?.toLowerCase().includes("string")) {
-          diagnostics.push(extensionDiagnostic(startPos, endPos, OID_STRING_AS_METRIC));
+          diagnostics.push(createExtensionDiagnostic(startPos, endPos, OID_STRING_AS_METRIC));
         }
         if (metric.info.syntax) {
           // Since OID & metric are re-usable we must get the whole yaml block and match both
@@ -368,7 +399,7 @@ const diagnoseMetricOids = async (
 
           if (metric.type === "gauge" && metric.info.syntax.startsWith("Counter")) {
             if (content.substring(blockStart, blockEnd).includes(metric.key)) {
-              diagnostics.push(extensionDiagnostic(startPos, endPos, OID_COUNTER_AS_GAUGE));
+              diagnostics.push(createExtensionDiagnostic(startPos, endPos, OID_COUNTER_AS_GAUGE));
             }
           }
           if (
@@ -376,7 +407,7 @@ const diagnoseMetricOids = async (
             (metric.info.syntax === "Gauge" || metric.info.syntax.toLowerCase().includes("integer"))
           ) {
             if (content.substring(blockStart, blockEnd).includes(metric.key)) {
-              diagnostics.push(extensionDiagnostic(startPos, endPos, OID_GAUGE_AS_COUNTER));
+              diagnostics.push(createExtensionDiagnostic(startPos, endPos, OID_GAUGE_AS_COUNTER));
             }
           }
           diagnostics.push(
@@ -448,11 +479,11 @@ const diagnoseDimensionOids = async (
 
       // Check if valid
       if (!/^\d[.\d]+\d$|^[\da-zA-Z]+$/.test(oid)) {
-        diagnostics.push(extensionDiagnostic(startPos, endPos, OID_SYNTAX_INVALID));
+        diagnostics.push(createExtensionDiagnostic(startPos, endPos, OID_SYNTAX_INVALID));
 
         // Check if there is online data
       } else if (!dimension.info?.objectType) {
-        diagnostics.push(extensionDiagnostic(startPos, endPos, OID_DOES_NOT_EXIST));
+        diagnostics.push(createExtensionDiagnostic(startPos, endPos, OID_DOES_NOT_EXIST));
 
         // Check things we can infer from the data
       } else {
@@ -522,7 +553,7 @@ const createTableOidDiagnostics = async (
     const subgroup = extension.snmp[groupIdx].subgroups?.[subgroupIdx];
     if (subgroup?.table) {
       if (usageInfo.value?.endsWith(".0")) {
-        diagnostics.push(extensionDiagnostic(startPos, endPos, OID_DOT_ZERO_IN_TABLE));
+        diagnostics.push(createExtensionDiagnostic(startPos, endPos, OID_DOT_ZERO_IN_TABLE));
       } else {
         // Get the second last index of '.' and slice oid from start
         const grandparentOid = oid.slice(0, oid.slice(0, oid.lastIndexOf(".")).lastIndexOf("."));
@@ -531,13 +562,13 @@ const createTableOidDiagnostics = async (
         const oidInfo = getCachedOid(grandparentOid);
         if (oidInfo) {
           if (!isTable(oidInfo)) {
-            diagnostics.push(extensionDiagnostic(startPos, endPos, OID_STATIC_OBJ_IN_TABLE));
+            diagnostics.push(createExtensionDiagnostic(startPos, endPos, OID_STATIC_OBJ_IN_TABLE));
           }
         }
       }
     } else {
       if (!usageInfo.value?.endsWith(".0")) {
-        diagnostics.push(extensionDiagnostic(startPos, endPos, OID_DOT_ZERO_MISSING));
+        diagnostics.push(createExtensionDiagnostic(startPos, endPos, OID_DOT_ZERO_MISSING));
       } else {
         // Remove '.0', get the second last index of '.' and slice oid from start
         const grandparentOid = oid.slice(
@@ -549,7 +580,7 @@ const createTableOidDiagnostics = async (
         const oidInfo = getCachedOid(grandparentOid);
         if (oidInfo) {
           if (isTable(oidInfo)) {
-            diagnostics.push(extensionDiagnostic(startPos, endPos, OID_TABLE_OBJ_AS_STATIC));
+            diagnostics.push(createExtensionDiagnostic(startPos, endPos, OID_TABLE_OBJ_AS_STATIC));
           }
         }
       }
@@ -557,3 +588,20 @@ const createTableOidDiagnostics = async (
   }
   return diagnostics;
 };
+
+/**
+ * Creates a {@link vscode.Diagnostic} from a known Extension Diagnostic
+ */
+function createExtensionDiagnostic(
+  startPos: vscode.Position,
+  endPos: vscode.Position,
+  diagnostic: ExtensionDiagnosticDto,
+): vscode.Diagnostic {
+  return {
+    range: new vscode.Range(startPos, endPos),
+    message: diagnostic.message,
+    code: diagnostic.code,
+    severity: diagnostic.severity,
+    source: "Dynatrace Extensions",
+  };
+}

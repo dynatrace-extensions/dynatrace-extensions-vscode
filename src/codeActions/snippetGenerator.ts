@@ -50,12 +50,12 @@ import {
   slugify,
 } from "./utils/snippetBuildingUtils";
 
-let instance: SnippetGenerator | undefined;
-
 /**
  * Provides singleton access to the SnippetGenerator action provider.
  */
 export const getSnippetGenerator = (() => {
+  let instance: SnippetGenerator | undefined;
+
   return () => {
     instance = instance === undefined ? new SnippetGenerator() : instance;
     return instance;

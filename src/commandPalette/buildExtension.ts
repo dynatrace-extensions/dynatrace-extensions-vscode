@@ -31,7 +31,7 @@ import * as vscode from "vscode";
 import { Dynatrace } from "../dynatrace-api/dynatrace";
 import { DynatraceAPIError } from "../dynatrace-api/errors";
 import { getActivationContext } from "../extension";
-import { FastModeStatus } from "../statusBar/fastMode";
+import { showFastModeStatusBar } from "../statusBar/fastMode";
 import { getDynatraceClient } from "../treeViews/tenantsTreeView";
 import { loopSafeWait } from "../utils/code";
 import {
@@ -51,11 +51,6 @@ import { runCommand } from "../utils/subprocesses";
 
 const logTrace = ["commandPalette", "buildExtension"];
 
-type FastModeOptions = {
-  status: FastModeStatus;
-  document: vscode.TextDocument;
-};
-
 export const buildExtensionWorkflow = async () => {
   if (
     (await checkWorkspaceOpen()) &&
@@ -67,10 +62,7 @@ export const buildExtensionWorkflow = async () => {
   }
 };
 
-export const fastModeBuilWorkflow = async (
-  doc: vscode.TextDocument,
-  fastModeStatus: FastModeStatus,
-) => {
+export const fastModeBuilWorkflow = async (doc: vscode.TextDocument) => {
   if (
     isFastModeEnabled() &&
     doc.fileName.endsWith("extension.yaml") &&
@@ -78,7 +70,7 @@ export const fastModeBuilWorkflow = async (
     (await checkTenantConnected())
   ) {
     const dt = await getDynatraceClient();
-    await buildExtension(dt, { status: fastModeStatus, document: doc });
+    await buildExtension(dt, doc);
   }
 };
 
@@ -294,8 +286,6 @@ async function validateExtension(
  * @param extensionName name of the extension
  * @param extensionVersion version of the extension
  * @param dt Dynatrace API Client
- * @param status status bar to be updated with build status
- * @param oc JSON output channel for communicating errors
  * @param cancelToken command cancellation token
  */
 async function uploadAndActivate(
@@ -305,11 +295,10 @@ async function uploadAndActivate(
   extensionName: string,
   extensionVersion: string,
   dt: Dynatrace,
-  status: FastModeStatus,
-  oc: vscode.OutputChannel,
   cancelToken: vscode.CancellationToken,
 ) {
   const fnLogTrace = [...logTrace, "uploadAndActivate"];
+  const oc = logger.getFastModeChannel();
   try {
     // Check upload possible
     const existingVersions = await dt.extensionsV2.listVersions(extensionName).catch(() => {
@@ -372,11 +361,11 @@ async function uploadAndActivate(
 
     // Copy .zip archive into dist dir
     copyFileSync(path.resolve(workspaceStorage, zipFileName), path.resolve(distDir, zipFileName));
-    status.updateStatusBar(true, extensionVersion, true);
+    showFastModeStatusBar(extensionVersion, true);
     oc.clear();
   } catch (err: unknown) {
     // Mark the status bar as build failing
-    status.updateStatusBar(true, extensionVersion, false);
+    showFastModeStatusBar(extensionVersion, false);
     // Provide details in output channel
     oc.replace(
       JSON.stringify(
@@ -402,10 +391,10 @@ async function uploadAndActivate(
  * If successful, the command is linked to uploading the package to Dynatrace.
  * @param dt Dynatrace API Client if cluster-side validation is to be done
  */
-export async function buildExtension(dt?: Dynatrace, fastMode?: FastModeOptions) {
+export async function buildExtension(dt?: Dynatrace, fastModeDoc?: vscode.TextDocument) {
   const fnLogTrace = [...logTrace, "buildExtension"];
   logger.info("Executing Build Extension command", ...fnLogTrace);
-  const oc = fastMode ? logger.getFastModeChannel() : logger.getGenericChannel();
+  const oc = fastModeDoc ? logger.getFastModeChannel() : logger.getGenericChannel();
   // Basic details we already know exist
   const workspaceStorage = getActivationContext().storageUri?.fsPath;
   if (!workspaceStorage) {
@@ -426,7 +415,7 @@ export async function buildExtension(dt?: Dynatrace, fastMode?: FastModeOptions)
     return;
   }
   const distDir = path.resolve(workspaceRoot, "dist");
-  const extensionFile = fastMode ? fastMode.document.fileName : getExtensionFilePath();
+  const extensionFile = fastModeDoc ? fastModeDoc.fileName : getExtensionFilePath();
   if (!extensionFile) {
     logger.error("Missing extension file. Command aborted.", ...fnLogTrace);
     return;
@@ -485,7 +474,7 @@ export async function buildExtension(dt?: Dynatrace, fastMode?: FastModeOptions)
           extension,
           extensionName,
           currentVersion,
-          fastMode ? true : false,
+          fastModeDoc ? true : false,
           dt,
         );
       } catch (err: unknown) {
@@ -552,7 +541,7 @@ export async function buildExtension(dt?: Dynatrace, fastMode?: FastModeOptions)
       }
 
       // Validation & upload workflow
-      if (fastMode) {
+      if (fastModeDoc) {
         progress.report({ message: "Uploading & activating extension" });
         if (!dt) {
           logger.warn(
@@ -568,8 +557,6 @@ export async function buildExtension(dt?: Dynatrace, fastMode?: FastModeOptions)
           extensionName,
           updatedVersion,
           dt,
-          fastMode.status,
-          oc,
           cancelToken,
         );
         return false;

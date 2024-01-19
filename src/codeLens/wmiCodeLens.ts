@@ -26,6 +26,7 @@ import { WmiQueryResult, runWMIQuery } from "./utils/wmiUtils";
  */
 export const getWmiCodeLensProvider = (() => {
   let instance: WmiCodeLensProvider | undefined;
+
   return () => {
     instance = instance === undefined ? new WmiCodeLensProvider() : instance;
     return instance;

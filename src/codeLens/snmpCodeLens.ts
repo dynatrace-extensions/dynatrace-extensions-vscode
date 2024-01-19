@@ -21,12 +21,12 @@ import { getLoadedMibFiles, loadUserMibFiles } from "../utils/caching";
 import { getSnmpDirPath } from "../utils/fileSystem";
 import { notify } from "../utils/logging";
 
-let instance: SnmpCodeLensProvider | undefined;
-
 /**
  * Provides singleton access to the SnmpCodeLensProvider
  */
 export const getSnmpCodeLensProvider = (() => {
+  let instance: SnmpCodeLensProvider | undefined;
+
   return () => {
     instance = instance === undefined ? new SnmpCodeLensProvider() : instance;
     return instance;
