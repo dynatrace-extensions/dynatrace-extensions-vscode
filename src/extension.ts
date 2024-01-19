@@ -34,7 +34,7 @@ import { getSnmpCodeLensProvider } from "./codeLens/snmpCodeLens";
 import { registerSelectorCommands } from "./codeLens/utils/selectorUtils";
 import { getWmiCodeLensProvider } from "./codeLens/wmiCodeLens";
 import { activateExtensionWorkflow } from "./commandPalette/activateExtension";
-import { buildExtensionWorkflow, fastModeBuilWorkflow } from "./commandPalette/buildExtension";
+import { buildExtensionWorkflow, fastModeBuildWorkflow } from "./commandPalette/buildExtension";
 import { convertJmxExtensionWorkflow } from "./commandPalette/convertJMXExtension";
 import { convertPythonExtensionWorkflow } from "./commandPalette/convertPythonExtension";
 import { createAlertWorkflow } from "./commandPalette/createAlert";
@@ -122,7 +122,7 @@ export async function activate(context: vscode.ExtensionContext) {
     getConnectionStatusBar(),
     vscode.languages.registerHoverProvider(MANIFEST_DOC_SELECTOR, getSnmpHoverProvider()),
     vscode.workspace.onDidSaveTextDocument(async (doc: vscode.TextDocument) => {
-      await fastModeBuilWorkflow(doc);
+      await fastModeBuildWorkflow(doc);
     }),
   );
 

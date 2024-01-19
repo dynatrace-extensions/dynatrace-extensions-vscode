@@ -51,6 +51,9 @@ import { runCommand } from "../utils/subprocesses";
 
 const logTrace = ["commandPalette", "buildExtension"];
 
+/**
+ * A workflow that builds an extension 2.0 package from the user's workspace.
+ */
 export const buildExtensionWorkflow = async () => {
   if (
     (await checkWorkspaceOpen()) &&
@@ -62,7 +65,11 @@ export const buildExtensionWorkflow = async () => {
   }
 };
 
-export const fastModeBuilWorkflow = async (doc: vscode.TextDocument) => {
+/**
+ * A workflow that should be used with a document change event.
+ * It triggers a faster build workflow that automatically uploads the package to Dynatrace.
+ */
+export const fastModeBuildWorkflow = async (doc: vscode.TextDocument) => {
   if (
     isFastModeEnabled() &&
     doc.fileName.endsWith("extension.yaml") &&
@@ -78,6 +85,217 @@ const isFastModeEnabled = () =>
   vscode.workspace
     .getConfiguration("dynatraceExtensions", null)
     .get<boolean>("fastDevelopmentMode");
+
+/**
+ * Builds an Extension 2.0 and its artefacts into a .zip package ready to upload to Dynatrace.
+ * If successful, the command is linked to uploading the package to Dynatrace.
+ * @param dt Dynatrace API Client if cluster-side validation is to be done
+ */
+async function buildExtension(dt?: Dynatrace, fastModeDoc?: vscode.TextDocument) {
+  const fnLogTrace = [...logTrace, "buildExtension"];
+  logger.info("Executing Build Extension command", ...fnLogTrace);
+  const oc = fastModeDoc ? logger.getFastModeChannel() : logger.getGenericChannel();
+  // Basic details we already know exist
+  const workspaceStorage = getActivationContext().storageUri?.fsPath;
+  if (!workspaceStorage) {
+    logger.error("Missing workspace storage path. Command aborted.", ...fnLogTrace);
+    return;
+  }
+  const devCertKeySetting = vscode.workspace
+    .getConfiguration("dynatraceExtensions", null)
+    .get<string>("developerCertkeyLocation");
+  if (!devCertKeySetting) {
+    logger.error("Missing developer certificate key setting. Command aborted.", ...fnLogTrace);
+    return;
+  }
+  const devCertKey = resolveRealPath(devCertKeySetting);
+  const workspaceRoot = vscode.workspace.workspaceFolders?.[0].uri.fsPath;
+  if (!workspaceRoot) {
+    logger.error("Missing workspace root path. Command aborted.", ...fnLogTrace);
+    return;
+  }
+  const distDir = path.resolve(workspaceRoot, "dist");
+  const extensionFile = fastModeDoc ? fastModeDoc.fileName : getExtensionFilePath();
+  if (!extensionFile) {
+    logger.error("Missing extension file. Command aborted.", ...fnLogTrace);
+    return;
+  }
+  const extensionDir = path.resolve(extensionFile, "..");
+  // Current name and version
+  const extension = readFileSync(extensionFile).toString();
+  const nameMatch = /^name: "?([:a-zA-Z0-9.\-_]+)"?/gm.exec(extension);
+  if (!nameMatch?.[1]) {
+    logger.error("Extension name missing from manifest. Command aborted.", ...fnLogTrace);
+    return;
+  }
+  const extensionName = nameMatch[1];
+  const versionMatch = /^version: "?([0-9.]+)"?/gm.exec(extension);
+  if (!versionMatch?.[1]) {
+    logger.error("Extension version missing from manifest. Command aborted.", ...fnLogTrace);
+    return;
+  }
+  const currentVersion = normalizeExtensionVersion(versionMatch[1]);
+
+  const followUpFlow = await vscode.window.withProgress(
+    {
+      location: vscode.ProgressLocation.Notification,
+      title: "Building extension",
+      cancellable: true,
+    },
+    async (progress, cancelToken) => {
+      cancelToken.onCancellationRequested(async () => {
+        logger.notify("WARN", "Operation cancelled by user.");
+      });
+
+      // Handle unsaved changes
+      const extensionDocument = vscode.workspace.textDocuments.find(doc =>
+        doc.fileName.endsWith("extension.yaml"),
+      );
+      if (extensionDocument?.isDirty) {
+        const saved = await extensionDocument.save();
+        if (saved) {
+          logger.notify("INFO", "Document saved automatically.");
+        } else {
+          logger.notify("ERROR", "Failed to save extension manifest. Build command cancelled.");
+          return false;
+        }
+      }
+      if (cancelToken.isCancellationRequested) {
+        return false;
+      }
+
+      // Pre-build workflow
+      let updatedVersion = "";
+      progress.report({ message: "Checking prerequisites" });
+      try {
+        updatedVersion = await preBuildTasks(
+          distDir,
+          extensionFile,
+          extension,
+          extensionName,
+          currentVersion,
+          fastModeDoc ? true : false,
+          dt,
+        );
+      } catch (err: unknown) {
+        logger.notify("ERROR", `Error during pre-build phase: ${(err as Error).message}`);
+        return false;
+      }
+
+      // eslint-disable-next-line @typescript-eslint/no-unnecessary-condition
+      if (cancelToken.isCancellationRequested) {
+        return false;
+      }
+
+      // Package assembly workflow
+      progress.report({ message: "Building extension package" });
+      const zipFilename = `${extensionName.replace(":", "_")}-${updatedVersion}.zip`;
+      try {
+        if (/^python:$/gm.test(extension)) {
+          logger.debug("Building package for a python extension", ...fnLogTrace);
+          const envOptions = await getPythonVenvOpts();
+          const sdkAvailable = await checkDtSdkPresent(oc, cancelToken, envOptions);
+          const extraPlatforms = vscode.workspace
+            .getConfiguration("dynatraceExtensions", null)
+            .get<string[]>("pythonExtraPlatforms");
+
+          if (sdkAvailable) {
+            // Wait for the packaging to finish
+            await assemblePython(
+              workspaceStorage,
+              path.resolve(extensionDir, ".."),
+              extraPlatforms,
+              devCertKey,
+              envOptions,
+              oc,
+              cancelToken,
+            );
+            // Then, remove the lib folder
+            const libDir = path.join(extensionDir, "lib");
+            if (existsSync(libDir)) {
+              try {
+                rmSync(libDir, { recursive: true, force: true });
+              } catch (e) {
+                logger.error(
+                  `Couldn't clean up 'lib' directory. ${(e as Error).message}`,
+                  ...fnLogTrace,
+                );
+              }
+            }
+          } else {
+            logger.notify("ERROR", "Cannot build Python extension - dt-sdk package not available");
+            return false;
+          }
+        } else {
+          logger.debug("Building package for a non-python extension", ...fnLogTrace);
+          assembleStandard(workspaceStorage, extensionDir, zipFilename, devCertKey);
+        }
+      } catch (err: unknown) {
+        logger.notify("ERROR", `Error during archiving & signing: ${(err as Error).message}`);
+        return false;
+      }
+
+      // eslint-disable-next-line @typescript-eslint/no-unnecessary-condition
+      if (cancelToken.isCancellationRequested) {
+        return false;
+      }
+
+      // Validation & upload workflow
+      if (fastModeDoc) {
+        progress.report({ message: "Uploading & activating extension" });
+        if (!dt) {
+          logger.warn(
+            "No Dynatrace client available. Won't continue fast mode flow",
+            ...fnLogTrace,
+          );
+          return false;
+        }
+        await uploadAndActivate(
+          workspaceStorage,
+          zipFilename,
+          distDir,
+          extensionName,
+          updatedVersion,
+          dt,
+          cancelToken,
+        );
+        return false;
+      } else {
+        progress.report({ message: "Validating extension" });
+        // eslint-disable-next-line @typescript-eslint/no-unnecessary-condition
+        if (cancelToken.isCancellationRequested) {
+          return false;
+        }
+        const valid = await validateExtension(workspaceStorage, zipFilename, distDir, oc, dt);
+        return valid;
+      }
+    },
+  );
+
+  // Perform any clean-up as needed
+  const maxFiles = vscode.workspace
+    .getConfiguration("dynatraceExtensions", null)
+    .get<number>("maxBuildFiles");
+  if (maxFiles && maxFiles > 0) {
+    removeOldestFiles(distDir, maxFiles);
+  }
+
+  // Follow-up is carried out separately to keep notification messages cleaner
+  if (followUpFlow) {
+    logger.debug("Follow-up flow available. Prompting for upload.");
+    await vscode.window
+      .showInformationMessage(
+        "Extension built successfully. Would you like to upload it to Dynatrace?",
+        "Yes",
+        "No",
+      )
+      .then(async choice => {
+        if (choice === "Yes") {
+          await vscode.commands.executeCommand("dynatrace-extensions.uploadExtension");
+        }
+      });
+  }
+}
 
 /**
  * Carries out general tasks that should be executed before the build workflow.
@@ -383,216 +601,5 @@ async function uploadAndActivate(
     if (existsSync(path.resolve(workspaceStorage, zipFileName))) {
       rmSync(path.resolve(workspaceStorage, zipFileName));
     }
-  }
-}
-
-/**
- * Builds an Extension 2.0 and its artefacts into a .zip package ready to upload to Dynatrace.
- * If successful, the command is linked to uploading the package to Dynatrace.
- * @param dt Dynatrace API Client if cluster-side validation is to be done
- */
-export async function buildExtension(dt?: Dynatrace, fastModeDoc?: vscode.TextDocument) {
-  const fnLogTrace = [...logTrace, "buildExtension"];
-  logger.info("Executing Build Extension command", ...fnLogTrace);
-  const oc = fastModeDoc ? logger.getFastModeChannel() : logger.getGenericChannel();
-  // Basic details we already know exist
-  const workspaceStorage = getActivationContext().storageUri?.fsPath;
-  if (!workspaceStorage) {
-    logger.error("Missing workspace storage path. Command aborted.", ...fnLogTrace);
-    return;
-  }
-  const devCertKeySetting = vscode.workspace
-    .getConfiguration("dynatraceExtensions", null)
-    .get<string>("developerCertkeyLocation");
-  if (!devCertKeySetting) {
-    logger.error("Missing developer certificate key setting. Command aborted.", ...fnLogTrace);
-    return;
-  }
-  const devCertKey = resolveRealPath(devCertKeySetting);
-  const workspaceRoot = vscode.workspace.workspaceFolders?.[0].uri.fsPath;
-  if (!workspaceRoot) {
-    logger.error("Missing workspace root path. Command aborted.", ...fnLogTrace);
-    return;
-  }
-  const distDir = path.resolve(workspaceRoot, "dist");
-  const extensionFile = fastModeDoc ? fastModeDoc.fileName : getExtensionFilePath();
-  if (!extensionFile) {
-    logger.error("Missing extension file. Command aborted.", ...fnLogTrace);
-    return;
-  }
-  const extensionDir = path.resolve(extensionFile, "..");
-  // Current name and version
-  const extension = readFileSync(extensionFile).toString();
-  const nameMatch = /^name: "?([:a-zA-Z0-9.\-_]+)"?/gm.exec(extension);
-  if (!nameMatch?.[1]) {
-    logger.error("Extension name missing from manifest. Command aborted.", ...fnLogTrace);
-    return;
-  }
-  const extensionName = nameMatch[1];
-  const versionMatch = /^version: "?([0-9.]+)"?/gm.exec(extension);
-  if (!versionMatch?.[1]) {
-    logger.error("Extension version missing from manifest. Command aborted.", ...fnLogTrace);
-    return;
-  }
-  const currentVersion = normalizeExtensionVersion(versionMatch[1]);
-
-  const followUpFlow = await vscode.window.withProgress(
-    {
-      location: vscode.ProgressLocation.Notification,
-      title: "Building extension",
-      cancellable: true,
-    },
-    async (progress, cancelToken) => {
-      cancelToken.onCancellationRequested(async () => {
-        logger.notify("WARN", "Operation cancelled by user.");
-      });
-
-      // Handle unsaved changes
-      const extensionDocument = vscode.workspace.textDocuments.find(doc =>
-        doc.fileName.endsWith("extension.yaml"),
-      );
-      if (extensionDocument?.isDirty) {
-        const saved = await extensionDocument.save();
-        if (saved) {
-          logger.notify("INFO", "Document saved automatically.");
-        } else {
-          logger.notify("ERROR", "Failed to save extension manifest. Build command cancelled.");
-          return false;
-        }
-      }
-      if (cancelToken.isCancellationRequested) {
-        return false;
-      }
-
-      // Pre-build workflow
-      let updatedVersion = "";
-      progress.report({ message: "Checking prerequisites" });
-      try {
-        updatedVersion = await preBuildTasks(
-          distDir,
-          extensionFile,
-          extension,
-          extensionName,
-          currentVersion,
-          fastModeDoc ? true : false,
-          dt,
-        );
-      } catch (err: unknown) {
-        logger.notify("ERROR", `Error during pre-build phase: ${(err as Error).message}`);
-        return false;
-      }
-
-      // eslint-disable-next-line @typescript-eslint/no-unnecessary-condition
-      if (cancelToken.isCancellationRequested) {
-        return false;
-      }
-
-      // Package assembly workflow
-      progress.report({ message: "Building extension package" });
-      const zipFilename = `${extensionName.replace(":", "_")}-${updatedVersion}.zip`;
-      try {
-        if (/^python:$/gm.test(extension)) {
-          logger.debug("Building package for a python extension", ...fnLogTrace);
-          const envOptions = await getPythonVenvOpts();
-          const sdkAvailable = await checkDtSdkPresent(oc, cancelToken, envOptions);
-          const extraPlatforms = vscode.workspace
-            .getConfiguration("dynatraceExtensions", null)
-            .get<string[]>("pythonExtraPlatforms");
-
-          if (sdkAvailable) {
-            // Wait for the packaging to finish
-            await assemblePython(
-              workspaceStorage,
-              path.resolve(extensionDir, ".."),
-              extraPlatforms,
-              devCertKey,
-              envOptions,
-              oc,
-              cancelToken,
-            );
-            // Then, remove the lib folder
-            const libDir = path.join(extensionDir, "lib");
-            if (existsSync(libDir)) {
-              try {
-                rmSync(libDir, { recursive: true, force: true });
-              } catch (e) {
-                logger.error(
-                  `Couldn't clean up 'lib' directory. ${(e as Error).message}`,
-                  ...fnLogTrace,
-                );
-              }
-            }
-          } else {
-            logger.notify("ERROR", "Cannot build Python extension - dt-sdk package not available");
-            return false;
-          }
-        } else {
-          logger.debug("Building package for a non-python extension", ...fnLogTrace);
-          assembleStandard(workspaceStorage, extensionDir, zipFilename, devCertKey);
-        }
-      } catch (err: unknown) {
-        logger.notify("ERROR", `Error during archiving & signing: ${(err as Error).message}`);
-        return false;
-      }
-
-      // eslint-disable-next-line @typescript-eslint/no-unnecessary-condition
-      if (cancelToken.isCancellationRequested) {
-        return false;
-      }
-
-      // Validation & upload workflow
-      if (fastModeDoc) {
-        progress.report({ message: "Uploading & activating extension" });
-        if (!dt) {
-          logger.warn(
-            "No Dynatrace client available. Won't continue fast mode flow",
-            ...fnLogTrace,
-          );
-          return false;
-        }
-        await uploadAndActivate(
-          workspaceStorage,
-          zipFilename,
-          distDir,
-          extensionName,
-          updatedVersion,
-          dt,
-          cancelToken,
-        );
-        return false;
-      } else {
-        progress.report({ message: "Validating extension" });
-        // eslint-disable-next-line @typescript-eslint/no-unnecessary-condition
-        if (cancelToken.isCancellationRequested) {
-          return false;
-        }
-        const valid = await validateExtension(workspaceStorage, zipFilename, distDir, oc, dt);
-        return valid;
-      }
-    },
-  );
-
-  // Perform any clean-up as needed
-  const maxFiles = vscode.workspace
-    .getConfiguration("dynatraceExtensions", null)
-    .get<number>("maxBuildFiles");
-  if (maxFiles && maxFiles > 0) {
-    removeOldestFiles(distDir, maxFiles);
-  }
-
-  // Follow-up is carried out separately to keep notification messages cleaner
-  if (followUpFlow) {
-    logger.debug("Follow-up flow available. Prompting for upload.");
-    await vscode.window
-      .showInformationMessage(
-        "Extension built successfully. Would you like to upload it to Dynatrace?",
-        "Yes",
-        "No",
-      )
-      .then(async choice => {
-        if (choice === "Yes") {
-          await vscode.commands.executeCommand("dynatrace-extensions.uploadExtension");
-        }
-      });
   }
 }
