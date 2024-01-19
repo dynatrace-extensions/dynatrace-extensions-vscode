@@ -39,7 +39,6 @@ jest.mock("../../../../src/utils/logging");
 describe("Simulator Manager", () => {
   let simulatorManager: SimulatorManager;
   const mockContext = new MockExtensionContext();
-  const panelManager = webviewPanel.getWebviewPanelManager(new MockUri("mock.extension.uri"));
 
   beforeAll(() => {
     mock({ mock: {} });
@@ -333,8 +332,8 @@ describe("Simulator Manager", () => {
     beforeEach(() => {
       jest.spyOn(fileSystemUtils, "getSimulatorTargets").mockReturnValue([]);
       jest.spyOn(fileSystemUtils, "getSimulatorSummaries").mockReturnValue([]);
-      renderSpy = jest.spyOn(panelManager, "render").mockImplementation(() => {});
-      postMessageSpy = jest.spyOn(panelManager, "postMessage").mockImplementation(() => {});
+      renderSpy = jest.spyOn(webviewPanel, "renderPanel").mockImplementation(() => {});
+      postMessageSpy = jest.spyOn(webviewPanel, "postMessageToPanel").mockImplementation(() => {});
     });
 
     it("first updates the panel with CHECKING status (render)", async () => {

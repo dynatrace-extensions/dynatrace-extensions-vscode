@@ -183,6 +183,60 @@ export const registerTenantsViewCommands = () => {
 };
 
 /**
+ * Create a temporary file and serve it to the user as an interface for collecting changes.
+ * The file is removed once the user closes it.
+ * @param headerContent informational content (comments) to inform the user about usage
+ * @param defaultDetails existing details as stringified JSON
+ * @param rejectNoChanges if true, the promise is rejected if the file content is unchanged
+ * @returns a Promise that will either resolve with the stringified content of the configuration
+ * or will reject with the message "No changes.".
+ */
+export async function getConfigurationDetailsViaFile(
+  headerContent: string,
+  defaultDetails: string,
+  rejectNoChanges: boolean = true,
+): Promise<string> {
+  // Create a file to act as an interface for making changes
+  const context = getActivationContext();
+  const tempConfigFile = path.resolve(context.globalStorageUri.fsPath, "tempConfigFile.jsonc");
+  const configFileContent = headerContent + "\n" + defaultDetails;
+  writeFileSync(tempConfigFile, configFileContent);
+
+  // Open the file for the user to edit
+  await vscode.workspace.openTextDocument(vscode.Uri.file(tempConfigFile)).then(async doc => {
+    await vscode.window.showTextDocument(doc);
+  });
+
+  // Create a promise based on the file
+  return new Promise<string>((resolve, reject) => {
+    const disposable = vscode.window.tabGroups.onDidChangeTabs(tabs => {
+      // When the file closes, extract the content
+      if (
+        tabs.closed.findIndex(
+          t => (t.input as vscode.TextDocument).uri.fsPath === tempConfigFile,
+        ) >= 0
+      ) {
+        disposable.dispose();
+        // Grab all lines that don't start with '//'
+        const newDetails = readFileSync(tempConfigFile)
+          .toString()
+          .split("\n")
+          .filter(line => !line.startsWith("//") && line !== "")
+          .join("\n");
+        // Remove the file since no longer needed
+        rmSync(tempConfigFile);
+        // Resolve or reject the promise
+        if (newDetails === defaultDetails && rejectNoChanges) {
+          reject("No changes.");
+        } else {
+          resolve(newDetails);
+        }
+      }
+    });
+  });
+}
+
+/**
  * A workflow for registering a new Dynatrace Environment within the VSCode extension.
  * URL, Token, and an optional label are collected. The user can also set this as the
  * currently used environment.
@@ -377,60 +431,6 @@ async function changeConnection() {
   if (currentEnv) {
     showConnectedStatusBar(currentEnv).catch(() => {});
   }
-}
-
-/**
- * Create a temporary file and serve it to the user as an interface for collecting changes.
- * The file is removed once the user closes it.
- * @param headerContent informational content (comments) to inform the user about usage
- * @param defaultDetails existing details as stringified JSON
- * @param rejectNoChanges if true, the promise is rejected if the file content is unchanged
- * @returns a Promise that will either resolve with the stringified content of the configuration
- * or will reject with the message "No changes.".
- */
-async function getConfigurationDetailsViaFile(
-  headerContent: string,
-  defaultDetails: string,
-  rejectNoChanges: boolean = true,
-): Promise<string> {
-  // Create a file to act as an interface for making changes
-  const context = getActivationContext();
-  const tempConfigFile = path.resolve(context.globalStorageUri.fsPath, "tempConfigFile.jsonc");
-  const configFileContent = headerContent + "\n" + defaultDetails;
-  writeFileSync(tempConfigFile, configFileContent);
-
-  // Open the file for the user to edit
-  await vscode.workspace.openTextDocument(vscode.Uri.file(tempConfigFile)).then(async doc => {
-    await vscode.window.showTextDocument(doc);
-  });
-
-  // Create a promise based on the file
-  return new Promise<string>((resolve, reject) => {
-    const disposable = vscode.window.tabGroups.onDidChangeTabs(tabs => {
-      // When the file closes, extract the content
-      if (
-        tabs.closed.findIndex(
-          t => (t.input as vscode.TextDocument).uri.fsPath === tempConfigFile,
-        ) >= 0
-      ) {
-        disposable.dispose();
-        // Grab all lines that don't start with '//'
-        const newDetails = readFileSync(tempConfigFile)
-          .toString()
-          .split("\n")
-          .filter(line => !line.startsWith("//") && line !== "")
-          .join("\n");
-        // Remove the file since no longer needed
-        rmSync(tempConfigFile);
-        // Resolve or reject the promise
-        if (newDetails === defaultDetails && rejectNoChanges) {
-          reject("No changes.");
-        } else {
-          resolve(newDetails);
-        }
-      }
-    });
-  });
 }
 
 /**
