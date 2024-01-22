@@ -144,7 +144,7 @@ const setContextProperty = (key: string, value: string | number | boolean) => {
   const fnLogTrace = ["extension", "setContextProperty"];
   const contextPrefix = "dynatrace-extensions";
   vscode.commands.executeCommand("setContext", `${contextPrefix}.${key}`, value).then(
-    () => logger.debug(`Set context property ${key} to ${String(value)}`),
+    () => logger.debug(`Set context property ${key} to ${String(value)}`, ...fnLogTrace),
     () => logger.warn("Could not set context for number of registered workspaces.", ...fnLogTrace),
   );
 };
