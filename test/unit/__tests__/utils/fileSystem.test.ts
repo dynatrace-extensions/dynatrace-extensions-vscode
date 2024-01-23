@@ -42,7 +42,9 @@ describe("Filesystem Utils", () => {
       "This is a very important alert",
       "This 😀 is a very important alert 😀",
     ])('should create a valid filename from "%s"', (title: string) => {
-      expect(createValidFileName(title)).toMatch(expectedRegex);
+      const actual = createValidFileName(title);
+
+      expect(actual).toMatch(expectedRegex);
     });
   });
 

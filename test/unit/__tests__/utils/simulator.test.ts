@@ -156,7 +156,6 @@ describe("Simulator Utils", () => {
   });
 
   describe("loadDefaultSimulationConfig", () => {
-    let getConfigurationSpy: jest.SpyInstance;
     const remoteTarget = {
       name: "mockTarget",
       address: "mockHost",
@@ -167,7 +166,6 @@ describe("Simulator Utils", () => {
     };
 
     beforeAll(() => {
-      getConfigurationSpy = jest.spyOn(vscode.workspace, "getConfiguration");
       mock({ mock: { globalStorage: { "targets.json": "[]" } } });
     });
 
@@ -178,7 +176,7 @@ describe("Simulator Utils", () => {
     });
 
     afterEach(() => {
-      jest.restoreAllMocks();
+      jest.resetAllMocks();
     });
 
     afterAll(() => {
@@ -186,40 +184,27 @@ describe("Simulator Utils", () => {
     });
 
     it("should return workspace settings if defined", () => {
-      const expected = {
-        defaultLocation: "mockLocation",
-        defaultEecType: "mockEecType",
-        defaultMetricsIngestion: "mockMetricsIngestion",
-      };
-      const mockWorkspaceConfig = new MockWorkspaceConfiguration(expected);
-      getConfigurationSpy.mockReturnValue(mockWorkspaceConfig);
+      setupWorkspaceWithConfiguration("mockLocation", "mockEecType", "mockMetricsIngest");
 
       const actual = loadDefaultSimulationConfig();
 
       expect(actual).toBeDefined();
-      expect(actual.eecType).toBe(expected.defaultEecType);
-      expect(actual.location).toBe(expected.defaultLocation);
-      expect(actual.sendMetrics).toBe(expected.defaultMetricsIngestion);
+      expect(actual.eecType).toBe("mockEecType");
+      expect(actual.location).toBe("mockLocation");
+      expect(actual.sendMetrics).toBe("mockMetricsIngest");
       expect(actual.target).toBeUndefined();
     });
 
     it("should add target details for remote location", () => {
-      const config = {
-        defaultLocation: "REMOTE",
-        defaultEecType: "ACTIVEGATE",
-        remoteTargetName: "mockTarget",
-        defaultMetricsIngestion: false,
-      };
-      const mockWorkspaceConfig = new MockWorkspaceConfiguration(config);
-      getConfigurationSpy.mockReturnValue(mockWorkspaceConfig);
+      setupWorkspaceWithConfiguration("REMOTE", "ACTIVEGATE", false, "mockTarget");
       mock({ mock: { globalStorage: { "targets.json": JSON.stringify([remoteTarget]) } } });
 
       const actual = loadDefaultSimulationConfig();
 
       expect(actual).toBeDefined();
-      expect(actual.eecType).toBe(config.defaultEecType);
-      expect(actual.location).toBe(config.defaultLocation);
-      expect(actual.sendMetrics).toBe(config.defaultMetricsIngestion);
+      expect(actual.eecType).toBe("ACTIVEGATE");
+      expect(actual.location).toBe("REMOTE");
+      expect(actual.sendMetrics).toBe(false);
       expect(actual.target).toBeDefined();
       expect(actual.target).toEqual(remoteTarget);
     });
@@ -227,43 +212,32 @@ describe("Simulator Utils", () => {
     test.each([
       {
         condition: "defaultLocation is undefined",
-        config: { defaultLocation: undefined, defaultEecType: {}, defaultMetricsIngestion: {} },
+        setup: () => setupWorkspaceWithConfiguration(undefined, "mock", "mock"),
       },
       {
         condition: "defaultEecType is undefined",
-        config: { defaultLocation: {}, defaultEecType: undefined, defaultMetricsIngestion: {} },
+        setup: () => setupWorkspaceWithConfiguration("mock", undefined, "mock"),
       },
       {
         condition: "defaultMetricsIngestion is undefined",
-        config: { defaultLocation: {}, defaultEecType: {}, defaultMetricsIngestion: undefined },
+        setup: () => setupWorkspaceWithConfiguration("mock", "mock", undefined),
       },
       {
         condition: "remote target eec doesn't match settings value",
-        config: {
-          defaultLocation: "REMOTE",
-          defaultEecType: "ONEAGENT",
-          remoteTargetName: "mockTarget",
-          defaultMetricsIngestion: false,
-        },
+        setup: () => setupWorkspaceWithConfiguration("REMOTE", "ONEAGENT", false, "mockTarget"),
       },
       {
         condition: "remote target not found",
-        config: {
-          defaultLocation: "REMOTE",
-          defaultEecType: "ACTIVEGATE",
-          remoteTargetName: "mockTarget2",
-          defaultMetricsIngestion: false,
-        },
+        setup: () => setupWorkspaceWithConfiguration("REMOTE", "ACTIVEGATE", false, "mockTarget2"),
       },
-    ])("should return fallback value if $condition", ({ config }) => {
-      const mockWorkspaceConfig = new MockWorkspaceConfiguration(config);
+    ])("should return fallback value if $condition", ({ setup }) => {
+      setup();
+      mock({ mock: { globalStorage: { "targets.json": JSON.stringify([remoteTarget]) } } });
       const expected: SimulationConfig = {
         eecType: "ONEAGENT",
         location: "LOCAL",
         sendMetrics: false,
       };
-      getConfigurationSpy.mockReturnValue(mockWorkspaceConfig);
-      mock({ mock: { globalStorage: { "targets.json": JSON.stringify([remoteTarget]) } } });
 
       const actual = loadDefaultSimulationConfig();
 
@@ -272,3 +246,19 @@ describe("Simulator Utils", () => {
     });
   });
 });
+
+const setupWorkspaceWithConfiguration = (
+  defaultLocation?: unknown,
+  defaultEecType?: unknown,
+  defaultMetricsIngestion?: unknown,
+  remoteTargetName?: unknown,
+) => {
+  jest.spyOn(vscode.workspace, "getConfiguration").mockReturnValue(
+    new MockWorkspaceConfiguration({
+      defaultLocation,
+      defaultEecType,
+      defaultMetricsIngestion,
+      remoteTargetName,
+    }),
+  );
+};

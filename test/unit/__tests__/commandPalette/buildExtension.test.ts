@@ -18,21 +18,12 @@ import {
 jest.mock("../../../../src/utils/logging");
 
 describe("Build Extension Workflow", () => {
-  let checkWorkspaceOpenSpy: jest.SpyInstance;
-  let isExtensionsWorkspaceSpy: jest.SpyInstance;
-  let checkCertificateExistsSpy: jest.SpyInstance;
-  let checkNoProblemsInManifestSpy: jest.SpyInstance;
   let getExtensionFilePathSpy: jest.SpyInstance;
-
   afterEach(() => {
     jest.resetAllMocks();
   });
 
   beforeAll(() => {
-    checkWorkspaceOpenSpy = jest.spyOn(conditionCheckers, "checkWorkspaceOpen");
-    isExtensionsWorkspaceSpy = jest.spyOn(conditionCheckers, "isExtensionsWorkspace");
-    checkCertificateExistsSpy = jest.spyOn(conditionCheckers, "checkCertificateExists");
-    checkNoProblemsInManifestSpy = jest.spyOn(conditionCheckers, "checkNoProblemsInManifest");
     getExtensionFilePathSpy = jest.spyOn(fileSystemUtils, "getExtensionFilePath");
   });
 
@@ -40,52 +31,30 @@ describe("Build Extension Workflow", () => {
     test.each([
       {
         condition: "workspace not open",
-        workSpaceOpen: false,
-        isExtensionsWorkspace: true,
-        certificateExists: true,
-        noProblemsInManifest: true,
+        setup: () => setupPreconditions(false),
       },
       {
         condition: "not an extension workspace",
-        workSpaceOpen: true,
-        isExtensionsWorkspace: false,
-        certificateExists: true,
-        noProblemsInManifest: true,
+        setup: () => setupPreconditions(true, false),
       },
       {
         condition: "dev certificate doesn't exist",
-        workSpaceOpen: true,
-        isExtensionsWorkspace: true,
-        certificateExists: false,
-        noProblemsInManifest: true,
+        setup: () => setupPreconditions(true, true, false),
       },
       {
         condition: "manfiest has problems",
-        workSpaceOpen: true,
-        isExtensionsWorkspace: true,
-        certificateExists: true,
-        noProblemsInManifest: false,
+        setup: () => setupPreconditions(true, true, true, false),
       },
-    ])(
-      "should not run if $condition",
-      async ({ workSpaceOpen, isExtensionsWorkspace, certificateExists, noProblemsInManifest }) => {
-        checkWorkspaceOpenSpy.mockReturnValue(Promise.resolve(workSpaceOpen));
-        isExtensionsWorkspaceSpy.mockReturnValue(Promise.resolve(isExtensionsWorkspace));
-        checkCertificateExistsSpy.mockReturnValue(Promise.resolve(certificateExists));
-        checkNoProblemsInManifestSpy.mockReturnValue(Promise.resolve(noProblemsInManifest));
+    ])("should not run if $condition", async ({ setup }) => {
+      setup();
 
-        await buildExtensionWorkflow();
+      await buildExtensionWorkflow();
 
-        expect(getExtensionFilePathSpy).not.toHaveBeenCalled();
-      },
-    );
+      expect(getExtensionFilePathSpy).not.toHaveBeenCalled();
+    });
 
     it("should throw if extension file path doesn't exist", async () => {
-      checkWorkspaceOpenSpy.mockReturnValue(Promise.resolve(true));
-      isExtensionsWorkspaceSpy.mockReturnValue(Promise.resolve(true));
-      checkCertificateExistsSpy.mockReturnValue(Promise.resolve(true));
-      checkNoProblemsInManifestSpy.mockReturnValue(Promise.resolve(true));
-      getExtensionFilePathSpy.mockReturnValue(undefined);
+      setupPreconditions();
 
       await expect(buildExtensionWorkflow()).rejects.toThrow(
         "Extension manifest file does not exist.",
@@ -114,6 +83,31 @@ describe("Build Extension Workflow", () => {
 });
 
 /**
+ * Sets up workflow preconditions
+ */
+const setupPreconditions = (
+  workspaceOpen: boolean = true,
+  isExtensionsWorkspace: boolean = true,
+  certificateExists: boolean = true,
+  noProblemsInManifest: boolean = true,
+  extensionFilePath?: string,
+) => {
+  jest
+    .spyOn(conditionCheckers, "checkWorkspaceOpen")
+    .mockReturnValue(Promise.resolve(workspaceOpen));
+  jest
+    .spyOn(conditionCheckers, "isExtensionsWorkspace")
+    .mockReturnValue(Promise.resolve(isExtensionsWorkspace));
+  jest
+    .spyOn(conditionCheckers, "checkCertificateExists")
+    .mockReturnValue(Promise.resolve(certificateExists));
+  jest
+    .spyOn(conditionCheckers, "checkNoProblemsInManifest")
+    .mockReturnValue(Promise.resolve(noProblemsInManifest));
+  jest.spyOn(fileSystemUtils, "getExtensionFilePath").mockReturnValue(extensionFilePath);
+};
+
+/**
  * Performs the base setup for allowing the build extension workflow to run.
  */
 const baseExecutionSetup = () => {
@@ -137,13 +131,8 @@ const baseExecutionSetup = () => {
     mockWorkspace: { extension: { "extension.yaml": validManifestContent } },
     mock: { devCertKey: readFileSync(devCertKeyPath).toString() },
   });
-  jest.spyOn(conditionCheckers, "checkWorkspaceOpen").mockReturnValue(Promise.resolve(true));
-  jest.spyOn(conditionCheckers, "isExtensionsWorkspace").mockReturnValue(Promise.resolve(true));
-  jest.spyOn(conditionCheckers, "checkCertificateExists").mockReturnValue(Promise.resolve(true));
-  jest.spyOn(conditionCheckers, "checkNoProblemsInManifest").mockReturnValue(Promise.resolve(true));
-  jest
-    .spyOn(fileSystemUtils, "getExtensionFilePath")
-    .mockReturnValue("mockWorkspace/extension/extension.yaml");
+
+  setupPreconditions(true, true, true, true, "mockWorkspace/extension/extension.yaml");
 
   jest
     .spyOn(extension, "getActivationContext")
