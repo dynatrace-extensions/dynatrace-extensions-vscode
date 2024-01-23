@@ -19,11 +19,18 @@ import * as path from "path";
 import * as vscode from "vscode";
 import { Dashboard } from "../dynatrace-api/interfaces/dashboards";
 import { ExtensionStub } from "../interfaces/extensionMeta";
-import { EnvironmentsTreeDataProvider } from "../treeViews/environmentsTreeView";
-import { CachedData } from "../utils/dataCaching";
+import { getDynatraceClient } from "../treeViews/tenantsTreeView";
+import { getCachedParsedExtension } from "../utils/caching";
+import { checkWorkspaceOpen, isExtensionsWorkspace } from "../utils/conditionCheckers";
 import { getEntityMetrics, getMetricDisplayName } from "../utils/extensionParsing";
 import { getExtensionFilePath } from "../utils/fileSystem";
 import * as logger from "../utils/logging";
+
+export const createDashboardWorkflow = async () => {
+  if ((await checkWorkspaceOpen()) && (await isExtensionsWorkspace())) {
+    await createOverviewDashboard();
+  }
+};
 
 /*======================================================*
  * TEMPLATES THAT CREATE VARIOUS PARTS OF THE DASHBOARD *
@@ -482,18 +489,12 @@ function buildDashboard(
  * The extension should have topology defined otherwise the dashboard doesn't have much
  * data to render and is pointless. The extension yaml is adapted to include the newly
  * created dashboard. At the end, the user is prompted to upload the dashboard to Dynatrace
- * @param tenantsProvider environments details proivder
- * @param cachedData provider for cacheable data
- * @param outputChannel JSON output channel for communicating errors
  * @returns
  */
-export async function createOverviewDashboard(
-  tenantsProvider: EnvironmentsTreeDataProvider,
-  cachedData: CachedData,
-  outputChannel: vscode.OutputChannel,
-) {
+export async function createOverviewDashboard() {
   const fnLogTrace = ["commandPalette", "createDashboard", "createOverviewDashboard"];
   logger.info("Executing Create Dashboard command", ...fnLogTrace);
+  const outputChannel = logger.getGenericChannel();
   const DASHBOARD_PATH = "dashboards/overview_dashboard.json";
   // Read extension.yaml
   const extensionFile = getExtensionFilePath();
@@ -501,7 +502,11 @@ export async function createOverviewDashboard(
     return;
   }
   const extensionText = readFileSync(extensionFile).toString();
-  const extension = cachedData.getCached<ExtensionStub>("parsedExtension");
+  const extension = getCachedParsedExtension();
+  if (!extension) {
+    logger.error("Parsed extension does not exist in cache. Command aborted.", ...fnLogTrace);
+    return;
+  }
   // Check topology. No topology = pointless dashboard
   if (!extension.topology) {
     logger.notify(
@@ -519,7 +524,10 @@ export async function createOverviewDashboard(
   });
 
   // Create dashboard
-  const dashboardJson = buildDashboard(extension, dashboardTitle);
+  const dashboardJson = buildDashboard(
+    extension,
+    dashboardTitle ?? `Extension Overview (${extension.name}:${extension.version})`,
+  );
   // Create directories for dashboard
   const extensionDir = path.resolve(extensionFile, "..");
   const dashboardsDir = path.resolve(extensionDir, "dashboards");
@@ -553,7 +561,7 @@ export async function createOverviewDashboard(
   logger.notify("INFO", "Dashboard created successfully", ...fnLogTrace);
 
   // If we're connected to the API, prompt for upload.
-  await tenantsProvider.getDynatraceClient().then(async dt => {
+  await getDynatraceClient().then(async dt => {
     if (dt) {
       await vscode.window
         .showInformationMessage("Would you like to upload it to Dynatrace?", "Yes", "No")

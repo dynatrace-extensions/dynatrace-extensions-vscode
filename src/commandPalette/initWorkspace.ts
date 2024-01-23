@@ -20,8 +20,16 @@ import { TextEncoder } from "util";
 import AdmZip = require("adm-zip");
 import * as vscode from "vscode";
 import { Dynatrace } from "../dynatrace-api/dynatrace";
-import { checkDtSdkPresent, checkSettings } from "../utils/conditionCheckers";
-import { CachedData } from "../utils/dataCaching";
+import { getActivationContext } from "../extension";
+import { getDynatraceClient } from "../treeViews/tenantsTreeView";
+import { refreshWorkspacesTreeView } from "../treeViews/workspacesTreeView";
+import { pushManifestTextForParsing } from "../utils/caching";
+import {
+  checkDtSdkPresent,
+  checkSettings,
+  checkTenantConnected,
+  checkWorkspaceOpen,
+} from "../utils/conditionCheckers";
 import {
   getExtensionFilePath,
   initWorkspaceStorage,
@@ -54,6 +62,23 @@ const PROJECT_TYPES = {
     label: "Existing 2.0 Extension",
     detail: "Start by downloading an extension already deployed in your tenant.",
   },
+};
+
+export const initWorkspaceWorkflow = async () => {
+  const context = getActivationContext();
+  if ((await checkWorkspaceOpen()) && (await checkTenantConnected())) {
+    initWorkspaceStorage();
+    try {
+      const dtClient = await getDynatraceClient();
+      if (dtClient) {
+        await initWorkspace(dtClient, () => {
+          refreshWorkspacesTreeView();
+        });
+      }
+    } finally {
+      await context.globalState.update("dynatrace-extensions.initPending", undefined);
+    }
+  }
 };
 
 /**
@@ -237,20 +262,14 @@ async function defaultExtensionSetup(schemaVersion: string, rootPath: string) {
  * finally creates some basic artifacts that should form the base of the project.
  * Types of projects currently supported - new extension stub, new python extension,
  * conversion from 1.0 JMX extension, or existing extension downloaded from tenant.
- * @param dataCache instance of cached data
- * @param context VSCode Extension Context
  * @param dt Dynatrace API Client
  * @param callback optional callback function to call once initialization complete
  * @returns
  */
-export async function initWorkspace(
-  dataCache: CachedData,
-  context: vscode.ExtensionContext,
-  dt: Dynatrace,
-  callback?: () => unknown,
-) {
+export async function initWorkspace(dt: Dynatrace, callback?: () => unknown) {
   const fnLogTrace = [...logTrace, "initWorkspace"];
   logger.info("Executing Initialize Workspace command", ...fnLogTrace);
+  const context = getActivationContext();
 
   // First, we set up the common aspects that apply to all extension projects
   let schemaVersion: string | undefined;
@@ -265,7 +284,7 @@ export async function initWorkspace(
       schemaVersion = context.workspaceState.get<string>("schemaVersion");
       if (!schemaVersion) {
         logger.debug("No schema version found in cache. Loading schemas now.", ...fnLogTrace);
-        const cmdSuccess = await loadSchemas(context, dt);
+        const cmdSuccess = await loadSchemas(dt);
         if (cmdSuccess) {
           schemaVersion = context.workspaceState.get<string>("schemaVersion");
           if (!schemaVersion) {
@@ -298,7 +317,7 @@ export async function initWorkspace(
       }
 
       // Now that the workspace exists, storage can be created
-      initWorkspaceStorage(context);
+      initWorkspaceStorage();
 
       // Which certificates to use?
       progress.report({ message: "Setting up workspace certificates" });
@@ -341,7 +360,7 @@ export async function initWorkspace(
 
       progress.report({ message: "Registering the workspace" });
       // Register the workspace by saving its metadata
-      await registerWorkspace(context);
+      await registerWorkspace();
 
       progress.report({ message: "Finalizing setup" });
       // Run any callbacks as needed
@@ -436,7 +455,7 @@ export async function initWorkspace(
 
       // Update parsed extension in the cache
       logger.debug("Parsed extension now updated in cache.", ...fnLogTrace);
-      dataCache.updateParsedExtension();
+      pushManifestTextForParsing();
 
       // Create or update the .gitignore
       await writeGititnore(projectType === PROJECT_TYPES.pythonExtension);

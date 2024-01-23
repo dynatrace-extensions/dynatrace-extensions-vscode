@@ -4,10 +4,14 @@ name: CI Tests
 on:
   push:
     branches:
-      - "main"
+      - main
+      - release/current
+      - release/hotfix
   pull_request:
     branches:
-      - "main"
+      - main
+      - release/current
+      - release/hotfix
 
 jobs:
   test:
@@ -25,8 +29,8 @@ jobs:
         run: npm run install:all
       - name: Build everything
         run: npm run build:all
-      - name: Run unit tests
+      - name: Run Unit tests
         run: npm run test:unit
-      - name: Run integration tests
-        run: xvfb-run -a npm test
+      - name: Run E2E tests
+        run: xvfb-run -a npm run test:e2e
 

@@ -15,16 +15,25 @@
  */
 
 import * as vscode from "vscode";
-import { CachedDataConsumer } from "../utils/dataCaching";
+import { getCachedBaristaIcons } from "../utils/caching";
 import { getParentBlocks } from "../utils/yamlParsing";
+
+/**
+ * Singleton access to IconCompletionProvider
+ */
+export const getIconCompletionProvider = (() => {
+  let instance: IconCompletionProvider | undefined;
+
+  return () => {
+    instance = instance === undefined ? new IconCompletionProvider() : instance;
+    return instance;
+  };
+})();
 
 /**
  * Provider for code auto-completion related to Barista icons
  */
-export class IconCompletionProvider
-  extends CachedDataConsumer
-  implements vscode.CompletionItemProvider
-{
+class IconCompletionProvider implements vscode.CompletionItemProvider {
   async provideCompletionItems(
     document: vscode.TextDocument,
     position: vscode.Position,
@@ -37,8 +46,9 @@ export class IconCompletionProvider
       line.endsWith("iconPattern: ") ||
       (parentBlocks[parentBlocks.length - 1] === "header" && line.endsWith("icon: "))
     ) {
-      if (this.baristaIcons.length > 0) {
-        completionItems.push(this.createIconCompletion());
+      const baristaIcons = getCachedBaristaIcons();
+      if (baristaIcons.length > 0) {
+        completionItems.push(this.createIconCompletion(baristaIcons));
       }
     }
 
@@ -49,7 +59,7 @@ export class IconCompletionProvider
    * Creates a completion item for Barista icons
    * @returns
    */
-  private createIconCompletion(): vscode.CompletionItem {
+  private createIconCompletion(baristaIcons: string[]): vscode.CompletionItem {
     const iconCompletion = new vscode.CompletionItem(
       "Browse icons",
       vscode.CompletionItemKind.Enum,
@@ -60,7 +70,7 @@ export class IconCompletionProvider
         "[online](https://barista.dynatrace.com/resources/icons).",
     );
     iconCompletion.insertText = new vscode.SnippetString();
-    iconCompletion.insertText.appendChoice(this.baristaIcons);
+    iconCompletion.insertText.appendChoice(baristaIcons);
 
     return iconCompletion;
   }

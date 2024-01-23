@@ -139,10 +139,9 @@ export function canSimulateDatasource(os: OsType, eecType: EecType, dataSource: 
  * Parses the extension settings and builds a SimulationConfig object that will be used as default
  * value for any extension simulations. In case of remote locations, some validation is also done
  * on the specified target host.
- * @param context {@link vscode.ExtensionContext}
  * @returns {@link SimulationConfig}
  */
-export function loadDefaultSimulationConfig(context: vscode.ExtensionContext): SimulationConfig {
+export function loadDefaultSimulationConfig(): SimulationConfig {
   const fnLogTrace = [...logTrace, "loadDefaultSimulationConfig"];
   // A fallback value in case the user's settings are invalid.
   const fallbackValue: SimulationConfig = {
@@ -183,7 +182,7 @@ export function loadDefaultSimulationConfig(context: vscode.ExtensionContext): S
       return fallbackValue;
     }
     // Name must match a registered target
-    const registeredTargets = getSimulatorTargets(context).filter(t => t.name === targetName);
+    const registeredTargets = getSimulatorTargets().filter(t => t.name === targetName);
     if (registeredTargets.length === 0) {
       logger.error(
         `Invalid default simulator configuration: No registered target exists by name "${targetName}"`,

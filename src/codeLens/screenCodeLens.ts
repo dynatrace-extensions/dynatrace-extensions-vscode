@@ -15,30 +15,36 @@
  */
 
 import * as vscode from "vscode";
-import { EnvironmentsTreeDataProvider } from "../treeViews/environmentsTreeView";
-import { CachedDataConsumer } from "../utils/dataCaching";
+import { getConnectedTenant } from "../treeViews/tenantsTreeView";
+import { getCachedParsedExtension } from "../utils/caching";
 import * as logger from "../utils/logging";
 import { getBlockItemIndexAtLine, getParentBlocks } from "../utils/yamlParsing";
 
 /**
+ * Provides singleton access to the ScreenLensProvider
+ */
+export const getScreenLensProvider = (() => {
+  let instance: ScreenLensProvider | undefined;
+
+  return () => {
+    instance = instance === undefined ? new ScreenLensProvider() : instance;
+    return instance;
+  };
+})();
+
+/**
  * Implementation of a Code Lens Provider to allow opening Dynatrace screens in the browser.
  */
-export class ScreenLensProvider extends CachedDataConsumer implements vscode.CodeLensProvider {
+class ScreenLensProvider implements vscode.CodeLensProvider {
   private readonly logTrace = ["codeLens", "screenCodeLens", this.constructor.name];
   private codeLenses: vscode.CodeLens[];
   private regex: RegExp;
   private _onDidChangeCodeLenses: vscode.EventEmitter<void> = new vscode.EventEmitter<void>();
   public readonly onDidChangeCodeLenses: vscode.Event<void> = this._onDidChangeCodeLenses.event;
-  private readonly environments: EnvironmentsTreeDataProvider;
 
-  /**
-   * @param environmentsProvider - a provider of Dynatrace environments data
-   */
-  constructor(environmentsProvider: EnvironmentsTreeDataProvider) {
-    super();
+  constructor() {
     this.codeLenses = [];
     this.regex = /^ {2}- ./gm;
-    this.environments = environmentsProvider;
     vscode.commands.registerCommand(
       "dynatrace-extensions.openScreen",
       async (entityType: string, screenType: "list" | "details") => {
@@ -58,9 +64,11 @@ export class ScreenLensProvider extends CachedDataConsumer implements vscode.Cod
     this.codeLenses = [];
     const regex = new RegExp(this.regex);
     const text = document.getText();
+    const parsedExtension = getCachedParsedExtension();
 
     // If no screens or feature disabled, don't continue
     if (
+      !parsedExtension ||
       !text.includes("screens:") ||
       !vscode.workspace.getConfiguration("dynatraceExtensions", null).get("screenCodeLens")
     ) {
@@ -81,7 +89,7 @@ export class ScreenLensProvider extends CachedDataConsumer implements vscode.Cod
       if (range) {
         // Get the entity type
         const screenIdx = getBlockItemIndexAtLine("screens", line.lineNumber, text);
-        const entityType = this.parsedExtension.screens?.[screenIdx].entityType;
+        const entityType = parsedExtension.screens?.[screenIdx].entityType;
         if (entityType) {
           // Create the lenses
           this.codeLenses.push(
@@ -113,11 +121,11 @@ export class ScreenLensProvider extends CachedDataConsumer implements vscode.Cod
    */
   private async openScreen(entityType: string, screenType: "list" | "details") {
     try {
-      const tenant = await this.environments.getCurrentEnvironment();
-      const baseUrl = tenant.url.includes(".apps")
-        ? `${tenant.url}/ui/apps/dynatrace.classic.technologies`
-        : tenant.url;
+      const tenant = await getConnectedTenant();
       if (tenant) {
+        const baseUrl = tenant.url.includes(".apps")
+          ? `${tenant.url}/ui/apps/dynatrace.classic.technologies`
+          : tenant.url;
         if (screenType === "list") {
           await vscode.env.openExternal(
             vscode.Uri.parse(`${baseUrl}/ui/entity/list/${entityType}`),
@@ -132,8 +140,8 @@ export class ScreenLensProvider extends CachedDataConsumer implements vscode.Cod
             logger.notify("ERROR", "No entities of this type were found in your tenant.");
           }
         }
+        // Things can fail. We don't care.
       }
-      // Things can fail. We don't care.
     } catch (err) {
       logger.warn(`Could not open screen: ${(err as Error).message}`, ...this.logTrace);
       logger.notify("WARN", "Could not open screen.");

@@ -21,7 +21,7 @@ import {
   Property,
   RelationProperty,
 } from "../interfaces/extensionMeta";
-import { CachedDataConsumer } from "../utils/dataCaching";
+import { getCachedParsedExtension } from "../utils/caching";
 import {
   getAllMetricsByFeatureSet,
   getAttributesFromTopology,
@@ -51,9 +51,21 @@ import {
 } from "./utils/snippetBuildingUtils";
 
 /**
+ * Provides singleton access to the SnippetGenerator action provider.
+ */
+export const getSnippetGenerator = (() => {
+  let instance: SnippetGenerator | undefined;
+
+  return () => {
+    instance = instance === undefined ? new SnippetGenerator() : instance;
+    return instance;
+  };
+})();
+
+/**
  * Provider for Code Actions that insert snippets of code into the existing extension yaml.
  */
-export class SnippetGenerator extends CachedDataConsumer implements vscode.CodeActionProvider {
+class SnippetGenerator implements vscode.CodeActionProvider {
   /**
    * Provides Code Actions that insert code snippets relevant to the triggered context.
    * @param document document that activated the provider
@@ -70,26 +82,21 @@ export class SnippetGenerator extends CachedDataConsumer implements vscode.CodeA
     const parentBlocks = getParentBlocks(range.start.line, document.getText());
     const lineText = document.lineAt(range.start.line).text;
 
+    const parsedExtension = getCachedParsedExtension();
+    if (!parsedExtension) {
+      return codeActions;
+    }
+
     // add properties to properties card
     if (parentBlocks[parentBlocks.length - 1] === "propertiesCard") {
       if (lineText.includes("properties:")) {
         // attribute properties
         codeActions.push(
-          ...this.createAttributePropertyInsertions(
-            document,
-            range,
-            this.parsedExtension,
-            "properties",
-          ),
+          ...this.createAttributePropertyInsertions(document, range, parsedExtension, "properties"),
         );
         // relation properties
         codeActions.push(
-          ...this.createRelationPropertyInsertions(
-            document,
-            range,
-            this.parsedExtension,
-            "properties",
-          ),
+          ...this.createRelationPropertyInsertions(document, range, parsedExtension, "properties"),
         );
       }
     }
@@ -101,11 +108,11 @@ export class SnippetGenerator extends CachedDataConsumer implements vscode.CodeA
     ) {
       // attribute columns
       codeActions.push(
-        ...this.createAttributePropertyInsertions(document, range, this.parsedExtension, "columns"),
+        ...this.createAttributePropertyInsertions(document, range, parsedExtension, "columns"),
       );
       // relation columns
       codeActions.push(
-        ...this.createRelationPropertyInsertions(document, range, this.parsedExtension, "columns"),
+        ...this.createRelationPropertyInsertions(document, range, parsedExtension, "columns"),
       );
     }
 
@@ -114,13 +121,13 @@ export class SnippetGenerator extends CachedDataConsumer implements vscode.CodeA
       // in chartsCard
       if (parentBlocks[parentBlocks.length - 1] === "chartsCards") {
         codeActions.push(
-          ...this.createChartInsertions(document, range, this.parsedExtension, "chartsCard"),
+          ...this.createChartInsertions(document, range, parsedExtension, "chartsCard"),
         );
       }
       // in entitiesListCard
       if (parentBlocks[parentBlocks.length - 1] === "entitiesListCards") {
         codeActions.push(
-          ...this.createChartInsertions(document, range, this.parsedExtension, "entitiesListCard"),
+          ...this.createChartInsertions(document, range, parsedExtension, "entitiesListCard"),
         );
       }
     }
@@ -133,49 +140,39 @@ export class SnippetGenerator extends CachedDataConsumer implements vscode.CodeA
       // in chartCards
       if (parentBlocks[parentBlocks.length - 3] === "chartsCards") {
         codeActions.push(
-          ...this.createChartInsertions(document, range, this.parsedExtension, "chartsCard", true),
+          ...this.createChartInsertions(document, range, parsedExtension, "chartsCard", true),
         );
       }
       // in entitiesListCards
       if (parentBlocks[parentBlocks.length - 3] === "entitiesListCards") {
         codeActions.push(
-          ...this.createChartInsertions(
-            document,
-            range,
-            this.parsedExtension,
-            "entitiesListCard",
-            true,
-          ),
+          ...this.createChartInsertions(document, range, parsedExtension, "entitiesListCard", true),
         );
       }
     }
 
     // add whole chart cards
     if (lineText.includes("chartsCards:")) {
-      codeActions.push(...this.createChartCardInsertions(document, range, this.parsedExtension));
+      codeActions.push(...this.createChartCardInsertions(document, range, parsedExtension));
     }
 
     // add entity list cards
     if (lineText.includes("entitiesListCards:")) {
-      codeActions.push(
-        ...this.createEntitiesListCardInsertions(document, range, this.parsedExtension),
-      );
+      codeActions.push(...this.createEntitiesListCardInsertions(document, range, parsedExtension));
     }
 
     // generate entire entity screens
     if (lineText.includes("screens:")) {
-      codeActions.push(...this.createScreenInsertions(document, range, this.parsedExtension));
+      codeActions.push(...this.createScreenInsertions(document, range, parsedExtension));
     }
 
     // add known actions
     if (lineText.includes("actions:")) {
       if (parentBlocks[parentBlocks.length - 1] === "screens") {
-        codeActions.push(
-          ...this.createGlobalActionInsertions(document, range, this.parsedExtension),
-        );
+        codeActions.push(...this.createGlobalActionInsertions(document, range, parsedExtension));
       }
       if (parentBlocks[parentBlocks.length - 1] === "actions") {
-        codeActions.push(...this.createActionInsertions(document, range, this.parsedExtension));
+        codeActions.push(...this.createActionInsertions(document, range, parsedExtension));
       }
     }
 
@@ -185,16 +182,14 @@ export class SnippetGenerator extends CachedDataConsumer implements vscode.CodeA
       parentBlocks[parentBlocks.length - 1] === "entitiesListCards"
     ) {
       // add whole filtering block
-      codeActions.push(
-        ...this.createFilteringBlockInsertions(document, range, this.parsedExtension),
-      );
+      codeActions.push(...this.createFilteringBlockInsertions(document, range, parsedExtension));
     }
     if (
       lineText.includes("filters:") &&
       parentBlocks[parentBlocks.length - 3] === "entitiesListCards"
     ) {
       // add individual filters
-      codeActions.push(...this.createFilterInsertions(document, range, this.parsedExtension));
+      codeActions.push(...this.createFilterInsertions(document, range, parsedExtension));
     }
 
     return codeActions;

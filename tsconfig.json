@@ -1,14 +1,8 @@
 {
-  "compilerOptions": {
-    "module": "commonjs",
-    "target": "ES2020",
-    "outDir": "out",
-    "lib": ["ES2020", "DOM"],
-    "sourceMap": true,
-    "rootDir": ".",
-    "strict": false,
-    "esModuleInterop": false,
-    "skipLibCheck": true
-  },
-  "include": ["src/test/**/*.ts"],
+  "include": [],
+  "files": [],
+  "references": [
+    { "path": "./tsconfig.src.json" },
+    { "path": "./tsconfig.test.json" }
+  ]
 }
