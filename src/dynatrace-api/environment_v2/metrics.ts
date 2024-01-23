@@ -49,13 +49,10 @@ export class MetricService {
     entitySelector?: string,
     mzSelector?: string,
   ): Promise<MetricSeriesCollection[]> {
-    return this.httpClient.paginatedCall(`${this.endpoint}/query`, "result", {
-      metricSelector: metricSelector,
-      resolution: resolution,
-      from: from,
-      to: to,
-      entitySelector: entitySelector,
-      mzSelector: mzSelector,
+    return this.httpClient.paginatedCall({
+      path: `${this.endpoint}/query`,
+      item: "result",
+      params: { metricSelector, resolution, from, to, entitySelector, mzSelector },
     });
   }
 }

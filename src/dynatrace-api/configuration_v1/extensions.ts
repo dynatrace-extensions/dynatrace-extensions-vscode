@@ -36,12 +36,10 @@ export class ExtensionsServiceV1 {
     const extensions: ExtensionV1DTO[] = [];
     let nextPageKey;
     do {
-      const res: ExtensionV1ListDto = await this.httpClient.makeRequest<ExtensionV1ListDto>(
-        this.endpoint,
-        {
-          nextPageKey: nextPageKey,
-        },
-      );
+      const res: ExtensionV1ListDto = await this.httpClient.makeRequest<ExtensionV1ListDto>({
+        path: this.endpoint,
+        params: { nextPageKey: nextPageKey },
+      });
       extensions.push(...res.extensions);
       nextPageKey = res.nextPageKey;
     } while (nextPageKey);
@@ -54,14 +52,9 @@ export class ExtensionsServiceV1 {
    * @returns the binary of the extension
    */
   async getExtensionBinary(extensionId: string): Promise<Uint8Array> {
-    return this.httpClient.makeRequest(
-      `${this.endpoint}/${extensionId}/binary`,
-      undefined,
-      "GET",
-      {},
-      undefined,
-      undefined,
-      "arraybuffer",
-    );
+    return this.httpClient.makeRequest({
+      path: `${this.endpoint}/${extensionId}/binary`,
+      responseType: "arraybuffer",
+    });
   }
 }

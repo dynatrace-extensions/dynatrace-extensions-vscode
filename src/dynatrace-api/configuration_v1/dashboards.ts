@@ -34,10 +34,10 @@ export class DashboardService {
    * @returns
    */
   async post(dashboard: Dashboard) {
-    return this.httpClient.makeRequest(
-      this.endpoint,
-      dashboard as unknown as Record<string, unknown>,
-      "POST",
-    );
+    return this.httpClient.makeRequest({
+      path: this.endpoint,
+      params: dashboard as unknown as Record<string, unknown>,
+      method: "POST",
+    });
   }
 }

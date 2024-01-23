@@ -36,6 +36,10 @@ export class ActiveGatesService {
    * @returns list of ActiveGates
    */
   async list(params?: Record<string, unknown>): Promise<ActiveGate[]> {
-    return this.httpClient.paginatedCall<ActiveGate>(this.endpoint, "activeGates", params);
+    return this.httpClient.paginatedCall<ActiveGate>({
+      path: this.endpoint,
+      item: "activeGates",
+      params,
+    });
   }
 }

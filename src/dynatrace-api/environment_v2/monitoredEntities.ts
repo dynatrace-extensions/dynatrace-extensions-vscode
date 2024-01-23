@@ -47,12 +47,10 @@ export class EntityServiceV2 {
     fields?: string,
     sort?: string,
   ): Promise<Entity[]> {
-    return this.httpClient.paginatedCall(this.endpoint, "entities", {
-      entitySelector: entitySelector,
-      from: from,
-      to: to,
-      fields: fields,
-      sort: sort,
+    return this.httpClient.paginatedCall({
+      path: this.endpoint,
+      item: "entities",
+      params: { entitySelector, from, to, fields, sort },
     });
   }
 
@@ -66,10 +64,9 @@ export class EntityServiceV2 {
    * @returns the requested entity
    */
   async get(entityId: string, from?: string, to?: string, fields?: string) {
-    return this.httpClient.makeRequest(`${this.endpoint}/${entityId}`, {
-      from: from,
-      to: to,
-      fields: fields,
+    return this.httpClient.makeRequest({
+      path: `${this.endpoint}/${entityId}`,
+      params: { from, to, fields },
     });
   }
 
@@ -78,7 +75,11 @@ export class EntityServiceV2 {
    * @returns list of entity types
    */
   async listTypes(): Promise<EntityType[]> {
-    return this.httpClient.paginatedCall(this.typesEndpoint, "types", { pageSize: 500 });
+    return this.httpClient.paginatedCall({
+      path: this.typesEndpoint,
+      item: "types",
+      params: { pageSize: 500 },
+    });
   }
 
   /**
@@ -87,6 +88,6 @@ export class EntityServiceV2 {
    * @returns details of the entity type
    */
   async getType(type: string): Promise<EntityType> {
-    return this.httpClient.makeRequest(`${this.typesEndpoint}/${type}`);
+    return this.httpClient.makeRequest({ path: `${this.typesEndpoint}/${type}` });
   }
 }

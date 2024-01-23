@@ -14,11 +14,17 @@
   limitations under the License.
  */
 
-import axios, { ResponseType } from "axios";
+import axios from "axios";
 import FormData = require("form-data");
 import * as logger from "../utils/logging";
 import { DynatraceAPIError } from "./errors";
-import { DynatraceAxiosError, ErrorEnvelope, PaginatedResponse } from "./interfaces/dynatrace";
+import {
+  DynatraceAxiosError,
+  DynatracePaginatedRequestConfig,
+  DynatraceRequestConfig,
+  ErrorEnvelope,
+  PaginatedResponse,
+} from "./interfaces/dynatrace";
 
 /**
  * Implementation of a HTTP Client specialised for accessing Dynatrace APIs
@@ -27,6 +33,11 @@ export class HttpClient {
   private readonly logTrace = ["dynatrace-api", "http_client", "HttpClient"];
   private readonly baseUrl: string;
   private readonly apiToken: string;
+  private static requestDefaults: DynatraceRequestConfig = {
+    path: "",
+    method: "GET",
+    headers: {},
+  };
 
   constructor(baseUrl: string, apiToken: string) {
     this.baseUrl = baseUrl;
@@ -36,29 +47,21 @@ export class HttpClient {
   /**
    * Makes an HTTP Request with the given details.
    * All requests automatically contain the API Token as Authorization header
-   * @param path URL path for the web request endpoint
-   * @param params query parameters; in case of POST or PUT it becomes body of request
-   * @param method HTTP method to use
-   * @param headers additional request headers
-   * @param queryParams query parameters; to be used for POST and PUT requests
    * @returns response data
    */
-  async makeRequest<T = never>(
-    path: string,
-    params?: Record<string, unknown>,
-    method: string = "GET",
-    headers: Record<string, string> = {},
-    queryParams?: Record<string, unknown>,
-    files?: { file: Buffer; name: string },
-    responseType?: ResponseType,
-  ): Promise<T> {
+  async makeRequest<T = never>(config: Partial<DynatraceRequestConfig>): Promise<T> {
+    const { path, params, method, headers, queryParams, files, responseType, signal } = {
+      ...HttpClient.requestDefaults,
+      ...config,
+    };
     const fnLogTrace = [...this.logTrace, "makeRequest"];
     const url = `${this.baseUrl}${path}`;
 
     let body = null;
+    let requestParams = params;
     if (method === "POST" || method === "PUT") {
       body = params;
-      params = queryParams;
+      requestParams = queryParams;
     }
 
     if (!("Content-Type" in headers)) {
@@ -80,12 +83,13 @@ export class HttpClient {
 
     return axios
       .request({
-        url: url,
-        headers: headers,
-        params: params,
-        method: method,
+        url,
+        headers,
+        params: requestParams,
+        method,
         data: files ? form : body,
         responseType,
+        signal,
       })
       .then(res => {
         if (res.status >= 400) {
@@ -128,30 +132,22 @@ export class HttpClient {
 
   /**
    * Makes a paginated GET API call, going over all pages and returning the full list of items.
-   * @param path path of the API endpoint
-   * @param item the attribute in the response that holds the items
-   * @param params query parameters
-   * @param headers additional request headers
    * @returns list of items
    */
-  async paginatedCall<T = never, R = T[]>(
-    path: string,
-    item: string,
-    params?: Record<string, unknown>,
-    headers: Record<string, string> = {},
-  ): Promise<R> {
+  async paginatedCall<T = never, R = T[]>(config: DynatracePaginatedRequestConfig): Promise<R> {
     const items: T[] = [];
     let nextPageKey: string | undefined = "firstCall";
+    let params = config.params;
 
     while (nextPageKey) {
       if (nextPageKey !== "firstCall") {
         params = { nextPageKey: nextPageKey };
       }
 
-      const response: PaginatedResponse<T> = await this.makeRequest(path, params, "GET", headers);
+      const response: PaginatedResponse<T> = await this.makeRequest({ ...config, params });
       nextPageKey = response.nextPageKey;
-      if (item in response) {
-        items.push(...response[item]);
+      if (config.item in response) {
+        items.push(...response[config.item]);
       }
     }
 

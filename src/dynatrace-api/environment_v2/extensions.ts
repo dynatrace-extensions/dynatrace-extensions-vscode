@@ -41,7 +41,7 @@ export class ExtensionsServiceV2 {
    */
   async listSchemaVersions(): Promise<string[]> {
     return this.httpClient
-      .makeRequest<SchemaList>(this.schemaEndpoint)
+      .makeRequest<SchemaList>({ path: this.schemaEndpoint })
       .then(res => res.versions.reverse());
   }
 
@@ -52,8 +52,9 @@ export class ExtensionsServiceV2 {
    */
   async listSchemaFiles(version: string): Promise<string[]> {
     return this.httpClient
-      .makeRequest<SchemaFiles>(`${this.schemaEndpoint}/${version}`, undefined, "GET", {
-        accept: "application/json; charset=utf-8",
+      .makeRequest<SchemaFiles>({
+        path: `${this.schemaEndpoint}/${version}`,
+        headers: { accept: "application/json; charset=utf-8" },
       })
       .then(res => res.files);
   }
@@ -65,7 +66,7 @@ export class ExtensionsServiceV2 {
    * @returns response data
    */
   async getSchemaFile(version: string, fileName: string): Promise<Record<string, unknown>> {
-    return this.httpClient.makeRequest(`${this.schemaEndpoint}/${version}/${fileName}`);
+    return this.httpClient.makeRequest({ path: `${this.schemaEndpoint}/${version}/${fileName}` });
   }
 
   /**
@@ -74,10 +75,10 @@ export class ExtensionsServiceV2 {
    * @returns list of versions
    */
   async listVersions(extensionName: string): Promise<MinimalExtension[]> {
-    return this.httpClient.paginatedCall<MinimalExtension>(
-      `${this.endpoint}/${extensionName}`,
-      "extensions",
-    );
+    return this.httpClient.paginatedCall<MinimalExtension>({
+      path: `${this.endpoint}/${extensionName}`,
+      item: "extensions",
+    });
   }
 
   /**
@@ -87,11 +88,10 @@ export class ExtensionsServiceV2 {
    * @returns response data
    */
   async deleteVersion(extensionName: string, version: string) {
-    return this.httpClient.makeRequest(
-      `${this.endpoint}/${extensionName}/${version}`,
-      {},
-      "DELETE",
-    );
+    return this.httpClient.makeRequest({
+      path: `${this.endpoint}/${extensionName}/${version}`,
+      method: "DELETE",
+    });
   }
 
   /**
@@ -101,14 +101,12 @@ export class ExtensionsServiceV2 {
    * @returns response data
    */
   async upload(file: Buffer, validateOnly = false) {
-    return this.httpClient.makeRequest(
-      `${this.endpoint}`,
-      {},
-      "POST",
-      {},
-      { validateOnly: validateOnly },
-      { file: file, name: "extension.zip" },
-    );
+    return this.httpClient.makeRequest({
+      path: `${this.endpoint}`,
+      method: "POST",
+      queryParams: { validateOnly: validateOnly },
+      files: { file: file, name: "extension.zip" },
+    });
   }
 
   /**
@@ -118,11 +116,11 @@ export class ExtensionsServiceV2 {
    * @returns response data
    */
   async putEnvironmentConfiguration(extensionName: string, version: string) {
-    return this.httpClient.makeRequest(
-      `${this.endpoint}/${extensionName}/environmentConfiguration`,
-      { version: version },
-      "PUT",
-    );
+    return this.httpClient.makeRequest({
+      path: `${this.endpoint}/${extensionName}/environmentConfiguration`,
+      params: { version: version },
+      method: "PUT",
+    });
   }
 
   /**
@@ -132,7 +130,11 @@ export class ExtensionsServiceV2 {
    * @returns the list of extensions
    */
   async list(name?: string): Promise<MinimalExtension[]> {
-    return this.httpClient.paginatedCall(`${this.endpoint}`, "extensions", { name: name });
+    return this.httpClient.paginatedCall({
+      path: `${this.endpoint}`,
+      item: "extensions",
+      params: { name: name },
+    });
   }
 
   /**
@@ -147,14 +149,11 @@ export class ExtensionsServiceV2 {
     version?: string,
     activeOnly?: boolean,
   ): Promise<ExtensionMonitoringConfiguration[]> {
-    return this.httpClient.paginatedCall<ExtensionMonitoringConfiguration>(
-      `${this.endpoint}/${extensionName}/monitoringConfigurations`,
-      "items",
-      {
-        version: version,
-        active: activeOnly,
-      },
-    );
+    return this.httpClient.paginatedCall<ExtensionMonitoringConfiguration>({
+      path: `${this.endpoint}/${extensionName}/monitoringConfigurations`,
+      item: "items",
+      params: { version: version, active: activeOnly },
+    });
   }
 
   /**
@@ -167,9 +166,9 @@ export class ExtensionsServiceV2 {
     extensionName: string,
     configurationId: string,
   ): Promise<ExtensionStatusDto> {
-    return this.httpClient.makeRequest<ExtensionStatusDto>(
-      `${this.endpoint}/${extensionName}/monitoringConfigurations/${configurationId}/status`,
-    );
+    return this.httpClient.makeRequest<ExtensionStatusDto>({
+      path: `${this.endpoint}/${extensionName}/monitoringConfigurations/${configurationId}/status`,
+    });
   }
 
   /**
@@ -179,11 +178,10 @@ export class ExtensionsServiceV2 {
    * @returns response data
    */
   async deleteMonitoringConfiguration(extensionName: string, configurationId: string) {
-    return this.httpClient.makeRequest(
-      `${this.endpoint}/${extensionName}/monitoringConfigurations/${configurationId}`,
-      {},
-      "DELETE",
-    );
+    return this.httpClient.makeRequest({
+      path: `${this.endpoint}/${extensionName}/monitoringConfigurations/${configurationId}`,
+      method: "DELETE",
+    });
   }
 
   /**
@@ -196,9 +194,9 @@ export class ExtensionsServiceV2 {
     extensionName: string,
     configurationId: string,
   ): Promise<ExtensionMonitoringConfiguration> {
-    return this.httpClient.makeRequest<ExtensionMonitoringConfiguration>(
-      `${this.endpoint}/${extensionName}/monitoringConfigurations/${configurationId}`,
-    );
+    return this.httpClient.makeRequest<ExtensionMonitoringConfiguration>({
+      path: `${this.endpoint}/${extensionName}/monitoringConfigurations/${configurationId}`,
+    });
   }
 
   /**
@@ -213,11 +211,11 @@ export class ExtensionsServiceV2 {
     configurationId: string,
     configurationDetails: Record<string, unknown>,
   ) {
-    return this.httpClient.makeRequest(
-      `${this.endpoint}/${extensionName}/monitoringConfigurations/${configurationId}`,
-      configurationDetails,
-      "PUT",
-    );
+    return this.httpClient.makeRequest({
+      path: `${this.endpoint}/${extensionName}/monitoringConfigurations/${configurationId}`,
+      params: configurationDetails,
+      method: "PUT",
+    });
   }
 
   /**
@@ -231,11 +229,11 @@ export class ExtensionsServiceV2 {
     extensionName: string,
     configurationDetails: Record<string, unknown>,
   ) {
-    return this.httpClient.makeRequest(
-      `${this.endpoint}/${extensionName}/monitoringConfigurations`,
-      configurationDetails,
-      "POST",
-    );
+    return this.httpClient.makeRequest({
+      path: `${this.endpoint}/${extensionName}/monitoringConfigurations`,
+      params: configurationDetails,
+      method: "POST",
+    });
   }
 
   /**
@@ -245,9 +243,9 @@ export class ExtensionsServiceV2 {
    * @returns schema of the extension
    */
   async getExtensionSchema(extensionName: string, extensionVersion: string) {
-    return this.httpClient.makeRequest(
-      `${this.endpoint}/${extensionName}/${extensionVersion}/schema`,
-    );
+    return this.httpClient.makeRequest({
+      path: `${this.endpoint}/${extensionName}/${extensionVersion}/schema`,
+    });
   }
 
   /**
@@ -267,14 +265,10 @@ export class ExtensionsServiceV2 {
       ? "application/octet-stream"
       : "application/json; charset=utf-8";
 
-    return this.httpClient.makeRequest(
-      `${this.endpoint}/${extensionName}/${extensionVersion}`,
-      {},
-      "GET",
+    return this.httpClient.makeRequest({
+      path: `${this.endpoint}/${extensionName}/${extensionVersion}`,
       headers,
-      {},
-      undefined,
-      downloadPackage ? "arraybuffer" : "json",
-    );
+      responseType: downloadPackage ? "arraybuffer" : "json",
+    });
   }
 }

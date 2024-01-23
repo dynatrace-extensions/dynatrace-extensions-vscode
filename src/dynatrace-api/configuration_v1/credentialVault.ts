@@ -49,7 +49,11 @@ export class CredentialVaultService {
       password: util.encode64("PasswordNotSupported"),
       certificateFormat: "PEM",
     };
-    return this.httpClient.makeRequest<{ id: string }>(this.endpoint, payload, "POST");
+    return this.httpClient.makeRequest<{ id: string }>({
+      path: this.endpoint,
+      params: payload,
+      method: "POST",
+    });
   }
 
   /**
@@ -77,7 +81,11 @@ export class CredentialVaultService {
       password: util.encode64("PasswordNotSupported"),
       certificateFormat: "PEM",
     };
-    return this.httpClient.makeRequest(`${this.endpoint}/${certificateId}`, payload, "PUT");
+    return this.httpClient.makeRequest({
+      path: `${this.endpoint}/${certificateId}`,
+      params: payload,
+      method: "PUT",
+    });
   }
 
   /**
@@ -86,8 +94,8 @@ export class CredentialVaultService {
    * @returns response data
    */
   async getCertificate(certificateId: string) {
-    return this.httpClient.makeRequest<CredentialsResponseElement>(
-      `${this.endpoint}/${certificateId}`,
-    );
+    return this.httpClient.makeRequest<CredentialsResponseElement>({
+      path: `${this.endpoint}/${certificateId}`,
+    });
   }
 }

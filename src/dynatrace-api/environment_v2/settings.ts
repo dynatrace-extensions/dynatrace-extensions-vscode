@@ -39,7 +39,7 @@ export class SettingsService {
    * @returns schemas
    */
   async listSchemas(): Promise<SchemaStub[]> {
-    return this.httpClient.paginatedCall(this.schemasEndpoint, "items");
+    return this.httpClient.paginatedCall({ path: this.schemasEndpoint, item: "items" });
   }
 
   /**
@@ -58,11 +58,15 @@ export class SettingsService {
     fields?: string,
     pageSize?: number,
   ): Promise<SettingsObject[]> {
-    return this.httpClient.paginatedCall(this.objectsEndpoint, "items", {
-      schemaIds: schemaIds,
-      scopes: scopes,
-      fields: fields,
-      pageSize: pageSize,
+    return this.httpClient.paginatedCall({
+      path: this.objectsEndpoint,
+      item: "items",
+      params: {
+        schemaIds: schemaIds,
+        scopes: scopes,
+        fields: fields,
+        pageSize: pageSize,
+      },
     });
   }
 
@@ -73,11 +77,11 @@ export class SettingsService {
    * @returns
    */
   async putObject(objectId: string, payload: SettingsObjectUpdate) {
-    return this.httpClient.makeRequest(
-      `${this.objectsEndpoint}/${objectId}`,
-      payload as unknown as Record<string, unknown>,
-      "PUT",
-    );
+    return this.httpClient.makeRequest({
+      path: `${this.objectsEndpoint}/${objectId}`,
+      params: payload as unknown as Record<string, unknown>,
+      method: "PUT",
+    });
   }
 
   /**
@@ -89,12 +93,11 @@ export class SettingsService {
    * @returns
    */
   async postObject(payload: SettingsObjectCreate[], validateOnly: boolean = false) {
-    return this.httpClient.makeRequest(
-      `${this.objectsEndpoint}`,
-      payload as unknown as Record<string, unknown>,
-      "POST",
-      {},
-      { validateOnly: validateOnly },
-    );
+    return this.httpClient.makeRequest({
+      path: `${this.objectsEndpoint}`,
+      params: payload as unknown as Record<string, unknown>,
+      method: "POST",
+      queryParams: { validateOnly: validateOnly },
+    });
   }
 }
