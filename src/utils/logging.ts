@@ -16,207 +16,74 @@
 
 import { statSync, writeFileSync } from "fs";
 import * as path from "path";
-import * as chalk from "chalk";
+import chalk from "chalk";
 import * as vscode from "vscode";
+import { getActivationContext } from "../extension";
 import { removeOldestFiles } from "./fileSystem";
 
 type LogLevel = "DEBUG" | "INFO" | "WARN" | "ERROR" | "NONE";
 type NotificationLevel = Extract<LogLevel, "INFO" | "WARN" | "ERROR">;
-
-let logLevel: LogLevel = "INFO";
-let maxFileSize: number = 10;
-let maxFiles: number = 10;
-let currentLogFile: string;
-let outputChannel: vscode.OutputChannel;
-let context: vscode.ExtensionContext;
-
-/**
- * Starts a new log file with the current timestamp.
- */
-function startNewLogFile() {
-  const logsDir = path.join(context.globalStorageUri.fsPath, "logs");
-  const workspaceName = vscode.workspace.workspaceFolders?.[0].name ?? "no-workspace";
-  const fileName = `${workspaceName}_${new Date()
-    .toISOString()
-    .replace("T", "_")
-    .replace(/:/g, "-")}_log.log`;
-  currentLogFile = path.join(logsDir, fileName);
-  writeFileSync(currentLogFile, "");
-}
+const CHALK_FORMATS: Record<LogLevel, string> = {
+  DEBUG: chalk.white("[DEBUG]"),
+  INFO: chalk.green("[INFO]"),
+  WARN: chalk.yellow("[WARN]"),
+  ERROR: chalk.red("[ERROR]"),
+  NONE: "",
+};
 
 /**
- * Checks the size of the current log file and starts a new one if needed.
+ * Disposes of all the output channels created so that VSCode can free up resources.
  */
-function checkFileSize() {
-  const size = statSync(currentLogFile).size / (1024 * 1024);
-  if (size > maxFileSize) {
-    startNewLogFile();
-  }
-}
+export const disposeOutputChannels = () => {
+  getGenericChannel().dispose();
+  getFastModeChannel().dispose();
+  getLogChannel().dispose();
+};
 
 /**
- * Extracts the log scope (trace breadcrumbs) from the stack trace.
- * NOTE: This only works in development mode.
- * @param stack the stack trace
+ * Provides access to a JSON-formatted output channel called "Dynatrace".
  */
-function extractScope(stack: string) {
-  return stack
-    .split("\n")
-    .map(l => {
-      if (l.includes("dynatrace-extensions-vscode")) {
-        const match = l.match(/at (.*?) \(/);
-        return match ? match[1] : "";
-      }
-      return "";
-    })
-    .filter(l => l !== "")
-    .slice(3)
-    .reverse()
-    .join(" > ");
-}
+export const getGenericChannel = (() => {
+  let genericChannel: vscode.OutputChannel | undefined;
+
+  return () => {
+    genericChannel =
+      genericChannel === undefined
+        ? vscode.window.createOutputChannel("Dynatrace", "json")
+        : genericChannel;
+    return genericChannel;
+  };
+})();
 
 /**
- * Logs a message to the developer tools console. The message is formatted with colors by
- * using chalk. All messages have an easily recognizable '[Dynatrace]' prefix.
- * @param timestamp the timestamp of the log message
- * @param data the data to log
- * @param scope the scope (trace breadcrumbs) of the log message
- * @param level the log level
+ * Provides access to a JSON-formatted output channel called "Dynatrace Fast Mode".
  */
-function logToConsole(timestamp: string, data: string, scope: string, level: LogLevel) {
-  const fmtPrefix = chalk.black.bgCyan("[Dynatrace]");
-  const fmtTimestamp = chalk.cyan(timestamp);
-  const fmtLevel = ((lvl: LogLevel) => {
-    switch (lvl) {
-      case "DEBUG":
-        return chalk.white(`[${lvl}]`);
-      case "INFO":
-        return chalk.green(`[${lvl}]`);
-      case "WARN":
-        return chalk.yellow(`[${lvl}]`);
-      case "ERROR":
-        return chalk.red(`[${lvl}]`);
-      case "NONE":
-        return "";
-    }
-  })(level);
+export const getFastModeChannel = (() => {
+  let fastModeChannel: vscode.OutputChannel | undefined;
 
-  // During development, we can automatically build the trace
-  const fmtScope = chalk.magentaBright(
-    `[${process.env.DEVELOPMENT ? extractScope(new Error().stack ?? "") : scope}]`,
-  );
-
-  console.log(
-    `${fmtTimestamp} ${fmtPrefix}${fmtLevel}${fmtScope} ` +
-      (level === "DEBUG" ? `${chalk.gray(data)}\n` : `${data}`),
-  );
-}
+  return () => {
+    fastModeChannel =
+      fastModeChannel === undefined
+        ? vscode.window.createOutputChannel("Dynatrace Fast Mode", "json")
+        : fastModeChannel;
+    return fastModeChannel;
+  };
+})();
 
 /**
- * Logs a message at the appropriate level with the given trace breadcrumbs.
- * Messages without a level are only logged to the developer tools console. Other levels
- * are also logged to the output channel and a log file in global storage.
- * @param data the data to log; objects will be JSON stringified
- * @param trace any trace breadcrumbs for internal logging
- * @param level the log level
+ * Provides access to a log-formatted output channel called "Dynatrace Log".
  */
-function logMessage(data: unknown, level: LogLevel, ...trace: string[]) {
-  const message = typeof data === "string" ? data : JSON.stringify(data, null, 2);
-  const timestamp = new Date().toISOString();
-  const scope = trace.join(".");
-  const formattedMessage = `${timestamp} [${level}][${scope}] ${message}`;
+const getLogChannel = (() => {
+  let logChannel: vscode.OutputChannel | undefined;
 
-  // Log to console and output channel controlled by settings
-  if (
-    ["ERROR", "NONE"].includes(level) ||
-    (level === "DEBUG" && ["DEBUG", "NONE"].includes(logLevel)) ||
-    (level === "INFO" && ["INFO", "DEBUG", "NONE"].includes(logLevel)) ||
-    (level === "WARN" && logLevel !== "ERROR")
-  ) {
-    logToConsole(timestamp, message, scope, level);
-    if (level !== "NONE") {
-      outputChannel.appendLine(formattedMessage);
-    }
-  }
-
-  // File log will always capture all messages
-  writeFileSync(currentLogFile, `${formattedMessage}\n`, { flag: "a" });
-  checkFileSize();
-}
-
-/**
- * Initializes the logging system. This must be called before any other logging statements.
- * It creates the output channel and starts a new log file.
- * @param ctx the extension context
- */
-export function initializeLogging(ctx: vscode.ExtensionContext) {
-  context = ctx;
-
-  // Load the configuration
-  const config = vscode.workspace.getConfiguration("dynatraceExtensions.logging", null);
-  logLevel = config.get<LogLevel>("level") ?? "INFO";
-  maxFileSize = config.get<number>("maxFileSize") ?? 10;
-  maxFiles = config.get<number>("maxFiles") ?? 10;
-
-  // Create the output channel, start a new log file, and remove old logs
-  outputChannel = vscode.window.createOutputChannel("Dynatrace Log", "log");
-  startNewLogFile();
-  removeOldestFiles(path.join(context.globalStorageUri.fsPath, "logs"), maxFiles);
-}
-
-/**
- * Disposes the output channel and cleans up old log files.
- */
-export function disposeLogger() {
-  outputChannel.dispose();
-  removeOldestFiles(path.join(context.globalStorageUri.fsPath, "logs"), maxFiles);
-}
-
-/**
- * Log a message without a level. These messages are only logged to
- * the editor's developer tools console.
- * @param data the data to log; objects will be JSON stringified
- * @param trace any trace breadcrumbs for internal logging
- */
-export function log(data: unknown, ...trace: string[]) {
-  logMessage(data, "NONE", ...trace);
-}
-
-/**
- * Log a message with DEBUG level.
- * @param data the data to log; objects will be JSON stringified
- * @param trace any trace breadcrumbs for internal logging
- */
-export function debug(data: unknown, ...trace: string[]) {
-  logMessage(data, "DEBUG", ...trace);
-}
-
-/**
- * Log a message with INFO level.
- * @param data the data to log; objects will be JSON stringified
- * @param trace any trace breadcrumbs for internal logging
- */
-export function info(data: unknown, ...trace: string[]) {
-  logMessage(data, "INFO", ...trace);
-}
-
-/**
- * Log a message with WARN level.
- * @param data the data to log; objects will be JSON stringified
- * @param trace any trace breadcrumbs for internal logging
- */
-export function warn(data: unknown, ...trace: string[]) {
-  logMessage(data, "WARN", ...trace);
-}
-
-/**
- * Log a message with ERROR level. This will always be logged.
- * @param data the data to log; objects will be JSON stringified
- * @param trace any trace breadcrumbs for internal logging
- */
-export function error(data: unknown, ...trace: string[]) {
-  logMessage(data, "ERROR", ...trace);
-}
+  return () => {
+    logChannel =
+      logChannel === undefined
+        ? vscode.window.createOutputChannel("Dynatrace Log", "log")
+        : logChannel;
+    return logChannel;
+  };
+})();
 
 /**
  * Sends a notitification at the specified level to the UI. It also logs the message internally.
@@ -224,7 +91,7 @@ export function error(data: unknown, ...trace: string[]) {
  * @param message message of the notification
  * @param trace any trace breadcrumbs for internal logging
  */
-export function notify(level: NotificationLevel, message: string, ...trace: string[]) {
+export const notify = (level: NotificationLevel, message: string, ...trace: string[]) => {
   switch (level) {
     case "INFO":
       vscode.window.showInformationMessage(message).then(
@@ -245,4 +112,202 @@ export function notify(level: NotificationLevel, message: string, ...trace: stri
       );
       break;
   }
-}
+};
+
+/**
+ * Log a message with ERROR level. This will always be logged.
+ * @param data the data to log; objects will be JSON stringified
+ * @param trace any trace breadcrumbs for internal logging
+ */
+export const error = (data: unknown, ...trace: string[]) => {
+  logMessage(data, "ERROR", ...trace);
+};
+
+/**
+ * Log a message with WARN level.
+ * @param data the data to log; objects will be JSON stringified
+ * @param trace any trace breadcrumbs for internal logging
+ */
+export const warn = (data: unknown, ...trace: string[]) => {
+  logMessage(data, "WARN", ...trace);
+};
+
+/**
+ * Log a message with INFO level.
+ * @param data the data to log; objects will be JSON stringified
+ * @param trace any trace breadcrumbs for internal logging
+ */
+export const info = (data: unknown, ...trace: string[]) => {
+  logMessage(data, "INFO", ...trace);
+};
+
+/**
+ * Log a message with DEBUG level.
+ * @param data the data to log; objects will be JSON stringified
+ * @param trace any trace breadcrumbs for internal logging
+ */
+export const debug = (data: unknown, ...trace: string[]) => {
+  logMessage(data, "DEBUG", ...trace);
+};
+
+/**
+ * Log a message without a level. These messages are only logged to
+ * the editor's developer tools console.
+ * @param data the data to log; objects will be JSON stringified
+ * @param trace any trace breadcrumbs for internal logging
+ */
+export const log = (data: unknown, ...trace: string[]) => {
+  logMessage(data, "NONE", ...trace);
+};
+
+/**
+ * Logs a message at the appropriate level with the given trace breadcrumbs.
+ * Messages without a level are only logged to the developer tools console. Other levels
+ * are also logged to the output channel and a log file in global storage.
+ * @param data the data to log; objects will be JSON stringified
+ * @param trace any trace breadcrumbs for internal logging
+ * @param level the log level
+ */
+const logMessage = (data: unknown, level: LogLevel, ...trace: string[]) => {
+  const logLevel = getConfiguredLogLevel();
+  const message = typeof data === "string" ? data : JSON.stringify(data, null, 2);
+  const timestamp = new Date().toISOString();
+  const scope = trace.join(".");
+  const formattedMessage = `${timestamp} [${level}][${scope}] ${message}`;
+
+  // Log to console and output channel controlled by settings
+  if (
+    ["ERROR", "NONE"].includes(level) ||
+    (level === "DEBUG" && ["DEBUG", "NONE"].includes(logLevel)) ||
+    (level === "INFO" && ["INFO", "DEBUG", "NONE"].includes(logLevel)) ||
+    (level === "WARN" && logLevel !== "ERROR")
+  ) {
+    logToConsole(timestamp, message, scope, level);
+    if (level !== "NONE") {
+      getLogChannel().appendLine(formattedMessage);
+    }
+  }
+
+  // File log will always capture all messages
+  writeFileSync(getCurrentLogFile(), `${formattedMessage}\n`, { flag: "a" });
+};
+
+const getConfiguredLogLevel = (() => {
+  let logLevel: LogLevel | undefined;
+
+  return () => {
+    logLevel =
+      logLevel === undefined
+        ? vscode.workspace
+            .getConfiguration("dynatraceExtensions.logging", null)
+            .get<LogLevel>("level") ?? "INFO"
+        : logLevel;
+    return logLevel;
+  };
+})();
+
+/**
+ * Logs a message to the developer tools console. The message is formatted with colors by
+ * using chalk. All messages have an easily recognizable '[Dynatrace]' prefix.
+ * @param timestamp the timestamp of the log message
+ * @param data the data to log
+ * @param scope the scope (trace breadcrumbs) of the log message
+ * @param level the log level
+ */
+const logToConsole = (timestamp: string, data: string, scope: string, level: LogLevel) => {
+  const fmtPrefix = chalk.black.bgCyan("[Dynatrace]");
+  const fmtTimestamp = chalk.cyan(timestamp);
+  const fmtLevel = CHALK_FORMATS[level];
+
+  // During development, we can automatically build the trace
+  const fmtScope = chalk.magentaBright(
+    `[${process.env.DEVELOPMENT ? extractScope(new Error().stack ?? "") : scope}]`,
+  );
+
+  console.log(
+    `${fmtTimestamp} ${fmtPrefix}${fmtLevel}${fmtScope} ` +
+      (level === "DEBUG" ? `${chalk.gray(data)}\n` : `${data}`),
+  );
+};
+
+/**
+ * Extracts the log scope (trace breadcrumbs) from the stack trace.
+ * NOTE: This only works in development mode.
+ * @param stack the stack trace
+ */
+const extractScope = (stack: string) => {
+  return (
+    stack
+      .split("\n")
+      .map(l => {
+        if (l.includes(path.resolve(__dirname, "..", ".."))) {
+          const match = l.match(/at (.*?) \(/);
+          return match ? match[1] : "";
+        }
+        return "";
+      })
+      .filter(l => l !== "")
+      .slice(3)
+      .reverse()
+      .join(" > ") || "vscode-api"
+  );
+};
+
+const getCurrentLogFile = (() => {
+  let currentLogFile: string | undefined;
+
+  return () => {
+    if (
+      currentLogFile === undefined ||
+      statSync(currentLogFile).size / (1024 * 1024) > getConfiguredMaxFileSize()
+    ) {
+      const context = getActivationContext();
+      const logsDir = path.join(context.globalStorageUri.fsPath, "logs");
+      const workspaceName = vscode.workspace.workspaceFolders?.[0].name ?? "no-workspace";
+      const fileName = `${workspaceName}_${new Date()
+        .toISOString()
+        .replace("T", "_")
+        .replace(/:/g, "-")}_log.log`;
+      currentLogFile = path.join(logsDir, fileName);
+      writeFileSync(currentLogFile, "");
+      cleanUpLogFiles();
+    }
+    return currentLogFile;
+  };
+})();
+
+const getConfiguredMaxFileSize = (() => {
+  let maxFileSize: number | undefined;
+
+  return () => {
+    maxFileSize =
+      maxFileSize === undefined
+        ? vscode.workspace
+            .getConfiguration("dynatraceExtensions.logging", null)
+            .get<number>("maxFileSize") ?? 10
+        : maxFileSize;
+    return maxFileSize;
+  };
+})();
+
+/**
+ * Cleans up old log files.
+ */
+export const cleanUpLogFiles = () => {
+  const context = getActivationContext();
+  removeOldestFiles(path.join(context.globalStorageUri.fsPath, "logs"), getConfiguredMaxFiles());
+};
+
+const getConfiguredMaxFiles = (() => {
+  let maxFiles: number | undefined;
+
+  return () => {
+    maxFiles =
+      maxFiles === undefined
+        ? vscode.workspace
+            .getConfiguration("dynatraceExtensions.logging", null)
+            .get<number>("maxFiles") ?? 10
+        : maxFiles;
+    return maxFiles;
+  };
+})();

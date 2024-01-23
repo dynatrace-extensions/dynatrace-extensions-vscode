@@ -17,15 +17,17 @@
 import mock = require("mock-fs");
 import { DirectoryItems } from "mock-fs/lib/filesystem";
 import * as vscode from "vscode";
-import { DatasourceName } from "../../../../src/interfaces/extensionMeta";
+import * as extension from "../../../../src/extension";
+import { DatasourceName, ExtensionStub } from "../../../../src/interfaces/extensionMeta";
 import {
   RemoteTarget,
   SimulationConfig,
   SimulatorData,
 } from "../../../../src/interfaces/simulator";
 import { SimulatorManager } from "../../../../src/statusBar/simulator";
+import * as cachingUtils from "../../../../src/utils/caching";
 import * as conditionCheckers from "../../../../src/utils/conditionCheckers";
-import * as extensionPartsingUtils from "../../../../src/utils/extensionParsing";
+import * as extensionParsingUtils from "../../../../src/utils/extensionParsing";
 import * as fileSystemUtils from "../../../../src/utils/fileSystem";
 import * as otherExtensionsUtils from "../../../../src/utils/otherExtensions";
 import * as simulatorUtils from "../../../../src/utils/simulator";
@@ -35,18 +37,16 @@ import { MockExtensionContext, MockUri } from "../../mocks/vscode";
 jest.mock("../../../../src/utils/logging");
 
 describe("Simulator Manager", () => {
-  let mockContext: vscode.ExtensionContext;
-  let panelManager: webviewPanel.WebviewPanelManager;
   let simulatorManager: SimulatorManager;
+  const mockContext = new MockExtensionContext();
 
   beforeAll(() => {
     mock({ mock: {} });
-    panelManager = new webviewPanel.WebviewPanelManager(new MockUri("mock.extension.uri"));
-    mockContext = new MockExtensionContext();
   });
 
   beforeEach(() => {
-    simulatorManager = new SimulatorManager(mockContext, panelManager);
+    jest.spyOn(extension, "getActivationContext").mockReturnValue(mockContext);
+    simulatorManager = new SimulatorManager();
   });
 
   afterEach(() => {
@@ -57,12 +57,20 @@ describe("Simulator Manager", () => {
     mock.restore();
   });
 
-  describe("checkMantatoryRequirements", () => {
+  describe("checkMandatoryRequirements", () => {
+    const mockExtensionStub: ExtensionStub = {
+      name: "mockExtension",
+      version: "1.0.0",
+      minDynatraceVersion: "1.0.0",
+      author: { name: "mockAuthor" },
+      snmp: [],
+    };
     it("should return false along with failed checks", () => {
       jest.spyOn(fileSystemUtils, "getExtensionFilePath").mockReturnValue(undefined);
-      jest.spyOn(extensionPartsingUtils, "getDatasourceName").mockReturnValue("unsupported");
+      jest.spyOn(cachingUtils, "getCachedParsedExtension").mockReturnValue(undefined);
+      jest.spyOn(extensionParsingUtils, "getDatasourceName").mockReturnValue("unsupported");
 
-      const [status, failedChecks] = simulatorManager.checkMantatoryRequirements();
+      const [status, failedChecks] = simulatorManager.checkMandatoryRequirements();
 
       expect(status).toBe(false);
       expect(failedChecks).toContain("Manifest");
@@ -90,8 +98,9 @@ describe("Simulator Manager", () => {
     ])("activation file check fails if $condition", ({ datasource, mockFs }) => {
       mock(mockFs as DirectoryItems);
       jest.spyOn(fileSystemUtils, "getExtensionFilePath").mockReturnValue("mock/extension");
+      jest.spyOn(cachingUtils, "getCachedParsedExtension").mockReturnValue(mockExtensionStub);
       jest
-        .spyOn(extensionPartsingUtils, "getDatasourceName")
+        .spyOn(extensionParsingUtils, "getDatasourceName")
         .mockReturnValue(datasource as DatasourceName);
       jest
         .spyOn(vscode.workspace, "workspaceFolders", "get")
@@ -99,7 +108,7 @@ describe("Simulator Manager", () => {
           { index: 0, name: "MockWorkspace", uri: new MockUri("mock/my-workspace") },
         ]);
 
-      const [status, failedChecks] = simulatorManager.checkMantatoryRequirements();
+      const [status, failedChecks] = simulatorManager.checkMandatoryRequirements();
 
       expect(status).toBe(false);
       expect(failedChecks).toContain("Activation file");
@@ -116,9 +125,10 @@ describe("Simulator Manager", () => {
       jest
         .spyOn(fileSystemUtils, "getExtensionFilePath")
         .mockReturnValue("mock/myWorkspace/extension");
-      jest.spyOn(extensionPartsingUtils, "getDatasourceName").mockReturnValue("snmp");
+      jest.spyOn(cachingUtils, "getCachedParsedExtension").mockReturnValue(mockExtensionStub);
+      jest.spyOn(extensionParsingUtils, "getDatasourceName").mockReturnValue("snmp");
 
-      const [status, failedChecks] = simulatorManager.checkMantatoryRequirements();
+      const [status, failedChecks] = simulatorManager.checkMandatoryRequirements();
 
       expect(status).toBe(true);
       expect(failedChecks).toHaveLength(0);
@@ -322,12 +332,12 @@ describe("Simulator Manager", () => {
     beforeEach(() => {
       jest.spyOn(fileSystemUtils, "getSimulatorTargets").mockReturnValue([]);
       jest.spyOn(fileSystemUtils, "getSimulatorSummaries").mockReturnValue([]);
-      renderSpy = jest.spyOn(panelManager, "render").mockImplementation(() => {});
-      postMessageSpy = jest.spyOn(panelManager, "postMessage").mockImplementation(() => {});
+      renderSpy = jest.spyOn(webviewPanel, "renderPanel").mockImplementation(() => {});
+      postMessageSpy = jest.spyOn(webviewPanel, "postMessageToPanel").mockImplementation(() => {});
     });
 
     it("first updates the panel with CHECKING status (render)", async () => {
-      jest.spyOn(simulatorManager, "checkMantatoryRequirements").mockReturnValue([true, []]);
+      jest.spyOn(simulatorManager, "checkMandatoryRequirements").mockReturnValue([true, []]);
 
       await simulatorManager.checkReady(true);
 
@@ -341,7 +351,7 @@ describe("Simulator Manager", () => {
     });
 
     it("first updates the panel with CHECKING status (postMessage)", async () => {
-      jest.spyOn(simulatorManager, "checkMantatoryRequirements").mockReturnValue([true, []]);
+      jest.spyOn(simulatorManager, "checkMandatoryRequirements").mockReturnValue([true, []]);
 
       await simulatorManager.checkReady(false);
 
@@ -357,7 +367,7 @@ describe("Simulator Manager", () => {
     });
 
     it("then updates the panel with READY state and panel data", async () => {
-      jest.spyOn(simulatorManager, "checkMantatoryRequirements").mockReturnValue([true, []]);
+      jest.spyOn(simulatorManager, "checkMandatoryRequirements").mockReturnValue([true, []]);
 
       await simulatorManager.checkReady(true);
 
@@ -372,7 +382,7 @@ describe("Simulator Manager", () => {
     it("updates the panel with UNSUPPORTED for mandatory check failures", async () => {
       const mockFailedChecks = ["a", "b", "c"];
       jest
-        .spyOn(simulatorManager, "checkMantatoryRequirements")
+        .spyOn(simulatorManager, "checkMandatoryRequirements")
         .mockReturnValue([false, mockFailedChecks]);
 
       await simulatorManager.checkReady(true);
@@ -390,7 +400,7 @@ describe("Simulator Manager", () => {
     });
 
     it("updates the panel with NOTREADY for simulation config check failures", async () => {
-      jest.spyOn(simulatorManager, "checkMantatoryRequirements").mockReturnValue([true, []]);
+      jest.spyOn(simulatorManager, "checkMandatoryRequirements").mockReturnValue([true, []]);
       jest
         .spyOn(simulatorManager, "checkSimulationConfig")
         .mockReturnValue(Promise.resolve(["NOTREADY", "mockMessage"]));

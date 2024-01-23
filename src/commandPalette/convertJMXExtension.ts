@@ -15,6 +15,7 @@
  */
 
 import { readFileSync, writeFileSync } from "fs";
+import * as path from "path";
 import * as jszip from "jszip";
 import * as vscode from "vscode";
 import * as yaml from "yaml";
@@ -40,7 +41,9 @@ import {
   SourceDto,
   V1UI,
 } from "../interfaces/extensionMeta";
-import { CachedData } from "../utils/dataCaching";
+import { getDynatraceClient } from "../treeViews/tenantsTreeView";
+import { pushManifestTextForParsing } from "../utils/caching";
+import { getExtensionWorkspaceDir } from "../utils/fileSystem";
 import * as logger from "../utils/logging";
 
 const logTrace = ["commandPalette", "convertJMXExtension"];
@@ -125,6 +128,21 @@ const TECH_OPTIONS = [
   { label: "Quarkus", id: "QUARKUS" },
   { label: "Micronaut", id: "MICRONAUT" },
 ];
+
+export const convertJmxExtensionWorkflow = async (outputPath?: string) => {
+  // Unless explicitly specified, try to detect output path
+  if (!outputPath) {
+    const extensionDir = getExtensionWorkspaceDir();
+    if (extensionDir) {
+      await convertJMXExtension(
+        await getDynatraceClient(),
+        path.resolve(extensionDir, "extension.yaml"),
+      );
+    }
+  } else {
+    await convertJMXExtension(await getDynatraceClient(), outputPath);
+  }
+};
 
 /**
  * Get the contents of the plugin.json file from a zip file binary data
@@ -783,15 +801,10 @@ export async function extractV1FromRemote(
  * Parses a JMX v1 plugin.json file and produces an equivalent 2.0 extension manifest.
  * The file can be loaded either locally or from a connected tenant and supports both direct
  * file parsing as well as zip browsing.
- * @param dataCache An instance of the data cache
  * @param dt Dynatrace Client API
  * @param outputPath optional path where to save the manifest
  */
-export async function convertJMXExtension(
-  dataCache: CachedData,
-  dt?: Dynatrace,
-  outputPath?: string,
-) {
+export async function convertJMXExtension(dt?: Dynatrace, outputPath?: string) {
   const fnLogTrace = [...logTrace, "convertJMXExtension"];
   logger.info("Executing Covert JMX command", ...fnLogTrace);
   // User chooses if they want to use a local file or browse from the Dynatrace environment
@@ -845,7 +858,7 @@ export async function convertJMXExtension(
     writeFileSync(extensionYAMLFile, yamlFileContents);
 
     // Update the cache
-    dataCache.updateParsedExtension();
+    pushManifestTextForParsing();
 
     // Open the file
     const document = await vscode.workspace.openTextDocument(extensionYAMLFile);

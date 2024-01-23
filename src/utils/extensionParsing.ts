@@ -32,14 +32,12 @@ const logTrace = ["utils", "extensionParsing"];
  */
 export function normalizeExtensionVersion(version: string): string {
   const fnLogTrace = [...logTrace, "normalizeExtensionVersion"];
-  logger.debug(`Normalizing extension version "${version}"`);
-
   const versionParts = version.split(".");
   while (versionParts.length < 3) {
     versionParts.push("0");
   }
   const result = versionParts.slice(0, 3).join(".");
-  logger.debug(`Normalized as "${result}"`, ...fnLogTrace);
+  logger.debug(`Normalized extension version "${version}" is "${result}"`, ...fnLogTrace);
   return result;
 }
 

@@ -33,13 +33,14 @@ import * as path from "path";
 import { copySync } from "fs-extra";
 import { glob } from "glob";
 import * as vscode from "vscode";
+import { getActivationContext } from "../extension";
 import {
   ExecutionSummary,
   LocalExecutionSummary,
   RemoteExecutionSummary,
   RemoteTarget,
 } from "../interfaces/simulator";
-import { DynatraceEnvironmentData, ExtensionWorkspace } from "../interfaces/treeViewData";
+import { DynatraceTenantDto, ExtensionWorkspace } from "../interfaces/treeViews";
 import { notify } from "./logging";
 import * as logger from "./logging";
 
@@ -76,9 +77,9 @@ export function removeOldestFiles(dirPath: string, count: number) {
  * Initializes the global storage path for the VS Code extension.
  * Given that VS Code storage paths may not exist yet, this function creates it if needed.
  * Also creates empty JSON files where all initialized repos' and tenants' metadata should be stored.
- * @param context VSCode Extension Context
  */
-export function initGlobalStorage(context: vscode.ExtensionContext) {
+export function initializeGlobalStorage() {
+  const context = getActivationContext();
   const globalStoragePath = context.globalStorageUri.fsPath;
   const extensionWorkspacesJson = path.join(globalStoragePath, "extensionWorkspaces.json");
   const dynatraceEnvironmentsJson = path.join(globalStoragePath, "dynatraceEnvironments.json");
@@ -126,10 +127,10 @@ export function initGlobalStorage(context: vscode.ExtensionContext) {
 /**
  * Initializes the workspace storage path for the current workspace (assumed to be opened).
  * Given that VS Code storage paths may not exist yet, this function creates it if needed.
- * @param context VSCode Extension Context
  */
-export function initWorkspaceStorage(context: vscode.ExtensionContext) {
+export function initWorkspaceStorage() {
   const fnLogTrace = [...logTrace, "initWorkspaceStorage"];
+  const context = getActivationContext();
   const storagePath = context.storageUri?.fsPath;
   if (!storagePath) {
     logger.error("No workspace detected.", ...fnLogTrace);
@@ -145,9 +146,9 @@ export function initWorkspaceStorage(context: vscode.ExtensionContext) {
 /**
  * Saves the metadata of an initialized workspace (assumed to be opened) within the global
  * storage path (extensionWorkspaces.json). If previous metadata exists, it will be overwritten.
- * @param context VSCode Extension Context
  */
-export async function registerWorkspace(context: vscode.ExtensionContext) {
+export async function registerWorkspace() {
+  const context = getActivationContext();
   if (!context.storageUri?.fsPath || !vscode.workspace.workspaceFolders) {
     logger.error(
       "No workspace to register. Check should be upstream.",
@@ -183,10 +184,9 @@ export async function registerWorkspace(context: vscode.ExtensionContext) {
 
 /**
  * Gets metadata of all extension workspaces currently registered in the global storage.
- * @param context VSCode Extension Context
- * @returns all workspaces
  */
-export function getAllWorkspaces(context: vscode.ExtensionContext): ExtensionWorkspace[] {
+export function getAllWorkspaces(): ExtensionWorkspace[] {
+  const context = getActivationContext();
   const workspacesJson = path.join(context.globalStorageUri.fsPath, "extensionWorkspaces.json");
   return (JSON.parse(readFileSync(workspacesJson).toString()) as ExtensionWorkspace[]).map(
     (extension: ExtensionWorkspace) =>
@@ -200,38 +200,33 @@ export function getAllWorkspaces(context: vscode.ExtensionContext): ExtensionWor
 
 /**
  * Finds a workspace (from globally stored metadata) by either its name or its id.
- * @param workspaceName Name of the workspace to find
- * @param workspaceId ID of the workspace to find
- * @param context VSCode Extension Context
  * @returns The workspace, if found, or undefined otherwise
  */
 export function findWorkspace(
-  context: vscode.ExtensionContext,
   workspaceName?: string,
   workspaceId?: string,
 ): ExtensionWorkspace | undefined {
   if (workspaceName) {
-    return getAllWorkspaces(context).find(ws => ws.name === workspaceName);
+    return getAllWorkspaces().find(ws => ws.name === workspaceName);
   }
   if (workspaceId) {
-    return getAllWorkspaces(context).find(ws => ws.id === workspaceId);
+    return getAllWorkspaces().find(ws => ws.id === workspaceId);
   }
 }
 
 /**
  * Gets metadata of all Dynatrace environments currently registered in the global storage.
- * @param context VSCode Extension Context
  * @returns all environments
  */
-export function getAllEnvironments(context: vscode.ExtensionContext): DynatraceEnvironmentData[] {
+export function getAllEnvironments(): DynatraceTenantDto[] {
+  const context = getActivationContext();
   const environmentsJson = path.join(context.globalStorageUri.fsPath, "dynatraceEnvironments.json");
-  return JSON.parse(readFileSync(environmentsJson).toString()) as DynatraceEnvironmentData[];
+  return JSON.parse(readFileSync(environmentsJson).toString()) as DynatraceTenantDto[];
 }
 
 /**
  * Saves the metadata of a workspace in the global storage. If previous metadata exists, it
  * will be overwritten.
- * @param context VSCode Extension Context
  * @param url URL for this environment
  * @param token API Token for Dynatrace API Calls. Note: this is stored as is, so encrypt it
  *              before sending it through
@@ -239,21 +234,19 @@ export function getAllEnvironments(context: vscode.ExtensionContext): DynatraceE
  * @param current if true, this will be set as the currently used environment
  */
 export async function registerEnvironment(
-  context: vscode.ExtensionContext,
   url: string,
   apiUrl: string,
   token: string,
   name?: string,
   current: boolean = false,
 ) {
+  const context = getActivationContext();
   const environmentsJson = path.join(context.globalStorageUri.fsPath, "dynatraceEnvironments.json");
-  let environments = JSON.parse(
-    readFileSync(environmentsJson).toString(),
-  ) as DynatraceEnvironmentData[];
   const id = url.includes("/e/") ? url.split("/e/")[1] : url.split("https://")[1].substring(0, 8);
-  const environment: DynatraceEnvironmentData = { id, url, apiUrl, token, name, current };
+  const environment: DynatraceTenantDto = { id, url, apiUrl, token, current, label: name ?? id };
 
   // If this will be the currently used environment, deactivate others
+  let environments = JSON.parse(readFileSync(environmentsJson).toString()) as DynatraceTenantDto[];
   if (current) {
     environments = environments.map(e => {
       e.current = e.current ? !e.current : e.current;
@@ -281,14 +274,14 @@ export async function registerEnvironment(
 /**
  * Removes a Dynatrace Environment from global extension storage, thus unregistering it from the
  * extension. The environment is specified by ID.
- * @param context VSCode Extension Context
  * @param environmentId id of the environment to remove
  */
-export async function removeEnvironment(context: vscode.ExtensionContext, environmentId: string) {
+export async function removeEnvironment(environmentId: string) {
+  const context = getActivationContext();
   const environmentsJson = path.join(context.globalStorageUri.fsPath, "dynatraceEnvironments.json");
   const environments = JSON.parse(
     readFileSync(environmentsJson).toString(),
-  ) as DynatraceEnvironmentData[];
+  ) as DynatraceTenantDto[];
 
   writeFileSync(environmentsJson, JSON.stringify(environments.filter(e => e.id !== environmentId)));
 
@@ -303,10 +296,10 @@ export async function removeEnvironment(context: vscode.ExtensionContext, enviro
 /**
  * Removes an Extension Workspace from global extension storage, thus unregistering it from
  * the extension. The workspace is specified by path.
- * @param context VSCode Extension Context
  * @param workspaceId id of the workspace to remove
  */
-export async function removeWorkspace(context: vscode.ExtensionContext, workspaceId: string) {
+export async function removeWorkspace(workspaceId: string) {
+  const context = getActivationContext();
   const workspacesJson = path.join(context.globalStorageUri.fsPath, "extensionWorkspaces.json");
   const workspaces = JSON.parse(readFileSync(workspacesJson).toString()) as ExtensionWorkspace[];
 
@@ -322,13 +315,10 @@ export async function removeWorkspace(context: vscode.ExtensionContext, workspac
 
 /**
  * Writes an extension simulator summary to the global storage.
- * @param context - VSCode Extension Context
  * @param summary - the summary to write
  */
-export function registerSimulatorSummary(
-  context: vscode.ExtensionContext,
-  summary: LocalExecutionSummary | RemoteExecutionSummary,
-) {
+export function registerSimulatorSummary(summary: LocalExecutionSummary | RemoteExecutionSummary) {
+  const context = getActivationContext();
   const summariesJson = path.join(context.globalStorageUri.fsPath, "summaries.json");
   const summaries = JSON.parse(readFileSync(summariesJson).toString()) as (
     | LocalExecutionSummary
@@ -340,12 +330,10 @@ export function registerSimulatorSummary(
 
 /**
  * Gets all extension simulator summaries from the global storage.
- * @param context - VSCode Extension Context
  * @returns all summaries
  */
-export function getSimulatorSummaries(
-  context: vscode.ExtensionContext,
-): (LocalExecutionSummary | RemoteExecutionSummary)[] {
+export function getSimulatorSummaries(): (LocalExecutionSummary | RemoteExecutionSummary)[] {
+  const context = getActivationContext();
   const summariesJson = path.join(context.globalStorageUri.fsPath, "summaries.json");
   return (
     JSON.parse(readFileSync(summariesJson).toString()) as (
@@ -364,7 +352,7 @@ export function getSimulatorSummaries(
  * The max number of files is not handled per workspace yet.
  * @param context - Extension Context
  */
-export function cleanUpSimulatorLogs(context: vscode.ExtensionContext) {
+export function cleanUpSimulatorLogs() {
   // eslint-disable-next-line no-secrets/no-secrets
   const fnLogTrace = [...logTrace, "cleanUpSimulatorLogs"];
   const maxFiles = vscode.workspace
@@ -379,7 +367,7 @@ export function cleanUpSimulatorLogs(context: vscode.ExtensionContext) {
   // Order summaries by workspace
   const newSummaries: ExecutionSummary[] = [];
   const summariesByWorkspace: Record<string, ExecutionSummary[] | undefined> = {};
-  getSimulatorSummaries(context).forEach(s => {
+  getSimulatorSummaries().forEach(s => {
     if (!summariesByWorkspace[s.workspace]) {
       summariesByWorkspace[s.workspace] = [];
     }
@@ -411,29 +399,27 @@ export function cleanUpSimulatorLogs(context: vscode.ExtensionContext) {
   });
 
   // Write the new summaries list to disk
+  const context = getActivationContext();
   const summariesPath = path.join(context.globalStorageUri.fsPath, "summaries.json");
   writeFileSync(summariesPath, JSON.stringify(newSummaries));
 }
 
 /**
  * Registers a list of targets for the extension simulator in the global storage.
- * @param context - VSCode Extension Context
  * @param targets - the targets to write
  */
-export function registerSimulatorTargets(
-  context: vscode.ExtensionContext,
-  targets: RemoteTarget[],
-) {
+export function registerSimulatorTargets(targets: RemoteTarget[]) {
+  const context = getActivationContext();
   const targetsJson = path.join(context.globalStorageUri.fsPath, "targets.json");
   writeFileSync(targetsJson, JSON.stringify(targets));
 }
 
 /**
  * Registers a list of targets for the extension simulator in the global storage.
- * @param context - VSCode Extension Context
  * @param targets - the targets to write
  */
-export function registerSimulatorTarget(context: vscode.ExtensionContext, target: RemoteTarget) {
+export function registerSimulatorTarget(target: RemoteTarget) {
+  const context = getActivationContext();
   const targetsJson = path.join(context.globalStorageUri.fsPath, "targets.json");
   const currentTargets = JSON.parse(readFileSync(targetsJson).toString()) as RemoteTarget[];
 
@@ -450,10 +436,10 @@ export function registerSimulatorTarget(context: vscode.ExtensionContext, target
 
 /**
  * Deletes a target from the extension's global storage.
- * @param context - VSCode Extension Context
  * @param target - the target to delete
  */
-export function deleteSimulatorTarget(context: vscode.ExtensionContext, target: RemoteTarget) {
+export function deleteSimulatorTarget(target: RemoteTarget) {
+  const context = getActivationContext();
   const targetsJson = path.join(context.globalStorageUri.fsPath, "targets.json");
   const currentTargets = JSON.parse(readFileSync(targetsJson).toString()) as RemoteTarget[];
 
@@ -464,10 +450,10 @@ export function deleteSimulatorTarget(context: vscode.ExtensionContext, target: 
 
 /**
  * Fetches all extension simulator summaries from the global storage.
- * @param context - VSCode Extension Context
  * @returns - all targets
  */
-export function getSimulatorTargets(context: vscode.ExtensionContext): RemoteTarget[] {
+export function getSimulatorTargets(): RemoteTarget[] {
+  const context = getActivationContext();
   const targetsJson = path.join(context.globalStorageUri.fsPath, "targets.json");
   return JSON.parse(readFileSync(targetsJson).toString()) as RemoteTarget[];
 }
@@ -512,6 +498,18 @@ export function uploadComponentCert(certPath: string, component: "OneAgent" | "A
     copyFileSync(certPath, path.join(uploadDir, certFilename));
   }
 }
+
+/**
+ * Reads the extension manifest and returns the contents or an empty string
+ * if the file doesn't exist.
+ */
+export const readExtensionManifest = () => {
+  const manifestFilePath = getExtensionFilePath();
+  if (manifestFilePath && existsSync(manifestFilePath)) {
+    return readFileSync(manifestFilePath).toString();
+  }
+  return "";
+};
 
 /**
  * Searches the known extension workspace path for the extension.yaml file and returns the
@@ -757,10 +755,10 @@ export function createUniqueFileName(dir: string, prefix: string, initialFileNam
 
 /**
  * Migrates from the legacy `dt-ext-copilot` extension to the current `dynatrace_extensions`.
- * This involves migra
- * @param context
+ * This involves migrating all global & workspace level storage and settings.
  */
-export async function migrateFromLegacyExtension(context: vscode.ExtensionContext) {
+export async function migrateFromLegacyExtension() {
+  const context = getActivationContext();
   await vscode.window.withProgress(
     { location: vscode.ProgressLocation.Notification },
     async progress => {
@@ -774,7 +772,7 @@ export async function migrateFromLegacyExtension(context: vscode.ExtensionContex
       copySync(legacyGlobalStoragePath, globalStoragePath, { overwrite: true });
 
       // Convert all environments to new format with apiUrl attribute
-      const environments = getAllEnvironments(context);
+      const environments = getAllEnvironments();
       if (environments.length > 0) {
         writeFileSync(
           path.resolve(globalStoragePath, "dynatraceEnvironments.json"),
@@ -785,7 +783,7 @@ export async function migrateFromLegacyExtension(context: vscode.ExtensionContex
       progress.report({ message: "Migrating workspace data" });
       const genericWorkspaceStorage = path.resolve(context.storageUri?.fsPath ?? "", "..", "..");
       // Move over all data stored in workspaces
-      const workspaces = getAllWorkspaces(context);
+      const workspaces = getAllWorkspaces();
       workspaces.forEach(workspace => {
         const legacyWorkspaceStorage = path.resolve(
           genericWorkspaceStorage,

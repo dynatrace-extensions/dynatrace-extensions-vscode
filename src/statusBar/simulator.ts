@@ -19,6 +19,7 @@ import { existsSync, mkdirSync, readFileSync, writeFileSync } from "fs";
 import * as path from "path";
 import pidtree = require("pidtree");
 import * as vscode from "vscode";
+import { getActivationContext } from "../extension";
 import {
   EecType,
   LocalExecutionSummary,
@@ -32,9 +33,9 @@ import {
   SimulatorStatus,
 } from "../interfaces/simulator";
 import { ToastOptions } from "../interfaces/webview";
+import { getCachedParsedExtension } from "../utils/caching";
 import { loopSafeWait } from "../utils/code";
 import { checkDtSdkPresent } from "../utils/conditionCheckers";
-import { CachedDataConsumer } from "../utils/dataCaching";
 import { getDatasourceName } from "../utils/extensionParsing";
 import {
   cleanUpSimulatorLogs,
@@ -55,7 +56,7 @@ import {
   getDatasourcePath,
   loadDefaultSimulationConfig,
 } from "../utils/simulator";
-import { REGISTERED_PANELS, WebviewPanelManager } from "../webviews/webviewPanel";
+import { REGISTERED_PANELS, postMessageToPanel, renderPanel } from "../webviews/webviewPanel";
 
 const SIMULATOR_START_CMD = "dynatrace-extensions.simulator.start";
 const SIMULATOR_STOP_CMD = "dynatrace-extensions.simulator.stop";
@@ -69,7 +70,7 @@ const SIMULATOR_PANEL_DATA_TYPE = "SIMULATOR_DATA";
 /**
  * Helper class for managing the Extension Simulator, its UI, and data.
  */
-export class SimulatorManager extends CachedDataConsumer {
+export class SimulatorManager {
   public datasourceName: string;
   public simulatorStatus: SimulatorStatus;
   public currentConfiguration: SimulationConfig;
@@ -84,18 +85,14 @@ export class SimulatorManager extends CachedDataConsumer {
   private datasourceDir: string;
   private datasourceExe: string;
   private pyEnvOptions: ExecOptions;
-  private readonly logTrace = ["statusBar", "simulator", this.constructor.name];
-  private readonly context: vscode.ExtensionContext;
+  private readonly logTrace = ["statusBar", "simulator", "SimulatorManager"];
   private readonly outputChannel: vscode.OutputChannel;
   private readonly statusBar: vscode.StatusBarItem;
-  private readonly panelManager: WebviewPanelManager;
 
   /**
-   * @param context - extension context
    * @param panelManager - webview panel manager
    */
-  constructor(context: vscode.ExtensionContext, panelManager: WebviewPanelManager) {
-    super(); // Data cache access
+  constructor() {
     this.datasourceName = "unsupported";
     this.simulatorStatus = "UNSUPPORTED";
     this.failedChecks = [];
@@ -105,10 +102,8 @@ export class SimulatorManager extends CachedDataConsumer {
     this.datasourceExe = "";
     this.pyEnvOptions = {};
     this.url = "file://CONSOLE";
-    this.context = context;
-    this.idToken = path.join(context.globalStorageUri.fsPath, "idToken.txt");
+    this.idToken = path.join(getActivationContext().globalStorageUri.fsPath, "idToken.txt");
     this.localOs = process.platform === "win32" ? "WINDOWS" : "LINUX";
-    this.panelManager = panelManager;
     this.simulationSpecs = {
       isPython: false,
       dsSupportsActiveGateEec: false,
@@ -116,10 +111,10 @@ export class SimulatorManager extends CachedDataConsumer {
       localActiveGateDsExists: false,
       localOneAgentDsExists: false,
     };
-    this.currentConfiguration = loadDefaultSimulationConfig(context);
+    this.currentConfiguration = loadDefaultSimulationConfig();
 
     // Initial clean-up of files
-    cleanUpSimulatorLogs(context);
+    cleanUpSimulatorLogs();
 
     // Create the output channel for logs
     this.outputChannel = vscode.window.createOutputChannel("Extension simulator", "log");
@@ -156,6 +151,13 @@ export class SimulatorManager extends CachedDataConsumer {
     this.statusBar.text = "Extension simulator";
     this.statusBar.tooltip = "Click to open";
     this.statusBar.show();
+
+    // Initial check for configuration
+    this.checkReady(false).then(
+      () => {},
+      err =>
+        logger.warn(`Initial simulator status check: ${(err as Error).message}`, ...this.logTrace),
+    );
   }
 
   /**
@@ -165,8 +167,8 @@ export class SimulatorManager extends CachedDataConsumer {
   private deleteTarget(target: RemoteTarget) {
     logger.info(`Deleting target ${target.name}`, ...this.logTrace, "deleteTarget");
     // This will always succeed
-    deleteSimulatorTarget(this.context, target);
-    this.panelManager.postMessage(REGISTERED_PANELS.SIMULATOR_UI, {
+    deleteSimulatorTarget(target);
+    postMessageToPanel(REGISTERED_PANELS.SIMULATOR_UI, {
       messageType: "showToast",
       data: {
         title: "Target deleted",
@@ -184,8 +186,8 @@ export class SimulatorManager extends CachedDataConsumer {
    */
   private addTarget(target: RemoteTarget) {
     logger.info(`Adding target ${target.name}`, ...this.logTrace, "addTarget");
-    registerSimulatorTarget(this.context, target);
-    this.panelManager.postMessage(REGISTERED_PANELS.SIMULATOR_UI, {
+    registerSimulatorTarget(target);
+    postMessageToPanel(REGISTERED_PANELS.SIMULATOR_UI, {
       messageType: "showToast",
       data: {
         title: "Target registered",
@@ -210,7 +212,7 @@ export class SimulatorManager extends CachedDataConsumer {
     this.refreshUI(showUI, "CHECKING");
 
     // First check mandatory requirements
-    const [result, failedChecks] = this.checkMantatoryRequirements();
+    const [result, failedChecks] = this.checkMandatoryRequirements();
     if (!result) {
       this.refreshUI(showUI, "UNSUPPORTED", undefined, failedChecks);
       logger.warn(`Mandatory checks failed: ${failedChecks.join(", ")}`, ...fnLogTrace);
@@ -247,7 +249,7 @@ export class SimulatorManager extends CachedDataConsumer {
    * Without these, there's no point going any further in the process.
    * @returns tuple of [check result, failed checks]
    */
-  public checkMantatoryRequirements(): [boolean, string[]] {
+  public checkMandatoryRequirements(): [boolean, string[]] {
     const failedChecks: string[] = [];
     // Check extension file exists
     const extensionFile = getExtensionFilePath();
@@ -257,11 +259,16 @@ export class SimulatorManager extends CachedDataConsumer {
       this.extensionFile = extensionFile;
     }
     // Check extension has datasource
-    const datasourceName = getDatasourceName(this.parsedExtension);
-    if (datasourceName === "unsupported") {
+    const parsedExtension = getCachedParsedExtension();
+    if (!parsedExtension) {
       failedChecks.push("Datasource");
     } else {
-      this.datasourceName = datasourceName;
+      const datasourceName = getDatasourceName(parsedExtension);
+      if (datasourceName === "unsupported") {
+        failedChecks.push("Datasource");
+      } else {
+        this.datasourceName = datasourceName;
+      }
     }
     // Check activation file exists
     if (!vscode.workspace.workspaceFolders) {
@@ -275,7 +282,7 @@ export class SimulatorManager extends CachedDataConsumer {
         this.activationFile = activationFile;
       } else {
         // Python extensions may use "activation.json" as alternative
-        if (datasourceName === "python") {
+        if (this.datasourceName === "python") {
           const extDir = getExtensionWorkspaceDir();
           if (extDir) {
             const pyActivation = path.resolve(
@@ -452,7 +459,7 @@ export class SimulatorManager extends CachedDataConsumer {
     const startTime = new Date();
     let success = true;
     // If needed, make room for new log
-    cleanUpSimulatorLogs(this.context);
+    cleanUpSimulatorLogs();
     const logFilePath = path.join(
       workspaceFolders[0].uri.fsPath,
       "logs",
@@ -495,7 +502,7 @@ export class SimulatorManager extends CachedDataConsumer {
 
     this.simulatorProcess.on("close", (code, signal) => {
       const duration = Math.round((new Date().getTime() - startTime.getTime()) / 1000);
-      registerSimulatorSummary(this.context, {
+      registerSimulatorSummary({
         ...staticDetails,
         startTime,
         duration,
@@ -697,8 +704,8 @@ export class SimulatorManager extends CachedDataConsumer {
     const panelData: SimulatorPanelData = {
       dataType: SIMULATOR_PANEL_DATA_TYPE,
       data: {
-        targets: getSimulatorTargets(this.context),
-        summaries: getSimulatorSummaries(this.context),
+        targets: getSimulatorTargets(),
+        summaries: getSimulatorSummaries(),
         currentConfiguration: this.currentConfiguration,
         specs: this.simulationSpecs,
         status: status ?? this.simulatorStatus,
@@ -714,9 +721,9 @@ export class SimulatorManager extends CachedDataConsumer {
     );
 
     if (show) {
-      this.panelManager.render(REGISTERED_PANELS.SIMULATOR_UI, "Extension Simulator", panelData);
+      renderPanel(REGISTERED_PANELS.SIMULATOR_UI, "Extension Simulator", panelData);
     } else {
-      this.panelManager.postMessage(REGISTERED_PANELS.SIMULATOR_UI, {
+      postMessageToPanel(REGISTERED_PANELS.SIMULATOR_UI, {
         messageType: "updateData",
         data: panelData,
       });
@@ -730,7 +737,7 @@ export class SimulatorManager extends CachedDataConsumer {
 
     const logContent = readFileSync(logFilePath.fsPath).toString();
 
-    this.panelManager.postMessage(REGISTERED_PANELS.SIMULATOR_UI, {
+    postMessageToPanel(REGISTERED_PANELS.SIMULATOR_UI, {
       messageType: "openLog",
       data: logContent,
     });

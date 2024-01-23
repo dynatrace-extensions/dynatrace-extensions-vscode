@@ -15,9 +15,12 @@
  */
 
 import { writeFileSync } from "fs";
+import * as path from "path";
 import * as vscode from "vscode";
 import { Dynatrace } from "../dynatrace-api/dynatrace";
-import { CachedData } from "../utils/dataCaching";
+import { getDynatraceClient } from "../treeViews/tenantsTreeView";
+import { pushManifestTextForParsing } from "../utils/caching";
+import { getExtensionWorkspaceDir } from "../utils/fileSystem";
 import * as logger from "../utils/logging";
 import { extractV1FromRemote, extractv1ExtensionFromLocal } from "./convertJMXExtension";
 import { convertPluginJsonToActivationSchema } from "./python/pythonConversion";
@@ -32,19 +35,32 @@ const OPTION_DYNATRACE_ENVIRONMENT: vscode.QuickPickItem = {
   description: "Browse your Dynatrace environment for a Python extension",
 };
 
+export const convertPythonExtensionWorkflow = async (outputPath?: string) => {
+  // Unless explicitly specified, try to detect output path
+  if (!outputPath) {
+    const extensionDir = getExtensionWorkspaceDir();
+    if (extensionDir) {
+      await convertPythonExtension(
+        await getDynatraceClient(),
+        path.resolve(extensionDir, "activationSchema.json"),
+      );
+    } else {
+      // No activationSchema.json found
+      await convertPythonExtension(await getDynatraceClient());
+    }
+  } else {
+    await convertPythonExtension(await getDynatraceClient(), outputPath);
+  }
+};
+
 /**
  * Parses a v1 plugin.json file and produces an equivalent 2.0 activationSchema.json.
  * The file can be loaded either locally or from a connected tenant and supports both direct
  * file parsing as well as zip browsing.
- * @param dataCache An instance of the data cache
  * @param dt Dynatrace Client API
  * @param outputPath optional path where to save the manifest
  */
-export async function convertPythonExtension(
-  dataCache: CachedData,
-  dt?: Dynatrace,
-  outputPath?: string,
-) {
+export async function convertPythonExtension(dt?: Dynatrace, outputPath?: string) {
   const fnLogTrace = ["commandPalette", "convertPythonExtension"];
   logger.info("Executing Convert Python Extension command", ...fnLogTrace);
   // User chooses if they want to use a local file or browse from the Dynatrace environment
@@ -97,7 +113,7 @@ export async function convertPythonExtension(
     writeFileSync(extensionJSONFile, jsonFileContents);
 
     // Update the cache
-    dataCache.updateParsedExtension();
+    pushManifestTextForParsing();
 
     // Open the file
     const document = await vscode.workspace.openTextDocument(extensionJSONFile);

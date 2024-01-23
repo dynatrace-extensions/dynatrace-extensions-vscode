@@ -23,10 +23,22 @@ const STOP_COMMAND = "dynatraceExtensions.simulator.codelens.stop";
 const REFRESH = "dynatraceExtensions.simulator.codelens.refresh";
 
 /**
+ * Provides singleton access to the SimulatorLensProvider
+ */
+export const getSimulatorLensProvider = (() => {
+  let instance: SimulatorLensProvider | undefined;
+
+  return (simulator: SimulatorManager) => {
+    instance = instance === undefined ? new SimulatorLensProvider(simulator) : instance;
+    return instance;
+  };
+})();
+
+/**
  * Simple implementation of a Code Lens Provider to allow starting and stopping the simulator from the editor
  * without having to visit the Simulator UI. This action will use the last known configuration or the defaults.
  */
-export class SimulatorLensProvider implements vscode.CodeLensProvider {
+class SimulatorLensProvider implements vscode.CodeLensProvider {
   private readonly logTrace = ["codeLens", "simulatorCodeLens", this.constructor.name];
   private codeLenses: vscode.CodeLens[];
   private simulator: SimulatorManager;
@@ -78,7 +90,7 @@ export class SimulatorLensProvider implements vscode.CodeLensProvider {
 
       // If we don't know the status yet, check if the simulator is ready
       if (this.lastKnownStatus === "UNKNOWN") {
-        const readyCheck = this.simulator.checkMantatoryRequirements();
+        const readyCheck = this.simulator.checkMandatoryRequirements();
         if (readyCheck[0]) {
           this.lastKnownStatus = "READY";
           const configCheck = await this.simulator.checkSimulationConfig(

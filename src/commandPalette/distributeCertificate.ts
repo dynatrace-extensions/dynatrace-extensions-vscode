@@ -18,9 +18,27 @@ import { readFileSync } from "fs";
 import * as vscode from "vscode";
 import { Dynatrace } from "../dynatrace-api/dynatrace";
 import { DynatraceAPIError } from "../dynatrace-api/errors";
-import { checkActiveGateInstalled, checkOneAgentInstalled } from "../utils/conditionCheckers";
-import { resolveRealPath, uploadComponentCert } from "../utils/fileSystem";
+import { getActivationContext } from "../extension";
+import { getDynatraceClient } from "../treeViews/tenantsTreeView";
+import {
+  checkActiveGateInstalled,
+  checkCertificateExists,
+  checkOneAgentInstalled,
+  checkTenantConnected,
+  checkWorkspaceOpen,
+} from "../utils/conditionCheckers";
+import { initWorkspaceStorage, resolveRealPath, uploadComponentCert } from "../utils/fileSystem";
 import * as logger from "../utils/logging";
+
+export const distributeCertificateWorkflow = async () => {
+  if ((await checkWorkspaceOpen()) && (await checkTenantConnected())) {
+    initWorkspaceStorage();
+    const dtClient = await getDynatraceClient();
+    if ((await checkCertificateExists("ca")) && dtClient) {
+      await distributeCertificate(dtClient);
+    }
+  }
+};
 
 /**
  * Delivers the "Distribute certificate" command functionality.
@@ -31,7 +49,7 @@ import * as logger from "../utils/logging";
  * @param dt Dynatrace API Client
  * @returns boolean - the success of the command
  */
-export async function distributeCertificate(context: vscode.ExtensionContext, dt: Dynatrace) {
+export async function distributeCertificate(dt: Dynatrace) {
   const fnLogTrace = ["commandPalette", "distributeCertificate"];
   logger.info("Executing Distribute Certificate command", ...fnLogTrace);
 
@@ -46,6 +64,7 @@ export async function distributeCertificate(context: vscode.ExtensionContext, dt
 
   // TODO: This is not enough. What if ID is stale? Needs GET to confirm existence
   // Check certificate exists and prompt for overwrite
+  const context = getActivationContext();
   const caCertId = context.workspaceState.get<string>("caCertId");
   let update = false;
   if (caCertId) {

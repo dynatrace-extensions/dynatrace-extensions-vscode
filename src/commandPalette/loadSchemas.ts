@@ -19,89 +19,33 @@ import * as path from "path";
 import axios from "axios";
 import * as vscode from "vscode";
 import { Dynatrace } from "../dynatrace-api/dynatrace";
+import { getActivationContext } from "../extension";
+import { getDynatraceClient } from "../treeViews/tenantsTreeView";
+import { checkTenantConnected } from "../utils/conditionCheckers";
 import { getExtensionFilePath } from "../utils/fileSystem";
 import * as logger from "../utils/logging";
 
 const logTrace = ["commandPalette", "loadSchemas"];
 
-/**
- * Downloads (at the given location) all schema files of a given version.
- * @param location where to save schemas on disk
- * @param version version of schemas to download
- * @param dt Dynatrace API Client
- */
-function downloadSchemaFiles(location: string, version: string, dt: Dynatrace) {
-  const fnLogTrace = [...logTrace, "downloadSchemaFiles"];
-  mkdirSync(location, { recursive: true });
-  return vscode.window.withProgress(
-    {
-      location: vscode.ProgressLocation.Notification,
-      title: `Loading schemas ${version}`,
-      cancellable: true,
-    },
-    async (progress, cancelToken) => {
-      progress.report({ message: "Fetching file names" });
-      if (cancelToken.isCancellationRequested) {
-        return "cancelled";
-      }
-      const schemaFiles = await dt.extensionsV2.listSchemaFiles(version).catch(async err => {
-        logger.notify("ERROR", (err as Error).message, ...fnLogTrace);
-        return [];
-      });
-
-      progress.report({ message: "Downloading files" });
-      await axios
-        .all(schemaFiles.map(file => dt.extensionsV2.getSchemaFile(version, file)))
-        .then(
-          axios.spread((...responses) => {
-            responses.forEach(resp => {
-              try {
-                if (cancelToken.isCancellationRequested) {
-                  return "cancelled";
-                }
-                let fileName = "unknownSchema";
-                if (Object.prototype.hasOwnProperty.call(resp, "$id")) {
-                  const parts = (resp.$id as string).split("/");
-                  fileName = parts[parts.length - 1];
-                }
-                writeFile(`${location}/${fileName}`, JSON.stringify(resp), err => {
-                  if (err) {
-                    logger.notify(
-                      "ERROR",
-                      `Error writing file ${fileName}:\n${err.message}`,
-                      ...fnLogTrace,
-                    );
-                  }
-                });
-              } catch (err) {
-                logger.notify(
-                  "ERROR",
-                  `Error writing file:\n${(err as Error).message}`,
-                  ...fnLogTrace,
-                );
-              }
-            });
-          }),
-        )
-        .catch(async err => {
-          logger.notify("ERROR", (err as Error).message, ...fnLogTrace);
-        });
-    },
-  );
-}
+export const loadSchemasWorkflow = async () => {
+  if (await checkTenantConnected()) {
+    const dtClient = await getDynatraceClient();
+    if (!dtClient) {
+      throw Error("Cannot continue without Dynatrace API client.");
+    }
+    await loadSchemas(dtClient);
+  }
+};
 
 /**
  * Delivers the "Load schemas" command functionality.
  * Prompts the user to select a schema version, then downloads all schema files for that version.
  * Files are written in the global shared storage.
- * @param context VSCode Extension Context
  * @param dt Dynatrace API Client
  * @returns boolean - the success of the command
  */
-export async function loadSchemas(
-  context: vscode.ExtensionContext,
-  dt: Dynatrace,
-): Promise<boolean> {
+export async function loadSchemas(dt: Dynatrace): Promise<boolean> {
+  const context = getActivationContext();
   logger.info("Executing Load Schemas command", ...logTrace);
   // Fetch available schema versions from cluster
   const availableVersions = await dt.extensionsV2.listSchemaVersions().catch(async err => {
@@ -180,4 +124,70 @@ export async function loadSchemas(
 
   logger.notify("INFO", "Schema loading complete.", ...logTrace);
   return true;
+}
+
+/**
+ * Downloads (at the given location) all schema files of a given version.
+ * @param location where to save schemas on disk
+ * @param version version of schemas to download
+ * @param dt Dynatrace API Client
+ */
+function downloadSchemaFiles(location: string, version: string, dt: Dynatrace) {
+  const fnLogTrace = [...logTrace, "downloadSchemaFiles"];
+  mkdirSync(location, { recursive: true });
+  return vscode.window.withProgress(
+    {
+      location: vscode.ProgressLocation.Notification,
+      title: `Loading schemas ${version}`,
+      cancellable: true,
+    },
+    async (progress, cancelToken) => {
+      progress.report({ message: "Fetching file names" });
+      if (cancelToken.isCancellationRequested) {
+        return "cancelled";
+      }
+      const schemaFiles = await dt.extensionsV2.listSchemaFiles(version).catch(async err => {
+        logger.notify("ERROR", (err as Error).message, ...fnLogTrace);
+        return [];
+      });
+
+      progress.report({ message: "Downloading files" });
+      await axios
+        .all(schemaFiles.map(file => dt.extensionsV2.getSchemaFile(version, file)))
+        .then(
+          axios.spread((...responses) => {
+            responses.forEach(resp => {
+              try {
+                if (cancelToken.isCancellationRequested) {
+                  return "cancelled";
+                }
+                let fileName = "unknownSchema";
+                if (Object.prototype.hasOwnProperty.call(resp, "$id")) {
+                  const parts = (resp.$id as string).split("/");
+                  fileName = parts[parts.length - 1];
+                }
+                writeFile(`${location}/${fileName}`, JSON.stringify(resp), err => {
+                  if (err) {
+                    logger.notify(
+                      "ERROR",
+                      `Error writing file ${fileName}:\n${err.message}`,
+                      ...fnLogTrace,
+                    );
+                  }
+                });
+              } catch (err) {
+                logger.notify(
+                  "ERROR",
+                  `Error writing file:\n${(err as Error).message}`,
+                  ...fnLogTrace,
+                );
+              }
+            });
+          }),
+        )
+        .catch(async err => {
+          logger.notify("ERROR", (err as Error).message, ...fnLogTrace);
+        });
+    },
+  );
 }

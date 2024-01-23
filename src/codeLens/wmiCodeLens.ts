@@ -15,11 +15,122 @@
  */
 
 import * as vscode from "vscode";
-import { CachedDataProducer } from "../utils/dataCaching";
+import { getCachedWmiStatus, setCachedWmiStatus, setCachedWmiQueryResult } from "../utils/caching";
+import * as logger from "../utils/logging";
 import { getBlockRange } from "../utils/yamlParsing";
 import { ValidationStatus } from "./utils/selectorUtils";
-import { WmiQueryResult } from "./utils/wmiUtils";
+import { WmiQueryResult, runWMIQuery } from "./utils/wmiUtils";
 
+/**
+ * Provides singleton access to the WmiCodeLensProvider
+ */
+export const getWmiCodeLensProvider = (() => {
+  let instance: WmiCodeLensProvider | undefined;
+
+  return () => {
+    instance = instance === undefined ? new WmiCodeLensProvider() : instance;
+    return instance;
+  };
+})();
+
+/**
+ * Implementation of a Code Lens provider for WMI Queries. It creates two lenses, for executing a
+ * WMI Query against the local Windows machine and checking the last execution status.
+ */
+class WmiCodeLensProvider implements vscode.CodeLensProvider {
+  private codeLenses: vscode.CodeLens[] = [];
+  private _onDidChangeCodeLenses: vscode.EventEmitter<void> = new vscode.EventEmitter<void>();
+  public readonly onDidChangeCodeLenses: vscode.Event<void> = this._onDidChangeCodeLenses.event;
+  private readonly controlSetting = "wmiCodeLens";
+  private readonly regex = new RegExp("query:", "g");
+
+  constructor() {
+    this.registerCommands();
+  }
+
+  private registerCommands() {
+    const commandId = "dynatrace-extensions.codelens.runWMIQuery";
+    vscode.commands.registerCommand(commandId, async (query: string) => {
+      runWMIQuery(query, (checkedQuery, status, result) => {
+        this.updateQueryData(checkedQuery, status, result);
+      }).catch(err =>
+        logger.error(`Running WMI Query failed unexpectedly. ${(err as Error).message}`, commandId),
+      );
+    });
+  }
+
+  public async provideCodeLenses(document: vscode.TextDocument): Promise<vscode.CodeLens[]> {
+    this.codeLenses = [];
+    const regex = new RegExp(this.regex);
+    const text = document.getText();
+
+    // Bail early if feature disabled or no wmi in manifest
+    if (
+      !text.includes("wmi:") ||
+      !vscode.workspace.getConfiguration("dynatraceExtensions", null).get(this.controlSetting)
+    ) {
+      return [];
+    }
+
+    // Create lenses
+    const { startIndex, endIndex } = getBlockRange("wmi", document);
+    const wmiContent = text.slice(startIndex, endIndex);
+    await Promise.all(
+      Array.from(wmiContent.matchAll(regex)).map(match =>
+        this.createLenses(match, startIndex, document).then(lenses =>
+          this.codeLenses.push(...lenses),
+        ),
+      ),
+    );
+
+    return this.codeLenses;
+  }
+
+  /**
+   * Creates two lenses for a query
+   * @param match match of our regular expression on the extension manifest
+   * @param matchOffest offset, in case the match was done on trimmed content
+   * @param document extension manifest
+   * @returns list of code lenses
+   */
+  private async createLenses(
+    match: RegExpMatchArray,
+    matchOffest: number,
+    document: vscode.TextDocument,
+  ) {
+    if (match.index) {
+      const line = document.lineAt(document.positionAt(matchOffest + match.index).line);
+      const indexOf = line.text.indexOf(match[0]);
+      const position = new vscode.Position(line.lineNumber, indexOf);
+      const range = document.getWordRangeAtPosition(position, new RegExp(this.regex));
+
+      if (range) {
+        const query = line.text.split("query: ")[1];
+        return [
+          new WmiQueryExecutionLens(range, query),
+          new WmiQueryStatusLens(range, query, getCachedWmiStatus(query) ?? { status: "unknown" }),
+        ];
+      }
+    }
+
+    return [];
+  }
+
+  /**
+   * Updates the last known execution status and result data for a given WMI query and notifies
+   * this provider that the code lenses have changed.
+   * @param query wmi query to update status for
+   * @param status current status
+   * @param result the query execution result, if new
+   */
+  public updateQueryData(query: string, status: ValidationStatus, result?: WmiQueryResult) {
+    setCachedWmiStatus(query, status);
+    if (result) {
+      setCachedWmiQueryResult(result);
+    }
+    this._onDidChangeCodeLenses.fire();
+  }
+}
 /**
  * Implements a Code Lens that shows the status of a WMI Query execution
  */
@@ -86,94 +197,5 @@ class WmiQueryExecutionLens extends vscode.CodeLens {
       arguments: [query],
     });
     this.query = query;
-  }
-}
-
-/**
- * Implementation of a Code Lens provider for WMI Queries. It creates two lenses, for executing a
- * WMI Query against the local Windows machine and checking the last execution status.
- */
-export class WmiCodeLensProvider extends CachedDataProducer implements vscode.CodeLensProvider {
-  private codeLenses: vscode.CodeLens[] = [];
-  private _onDidChangeCodeLenses: vscode.EventEmitter<void> = new vscode.EventEmitter<void>();
-  public readonly onDidChangeCodeLenses: vscode.Event<void> = this._onDidChangeCodeLenses.event;
-  private readonly controlSetting = "wmiCodeLens";
-  private readonly regex = new RegExp("query:", "g");
-
-  /**
-   * Provides the actual code lenses relevant to each valid section of the extension yaml.
-   * @param document the extension manifest
-   * @returns list of code lenses
-   */
-  public async provideCodeLenses(document: vscode.TextDocument): Promise<vscode.CodeLens[]> {
-    this.codeLenses = [];
-    const regex = new RegExp(this.regex);
-    const text = document.getText();
-
-    // Bail early if feature disabled or no wmi in manifest
-    if (
-      !text.includes("wmi:") ||
-      !vscode.workspace.getConfiguration("dynatraceExtensions", null).get(this.controlSetting)
-    ) {
-      return [];
-    }
-
-    // Create lenses
-    const { startIndex, endIndex } = getBlockRange("wmi", document);
-    const wmiContent = text.slice(startIndex, endIndex);
-    await Promise.all(
-      Array.from(wmiContent.matchAll(regex)).map(match =>
-        this.createLenses(match, startIndex, document).then(lenses =>
-          this.codeLenses.push(...lenses),
-        ),
-      ),
-    );
-
-    return this.codeLenses;
-  }
-
-  /**
-   * Creates two lenses for a query
-   * @param match match of our regular expression on the extension manifest
-   * @param matchOffest offset, in case the match was done on trimmed content
-   * @param document extension manifest
-   * @returns list of code lenses
-   */
-  private async createLenses(
-    match: RegExpMatchArray,
-    matchOffest: number,
-    document: vscode.TextDocument,
-  ) {
-    if (match.index) {
-      const line = document.lineAt(document.positionAt(matchOffest + match.index).line);
-      const indexOf = line.text.indexOf(match[0]);
-      const position = new vscode.Position(line.lineNumber, indexOf);
-      const range = document.getWordRangeAtPosition(position, new RegExp(this.regex));
-
-      if (range) {
-        const query = line.text.split("query: ")[1];
-        return [
-          new WmiQueryExecutionLens(range, query),
-          new WmiQueryStatusLens(range, query, this.wmiStatuses[query] ?? { status: "unknown" }),
-        ];
-      }
-    }
-
-    return [];
-  }
-
-  /**
-   * Updates the last known execution status and result data for a given WMI query and notifies
-   * this provider that the code lenses have changed.
-   * @param query wmi query to update status for
-   * @param status current status
-   * @param result the query execution result, if new
-   */
-  public updateQueryData(query: string, status: ValidationStatus, result?: WmiQueryResult) {
-    this.cachedData.updateWmiStatus(query, status);
-    if (result) {
-      this.cachedData.updateWmiQueryResult(result);
-    }
-    this._onDidChangeCodeLenses.fire();
   }
 }
