@@ -39,7 +39,7 @@ export class CredentialVaultService {
    * @returns response data
    */
   async postCertificate(certificate: string, name: string, description: string = "") {
-    const payload = {
+    const body = {
       name: name,
       description: description,
       ownerAccessOnly: true,
@@ -51,8 +51,8 @@ export class CredentialVaultService {
     };
     return this.httpClient.makeRequest<{ id: string }>({
       path: this.endpoint,
-      params: payload,
       method: "POST",
+      body,
     });
   }
 
@@ -71,7 +71,7 @@ export class CredentialVaultService {
     name: string,
     description: string = "",
   ) {
-    const payload = {
+    const body = {
       name: name,
       description: description,
       ownerAccessOnly: true,
@@ -83,8 +83,8 @@ export class CredentialVaultService {
     };
     return this.httpClient.makeRequest({
       path: `${this.endpoint}/${certificateId}`,
-      params: payload,
       method: "PUT",
+      body,
     });
   }
 

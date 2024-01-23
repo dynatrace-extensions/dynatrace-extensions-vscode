@@ -36,8 +36,8 @@ export class DashboardService {
   async post(dashboard: Dashboard) {
     return this.httpClient.makeRequest({
       path: this.endpoint,
-      params: dashboard as unknown as Record<string, unknown>,
       method: "POST",
+      body: dashboard as unknown as Record<string, unknown>,
     });
   }
 }

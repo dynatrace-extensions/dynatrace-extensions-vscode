@@ -79,8 +79,8 @@ export class SettingsService {
   async putObject(objectId: string, payload: SettingsObjectUpdate) {
     return this.httpClient.makeRequest({
       path: `${this.objectsEndpoint}/${objectId}`,
-      params: payload as unknown as Record<string, unknown>,
       method: "PUT",
+      body: payload as unknown as Record<string, unknown>,
     });
   }
 
@@ -95,9 +95,9 @@ export class SettingsService {
   async postObject(payload: SettingsObjectCreate[], validateOnly: boolean = false) {
     return this.httpClient.makeRequest({
       path: `${this.objectsEndpoint}`,
-      params: payload as unknown as Record<string, unknown>,
       method: "POST",
-      queryParams: { validateOnly: validateOnly },
+      body: payload as unknown as Record<string, unknown>,
+      params: { validateOnly: validateOnly },
     });
   }
 }

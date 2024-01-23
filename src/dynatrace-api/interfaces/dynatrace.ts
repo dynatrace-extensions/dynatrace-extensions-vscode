@@ -44,25 +44,25 @@ export interface PaginatedResponse<T> {
 }
 
 export interface DynatraceRequestConfig {
-  /* path URL path for the web request endpoint */
+  /* URL path for the API endpoint */
   path: string;
 
-  /* query parameters; in case of POST or PUT it becomes body of request */
+  /* query parameters */
   params?: Record<string, unknown>;
 
-  /* method HTTP method to use */
+  /* body of the request (required for POST and PUT) */
+  body?: Record<string, unknown>;
+
+  /* HTTP method to use */
   method: Method;
 
-  /* headers additional request headers */
+  /* additional request headers */
   headers: Record<string, string>;
-
-  /* query parameters; to be used for POST and PUT requests */
-  queryParams?: Record<string, unknown>;
 
   /* files to be uploaded */
   files?: { file: Buffer; name: string };
 
-  /* expected response type */
+  /* expected response type (default is json) */
   responseType?: ResponseType;
 
   /* signal to cancel the request */

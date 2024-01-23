@@ -104,7 +104,7 @@ export class ExtensionsServiceV2 {
     return this.httpClient.makeRequest({
       path: `${this.endpoint}`,
       method: "POST",
-      queryParams: { validateOnly: validateOnly },
+      params: { validateOnly: validateOnly },
       files: { file: file, name: "extension.zip" },
     });
   }
@@ -118,8 +118,8 @@ export class ExtensionsServiceV2 {
   async putEnvironmentConfiguration(extensionName: string, version: string) {
     return this.httpClient.makeRequest({
       path: `${this.endpoint}/${extensionName}/environmentConfiguration`,
-      params: { version: version },
       method: "PUT",
+      body: { version: version },
     });
   }
 
@@ -213,8 +213,8 @@ export class ExtensionsServiceV2 {
   ) {
     return this.httpClient.makeRequest({
       path: `${this.endpoint}/${extensionName}/monitoringConfigurations/${configurationId}`,
-      params: configurationDetails,
       method: "PUT",
+      body: configurationDetails,
     });
   }
 
@@ -231,8 +231,8 @@ export class ExtensionsServiceV2 {
   ) {
     return this.httpClient.makeRequest({
       path: `${this.endpoint}/${extensionName}/monitoringConfigurations`,
-      params: configurationDetails,
       method: "POST",
+      body: configurationDetails,
     });
   }
 

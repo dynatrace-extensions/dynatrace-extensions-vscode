@@ -50,19 +50,12 @@ export class HttpClient {
    * @returns response data
    */
   async makeRequest<T = never>(config: Partial<DynatraceRequestConfig>): Promise<T> {
-    const { path, params, method, headers, queryParams, files, responseType, signal } = {
+    const { path, params, method, headers, body, files, responseType, signal } = {
       ...HttpClient.requestDefaults,
       ...config,
     };
     const fnLogTrace = [...this.logTrace, "makeRequest"];
     const url = `${this.baseUrl}${path}`;
-
-    let body = null;
-    let requestParams = params;
-    if (method === "POST" || method === "PUT") {
-      body = params;
-      requestParams = queryParams;
-    }
 
     if (!("Content-Type" in headers)) {
       headers["Content-type"] = "application/json";
@@ -75,9 +68,9 @@ export class HttpClient {
     headers.Authorization = `Api-Token ${this.apiToken}`;
 
     logger.debug(
-      `Making ${method} request to ${url} ${
-        params ? "with params " + JSON.stringify(params) : ""
-      } ${body ? " and body " + JSON.stringify(body) : ""}`,
+      `Making ${method} request to ${url} ` +
+        `${params ? "with params " + JSON.stringify(params) : ""} ` +
+        `${body ? " and body " + JSON.stringify(body) : ""}`,
       ...fnLogTrace,
     );
 
@@ -85,7 +78,7 @@ export class HttpClient {
       .request({
         url,
         headers,
-        params: requestParams,
+        params,
         method,
         data: files ? form : body,
         responseType,
