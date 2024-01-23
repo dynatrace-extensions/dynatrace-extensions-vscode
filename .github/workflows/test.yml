@@ -5,12 +5,12 @@ on:
   push:
     branches:
       - main
-      - release/this
+      - release/current
       - release/hotfix
   pull_request:
     branches:
       - main
-      - release/this
+      - release/current
       - release/hotfix
 
 jobs:
