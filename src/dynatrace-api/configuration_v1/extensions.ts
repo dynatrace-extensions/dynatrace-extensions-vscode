@@ -30,15 +30,17 @@ export class ExtensionsServiceV1 {
 
   /**
    * Gets the list of uploaded v1 extensions.
+   * @param signal cancellation signal
    * @returns list of extensions
    */
-  async getExtensions(): Promise<ExtensionV1DTO[]> {
+  async getExtensions(signal?: AbortSignal): Promise<ExtensionV1DTO[]> {
     const extensions: ExtensionV1DTO[] = [];
     let nextPageKey;
     do {
       const res: ExtensionV1ListDto = await this.httpClient.makeRequest<ExtensionV1ListDto>({
         path: this.endpoint,
         params: { nextPageKey: nextPageKey },
+        signal,
       });
       extensions.push(...res.extensions);
       nextPageKey = res.nextPageKey;
@@ -49,12 +51,14 @@ export class ExtensionsServiceV1 {
   /**
    * Get the binary of a v1 extension
    * @param extensionId the id of the extension
+   * @param signal cancellation signal
    * @returns the binary of the extension
    */
-  async getExtensionBinary(extensionId: string): Promise<Uint8Array> {
+  async getExtensionBinary(extensionId: string, signal?: AbortSignal): Promise<Uint8Array> {
     return this.httpClient.makeRequest({
       path: `${this.endpoint}/${extensionId}/binary`,
       responseType: "arraybuffer",
+      signal,
     });
   }
 }

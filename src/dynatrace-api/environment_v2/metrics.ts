@@ -39,6 +39,7 @@ export class MetricService {
    * matched entities are included in response.
    * @param mzSelector The management zone scope of the query. Only metrics data relating to the
    * specified management zones are included to the response.
+   * @param signal cancellation signal
    * @returns
    */
   async query(
@@ -48,11 +49,13 @@ export class MetricService {
     to?: string,
     entitySelector?: string,
     mzSelector?: string,
+    signal?: AbortSignal,
   ): Promise<MetricSeriesCollection[]> {
     return this.httpClient.paginatedCall({
       path: `${this.endpoint}/query`,
       item: "result",
       params: { metricSelector, resolution, from, to, entitySelector, mzSelector },
+      signal,
     });
   }
 }
