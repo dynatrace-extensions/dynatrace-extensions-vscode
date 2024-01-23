@@ -1,3 +1,4 @@
+// @ts-nocheck
 /**
   Copyright 2022 Dynatrace LLC
 

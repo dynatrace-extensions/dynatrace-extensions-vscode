@@ -4,7 +4,7 @@
   "parserOptions": {
     "ecmaVersion": 6,
     "sourceType": "module",
-    "project": ["./tsconfig.json", "./tsconfig.app.json"]
+    "project": ["./tsconfig.src.json", "./tsconfig.test.json"]
   },
   "plugins": [
     "@typescript-eslint",
@@ -27,7 +27,7 @@
   ],
   "overrides": [
     {
-      "files": ["**/utils/logging.ts"],
+      "files": ["src/utils/logging.ts", "test/**/*.test.ts", "**/__mocks__/**/*.ts"],
       "rules": {
         "no-restricted-syntax": "off"
       }
@@ -48,6 +48,8 @@
     "@typescript-eslint/indent": [0],
     "prettier/prettier": "error",
     "lines-between-class-members": "off",
+    "no-use-before-define": "off",
+    "@typescript-eslint/no-use-before-define": "off",
     "no-underscore-dangle": ["error", { "allowAfterThis": true }],
     "prefer-const": "error",
     "no-fallthrough": "warn",
@@ -120,6 +122,7 @@
     "no-secrets/no-secrets": [
       "error",
       {
+        "tolerance": 5,
         "additionalRegexes": {
           "Dynatrace Token SSO": "dt0[a-zA-Z]{1}[0-9]{2}\\.[A-Z0-9]{8}\\.[A-Z0-9]{64}",
           "Dynatrace Token SSO Internal services": "dt0[a-zA-Z]{1}[0-9]{2}\\.[A-Za-z0-9\\-]+\\.[A-Z0-9]{64}",
@@ -131,5 +134,5 @@
       }
     ]
   },
-  "ignorePatterns": ["out", "dist", "**/*.d.ts", "node_modules", "src/test", "jest.config.js"]
+  "ignorePatterns": ["out", "dist", "**/*.d.ts", "node_modules", "src/test", "jest*.config.js"]
 }

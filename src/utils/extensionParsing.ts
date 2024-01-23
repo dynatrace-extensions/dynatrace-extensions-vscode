@@ -32,14 +32,12 @@ const logTrace = ["utils", "extensionParsing"];
  */
 export function normalizeExtensionVersion(version: string): string {
   const fnLogTrace = [...logTrace, "normalizeExtensionVersion"];
-  logger.debug(`Normalizing extension version "${version}"`);
-
   const versionParts = version.split(".");
   while (versionParts.length < 3) {
     versionParts.push("0");
   }
   const result = versionParts.slice(0, 3).join(".");
-  logger.debug(`Normalized as "${result}"`, ...fnLogTrace);
+  logger.debug(`Normalized extension version "${version}" is "${result}"`, ...fnLogTrace);
   return result;
 }
 
@@ -327,7 +325,7 @@ export function getAllMetricKeys(extension: ExtensionStub): string[] {
       }
     });
   } else {
-    extension.metrics.forEach(metric => {
+    extension.metrics?.forEach(metric => {
       metrics.push(metric.key);
     });
   }
@@ -994,7 +992,14 @@ export function getEntityChartCardKeys(screenIdx: number, extension: ExtensionSt
 
 type CardMeta = {
   key: string;
-  type: "ENTITIES_LIST" | "CHART_GROUP" | "MESSAGE" | "LOGS" | "EVENTS" | "METRIC_TABLE";
+  type:
+    | "ENTITIES_LIST"
+    | "CHART_GROUP"
+    | "MESSAGE"
+    | "LOGS"
+    | "EVENTS"
+    | "METRIC_TABLE"
+    | "INJECTIONS";
 };
 
 /**

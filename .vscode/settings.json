@@ -11,5 +11,6 @@
     "markdown.extension.toc.updateOnSave": false,
     "eslint.workingDirectories": [
       "./", "./webview-ui"
-    ]
+    ],
+    "jest.jestCommandLine": ".\\node_modules\\.bin\\jest"
 }

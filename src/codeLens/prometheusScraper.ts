@@ -17,7 +17,7 @@
 import { readFileSync } from "fs";
 import axios from "axios";
 import * as vscode from "vscode";
-import { CachedData, CachedDataProducer } from "../utils/dataCaching";
+import { getCachedPrometheusData, setCachedPrometheusData } from "../utils/caching";
 import * as logger from "../utils/logging";
 
 export type PromData = Record<string, PromDetails>;
@@ -30,14 +30,23 @@ type PromAuth = "No authentication" | "Bearer token" | "Username & password" | "
 type ScrapingMethod = "Endpoint" | "File";
 
 /**
+ * Provides singleton access to the PrometheusCodeLensProvider
+ */
+export const getPrometheusCodeLensProvider = (() => {
+  let instance: PrometheusCodeLensProvider | undefined;
+
+  return () => {
+    instance = instance === undefined ? new PrometheusCodeLensProvider() : instance;
+    return instance;
+  };
+})();
+
+/**
  * Code Lens Provider implementation to facilitate loading Prometheus metrics and data
  * from an external endpoint and leveraging it in other parts of the extension.
  */
-export class PrometheusCodeLensProvider
-  extends CachedDataProducer
-  implements vscode.CodeLensProvider
-{
-  private readonly logTrace = ["codeLens", "prometheusScraper", this.constructor.name];
+class PrometheusCodeLensProvider implements vscode.CodeLensProvider {
+  private readonly logTrace = ["codeLens", "prometheusScraper", "PrometheusCodeLensProvider"];
   private codeLenses: vscode.CodeLens[];
   private regex: RegExp;
   private lastScrape = "N/A";
@@ -53,11 +62,7 @@ export class PrometheusCodeLensProvider
   private _onDidChangeCodeLenses: vscode.EventEmitter<void> = new vscode.EventEmitter<void>();
   public readonly onDidChangeCodeLenses: vscode.Event<void> = this._onDidChangeCodeLenses.event;
 
-  /**
-   * @param cachedDataProvider provider of cacheable data
-   */
-  constructor(cachedData: CachedData) {
-    super(cachedData);
+  constructor() {
     this.codeLenses = [];
     this.regex = /^(prometheus:)/gm;
     vscode.commands.registerCommand(
@@ -113,7 +118,7 @@ export class PrometheusCodeLensProvider
           );
         }
         // Status lens
-        const scrapedMetrics = Object.keys(this.prometheusData).length;
+        const scrapedMetrics = Object.keys(getCachedPrometheusData()).length;
         this.codeLenses.push(
           new vscode.CodeLens(range, {
             title:
@@ -148,7 +153,7 @@ export class PrometheusCodeLensProvider
         return;
       }
       // Clear cached data since we're now scraping a different endpoint/file
-      this.cachedData.setPrometheusData({});
+      setCachedPrometheusData({});
     }
     const scrapeSuccess = await this.scrape();
     if (scrapeSuccess) {
@@ -269,58 +274,59 @@ export class PrometheusCodeLensProvider
    * @returns whether scraping was successful (any errors) or not
    */
   private async scrape() {
-    if (!this.promUrl && !this.promFile) {
-      return false;
-    }
-    try {
-      switch (this.method) {
-        case "Endpoint":
-          switch (this.promAuth) {
-            case "No authentication":
-              await axios.get(this.promUrl).then(res => {
-                this.processPrometheusData(res.data as string);
-              });
-              return true;
-            case "Username & password":
-              if (!this.promUsername || !this.promPassword) {
-                return false;
-              }
-              await axios
-                .get(this.promUrl, {
-                  auth: { username: this.promUsername, password: this.promPassword },
-                })
-                .then(res => {
+    if (this.promUrl && this.promFile) {
+      try {
+        switch (this.method) {
+          case "Endpoint":
+            switch (this.promAuth) {
+              case "No authentication":
+                await axios.get(this.promUrl).then(res => {
                   this.processPrometheusData(res.data as string);
                 });
-              return true;
-            case "Bearer token":
-              if (!this.promToken) {
+                return true;
+              case "Username & password":
+                if (!this.promUsername || !this.promPassword) {
+                  return false;
+                }
+                await axios
+                  .get(this.promUrl, {
+                    auth: { username: this.promUsername, password: this.promPassword },
+                  })
+                  .then(res => {
+                    this.processPrometheusData(res.data as string);
+                  });
+                return true;
+              case "Bearer token":
+                if (!this.promToken) {
+                  return false;
+                }
+                await axios
+                  .get(this.promUrl, { headers: { Authorization: `Bearer ${this.promToken}` } })
+                  .then(res => {
+                    this.processPrometheusData(res.data as string);
+                  });
+                return true;
+              default:
                 return false;
-              }
-              await axios
-                .get(this.promUrl, { headers: { Authorization: `Bearer ${this.promToken}` } })
-                .then(res => {
-                  this.processPrometheusData(res.data as string);
-                });
-              return true;
-            default:
+            }
+          case "File":
+            if (!this.promFile) {
               return false;
-          }
-        case "File":
-          if (!this.promFile) {
-            return false;
-          }
-          try {
-            const data = readFileSync(this.promFile, "utf-8");
-            this.processPrometheusData(data);
-            return true;
-          } catch (err) {
-            logger.error(err, ...this.logTrace);
-            return false;
-          }
+            }
+            try {
+              const data = readFileSync(this.promFile, "utf-8");
+              this.processPrometheusData(data);
+              return true;
+            } catch (err) {
+              logger.error(err, ...this.logTrace);
+              return false;
+            }
+        }
+      } catch (err) {
+        logger.error(err, ...this.logTrace);
+        return false;
       }
-    } catch (err) {
-      logger.error(err, ...this.logTrace);
+    } else {
       return false;
     }
   }
@@ -380,6 +386,6 @@ export class PrometheusCodeLensProvider
           }
         }
       });
-    this.cachedData.setPrometheusData(scrapedMetrics);
+    setCachedPrometheusData(scrapedMetrics);
   }
 }

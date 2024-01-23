@@ -15,10 +15,9 @@
  */
 
 import { exec } from "child_process";
-import * as vscode from "vscode";
-import { CachedData } from "../../utils/dataCaching";
+import { getCachedWmiQueryResult } from "../../utils/caching";
 import * as logger from "../../utils/logging";
-import { REGISTERED_PANELS, WebviewPanelManager } from "../../webviews/webviewPanel";
+import { REGISTERED_PANELS, renderPanel } from "../../webviews/webviewPanel";
 import { ValidationStatus } from "./selectorUtils";
 
 const logTrace = ["codeLens", "utils", "wmiUtils"];
@@ -45,27 +44,25 @@ export interface WmiQueryResult {
  */
 export async function runWMIQuery(
   query: string,
-  oc: vscode.OutputChannel,
-  panelManager: WebviewPanelManager,
-  cachedData: CachedData,
   updateCallback: (query: string, status: ValidationStatus, result?: WmiQueryResult) => void,
 ) {
   const fnLogTrace = [...logTrace, "runWMIQuery"];
+  const oc = logger.getGenericChannel();
   updateCallback(query, { status: "loading" });
 
   // First check for cached data...
-  const cachedWmiData: Record<string, WmiQueryResult> = cachedData.getCached("wmiData");
-  if (Object.keys(cachedWmiData).includes(query)) {
-    if (cachedWmiData[query].error) {
+  const cachedWmiQueryResult = getCachedWmiQueryResult(query);
+  if (cachedWmiQueryResult) {
+    if (cachedWmiQueryResult.error) {
       updateCallback(query, { status: "invalid" });
       oc.clear();
-      oc.appendLine(cachedWmiData[query].errorMessage);
+      oc.appendLine(String(cachedWmiQueryResult.errorMessage));
       oc.show();
     } else {
       updateCallback(query, { status: "valid" });
-      panelManager.render(REGISTERED_PANELS.WMI_RESULTS, "WMI query results", {
+      renderPanel(REGISTERED_PANELS.WMI_RESULTS, "WMI query results", {
         dataType: "WMI_RESULT",
-        data: cachedWmiData[query],
+        data: cachedWmiQueryResult,
       });
     }
     // Otherwise, run query...
@@ -130,7 +127,7 @@ export async function runWMIQuery(
           results: jsonResponse,
           responseTime,
         };
-        panelManager.render(REGISTERED_PANELS.WMI_RESULTS, "WMI query results", {
+        renderPanel(REGISTERED_PANELS.WMI_RESULTS, "WMI query results", {
           dataType: "WMI_RESULT",
           data: queryResult,
         });

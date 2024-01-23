@@ -15,6 +15,7 @@
  */
 
 import * as vscode from "vscode";
+import { getActivationContext } from "../extension";
 import { PanelData, WebviewMessage } from "../interfaces/webview";
 import * as logger from "../utils/logging";
 
@@ -53,25 +54,39 @@ function getColumn() {
   return vscode.window.activeTextEditor ? vscode.ViewColumn.Beside : vscode.ViewColumn.One;
 }
 
+export const renderPanel = (viewType: REGISTERED_PANELS, title: string, data: PanelData) => {
+  getWebviewPanelManager().render(viewType, title, data);
+};
+
+export const postMessageToPanel = (viewType: REGISTERED_PANELS, message: WebviewMessage) => {
+  getWebviewPanelManager().postMessage(viewType, message);
+};
+
+export const getWebviewPanelManager = (() => {
+  let instance: WebviewPanelManager | undefined;
+
+  return () => {
+    instance = instance === undefined ? new WebviewPanelManager() : instance;
+    return instance;
+  };
+})();
+
 /**
  * This class manages the state and behavior of webview panels rendered as a React app.
  * There will be a single global instance of this class managing all panels.
  * Handling of each data type individually should be done within the React components.
  */
-export class WebviewPanelManager implements vscode.WebviewPanelSerializer {
-  private readonly logTrace = ["webviews", "webviewPanel", this.constructor.name];
+class WebviewPanelManager implements vscode.WebviewPanelSerializer {
+  private readonly logTrace = ["webviews", "webviewPanel", "WebviewPanelManager"];
   private currentPanels: Map<REGISTERED_PANELS, vscode.WebviewPanel>;
   private disposables: Map<REGISTERED_PANELS, vscode.Disposable[]>;
 
   private readonly extensionUri: vscode.Uri;
 
-  /**
-   * @param extensionUri The URI of the directory containing the extension
-   */
-  constructor(extensionUri: vscode.Uri) {
+  constructor() {
     this.currentPanels = new Map<REGISTERED_PANELS, vscode.WebviewPanel>();
     this.disposables = new Map<REGISTERED_PANELS, vscode.Disposable[]>();
-    this.extensionUri = extensionUri;
+    this.extensionUri = getActivationContext().extensionUri;
   }
 
   /**
@@ -177,7 +192,7 @@ export class WebviewPanelManager implements vscode.WebviewPanelSerializer {
     if (this.currentPanels.has(viewType)) {
       // If a webview panel of this view type exists, send it the new data
       const existingPanel = this.currentPanels.get(viewType);
-      existingPanel.webview.postMessage({ messageType: "updateData", data }).then(
+      existingPanel?.webview.postMessage({ messageType: "updateData", data }).then(
         () => {},
         err => {
           logger.error(err, ...fnLogTrace);
@@ -213,7 +228,7 @@ export class WebviewPanelManager implements vscode.WebviewPanelSerializer {
     const fnLogTrace = [...this.logTrace, "postMessage"];
     if (this.currentPanels.has(viewType)) {
       const existingPanel = this.currentPanels.get(viewType);
-      existingPanel.webview.postMessage(message).then(
+      existingPanel?.webview.postMessage(message).then(
         () => {},
         err => {
           logger.error(err, ...fnLogTrace);

@@ -15,8 +15,8 @@
  */
 
 import * as vscode from "vscode";
-import { COUNT_METRIC_KEY_SUFFIX, GAUGE_METRIC_KEY_SUFFIX } from "./diagnosticData";
-import { DiagnosticsProvider } from "./diagnostics";
+import { COUNT_METRIC_KEY_SUFFIX, GAUGE_METRIC_KEY_SUFFIX } from "../constants";
+import { getDiagnostics } from "../utils/diagnostics";
 
 interface InsertOptions {
   editType: "insert";
@@ -36,18 +36,21 @@ interface DeleteOptions {
 }
 
 /**
+ * Provides singleton access to the DiagnosticFixProvider
+ */
+export const getDiagnosticFixProvider = (() => {
+  let instance: DiagnosticFixProvider | undefined;
+
+  return () => {
+    instance = instance === undefined ? new DiagnosticFixProvider() : instance;
+    return instance;
+  };
+})();
+
+/**
  * Provider for Code Actions that proposes fixes for Dynatrace Extensions Diagnostics
  */
-export class DiagnosticFixProvider implements vscode.CodeActionProvider {
-  private readonly diagnosticProvider: DiagnosticsProvider;
-
-  /**
-   * @param diagnosticProvider a provider of Diagnostics raised by the add-on
-   */
-  constructor(diagnosticProvider: DiagnosticsProvider) {
-    this.diagnosticProvider = diagnosticProvider;
-  }
-
+class DiagnosticFixProvider implements vscode.CodeActionProvider {
   /**
    * Provides Code Actions that fix Diagnostics relevant to the triggered context
    * @param document document that activated the provider
@@ -63,7 +66,7 @@ export class DiagnosticFixProvider implements vscode.CodeActionProvider {
     const fixActions: vscode.CodeAction[] = [];
 
     // We should only attempt to fix our own diagnostics
-    const diagnostics = this.diagnosticProvider.getDiagnostics(document.uri);
+    const diagnostics = getDiagnostics(document.uri);
 
     // Actions for fixing metric keys
     fixActions.push(

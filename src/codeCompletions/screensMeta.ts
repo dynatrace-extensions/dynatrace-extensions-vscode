@@ -16,14 +16,23 @@
 
 import * as vscode from "vscode";
 import { ExtensionStub } from "../interfaces/extensionMeta";
-import { CachedDataConsumer } from "../utils/dataCaching";
+import { getCachedParsedExtension } from "../utils/caching";
 import { getReferencedCardsMeta, getDefinedCardsMeta } from "../utils/extensionParsing";
 import { getBlockItemIndexAtLine, getParentBlocks } from "../utils/yamlParsing";
 
-export class ScreensMetaCompletionProvider
-  extends CachedDataConsumer
-  implements vscode.CompletionItemProvider
-{
+/**
+ * Singleton access to ScreensCompletionProvider
+ */
+export const getScreensCompletionProvider = (() => {
+  let instance: ScreensCompletionProvider | undefined;
+
+  return () => {
+    instance = instance === undefined ? new ScreensCompletionProvider() : instance;
+    return instance;
+  };
+})();
+
+class ScreensCompletionProvider implements vscode.CompletionItemProvider {
   provideCompletionItems(
     document: vscode.TextDocument,
     position: vscode.Position,
@@ -32,6 +41,10 @@ export class ScreensMetaCompletionProvider
     const parentBlocks = getParentBlocks(position.line, document.getText());
     const line = document.lineAt(position.line).text.substring(0, position.character);
     const screenIdx = getBlockItemIndexAtLine("screens", position.line, document.getText());
+    const parsedExtension = getCachedParsedExtension();
+    if (!parsedExtension) {
+      return completions;
+    }
 
     // Screen Card Key Suggestions
     // -----
@@ -41,9 +54,7 @@ export class ScreensMetaCompletionProvider
         parentBlocks[parentBlocks.length - 1] === "cards" &&
         parentBlocks[parentBlocks.length - 2] === "layout"
       ) {
-        completions.push(
-          ...this.createCardKeyCompletions("layout", screenIdx, this.parsedExtension),
-        );
+        completions.push(...this.createCardKeyCompletions("layout", screenIdx, parsedExtension));
       }
 
       // In card definitions, suggestions include keys from layout (if any)
@@ -59,7 +70,7 @@ export class ScreensMetaCompletionProvider
           ...this.createCardKeyCompletions(
             "definition",
             screenIdx,
-            this.parsedExtension,
+            parsedExtension,
             parentBlocks[parentBlocks.length - 1] as
               | "entitiesListCards"
               | "chartsCards"

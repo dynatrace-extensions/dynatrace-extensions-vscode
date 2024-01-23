@@ -16,7 +16,7 @@
 
 import * as vscode from "vscode";
 import { ExtensionStub } from "../interfaces/extensionMeta";
-import { CachedDataConsumer } from "../utils/dataCaching";
+import { getCachedBuiltinEntityTypes, getCachedParsedExtension } from "../utils/caching";
 import {
   getAttributesKeysFromTopology,
   getEntityName,
@@ -31,12 +31,21 @@ const TRIGGER_SUGGEST_CMD: vscode.Command = {
 };
 
 /**
+ * Singleton access to EntitySelectorCompletionProvider
+ */
+export const getEntitySelectorCompletionProvider = (() => {
+  let instance: EntitySelectorCompletionProvider | undefined;
+
+  return () => {
+    instance = instance === undefined ? new EntitySelectorCompletionProvider() : instance;
+    return instance;
+  };
+})();
+
+/**
  * Provider for code auto-completions within entity selectors.
  */
-export class EntitySelectorCompletionProvider
-  extends CachedDataConsumer
-  implements vscode.CompletionItemProvider
-{
+class EntitySelectorCompletionProvider implements vscode.CompletionItemProvider {
   /**
    * Provides the actual completion items related to the currently typed entity selector.
    * @param document
@@ -52,6 +61,11 @@ export class EntitySelectorCompletionProvider
     const completionItems: vscode.CompletionItem[] = [];
     const line = document.lineAt(position.line).text.substring(0, position.character);
 
+    const parsedExtension = getCachedParsedExtension();
+    if (!parsedExtension) {
+      return completionItems;
+    }
+
     // Completions are possible on any line containing `entitySelectorTemplate`
     if (line.includes("entitySelectorTemplate:")) {
       const currentSelector = this.getMostRecentSelector(line, position.character);
@@ -59,7 +73,7 @@ export class EntitySelectorCompletionProvider
       // If at the start of template, offer pre-defined selectors or option to build
       if (line.endsWith("entitySelectorTemplate: ")) {
         completionItems.push(
-          ...this.createKnownSelectorCompletions(position, document, this.parsedExtension),
+          ...this.createKnownSelectorCompletions(position, document, parsedExtension),
         );
         completionItems.push(this.createBaseSelectorCompletion());
       }
@@ -69,19 +83,15 @@ export class EntitySelectorCompletionProvider
       }
       // `type` will always require a valid entity type
       if (line.endsWith("type(")) {
-        completionItems.push(...this.createTypeCompletions(this.parsedExtension, currentSelector));
+        completionItems.push(...this.createTypeCompletions(parsedExtension, currentSelector));
       }
       // Closing bracket and comma implies continuation, suggest valid operators
       if (line.endsWith("),")) {
-        completionItems.push(
-          ...this.createOperatorCompletions(currentSelector, this.parsedExtension),
-        );
+        completionItems.push(...this.createOperatorCompletions(currentSelector, parsedExtension));
       }
       // Clear markers for suggesting relationships relevant to current selector context
       if (line.endsWith("fromRelationships.") || line.endsWith("toRelationships.")) {
-        completionItems.push(
-          this.createRelationshipCompletion(currentSelector, this.parsedExtension),
-        );
+        completionItems.push(this.createRelationshipCompletion(currentSelector, parsedExtension));
       }
     }
 
@@ -192,7 +202,7 @@ export class EntitySelectorCompletionProvider
     const customTypes = (extension.topology?.types ?? [])
       .map(type => type.name)
       .filter(e => !usedTypes.includes(e));
-    const builtinTypes = this.builtinEntityTypes
+    const builtinTypes = getCachedBuiltinEntityTypes()
       .map(type => type.type?.toLowerCase())
       .filter(e => e !== undefined && !usedTypes.includes(e)) as string[];
 

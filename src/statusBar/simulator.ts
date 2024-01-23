@@ -19,6 +19,7 @@ import { existsSync, mkdirSync, readFileSync, writeFileSync } from "fs";
 import * as path from "path";
 import pidtree = require("pidtree");
 import * as vscode from "vscode";
+import { getActivationContext } from "../extension";
 import {
   EecType,
   LocalExecutionSummary,
@@ -32,9 +33,9 @@ import {
   SimulatorStatus,
 } from "../interfaces/simulator";
 import { ToastOptions } from "../interfaces/webview";
+import { getCachedParsedExtension } from "../utils/caching";
 import { loopSafeWait } from "../utils/code";
 import { checkDtSdkPresent } from "../utils/conditionCheckers";
-import { CachedDataConsumer } from "../utils/dataCaching";
 import { getDatasourceName } from "../utils/extensionParsing";
 import {
   cleanUpSimulatorLogs,
@@ -55,7 +56,7 @@ import {
   getDatasourcePath,
   loadDefaultSimulationConfig,
 } from "../utils/simulator";
-import { REGISTERED_PANELS, WebviewPanelManager } from "../webviews/webviewPanel";
+import { REGISTERED_PANELS, postMessageToPanel, renderPanel } from "../webviews/webviewPanel";
 
 const SIMULATOR_START_CMD = "dynatrace-extensions.simulator.start";
 const SIMULATOR_STOP_CMD = "dynatrace-extensions.simulator.stop";
@@ -69,7 +70,7 @@ const SIMULATOR_PANEL_DATA_TYPE = "SIMULATOR_DATA";
 /**
  * Helper class for managing the Extension Simulator, its UI, and data.
  */
-export class SimulatorManager extends CachedDataConsumer {
+export class SimulatorManager {
   public datasourceName: string;
   public simulatorStatus: SimulatorStatus;
   public currentConfiguration: SimulationConfig;
@@ -84,23 +85,25 @@ export class SimulatorManager extends CachedDataConsumer {
   private datasourceDir: string;
   private datasourceExe: string;
   private pyEnvOptions: ExecOptions;
-  private readonly logTrace = ["statusBar", "simulator", this.constructor.name];
-  private readonly context: vscode.ExtensionContext;
+  private readonly logTrace = ["statusBar", "simulator", "SimulatorManager"];
   private readonly outputChannel: vscode.OutputChannel;
   private readonly statusBar: vscode.StatusBarItem;
-  private readonly panelManager: WebviewPanelManager;
 
   /**
-   * @param context - extension context
    * @param panelManager - webview panel manager
    */
-  constructor(context: vscode.ExtensionContext, panelManager: WebviewPanelManager) {
-    super(); // Data cache access
+  constructor() {
+    this.datasourceName = "unsupported";
+    this.simulatorStatus = "UNSUPPORTED";
+    this.failedChecks = [];
+    this.extensionFile = "";
+    this.activationFile = "";
+    this.datasourceDir = "";
+    this.datasourceExe = "";
+    this.pyEnvOptions = {};
     this.url = "file://CONSOLE";
-    this.context = context;
-    this.idToken = path.join(context.globalStorageUri.fsPath, "idToken.txt");
+    this.idToken = path.join(getActivationContext().globalStorageUri.fsPath, "idToken.txt");
     this.localOs = process.platform === "win32" ? "WINDOWS" : "LINUX";
-    this.panelManager = panelManager;
     this.simulationSpecs = {
       isPython: false,
       dsSupportsActiveGateEec: false,
@@ -108,10 +111,10 @@ export class SimulatorManager extends CachedDataConsumer {
       localActiveGateDsExists: false,
       localOneAgentDsExists: false,
     };
-    this.currentConfiguration = loadDefaultSimulationConfig(context);
+    this.currentConfiguration = loadDefaultSimulationConfig();
 
     // Initial clean-up of files
-    cleanUpSimulatorLogs(context);
+    cleanUpSimulatorLogs();
 
     // Create the output channel for logs
     this.outputChannel = vscode.window.createOutputChannel("Extension simulator", "log");
@@ -148,6 +151,13 @@ export class SimulatorManager extends CachedDataConsumer {
     this.statusBar.text = "Extension simulator";
     this.statusBar.tooltip = "Click to open";
     this.statusBar.show();
+
+    // Initial check for configuration
+    this.checkReady(false).then(
+      () => {},
+      err =>
+        logger.warn(`Initial simulator status check: ${(err as Error).message}`, ...this.logTrace),
+    );
   }
 
   /**
@@ -157,8 +167,8 @@ export class SimulatorManager extends CachedDataConsumer {
   private deleteTarget(target: RemoteTarget) {
     logger.info(`Deleting target ${target.name}`, ...this.logTrace, "deleteTarget");
     // This will always succeed
-    deleteSimulatorTarget(this.context, target);
-    this.panelManager.postMessage(REGISTERED_PANELS.SIMULATOR_UI, {
+    deleteSimulatorTarget(target);
+    postMessageToPanel(REGISTERED_PANELS.SIMULATOR_UI, {
       messageType: "showToast",
       data: {
         title: "Target deleted",
@@ -176,8 +186,8 @@ export class SimulatorManager extends CachedDataConsumer {
    */
   private addTarget(target: RemoteTarget) {
     logger.info(`Adding target ${target.name}`, ...this.logTrace, "addTarget");
-    registerSimulatorTarget(this.context, target);
-    this.panelManager.postMessage(REGISTERED_PANELS.SIMULATOR_UI, {
+    registerSimulatorTarget(target);
+    postMessageToPanel(REGISTERED_PANELS.SIMULATOR_UI, {
       messageType: "showToast",
       data: {
         title: "Target registered",
@@ -195,14 +205,14 @@ export class SimulatorManager extends CachedDataConsumer {
    * @param showUI whether to show the simulator panel after checking
    * @param config a simulation config to check
    */
-  public checkReady(showUI: boolean = true, config?: SimulationConfig) {
+  public async checkReady(showUI: boolean = true, config?: SimulationConfig) {
     const fnLogTrace = [...this.logTrace, "checkReady"];
     logger.info("Checking simulator readiness", ...fnLogTrace);
     // Let the panel know check is in progress
     this.refreshUI(showUI, "CHECKING");
 
     // First check mandatory requirements
-    const [result, failedChecks] = this.checkMantatoryRequirements();
+    const [result, failedChecks] = this.checkMandatoryRequirements();
     if (!result) {
       this.refreshUI(showUI, "UNSUPPORTED", undefined, failedChecks);
       logger.warn(`Mandatory checks failed: ${failedChecks.join(", ")}`, ...fnLogTrace);
@@ -212,27 +222,23 @@ export class SimulatorManager extends CachedDataConsumer {
     // Check config if given, check further
     if (config) {
       this.currentConfiguration = config;
-      this.checkSimulationConfig(config.location, config.eecType, config.target).then(
-        ([status, statusMessage]) => {
-          logger.debug(
-            `Simulation config check result: ${status} (${statusMessage})`,
-            ...fnLogTrace,
-          );
-          this.refreshUI(showUI, status, statusMessage);
-        },
-        err => {
-          logger.error(
-            `Error checking simulation config: ${(err as Error).message}`,
-            ...fnLogTrace,
-          );
-          this.refreshUI(
-            showUI,
-            "NOTREADY",
-            `Error checking configuration: ${(err as Error).message}`,
-          );
-        },
-      );
-      return;
+
+      try {
+        const [status, statusMessage] = await this.checkSimulationConfig(
+          config.location,
+          config.eecType,
+          config.target,
+        );
+        logger.debug(`Simulation config check result: ${status} (${statusMessage})`, ...fnLogTrace);
+        return this.refreshUI(showUI, status, statusMessage);
+      } catch (err) {
+        logger.error(`Error checking simulation config: ${(err as Error).message}`, ...fnLogTrace);
+        this.refreshUI(
+          showUI,
+          "NOTREADY",
+          `Error checking configuration: ${(err as Error).message}`,
+        );
+      }
     }
 
     this.refreshUI(showUI, "READY");
@@ -243,7 +249,7 @@ export class SimulatorManager extends CachedDataConsumer {
    * Without these, there's no point going any further in the process.
    * @returns tuple of [check result, failed checks]
    */
-  public checkMantatoryRequirements(): [boolean, string[]] {
+  public checkMandatoryRequirements(): [boolean, string[]] {
     const failedChecks: string[] = [];
     // Check extension file exists
     const extensionFile = getExtensionFilePath();
@@ -253,11 +259,16 @@ export class SimulatorManager extends CachedDataConsumer {
       this.extensionFile = extensionFile;
     }
     // Check extension has datasource
-    const datasourceName = getDatasourceName(this.parsedExtension);
-    if (datasourceName === "unsupported") {
+    const parsedExtension = getCachedParsedExtension();
+    if (!parsedExtension) {
       failedChecks.push("Datasource");
     } else {
-      this.datasourceName = datasourceName;
+      const datasourceName = getDatasourceName(parsedExtension);
+      if (datasourceName === "unsupported") {
+        failedChecks.push("Datasource");
+      } else {
+        this.datasourceName = datasourceName;
+      }
     }
     // Check activation file exists
     if (!vscode.workspace.workspaceFolders) {
@@ -271,12 +282,17 @@ export class SimulatorManager extends CachedDataConsumer {
         this.activationFile = activationFile;
       } else {
         // Python extensions may use "activation.json" as alternative
-        if (datasourceName === "python") {
-          const pyActivation = path.resolve(
-            path.join(path.resolve(getExtensionWorkspaceDir(), ".."), "activation.json"),
-          );
-          if (existsSync(pyActivation)) {
-            this.activationFile = pyActivation;
+        if (this.datasourceName === "python") {
+          const extDir = getExtensionWorkspaceDir();
+          if (extDir) {
+            const pyActivation = path.resolve(
+              path.join(path.resolve(extDir, ".."), "activation.json"),
+            );
+            if (existsSync(pyActivation)) {
+              this.activationFile = pyActivation;
+            } else {
+              failedChecks.push("Activation file");
+            }
           } else {
             failedChecks.push("Activation file");
           }
@@ -435,16 +451,21 @@ export class SimulatorManager extends CachedDataConsumer {
       ...this.logTrace,
       "createProcess",
     );
+    const workspaceFolders = vscode.workspace.workspaceFolders;
+    if (!workspaceFolders) {
+      logger.error("No workspace folders found. Aborting command.", ...this.logTrace);
+      return;
+    }
     const startTime = new Date();
     let success = true;
     // If needed, make room for new log
-    cleanUpSimulatorLogs(this.context);
+    cleanUpSimulatorLogs();
     const logFilePath = path.join(
-      vscode.workspace.workspaceFolders[0].uri.fsPath,
+      workspaceFolders[0].uri.fsPath,
       "logs",
       `${startTime.toISOString().replace(/:/g, "-")}_simulator.log`,
     );
-    const workspace = vscode.workspace.workspaceFolders[0].name;
+    const workspace = workspaceFolders[0].name;
     this.simulatorProcess = spawn(command, options);
 
     this.outputChannel.appendLine(
@@ -458,26 +479,30 @@ export class SimulatorManager extends CachedDataConsumer {
       writeFileSync(logFilePath, `ERROR:\n${err.message}\n`, { flag: "a" });
     });
 
-    this.simulatorProcess.stdout.on("data", (data: Buffer) => {
-      this.outputChannel.append(data.toString());
-      writeFileSync(logFilePath, data.toString(), { flag: "a" });
-    });
-    this.simulatorProcess.stderr.on("data", (data: Buffer) => {
-      this.outputChannel.appendLine("Error:");
-      this.outputChannel.append(data.toString());
-      success = false;
-      writeFileSync(logFilePath, `Error:\n${data.toString()}`, { flag: "a" });
-    });
+    if (this.simulatorProcess.stdout) {
+      this.simulatorProcess.stdout.on("data", (data: Buffer) => {
+        this.outputChannel.append(data.toString());
+        writeFileSync(logFilePath, data.toString(), { flag: "a" });
+      });
+    }
+    if (this.simulatorProcess.stderr) {
+      this.simulatorProcess.stderr.on("data", (data: Buffer) => {
+        this.outputChannel.appendLine("Error:");
+        this.outputChannel.append(data.toString());
+        success = false;
+        writeFileSync(logFilePath, `Error:\n${data.toString()}`, { flag: "a" });
+      });
+    }
 
     this.simulatorProcess.on("exit", (code, signal) => {
       this.outputChannel.appendLine(
-        `Simulator process exited with code ${code ?? signal.toString()}`,
+        `Simulator process exited with code ${String(code ?? signal?.toString())}`,
       );
     });
 
     this.simulatorProcess.on("close", (code, signal) => {
       const duration = Math.round((new Date().getTime() - startTime.getTime()) / 1000);
-      registerSimulatorSummary(this.context, {
+      registerSimulatorSummary({
         ...staticDetails,
         startTime,
         duration,
@@ -487,7 +512,7 @@ export class SimulatorManager extends CachedDataConsumer {
       } as LocalExecutionSummary | RemoteExecutionSummary);
       this.refreshUI(true);
       this.outputChannel.appendLine(
-        `Simulator process closed with code ${code ?? signal.toString()}`,
+        `Simulator process closed with code ${String(code ?? signal?.toString())}`,
       );
       this.simulatorProcess = undefined;
     });
@@ -497,16 +522,22 @@ export class SimulatorManager extends CachedDataConsumer {
    * Starts a local simulation of the extension.
    */
   private startLocally() {
+    const extDir = getExtensionWorkspaceDir();
+    if (!extDir) {
+      logger.error(
+        "Could not find extension directory. Aborting command.",
+        ...this.logTrace,
+        "startLocally",
+      );
+      return;
+    }
     const command =
       this.datasourceName === "python"
         ? `dt-sdk run --activation-config "${this.activationFile}"` +
           (this.currentConfiguration.sendMetrics ? " --local-ingest" : "")
         : `.${path.sep}${this.datasourceExe} --url "${this.url}"  --idtoken "${this.idToken}" ` +
           `--extConfig "file://${this.extensionFile}" --userConfig "file://${this.activationFile}"`;
-    const cwd =
-      this.datasourceName === "python"
-        ? path.resolve(getExtensionWorkspaceDir(), "..")
-        : this.datasourceDir;
+    const cwd = this.datasourceName === "python" ? path.resolve(extDir, "..") : this.datasourceDir;
     const shell = process.platform === "win32" ? "powershell.exe" : "/bin/bash";
 
     // Initial message before starting the process
@@ -549,7 +580,9 @@ export class SimulatorManager extends CachedDataConsumer {
       if (code === 0) {
         this.outputChannel.appendLine("Files copied successfully.");
       } else {
-        this.outputChannel.appendLine(`SCP process exited with code ${code ?? signal.toString()}`);
+        this.outputChannel.appendLine(
+          `SCP process exited with code ${String(code ?? signal?.toString())}`,
+        );
       }
     });
 
@@ -583,10 +616,16 @@ export class SimulatorManager extends CachedDataConsumer {
     const fnLogTrace = [...this.logTrace, "start"];
     logger.info("Starting simulator", ...fnLogTrace);
 
+    const workspaceFolders = vscode.workspace.workspaceFolders;
+    if (!workspaceFolders) {
+      logger.error("No workspace folders found. Aborting command.", ...fnLogTrace);
+      return;
+    }
+
     const { location, target } = config;
 
     // Create log folder if it doesn't exist
-    const logsDir = path.join(vscode.workspace.workspaceFolders[0].uri.fsPath, "logs");
+    const logsDir = path.join(workspaceFolders[0].uri.fsPath, "logs");
     if (!existsSync(logsDir)) {
       mkdirSync(logsDir);
     }
@@ -597,6 +636,10 @@ export class SimulatorManager extends CachedDataConsumer {
           this.startLocally();
           break;
         case "REMOTE":
+          if (!target) {
+            logger.notify("ERROR", "No target given for remote simulation", ...fnLogTrace);
+            return;
+          }
           await this.startRemotely(target);
           break;
       }
@@ -661,12 +704,12 @@ export class SimulatorManager extends CachedDataConsumer {
     const panelData: SimulatorPanelData = {
       dataType: SIMULATOR_PANEL_DATA_TYPE,
       data: {
-        targets: getSimulatorTargets(this.context),
-        summaries: getSimulatorSummaries(this.context),
+        targets: getSimulatorTargets(),
+        summaries: getSimulatorSummaries(),
         currentConfiguration: this.currentConfiguration,
         specs: this.simulationSpecs,
         status: status ?? this.simulatorStatus,
-        statusMessage,
+        statusMessage: String(statusMessage),
         failedChecks: failedChecks ?? this.failedChecks,
       },
     };
@@ -678,9 +721,9 @@ export class SimulatorManager extends CachedDataConsumer {
     );
 
     if (show) {
-      this.panelManager.render(REGISTERED_PANELS.SIMULATOR_UI, "Extension Simulator", panelData);
+      renderPanel(REGISTERED_PANELS.SIMULATOR_UI, "Extension Simulator", panelData);
     } else {
-      this.panelManager.postMessage(REGISTERED_PANELS.SIMULATOR_UI, {
+      postMessageToPanel(REGISTERED_PANELS.SIMULATOR_UI, {
         messageType: "updateData",
         data: panelData,
       });
@@ -694,7 +737,7 @@ export class SimulatorManager extends CachedDataConsumer {
 
     const logContent = readFileSync(logFilePath.fsPath).toString();
 
-    this.panelManager.postMessage(REGISTERED_PANELS.SIMULATOR_UI, {
+    postMessageToPanel(REGISTERED_PANELS.SIMULATOR_UI, {
       messageType: "openLog",
       data: logContent,
     });

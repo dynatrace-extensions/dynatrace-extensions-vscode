@@ -23,7 +23,9 @@ import { existsSync, readdirSync, readFileSync } from "fs";
 import * as path from "path";
 import axios from "axios";
 import * as vscode from "vscode";
-import { EnvironmentsTreeDataProvider } from "../treeViews/environmentsTreeView";
+import { getActivationContext } from "../extension";
+import { getConnectedTenant } from "../treeViews/tenantsTreeView";
+import { getDiagnostics } from "./diagnostics";
 import { getExtensionFilePath, resolveRealPath } from "./fileSystem";
 import * as logger from "./logging";
 import { runCommand } from "./subprocesses";
@@ -70,12 +72,10 @@ export async function checkSettings(...settings: string[]): Promise<boolean> {
  * @param environmentsTree environments tree data provider
  * @returns check status
  */
-export async function checkEnvironmentConnected(
-  environmentsTree: EnvironmentsTreeDataProvider,
-): Promise<boolean> {
+export async function checkTenantConnected(): Promise<boolean> {
   const fnLogTrace = [...logTrace, "checkEnvironmentConnected"];
   let status = true;
-  if (!(await environmentsTree.getCurrentEnvironment())) {
+  if (!(await getConnectedTenant())) {
     logger.notify(
       "ERROR",
       "You must be connected to a Dynatrace Environment to use this command.",
@@ -113,14 +113,11 @@ export async function checkWorkspaceOpen(suppressMessaging: boolean = false): Pr
 
 /**
  * Checks whether the currently opened workspace is an Extensions 2.0 workspace or not.
- * @param context VSCode Extension Context
  * @param showWarningMessage when true, displays a warning message to the user
  * @returns check status
  */
-export async function isExtensionsWorkspace(
-  context: vscode.ExtensionContext,
-  showWarningMessage: boolean = true,
-): Promise<boolean> {
+export async function isExtensionsWorkspace(showWarningMessage: boolean = true): Promise<boolean> {
+  const context = getActivationContext();
   const fnLogTrace = [...logTrace, "isExtensionsWorkspace"];
   let status = false;
   if (context.storageUri && existsSync(context.storageUri.fsPath)) {
@@ -146,13 +143,11 @@ export async function isExtensionsWorkspace(
 /**
  * Checks whether the workspace storage already has certificate files and prompts for overwriting.
  * Assumes the workspace storage has already been setup (i.e. path exists).
- * @param context
  * @returns true if operation should continue, false for cancellation
  */
-export async function checkOverwriteCertificates(
-  context: vscode.ExtensionContext,
-): Promise<boolean> {
+export async function checkOverwriteCertificates(): Promise<boolean> {
   let status = true;
+  const context = getActivationContext();
   const storageUri = context.storageUri?.fsPath;
   if (!storageUri) {
     return false;
@@ -402,3 +397,34 @@ export async function checkDtSdkPresent(
 
   return status;
 }
+
+/**
+ * Checks whether VSCode has any diagnostics (problems) registered on the extension manifest
+ * with severity "Error". This can be used if to check if extension should be built or not.
+ * @returns true if no problems, false otherwise
+ */
+export const checkNoProblemsInManifest = async (): Promise<boolean> => {
+  const fnLogTrace = [...logTrace, "checkNoProblemsInManifest"];
+  let status = true;
+
+  const extensionYamlFile = getExtensionFilePath();
+  if (!extensionYamlFile) return false;
+  const extensionYamlFileUri = vscode.Uri.file(extensionYamlFile);
+
+  const diagnostics = [
+    ...getDiagnostics(extensionYamlFileUri),
+    ...vscode.languages.getDiagnostics(extensionYamlFileUri),
+  ];
+
+  if (
+    diagnostics.length > 0 &&
+    diagnostics.findIndex(diag => diag.severity === vscode.DiagnosticSeverity.Error) > -1
+  ) {
+    logger.notify("ERROR", "Extension cannot be built. Fix problems first.", ...fnLogTrace);
+    await vscode.commands.executeCommand("workbench.action.problems.focus");
+    status = false;
+  }
+
+  logger.info(`Are there problems in the manifest? ${String(status)}`, ...fnLogTrace);
+  return status;
+};
