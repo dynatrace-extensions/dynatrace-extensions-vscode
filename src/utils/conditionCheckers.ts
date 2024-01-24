@@ -379,9 +379,9 @@ export function checkActiveGateInstalled(): boolean {
 /**
  * Checks whether the DT-SDK is installed on the Python environment.
  * Doesn't care so much about reasoning, just provides the status of the check.
- * @param oc: {@link vscode.OutputChannel}
- * @param cancelToken: {@link vscode.CancellationToken}
- * @param envOptions: {@link ExecOptions}
+ * @param oc output channel to print to
+ * @param cancelToken cancellation token to cancel the process
+ * @param envOptions environment options to pass to the subprocess
  * @returns status of check
  */
 export async function checkDtSdkPresent(
@@ -389,7 +389,7 @@ export async function checkDtSdkPresent(
   cancelToken?: vscode.CancellationToken,
   envOptions?: ExecOptions,
 ): Promise<boolean> {
-  const status = await runCommand("dt-sdk --help", oc, cancelToken, envOptions)
+  const status = await runCommand("dt-sdk version", oc, cancelToken, envOptions)
     .then(() => true)
     .catch(() => false);
 

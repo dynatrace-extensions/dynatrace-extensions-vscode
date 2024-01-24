@@ -82,189 +82,11 @@ export const initWorkspaceWorkflow = async () => {
 };
 
 /**
- * Sets up the workspace for a new Python extension.
- * Checks if dt-sdk is available, installs dt-sdk if needed, and creates a python
- * extension.
- * @param rootPath path of the workspace (extension is created in its root)
- * @param tempPath the workspace storage (provided by vscode) for temporary work
- * @returns
- */
-async function pythonExtensionSetup(
-  rootPath: string,
-  tempPath: string,
-  progress: vscode.Progress<{
-    message?: string;
-    increment?: number;
-  }>,
-) {
-  const fnLogTrace = [...logTrace, "pythonExtensionSetup"];
-  logger.debug("Setting up a new python extension", ...fnLogTrace);
-  // Get correct python env
-  const envOptions = await getPythonVenvOpts();
-  // Check: dt-sdk available?
-  const dtSdkAvailable = await checkDtSdkPresent(undefined, undefined, envOptions);
-  if (!dtSdkAvailable) {
-    progress.report({ message: "Installing dependencies. This may take a while." });
-    await runCommand(
-      "pip install --upgrade dt-extensions-sdk[cli]",
-      undefined,
-      undefined,
-      envOptions,
-    );
-  }
-  // Name for the Python extension
-  progress.report({ message: "Waiting for your input..." });
-  const chosenName =
-    (await vscode.window.showInputBox({
-      title: "Provide a name for your extension",
-      placeHolder: "my_python_extension",
-      ignoreFocusOut: true,
-      validateInput: value => {
-        if (!/^[a-z][a-zA-Z0-9_]*/.test(value)) {
-          return (
-            "The name must be a valid Python module: " +
-            "use letters, digits, and underscores only."
-          );
-        }
-        return undefined;
-      },
-    })) ?? "my_python_extension";
-  logger.debug(`Generated extension name is "${chosenName}"`, ...fnLogTrace);
-  // Generate artefacts
-  progress.report({ message: "Creating folders and files" });
-  await runCommand(
-    `dt-sdk create -o "${tempPath}" ${chosenName}`,
-    undefined,
-    undefined,
-    envOptions,
-  );
-
-  // Tidy up
-  // TODO - This doesn't work if the workspace is in another drive in Windows.
-  // Can't rename from C: to D: for example
-  readdirSync(path.resolve(tempPath, chosenName)).forEach(p =>
-    renameSync(path.resolve(tempPath, chosenName, p), path.resolve(rootPath, p)),
-  );
-  rmdirSync(path.resolve(tempPath, chosenName));
-}
-
-/**
- * Sets up the workspace for continuing work on an existing extension.
- * User is prompted to select an extension from their tenant, which is then downloaded
- * and unpacked in the workspace root folder. Requires an environment connection.
- * @param dt Dynatrace API Client
- * @param rootPath path to the workspace root folder
- * @returns
- */
-async function existingExtensionSetup(dt: Dynatrace, rootPath: string) {
-  const fnLogTrace = [...logTrace, "existingExtensionSetup"];
-  logger.debug("Setting up workspace with an existing extension", ...fnLogTrace);
-
-  const download = await vscode.window.showQuickPick(
-    (
-      await dt.extensionsV2.list()
-    ).map(ext => ({
-      label: `${ext.extensionName} (${ext.version})`,
-      extension: ext,
-    })),
-    {
-      title: "Choose an extension to download",
-      canPickMany: false,
-      ignoreFocusOut: true,
-    },
-  );
-  if (!download) {
-    notify("ERROR", "No selection made. Operation aborted.", ...fnLogTrace);
-    return;
-  }
-
-  const extensionDir = path.resolve(rootPath, "extension");
-  if (!existsSync(extensionDir)) {
-    mkdirSync(extensionDir);
-  }
-
-  logger.debug(
-    `Attempting to download "${download.extension.extensionName}" version ${download.extension.version}`,
-    ...fnLogTrace,
-  );
-  const zipData = await dt.extensionsV2.getExtension(
-    download.extension.extensionName,
-    download.extension.version,
-    true,
-  );
-  const extensionPackage = new AdmZip(zipData);
-  const extensionZip = new AdmZip(extensionPackage.getEntry("extension.zip")?.getData());
-  extensionZip.extractAllTo(extensionDir);
-
-  // Additional extraction is needed for python extensions
-  const extensionYaml = readFileSync(path.resolve(extensionDir, "extension.yaml")).toString();
-  try {
-    if (/^python:/gm.test(extensionYaml)) {
-      logger.debug("This is a python extension. Extracting relevant contents", ...fnLogTrace);
-      const moduleNameMatch = /^ *module: (.*?)$/gm.exec(extensionYaml);
-      if (moduleNameMatch && moduleNameMatch.length > 1) {
-        const moduleName = moduleNameMatch[1];
-        extensionZip
-          .getEntries()
-          .filter(e => {
-            logger.info(e.name, ...fnLogTrace);
-            return e.name.startsWith(moduleName);
-          })
-          .forEach(e => {
-            const moduleZip = new AdmZip(e.getData());
-            moduleZip.extractAllTo(rootPath);
-          });
-      }
-      await writeGititnore(true);
-    }
-  } catch (err) {
-    logger.error(err, ...fnLogTrace);
-    notify(
-      "WARN",
-      "Not all files were extracted successfully. Manual edits are still needed.",
-      ...fnLogTrace,
-    );
-  }
-}
-
-/**
- * Sets up the workspace for a new Extension 2.0.
- * Generates a small stub with the minimum mandatory details for any extension.
- * @param schemaVersion version of schema for this workspace
- * @param rootPath the root of the workspace
- */
-async function defaultExtensionSetup(schemaVersion: string, rootPath: string) {
-  // Only modify artefacts if extension.yaml not already present in workspace
-  const extensionFilePath = getExtensionFilePath();
-  if (!extensionFilePath) {
-    // Create extension directory
-    const extensionDir = vscode.Uri.file(path.resolve(path.join(rootPath, "extension")));
-    await vscode.workspace.fs.createDirectory(extensionDir);
-    // Add a basic extension stub
-    const extensionStub =
-      'name: custom:my.awesome.extension\nversion: "0.0.1"\n' +
-      `minDynatraceVersion: "${schemaVersion}"\nauthor:\n  name: Your Name Here`;
-    await vscode.workspace.fs.writeFile(
-      vscode.Uri.file(path.join(extensionDir.fsPath, "extension.yaml")),
-      new TextEncoder().encode(extensionStub),
-    );
-  } else {
-    if (/^python:/gm.test(readFileSync(extensionFilePath).toString())) {
-      await writeGititnore(true);
-    }
-  }
-}
-
-/**
- * Register a new or existing extension workspace with the add-on.
- * For new workspaces, it creates the mandatory folders (e.g. dist, config, extension),
- * sets up the certificates needed for signing (can use existing or generate new ones), and
- * finally creates some basic artifacts that should form the base of the project.
- * Types of projects currently supported - new extension stub, new python extension,
- * conversion from 1.0 JMX extension, or existing extension downloaded from tenant.
+ * Registers a workspace with the VS Code extension.
+ * Initialization also involves creating a directory structure and some starter files depending on
+ * the project template chosen.
  * @param dt Dynatrace API Client
  * @param callback optional callback function to call once initialization complete
- * @returns
  */
 export async function initWorkspace(dt: Dynatrace, callback?: () => unknown) {
   const fnLogTrace = [...logTrace, "initWorkspace"];
@@ -463,4 +285,178 @@ export async function initWorkspace(dt: Dynatrace, callback?: () => unknown) {
   );
 
   notify("INFO", "Workspace initialization completed successfully.", ...fnLogTrace);
+}
+
+/**
+ * Sets up the workspace for a new Python extension.
+ * Checks if dt-sdk is available, installs dt-sdk if needed, and creates a python
+ * extension.
+ * @param rootPath path of the workspace (extension is created in its root)
+ * @param tempPath the workspace storage (provided by vscode) for temporary work
+ * @returns
+ */
+async function pythonExtensionSetup(
+  rootPath: string,
+  tempPath: string,
+  progress: vscode.Progress<{
+    message?: string;
+    increment?: number;
+  }>,
+) {
+  const fnLogTrace = [...logTrace, "pythonExtensionSetup"];
+  logger.debug("Setting up a new python extension", ...fnLogTrace);
+  // Get correct python env
+  const envOptions = await getPythonVenvOpts();
+  // Check: dt-sdk available?
+  const dtSdkAvailable = await checkDtSdkPresent(undefined, undefined, envOptions);
+  if (!dtSdkAvailable) {
+    progress.report({ message: "Installing dependencies. This may take a while." });
+    await runCommand(
+      "pip install --upgrade dt-extensions-sdk[cli]",
+      undefined,
+      undefined,
+      envOptions,
+    );
+  }
+  // Name for the Python extension
+  progress.report({ message: "Waiting for your input..." });
+  const chosenName =
+    (await vscode.window.showInputBox({
+      title: "Provide a name for your extension",
+      placeHolder: "my_python_extension",
+      ignoreFocusOut: true,
+      validateInput: value => {
+        if (!/^[a-z][a-zA-Z0-9_]*/.test(value)) {
+          return (
+            "The name must be a valid Python module: " +
+            "use letters, digits, and underscores only."
+          );
+        }
+        return undefined;
+      },
+    })) ?? "my_python_extension";
+  logger.debug(`Generated extension name is "${chosenName}"`, ...fnLogTrace);
+  // Generate artefacts
+  progress.report({ message: "Creating folders and files" });
+  await runCommand(
+    `dt-sdk create -o "${tempPath}" ${chosenName}`,
+    undefined,
+    undefined,
+    envOptions,
+  );
+
+  // Tidy up
+  // TODO - This doesn't work if the workspace is in another drive in Windows.
+  // Can't rename from C: to D: for example
+  readdirSync(path.resolve(tempPath, chosenName)).forEach(p =>
+    renameSync(path.resolve(tempPath, chosenName, p), path.resolve(rootPath, p)),
+  );
+  rmdirSync(path.resolve(tempPath, chosenName));
+}
+
+/**
+ * Sets up the workspace for continuing work on an existing extension.
+ * User is prompted to select an extension from their tenant, which is then downloaded
+ * and unpacked in the workspace root folder. Requires an environment connection.
+ * @param dt Dynatrace API Client
+ * @param rootPath path to the workspace root folder
+ * @returns
+ */
+async function existingExtensionSetup(dt: Dynatrace, rootPath: string) {
+  const fnLogTrace = [...logTrace, "existingExtensionSetup"];
+  logger.debug("Setting up workspace with an existing extension", ...fnLogTrace);
+
+  const download = await vscode.window.showQuickPick(
+    (
+      await dt.extensionsV2.list()
+    ).map(ext => ({
+      label: `${ext.extensionName} (${ext.version})`,
+      extension: ext,
+    })),
+    {
+      title: "Choose an extension to download",
+      canPickMany: false,
+      ignoreFocusOut: true,
+    },
+  );
+  if (!download) {
+    notify("ERROR", "No selection made. Operation aborted.", ...fnLogTrace);
+    return;
+  }
+
+  const extensionDir = path.resolve(rootPath, "extension");
+  if (!existsSync(extensionDir)) {
+    mkdirSync(extensionDir);
+  }
+
+  logger.debug(
+    `Attempting to download "${download.extension.extensionName}" version ${download.extension.version}`,
+    ...fnLogTrace,
+  );
+  const zipData = await dt.extensionsV2.getExtension(
+    download.extension.extensionName,
+    download.extension.version,
+    true,
+  );
+  const extensionPackage = new AdmZip(zipData);
+  const extensionZip = new AdmZip(extensionPackage.getEntry("extension.zip")?.getData());
+  extensionZip.extractAllTo(extensionDir);
+
+  // Additional extraction is needed for python extensions
+  const extensionYaml = readFileSync(path.resolve(extensionDir, "extension.yaml")).toString();
+  try {
+    if (/^python:/gm.test(extensionYaml)) {
+      logger.debug("This is a python extension. Extracting relevant contents", ...fnLogTrace);
+      const moduleNameMatch = /^ *module: (.*?)$/gm.exec(extensionYaml);
+      if (moduleNameMatch && moduleNameMatch.length > 1) {
+        const moduleName = moduleNameMatch[1];
+        extensionZip
+          .getEntries()
+          .filter(e => {
+            logger.info(e.name, ...fnLogTrace);
+            return e.name.startsWith(moduleName);
+          })
+          .forEach(e => {
+            const moduleZip = new AdmZip(e.getData());
+            moduleZip.extractAllTo(rootPath);
+          });
+      }
+      await writeGititnore(true);
+    }
+  } catch (err) {
+    logger.error(err, ...fnLogTrace);
+    notify(
+      "WARN",
+      "Not all files were extracted successfully. Manual edits are still needed.",
+      ...fnLogTrace,
+    );
+  }
+}
+
+/**
+ * Sets up the workspace for a new Extension 2.0.
+ * Generates a small stub with the minimum mandatory details for any extension.
+ * @param schemaVersion version of schema for this workspace
+ * @param rootPath the root of the workspace
+ */
+async function defaultExtensionSetup(schemaVersion: string, rootPath: string) {
+  // Only modify artefacts if extension.yaml not already present in workspace
+  const extensionFilePath = getExtensionFilePath();
+  if (!extensionFilePath) {
+    // Create extension directory
+    const extensionDir = vscode.Uri.file(path.resolve(path.join(rootPath, "extension")));
+    await vscode.workspace.fs.createDirectory(extensionDir);
+    // Add a basic extension stub
+    const extensionStub =
+      'name: custom:my.awesome.extension\nversion: "0.0.1"\n' +
+      `minDynatraceVersion: "${schemaVersion}"\nauthor:\n  name: Your Name Here`;
+    await vscode.workspace.fs.writeFile(
+      vscode.Uri.file(path.join(extensionDir.fsPath, "extension.yaml")),
+      new TextEncoder().encode(extensionStub),
+    );
+  } else {
+    if (/^python:/gm.test(readFileSync(extensionFilePath).toString())) {
+      await writeGititnore(true);
+    }
+  }
 }

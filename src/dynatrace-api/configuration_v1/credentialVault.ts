@@ -36,10 +36,16 @@ export class CredentialVaultService {
    * @param certificate the certificate as a PEM encoded string
    * @param name the name for this credential as it will appear in the vault
    * @param description the description associated with the credential
+   * @param signal cancellation signal
    * @returns response data
    */
-  async postCertificate(certificate: string, name: string, description: string = "") {
-    const payload = {
+  async postCertificate(
+    certificate: string,
+    name: string,
+    description: string = "",
+    signal?: AbortSignal,
+  ) {
+    const body = {
       name: name,
       description: description,
       ownerAccessOnly: true,
@@ -49,7 +55,12 @@ export class CredentialVaultService {
       password: util.encode64("PasswordNotSupported"),
       certificateFormat: "PEM",
     };
-    return this.httpClient.makeRequest<{ id: string }>(this.endpoint, payload, "POST");
+    return this.httpClient.makeRequest<{ id: string }>({
+      path: this.endpoint,
+      method: "POST",
+      body,
+      signal,
+    });
   }
 
   /**
@@ -59,6 +70,7 @@ export class CredentialVaultService {
    * @param certificate the new certificate as a PEM encoded string
    * @param name the name for this credential as it will appear in the vault
    * @param description the description associated with the credential
+   * @param signal cancellation signal
    * @returns response data
    */
   async putCertificate(
@@ -66,8 +78,9 @@ export class CredentialVaultService {
     certificate: string,
     name: string,
     description: string = "",
+    signal?: AbortSignal,
   ) {
-    const payload = {
+    const body = {
       name: name,
       description: description,
       ownerAccessOnly: true,
@@ -77,17 +90,24 @@ export class CredentialVaultService {
       password: util.encode64("PasswordNotSupported"),
       certificateFormat: "PEM",
     };
-    return this.httpClient.makeRequest(`${this.endpoint}/${certificateId}`, payload, "PUT");
+    return this.httpClient.makeRequest({
+      path: `${this.endpoint}/${certificateId}`,
+      method: "PUT",
+      body,
+      signal,
+    });
   }
 
   /**
    * Gets the details of a credential stored in the Dynatrace credential vault.
    * @param certificateId ID of the credential to retrieve
+   * @param signal cancellation signal
    * @returns response data
    */
-  async getCertificate(certificateId: string) {
-    return this.httpClient.makeRequest<CredentialsResponseElement>(
-      `${this.endpoint}/${certificateId}`,
-    );
+  async getCertificate(certificateId: string, signal?: AbortSignal) {
+    return this.httpClient.makeRequest<CredentialsResponseElement>({
+      path: `${this.endpoint}/${certificateId}`,
+      signal,
+    });
   }
 }

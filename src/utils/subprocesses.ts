@@ -31,6 +31,8 @@ const logTrace = ["utils", "subprocesses"];
  * part of the stderr (the rest is included via output channel)
  * @param command the command to execute
  * @param oc JSON output channel to communicate error details
+ * @param cancelToken cancellation token to cancel the process
+ * @param envOptions options to pass to the child process
  * @returns exit code or `null`
  */
 export function runCommand(
@@ -46,21 +48,17 @@ export function runCommand(
   let [stdout, stderr] = ["", ""];
 
   return new Promise((resolve, reject) => {
-    if (cancelToken?.isCancellationRequested) {
-      logger.debug("Cancellation registered. Killing subprocess", ...fnLogTrace);
-      p.kill("SIGINT");
-    }
-    p.stdout?.on("data", (data: Buffer) => {
-      stdout += data.toString();
-      if (cancelToken?.isCancellationRequested) {
-        logger.debug("Cancellation registered. Killing subprocess", ...fnLogTrace);
+    if (cancelToken) {
+      cancelToken.onCancellationRequested(() => {
+        logger.warn("Cancellation requested. Killing subprocess", ...fnLogTrace);
         p.kill("SIGINT");
-      }
-    });
+        reject(Error("Operation cancelled."));
+      });
+    }
+    p.stdout?.on("data", (data: Buffer) => (stdout += data.toString()));
     p.stderr?.on("data", (data: Buffer) => (stderr += data.toString()));
     p.on("exit", code => {
       if (cancelToken?.isCancellationRequested) {
-        logger.debug("Cancellation registered. Killing subprocess", ...fnLogTrace);
         return resolve(1);
       }
       if (code !== 0) {
@@ -83,7 +81,7 @@ export function runCommand(
         }
         reject(Error(shortMessage));
       }
-      logger.info(stdout, ...fnLogTrace);
+      logger.debug(stdout, ...fnLogTrace);
       return resolve(code);
     });
   });

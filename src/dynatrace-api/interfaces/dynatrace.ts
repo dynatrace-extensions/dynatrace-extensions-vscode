@@ -14,7 +14,7 @@
   limitations under the License.
  */
 
-import { AxiosError, AxiosResponse } from "axios";
+import { AxiosError, AxiosResponse, ResponseType, Method } from "axios";
 
 interface ConstraintViolation {
   parameterLocation: "HEADER" | "PATH" | "PAYLOAD_BODY" | "QUERY";
@@ -41,4 +41,35 @@ export interface PaginatedResponse<T> {
   [key: string]: T[];
   // @ts-expect-errors
   nextPageKey?: string;
+}
+
+export interface DynatraceRequestConfig {
+  /* URL path for the API endpoint */
+  path: string;
+
+  /* query parameters */
+  params?: Record<string, unknown>;
+
+  /* body of the request (required for POST and PUT) */
+  body?: Record<string, unknown>;
+
+  /* HTTP method to use */
+  method: Method;
+
+  /* additional request headers */
+  headers: Record<string, string>;
+
+  /* files to be uploaded */
+  files?: { file: Buffer; name: string };
+
+  /* expected response type (default is json) */
+  responseType?: ResponseType;
+
+  /* signal to cancel the request */
+  signal?: AbortSignal;
+}
+
+export interface DynatracePaginatedRequestConfig extends Partial<DynatraceRequestConfig> {
+  /* the attribute in the response that holds the items */
+  item: string;
 }
