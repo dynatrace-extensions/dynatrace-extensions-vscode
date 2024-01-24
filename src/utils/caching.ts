@@ -297,3 +297,39 @@ const fetchAndUpdateEntityTypeInstances = async (type: string) => {
     .list(`type(${type})`)
     .then(entities => entityInstances.set(type, entities));
 };
+
+/**
+ * Memoizes the result of the getter function call based on the string representation of the getter.
+ * Dependency array is compared to refresh the cache (empty array caches it forever).
+ * @param getter Function to memoize
+ * @param deps Array of dependencies to compare
+ * @param clear If true, removes this getter from the cache
+ */
+export const useMemo = (() => {
+  interface MemoCache {
+    oldDeps: unknown[];
+    oldResult: unknown;
+  }
+
+  const memoCache = new Map<string, MemoCache>();
+
+  return async <T>(
+    getter: () => T | PromiseLike<T>,
+    deps: unknown[],
+    clear: boolean = false,
+  ): Promise<T> => {
+    const cacheKey = getter.toString();
+
+    if (clear) {
+      memoCache.delete(cacheKey);
+    }
+
+    if (
+      !memoCache.has(cacheKey) ||
+      !deps.every((dep, i) => String(dep) === String(memoCache.get(cacheKey)?.oldDeps[i]))
+    ) {
+      memoCache.set(cacheKey, { oldDeps: deps, oldResult: await getter() });
+    }
+    return memoCache.get(cacheKey)?.oldResult as T;
+  };
+})();

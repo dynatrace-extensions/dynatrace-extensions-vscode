@@ -6,8 +6,8 @@ import * as yaml from "yaml";
 import { buildExtensionWorkflow } from "../../../../src/commandPalette/buildExtension";
 import * as extension from "../../../../src/extension";
 import * as tenantsTreeView from "../../../../src/treeViews/tenantsTreeView";
+import * as cachingUtils from "../../../../src/utils/caching";
 import * as conditionCheckers from "../../../../src/utils/conditionCheckers";
-import * as fileSystemUtils from "../../../../src/utils/fileSystem";
 import {
   MockCancellationToken,
   MockExtensionContext,
@@ -18,13 +18,13 @@ import {
 jest.mock("../../../../src/utils/logging");
 
 describe("Build Extension Workflow", () => {
-  let getExtensionFilePathSpy: jest.SpyInstance;
+  let useMemoSpy: jest.SpyInstance;
   afterEach(() => {
     jest.resetAllMocks();
   });
 
   beforeAll(() => {
-    getExtensionFilePathSpy = jest.spyOn(fileSystemUtils, "getExtensionFilePath");
+    useMemoSpy = jest.spyOn(cachingUtils, "useMemo");
   });
 
   describe("Preconditions check", () => {
@@ -50,7 +50,7 @@ describe("Build Extension Workflow", () => {
 
       await buildExtensionWorkflow();
 
-      expect(getExtensionFilePathSpy).not.toHaveBeenCalled();
+      expect(useMemoSpy).not.toHaveBeenCalled();
     });
 
     it("should throw if extension file path doesn't exist", async () => {
@@ -104,7 +104,12 @@ const setupPreconditions = (
   jest
     .spyOn(conditionCheckers, "checkNoProblemsInManifest")
     .mockReturnValue(Promise.resolve(noProblemsInManifest));
-  jest.spyOn(fileSystemUtils, "getExtensionFilePath").mockReturnValue(extensionFilePath);
+  jest.spyOn(cachingUtils, "useMemo").mockImplementation(getter => {
+    if (String(getter) === "() => manifestFilePath") {
+      return Promise.resolve(extensionFilePath);
+    }
+    return Promise.resolve(undefined);
+  });
 };
 
 /**
