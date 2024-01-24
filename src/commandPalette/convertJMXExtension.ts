@@ -629,9 +629,9 @@ async function convertV1UiToScreens(
       ],
       metricTableCards: [metricTableCard],
     });
-
-    return screens;
   }
+
+  return screens;
 }
 
 /**
@@ -706,7 +706,7 @@ async function convertJMXExtensionToV2(jmxV1Extension: ExtensionV1): Promise<Ext
   const screens = jmxV1Extension.ui
     ? await convertV1UiToScreens(jmxV1Extension.ui, extensionName, technology, metricKeyMap)
     : [];
-  if (screens && screens.length > 0) {
+  if (screens.length > 0) {
     jmxV2Extension.screens = screens;
   }
   // Metrics
