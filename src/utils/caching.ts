@@ -322,14 +322,15 @@ export const useMemo = (() => {
 
     if (clear) {
       memoCache.delete(cacheKey);
+    } else {
+      if (
+        !memoCache.has(cacheKey) ||
+        !deps.every((dep, i) => String(dep) === String(memoCache.get(cacheKey)?.oldDeps[i]))
+      ) {
+        memoCache.set(cacheKey, { oldDeps: deps, oldResult: await getter() });
+      }
     }
 
-    if (
-      !memoCache.has(cacheKey) ||
-      !deps.every((dep, i) => String(dep) === String(memoCache.get(cacheKey)?.oldDeps[i]))
-    ) {
-      memoCache.set(cacheKey, { oldDeps: deps, oldResult: await getter() });
-    }
     return memoCache.get(cacheKey)?.oldResult as T;
   };
 })();
