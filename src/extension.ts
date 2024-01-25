@@ -64,7 +64,7 @@ import { initializeCache } from "./utils/caching";
 import { isExtensionsWorkspace } from "./utils/conditionCheckers";
 import { registerDiagnosticsEventListeners } from "./utils/diagnostics";
 import {
-  getAllEnvironments,
+  getAllTenants,
   getAllWorkspaces,
   initializeGlobalStorage,
   migrateFromLegacyExtension,
@@ -98,7 +98,7 @@ export async function activate(context: vscode.ExtensionContext) {
   // Set custom context properties for tree views
   setContextProperty("numWorkspaces", getAllWorkspaces().length);
   setContextProperty("extensionWorkspace", await isExtensionsWorkspace(false));
-  setContextProperty("numEnvironments", getAllEnvironments().length);
+  setContextProperty("numEnvironments", getAllTenants().length);
 
   logger.debug("Instantiating feature providers", ...fnLogTrace);
   await initializeCache(context.globalStorageUri.fsPath);

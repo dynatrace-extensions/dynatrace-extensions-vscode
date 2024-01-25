@@ -157,8 +157,7 @@ export async function registerWorkspace() {
     );
     return;
   }
-  const workspacesJson = path.join(context.globalStorageUri.fsPath, "extensionWorkspaces.json");
-  const workspaces = JSON.parse(readFileSync(workspacesJson).toString()) as ExtensionWorkspace[];
+  const workspaces = getAllWorkspaces();
   const workspace: ExtensionWorkspace = {
     name: vscode.workspace.name ?? "",
     id: path.basename(path.dirname(context.storageUri.fsPath)),
@@ -172,7 +171,7 @@ export async function registerWorkspace() {
     workspaces[currentIndex] = workspace;
   }
 
-  writeFileSync(workspacesJson, JSON.stringify(workspaces));
+  writeFileSync(getWorkspacesJsonPath(), JSON.stringify(workspaces));
 
   // Update the state
   await vscode.commands.executeCommand(
@@ -186,9 +185,7 @@ export async function registerWorkspace() {
  * Gets metadata of all extension workspaces currently registered in the global storage.
  */
 export function getAllWorkspaces(): ExtensionWorkspace[] {
-  const context = getActivationContext();
-  const workspacesJson = path.join(context.globalStorageUri.fsPath, "extensionWorkspaces.json");
-  return (JSON.parse(readFileSync(workspacesJson).toString()) as ExtensionWorkspace[]).map(
+  return (JSON.parse(readFileSync(getWorkspacesJsonPath()).toString()) as ExtensionWorkspace[]).map(
     (extension: ExtensionWorkspace) =>
       ({
         id: extension.id,
@@ -215,81 +212,69 @@ export function findWorkspace(
 }
 
 /**
- * Gets metadata of all Dynatrace environments currently registered in the global storage.
- * @returns all environments
+ * Gets metadata of all Dynatrace tenants currently registered in the global storage.
  */
-export function getAllEnvironments(): DynatraceTenantDto[] {
-  const context = getActivationContext();
-  const environmentsJson = path.join(context.globalStorageUri.fsPath, "dynatraceEnvironments.json");
-  return JSON.parse(readFileSync(environmentsJson).toString()) as DynatraceTenantDto[];
+export function getAllTenants(): DynatraceTenantDto[] {
+  return JSON.parse(readFileSync(getTenantsJsonPath()).toString()) as DynatraceTenantDto[];
 }
 
 /**
- * Saves the metadata of a workspace in the global storage. If previous metadata exists, it
- * will be overwritten.
- * @param url URL for this environment
- * @param token API Token for Dynatrace API Calls. Note: this is stored as is, so encrypt it
- *              before sending it through
+ * Saves the metadata of a tenant in the global storage. Previous values are overwritten.
+ * @param url URL for browser pages of the tenant
+ * @param apiUrl URL for API calls to the tenant
+ * @param token API Token for Dynatrace API Calls. Note: must be encrypted already.
  * @param name An optional name/label for this environment
  * @param current if true, this will be set as the currently used environment
  */
-export async function registerEnvironment(
+export async function registerTenant(
   url: string,
   apiUrl: string,
   token: string,
   name?: string,
   current: boolean = false,
 ) {
-  const context = getActivationContext();
-  const environmentsJson = path.join(context.globalStorageUri.fsPath, "dynatraceEnvironments.json");
   const id = url.includes("/e/") ? url.split("/e/")[1] : url.split("https://")[1].substring(0, 8);
-  const environment: DynatraceTenantDto = { id, url, apiUrl, token, current, label: name ?? id };
+  const tenant: DynatraceTenantDto = { id, url, apiUrl, token, current, label: name ?? id };
 
   // If this will be the currently used environment, deactivate others
-  let environments = JSON.parse(readFileSync(environmentsJson).toString()) as DynatraceTenantDto[];
+  let tenants = getAllTenants();
   if (current) {
-    environments = environments.map(e => {
-      e.current = e.current ? !e.current : e.current;
-      return e;
+    tenants = tenants.map(t => {
+      t.current = t.current ? !t.current : t.current;
+      return t;
     });
   }
 
   // Update any existing entries, otherwise create new
-  const index = environments.findIndex(e => e.id === id);
+  const index = tenants.findIndex(e => e.id === id);
   if (index === -1) {
-    environments.push(environment);
+    tenants.push(tenant);
   } else {
-    environments[index] = environment;
+    tenants[index] = tenant;
   }
-  writeFileSync(environmentsJson, JSON.stringify(environments));
+  writeFileSync(getTenantsJsonPath(), JSON.stringify(tenants));
 
   // Update the state
   await vscode.commands.executeCommand(
     "setContext",
     "dynatrace-extensions.numEnvironments",
-    environments.length,
+    tenants.length,
   );
 }
 
 /**
- * Removes a Dynatrace Environment from global extension storage, thus unregistering it from the
- * extension. The environment is specified by ID.
- * @param environmentId id of the environment to remove
+ * Removes a Dynatrace Tenant from global extension storage, thus unregistering it from the
+ * extension. The tenant is specified by ID.
  */
-export async function removeEnvironment(environmentId: string) {
-  const context = getActivationContext();
-  const environmentsJson = path.join(context.globalStorageUri.fsPath, "dynatraceEnvironments.json");
-  const environments = JSON.parse(
-    readFileSync(environmentsJson).toString(),
-  ) as DynatraceTenantDto[];
-
-  writeFileSync(environmentsJson, JSON.stringify(environments.filter(e => e.id !== environmentId)));
+export async function removeTenant(tenantId: string) {
+  const tenants = getAllTenants();
+  writeFileSync(getTenantsJsonPath(), JSON.stringify(tenants.filter(t => t.id !== tenantId)));
 
   // Update the state
   await vscode.commands.executeCommand(
     "setContext",
     "dynatrace-extensions.numEnvironments",
-    environments.length - 1,
+    getAllTenants().length,
   );
 }
 
@@ -299,17 +284,25 @@ export async function removeEnvironment(environmentId: string) {
  * @param workspaceId id of the workspace to remove
  */
 export async function removeWorkspace(workspaceId: string) {
-  const context = getActivationContext();
-  const workspacesJson = path.join(context.globalStorageUri.fsPath, "extensionWorkspaces.json");
-  const workspaces = JSON.parse(readFileSync(workspacesJson).toString()) as ExtensionWorkspace[];
-
-  writeFileSync(workspacesJson, JSON.stringify(workspaces.filter(w => w.id !== workspaceId)));
+  const workspaces = getAllWorkspaces();
+  writeFileSync(
+    getWorkspacesJsonPath(),
+    JSON.stringify(
+      workspaces
+        .filter(w => w.id !== workspaceId)
+        .map(({ name, id, folder }) => ({
+          name,
+          id,
+          folder: folder.toString(),
+        })),
+    ),
+  );
 
   // Update the state
   await vscode.commands.executeCommand(
     "setContext",
     "dynatrace-extensions.numWorkspaces",
-    workspaces.length - 1,
+    getAllWorkspaces().length,
   );
 }
 
@@ -772,7 +765,7 @@ export async function migrateFromLegacyExtension() {
       copySync(legacyGlobalStoragePath, globalStoragePath, { overwrite: true });
 
       // Convert all environments to new format with apiUrl attribute
-      const environments = getAllEnvironments();
+      const environments = getAllTenants();
       if (environments.length > 0) {
         writeFileSync(
           path.resolve(globalStoragePath, "dynatraceEnvironments.json"),
@@ -890,3 +883,13 @@ export function getSnmpMibFiles(): string[] {
   }
   return [];
 }
+
+const getTenantsJsonPath = () => {
+  const context = getActivationContext();
+  return path.join(context.globalStorageUri.fsPath, "dynatraceEnvironments.json");
+};
+
+const getWorkspacesJsonPath = () => {
+  const context = getActivationContext();
+  return path.join(context.globalStorageUri.fsPath, "extensionWorkspaces.json");
+};
