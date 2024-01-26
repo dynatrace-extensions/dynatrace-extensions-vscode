@@ -1,0 +1,12 @@
+someExtraStuff
+forTesting/**/*
+!.vscode/extensions.json
+!.vscode/*.code-snippets
+.history/
+*.vsix
+logs
+*.log
+*.egg-info
+__pycache__
+.env
+venv/
