@@ -8,6 +8,7 @@ const config = {
   collectCoverage: true,
   collectCoverageFrom: [
     'src/utils/fileSystem.ts',
+    'src/utils/caching.ts',
   ],
 };
 
