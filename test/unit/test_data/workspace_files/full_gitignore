@@ -1,0 +1,31 @@
+# VS Code
+.vscode/*
+!.vscode/tasks.json
+!.vscode/launch.json
+!.vscode/extensions.json
+!.vscode/*.code-snippets
+
+# Local History for Visual Studio Code
+.history/
+
+# Built Visual Studio Code Extensions
+*.vsix
+
+# Dynatrace Extensions builds & configs
+config
+dist
+logs
+
+# Log files
+*.log
+
+# Python
+*.py[cod]
+*.egg-info
+__pycache__
+
+# Environments
+.env
+.venv
+env/
+venv/
