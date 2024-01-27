@@ -14,21 +14,37 @@
   limitations under the License.
  */
 
+import * as path from "path";
+import axios from "axios";
+import * as yaml from "yaml";
+import { PromData } from "../../../../src/codeLens/prometheusScraper";
 import { ValidationStatus } from "../../../../src/codeLens/utils/selectorUtils";
 import { WmiQueryResult } from "../../../../src/codeLens/utils/wmiUtils";
-import { Dynatrace } from "../../../../src/dynatrace-api/dynatrace";
-import { Entity } from "../../../../src/dynatrace-api/interfaces/monitoredEntities";
+import * as extension from "../../../../src/extension";
+import { ExtensionStub } from "../../../../src/interfaces/extensionMeta";
 import * as tenantsTreeView from "../../../../src/treeViews/tenantsTreeView";
 import {
+  getCachedBaristaIcons,
+  getCachedBuiltinEntityTypes,
   getCachedEntityInstances,
+  getCachedParsedExtension,
+  getCachedPrometheusData,
   getCachedSelectorStatus,
   getCachedWmiQueryResult,
   getCachedWmiStatus,
+  initializeCache,
+  setCachedPrometheusData,
   setCachedSelectorStatus,
   setCachedWmiQueryResult,
   setCachedWmiStatus,
   updateEntityInstances,
+  useMemo,
 } from "../../../../src/utils/caching";
+import { waitForCondition } from "../../../../src/utils/code";
+import * as fileSystemUtils from "../../../../src/utils/fileSystem";
+import { readTestDataFile } from "../../../shared/utils";
+import { MockDynatrace, mockEntities } from "../../mocks/dynatrace";
+import { MockExtensionContext } from "../../mocks/vscode";
 
 jest.mock("../../../../src/utils/logging");
 
@@ -51,23 +67,15 @@ const mockValidationStatuses: ValidationStatus[] = [
   { status: "valid" },
   { status: "invalid", error: { code: 400, message: "mock error" } },
 ];
-const mockEntityInstances: Entity[] = [
-  { type: "mock1", entityId: "mock1", displayName: "mock1", firstSeenTms: 1, lastSeenTms: 2 },
-  { type: "mock2", entityId: "mock2", displayName: "mock2", firstSeenTms: 3, lastSeenTms: 4 },
-];
+const mockPrometheusData: PromData = { mock1: { type: "mock1" }, mock2: { type: "mock2" } };
 
 describe("Caching Utils", () => {
-  beforeAll(() => {
-    jest.spyOn(tenantsTreeView, "getDynatraceClient").mockImplementation(() =>
-      Promise.resolve({
-        entitiesV2: {
-          list: (selector: string) => {
-            if (selector === "type(mock1)") return Promise.resolve([mockEntityInstances[0]]);
-            if (selector === "type(mock2)") return Promise.resolve([mockEntityInstances[1]]);
-          },
-        },
-      } as Dynatrace),
-    );
+  beforeEach(() => {
+    setupForCacheInit();
+  });
+
+  afterEach(() => {
+    jest.restoreAllMocks();
   });
 
   describe("get / set CachedWmiQueryResult", () => {
@@ -95,7 +103,7 @@ describe("Caching Utils", () => {
     });
   });
 
-  describe("get/ set CachedWmiStatus", () => {
+  describe("get / set CachedWmiStatus", () => {
     test("get - returns undefined if status is not cached", () => {
       const actual = getCachedWmiStatus("mock");
 
@@ -120,7 +128,7 @@ describe("Caching Utils", () => {
     });
   });
 
-  describe("get/ set CachedSelectorStatus", () => {
+  describe("get / set CachedSelectorStatus", () => {
     test("get - returns undefined if status is not cached", () => {
       const actual = getCachedSelectorStatus("mock");
 
@@ -145,7 +153,7 @@ describe("Caching Utils", () => {
     });
   });
 
-  describe("get/ set CachedEntityInstances", () => {
+  describe("get / set CachedEntityInstances", () => {
     test("get - returns undefined if entity type is not cached", () => {
       const actual = getCachedEntityInstances("mock");
 
@@ -157,7 +165,142 @@ describe("Caching Utils", () => {
 
       const actual = getCachedEntityInstances("mock1");
 
-      expect(actual).toEqual([mockEntityInstances[0]]);
+      expect(actual).toEqual(mockEntities["type(mock1)"]);
     });
   });
+
+  describe("get / set PrometheusData", () => {
+    test("get - returns {} if prometheus data not loaded", () => {
+      const actual = getCachedPrometheusData();
+
+      expect(actual).toEqual({});
+    });
+
+    test("set/get - cached prometheus data", () => {
+      setCachedPrometheusData(mockPrometheusData);
+
+      const actual = getCachedPrometheusData();
+
+      expect(actual).toEqual(mockPrometheusData);
+    });
+  });
+
+  describe("getCachedBuiltinEntityTypes", () => {
+    it("returns empty list if entities were not loaded", () => {
+      const actual = getCachedBuiltinEntityTypes();
+
+      expect(actual).toEqual([]);
+    });
+  });
+
+  describe("useMemo", () => {
+    it("it returns cached value when deps unchanged", async () => {
+      const actualValues: string[] = [];
+      for (let i = 0; i < 2; i++) {
+        const val = await useMemo(() => `mock-${i}`, []);
+        actualValues.push(val);
+      }
+
+      actualValues.forEach(actual => {
+        expect(actual).toEqual("mock-0");
+      });
+    });
+
+    it("it fetches new value when deps changed", async () => {
+      const actualValues: string[] = [];
+      for (let i = 0; i < 2; i++) {
+        const val = await useMemo(() => `mock-${i}`, [i]);
+        actualValues.push(val);
+      }
+
+      actualValues.forEach((actual, i) => {
+        expect(actual).toEqual(`mock-${i}`);
+      });
+    });
+
+    it("deletes the cached result when clear flag is set", async () => {
+      const val1 = await useMemo(() => "mock-1", []);
+      const val2 = await useMemo(() => "mock-1", [], true);
+
+      expect(val1).toEqual("mock-1");
+      expect(val2).toEqual(undefined);
+    });
+  });
+
+  describe("initializeCache", () => {
+    it("loads built-in entity types", async () => {
+      const expected = ["mock1", "mock2"];
+
+      await initializeCache();
+
+      await expect(
+        waitForCondition(() => getCachedBuiltinEntityTypes().length > 0, {
+          interval: 1,
+          timeout: 5,
+        }),
+      ).resolves.not.toThrow();
+      const actual = getCachedBuiltinEntityTypes();
+      expect(actual).toEqual(expected);
+    });
+
+    test.each([
+      { case: "internal", internal: true },
+      { case: "public", internal: false },
+    ])("loads barista icons from $case URL", async ({ internal }) => {
+      mockBarista(internal);
+      const expected = ["mockIcon1", "mockIcon2"];
+
+      await initializeCache();
+
+      await expect(
+        waitForCondition(() => getCachedBaristaIcons().length > 0, {
+          interval: 1,
+          timeout: 100,
+        }),
+      ).resolves.not.toThrow();
+      const actual = getCachedBaristaIcons();
+      expect(actual).toEqual(expected);
+    });
+
+    it("parses the extension manifest", async () => {
+      const manifestText = readTestDataFile(path.join("manifests", "basic_extension.yaml"));
+      jest.spyOn(fileSystemUtils, "readExtensionManifest").mockReturnValue(manifestText);
+      const expected = yaml.parse(manifestText) as ExtensionStub;
+
+      await initializeCache();
+
+      await expect(
+        waitForCondition(() => getCachedParsedExtension() !== null, {
+          interval: 1,
+          timeout: 1000,
+        }),
+      ).resolves.not.toThrow();
+      const actual = getCachedParsedExtension();
+      expect(actual).toEqual(expected);
+    });
+
+    it.todo("loads SNMP data");
+  });
 });
+
+const mockBarista = (internal: boolean) => {
+  jest.spyOn(axios, "get").mockImplementation((url: string) => {
+    return new Promise((resolve, reject) => {
+      if (url.includes(internal ? "barista.lab.dynatrace.org" : "barista.dynatrace.com")) {
+        resolve({ data: { icons: [{ name: "mockIcon1" }, { name: "mockIcon2" }] } });
+      }
+      reject(new Error("mock error"));
+    });
+  });
+};
+
+const setupForCacheInit = () => {
+  const mockGlobalStoragePath = "mock/globalStorage";
+  const mockWorkspaceStoragePath = "mock/workspaceStorage";
+  jest
+    .spyOn(extension, "getActivationContext")
+    .mockReturnValue(new MockExtensionContext(mockGlobalStoragePath, mockWorkspaceStoragePath));
+  jest
+    .spyOn(tenantsTreeView, "getDynatraceClient")
+    .mockReturnValue(Promise.resolve(new MockDynatrace()));
+};
