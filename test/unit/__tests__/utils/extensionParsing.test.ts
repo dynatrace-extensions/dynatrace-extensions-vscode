@@ -18,11 +18,15 @@ import * as path from "path";
 import * as yaml from "yaml";
 import { ExtensionStub } from "../../../../src/interfaces/extensionMeta";
 import {
+  getAllMetricKeys,
   getAttributesFromTopology,
   getAttributesKeysFromTopology,
   getDatasourceName,
+  getEntityMetricPatterns,
+  getEntityMetrics,
   getExtensionDatasource,
   getMetricKeysFromChartCard,
+  getMetricKeysFromEntitiesListCard,
   incrementExtensionVersion,
   normalizeExtensionVersion,
 } from "../../../../src/utils/extensionParsing";
@@ -158,6 +162,143 @@ describe("Extension Parsing Utils", () => {
         ];
 
         const actual = getMetricKeysFromChartCard(si, ci, oracleExtension);
+
+        expect(actual).toEqual(expected);
+      });
+    });
+
+    describe("getMetricKeysFromEntitiesListCard", () => {
+      it("extracts all metric keys from entities list card", () => {
+        const si = 0;
+        const ci = 0;
+        const expected = [
+          "com.dynatrace.extension.sql-oracle.cpu.foregroundTotal",
+          "com.dynatrace.extension.sql-oracle.cpu.backgroundTotal",
+          "com.dynatrace.extension.sql-oracle.memory.pga.used",
+        ];
+
+        const actual = getMetricKeysFromEntitiesListCard(si, ci, oracleExtension);
+
+        expect(actual).toEqual(expected);
+      });
+    });
+
+    describe("getAllMetricKeys", () => {
+      it("extracts all metric keys from extension datasource", () => {
+        const expected = [
+          "com.dynatrace.extension.sql-oracle.cpu.cores",
+          "com.dynatrace.extension.sql-oracle.cpu.backgroundTotal",
+          "com.dynatrace.extension.sql-oracle.cpu.foregroundTotal",
+          "com.dynatrace.extension.sql-oracle.memory.pga.size.pgaAggregateLimit",
+          "com.dynatrace.extension.sql-oracle.memory.pga.size.pgaAggregateTarget",
+          "com.dynatrace.extension.sql-oracle.memory.pga.used",
+          "com.dynatrace.extension.sql-oracle.memory.pga.allocated",
+          "com.dynatrace.extension.sql-oracle.memory.sga.cacheBuffer.sharedPoolFree",
+          "com.dynatrace.extension.sql-oracle.memory.sga.redoBuffer.redoLogSpaceWaitTime.count",
+          "com.dynatrace.extension.sql-oracle.memory.sga.redoBuffer.redoSizeIncrease.count",
+          "com.dynatrace.extension.sql-oracle.memory.sga.redoBuffer.redoWriteTime.count",
+          "com.dynatrace.extension.sql-oracle.memory.sessionLogicalReads.count",
+          "com.dynatrace.extension.sql-oracle.memory.physicalReads.count",
+          "com.dynatrace.extension.sql-oracle.memory.physicalReadsDirect.count",
+          "com.dynatrace.extension.sql-oracle.memory.memorySorts.count",
+          "com.dynatrace.extension.sql-oracle.memory.diskSorts.count",
+          "com.dynatrace.extension.sql-oracle.memory.libraryCacheHitRatio",
+          "com.dynatrace.extension.sql-oracle.asm.free_mb",
+          "com.dynatrace.extension.sql-oracle.asm.total_mb",
+          "com.dynatrace.extension.sql-oracle.asm.used_pct",
+          "com.dynatrace.extension.sql-oracle.asm.reads.count",
+          "com.dynatrace.extension.sql-oracle.asm.writes.count",
+          "com.dynatrace.extension.sql-oracle.status",
+          "com.dynatrace.extension.sql-oracle.db_status",
+          "com.dynatrace.extension.sql-oracle.io.bytesRead.count",
+          "com.dynatrace.extension.sql-oracle.io.bytesWritten.count",
+          "com.dynatrace.extension.sql-oracle.io.wait.count",
+          "com.dynatrace.extension.sql-oracle.sessions.active",
+          "com.dynatrace.extension.sql-oracle.sessions.all",
+          "com.dynatrace.extension.sql-oracle.sessions.userCalls.count",
+          "com.dynatrace.extension.sql-oracle.limits.sessions",
+          "com.dynatrace.extension.sql-oracle.limits.processes",
+          "com.dynatrace.extension.sql-oracle.wait.count",
+          "com.dynatrace.extension.sql-oracle.wait.time.count",
+          "com.dynatrace.extension.sql-oracle.tablespaces.totalSpace",
+          "com.dynatrace.extension.sql-oracle.tablespaces.freeSpace",
+          "com.dynatrace.extension.sql-oracle.tablespaces.usedSpace",
+          "com.dynatrace.extension.sql-oracle.tablespaces.usedSpaceRatio",
+          "com.dynatrace.extension.sql-oracle.tablespaces.freeSpaceRatio",
+          "com.dynatrace.extension.sql-oracle.backup-input_bytes",
+          "com.dynatrace.extension.sql-oracle.backup-output_bytes",
+          "com.dynatrace.extension.sql-oracle.backup-elapsed_seconds",
+          "com.dynatrace.extension.sql-oracle.backup-compression_ratio",
+          "com.dynatrace.extension.sql-oracle.backup-input_bytes_per_second",
+          "com.dynatrace.extension.sql-oracle.backup-output_bytes_per_second",
+          "com.dynatrace.extension.sql-oracle.backup-autobackup_count_number",
+          "com.dynatrace.extension.sql-oracle.backup.state",
+          "com.dynatrace.extension.sql-oracle.backup.time_since",
+          "com.dynatrace.extension.sql-oracle.queries.connectionManagement.count",
+          "com.dynatrace.extension.sql-oracle.queries.plSqlExec.count",
+          "com.dynatrace.extension.sql-oracle.queries.sqlExec.count",
+          "com.dynatrace.extension.sql-oracle.queries.sqlParse.count",
+          "com.dynatrace.extension.sql-oracle.queries.dbTime.count",
+          "com.dynatrace.extension.sql-oracle.queries.cpuTime.count",
+          "com.dynatrace.extension.sql-oracle.pdb-total_size",
+          "com.dynatrace.extension.sql-oracle.pdb-block_size",
+          "com.dynatrace.extension.sql-oracle.pdb-diagnostic_size",
+          "com.dynatrace.extension.sql-oracle.pdb-audit_files_size",
+          "com.dynatrace.extension.sql-oracle.pdb-max_size",
+          "com.dynatrace.extension.sql-oracle.pdb-max_diagnostic_size",
+          "com.dynatrace.extension.sql-oracle.pdb-max_audit_size",
+        ];
+
+        const actual = getAllMetricKeys(oracleExtension);
+
+        expect(actual).toEqual(expected);
+      });
+    });
+
+    describe("getEntityMetricPatterns", () => {
+      it("extracts all entity metric source patterns/conditions", () => {
+        const expected = ["$prefix(com.dynatrace.extension.sql-oracle.backup)"];
+
+        const actual = getEntityMetricPatterns(0, oracleExtension);
+
+        expect(actual).toEqual(expected);
+      });
+    });
+
+    describe("getEntityMetrics", () => {
+      it("extracts metric keys matching given entity", () => {
+        const expected = [
+          "com.dynatrace.extension.sql-oracle.backup-input_bytes",
+          "com.dynatrace.extension.sql-oracle.backup-output_bytes",
+          "com.dynatrace.extension.sql-oracle.backup-elapsed_seconds",
+          "com.dynatrace.extension.sql-oracle.backup-compression_ratio",
+          "com.dynatrace.extension.sql-oracle.backup-input_bytes_per_second",
+          "com.dynatrace.extension.sql-oracle.backup-output_bytes_per_second",
+          "com.dynatrace.extension.sql-oracle.backup-autobackup_count_number",
+          "com.dynatrace.extension.sql-oracle.backup.state",
+          "com.dynatrace.extension.sql-oracle.backup.time_since",
+        ];
+
+        const actual = getEntityMetrics(0, oracleExtension);
+
+        expect(actual).toEqual(expected);
+      });
+
+      it("doesn't include excluded keys", () => {
+        const expected = [
+          "com.dynatrace.extension.sql-oracle.backup-input_bytes",
+          "com.dynatrace.extension.sql-oracle.backup-output_bytes",
+          "com.dynatrace.extension.sql-oracle.backup-elapsed_seconds",
+          "com.dynatrace.extension.sql-oracle.backup-compression_ratio",
+          "com.dynatrace.extension.sql-oracle.backup-input_bytes_per_second",
+          "com.dynatrace.extension.sql-oracle.backup-output_bytes_per_second",
+          "com.dynatrace.extension.sql-oracle.backup-autobackup_count_number",
+          "com.dynatrace.extension.sql-oracle.backup.state",
+        ];
+
+        const actual = getEntityMetrics(0, oracleExtension, [
+          "com.dynatrace.extension.sql-oracle.backup.time_since",
+        ]);
 
         expect(actual).toEqual(expected);
       });

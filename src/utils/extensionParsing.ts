@@ -276,7 +276,7 @@ export function getMetricKeysFromEntitiesListCard(
   extension: ExtensionStub,
 ): string[] {
   const metrics: string[] = [];
-  const card = extension.screens?.[screenIdx].chartsCards?.[cardIdx];
+  const card = extension.screens?.[screenIdx].entitiesListCards?.[cardIdx];
   if (card?.charts) {
     card.charts.forEach(c => {
       if (c.graphChartConfig) {
@@ -314,7 +314,7 @@ export function getAllMetricKeys(extension: ExtensionStub): string[] {
       }
       if (group.subgroups) {
         group.subgroups.forEach(subgroup => {
-          if (subgroup.metrics.length > 0) {
+          if (subgroup.metrics?.length > 0) {
             subgroup.metrics.forEach(metric => {
               if (!metrics.includes(metric.key)) {
                 metrics.push(metric.key);
