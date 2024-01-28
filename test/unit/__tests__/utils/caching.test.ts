@@ -27,9 +27,11 @@ import {
   getCachedBaristaIcons,
   getCachedBuiltinEntityTypes,
   getCachedEntityInstances,
+  getCachedOid,
   getCachedParsedExtension,
   getCachedPrometheusData,
   getCachedSelectorStatus,
+  getCachedSnmpOids,
   getCachedWmiQueryResult,
   getCachedWmiStatus,
   initializeCache,
@@ -37,11 +39,15 @@ import {
   setCachedSelectorStatus,
   setCachedWmiQueryResult,
   setCachedWmiStatus,
+  updateCachedOid,
+  updateCachedSnmpOids,
   updateEntityInstances,
   useMemo,
 } from "../../../../src/utils/caching";
 import { waitForCondition } from "../../../../src/utils/code";
 import * as fileSystemUtils from "../../../../src/utils/fileSystem";
+import * as snmpUtils from "../../../../src/utils/snmp";
+import { OidInformation } from "../../../../src/utils/snmp";
 import { readTestDataFile } from "../../../shared/utils";
 import { MockDynatrace, mockEntities } from "../../mocks/dynatrace";
 import { MockExtensionContext } from "../../mocks/vscode";
@@ -68,6 +74,20 @@ const mockValidationStatuses: ValidationStatus[] = [
   { status: "invalid", error: { code: 400, message: "mock error" } },
 ];
 const mockPrometheusData: PromData = { mock1: { type: "mock1" }, mock2: { type: "mock2" } };
+const mockSnmpOids: Record<string, OidInformation> = {
+  "1.2.3.4.5": {
+    oid: "1.2.3.4.5",
+    description: "Mock OID 1",
+    source: "MOCK_MIB",
+    objectType: "MockOid1",
+  },
+  "9.8.7.6.5": {
+    oid: "9.8.7.6.5",
+    description: "Mock OID 2",
+    source: "MOCK_MIB",
+    objectType: "MockOid2",
+  },
+};
 
 describe("Caching Utils", () => {
   beforeEach(() => {
@@ -154,6 +174,14 @@ describe("Caching Utils", () => {
   });
 
   describe("get / set CachedEntityInstances", () => {
+    beforeEach(() => {
+      mockDynatraceClient();
+    });
+
+    afterEach(() => {
+      jest.restoreAllMocks();
+    });
+
     test("get - returns undefined if entity type is not cached", () => {
       const actual = getCachedEntityInstances("mock");
 
@@ -182,6 +210,51 @@ describe("Caching Utils", () => {
       const actual = getCachedPrometheusData();
 
       expect(actual).toEqual(mockPrometheusData);
+    });
+  });
+
+  describe("get / update SNMP OIDs", () => {
+    beforeEach(() => {
+      jest
+        .spyOn(snmpUtils, "fetchOID")
+        .mockImplementation((oid: string) => Promise.resolve(mockSnmpOids[oid]));
+    });
+
+    afterEach(() => {
+      jest.restoreAllMocks();
+    });
+
+    test("get returns undefined if OID is not cached", () => {
+      const actual = getCachedOid("1.0.0.0.0");
+
+      expect(actual).toBeUndefined();
+    });
+
+    test("get returns empty map if SNMP MIBs not loaded", async () => {
+      const expected = new Map<string, OidInformation>();
+      await initializeCache();
+
+      const actual = getCachedSnmpOids();
+
+      expect(actual).toEqual(expected);
+    });
+
+    test("update/get - cached OID", async () => {
+      const expected = mockSnmpOids["1.2.3.4.5"];
+
+      await updateCachedOid("1.2.3.4.5");
+
+      const actual = getCachedOid("1.2.3.4.5");
+      expect(actual).toEqual(expected);
+    });
+
+    test("update/get - cached OIDs", async () => {
+      const expected = Object.values(mockSnmpOids);
+
+      await updateCachedSnmpOids(Object.keys(mockSnmpOids));
+
+      const actual = getCachedSnmpOids();
+      expect(actual).toEqual(expected);
     });
   });
 
@@ -228,6 +301,14 @@ describe("Caching Utils", () => {
   });
 
   describe("initializeCache", () => {
+    beforeEach(() => {
+      mockDynatraceClient();
+    });
+
+    afterEach(() => {
+      jest.restoreAllMocks();
+    });
+
     it("loads built-in entity types", async () => {
       const expected = ["mock1", "mock2"];
 
@@ -278,8 +359,6 @@ describe("Caching Utils", () => {
       const actual = getCachedParsedExtension();
       expect(actual).toEqual(expected);
     });
-
-    it.todo("loads SNMP data");
   });
 });
 
@@ -294,13 +373,16 @@ const mockBarista = (internal: boolean) => {
   });
 };
 
+const mockDynatraceClient = () => {
+  jest
+    .spyOn(tenantsTreeView, "getDynatraceClient")
+    .mockReturnValue(Promise.resolve(new MockDynatrace()));
+};
+
 const setupForCacheInit = () => {
   const mockGlobalStoragePath = "mock/globalStorage";
   const mockWorkspaceStoragePath = "mock/workspaceStorage";
   jest
     .spyOn(extension, "getActivationContext")
     .mockReturnValue(new MockExtensionContext(mockGlobalStoragePath, mockWorkspaceStoragePath));
-  jest
-    .spyOn(tenantsTreeView, "getDynatraceClient")
-    .mockReturnValue(Promise.resolve(new MockDynatrace()));
 };

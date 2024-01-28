@@ -23,7 +23,6 @@ import { PromData } from "../codeLens/prometheusScraper";
 import { ValidationStatus } from "../codeLens/utils/selectorUtils";
 import { WmiQueryResult } from "../codeLens/utils/wmiUtils";
 import { Entity, EntityType } from "../dynatrace-api/interfaces/monitoredEntities";
-import { getActivationContext } from "../extension";
 import { ExtensionStub } from "../interfaces/extensionMeta";
 import { getDynatraceClient } from "../treeViews/tenantsTreeView";
 import * as logger from "../utils/logging";
@@ -49,7 +48,6 @@ interface BaristaMeta {
 }
 
 const logTrace = ["utils", "caching"];
-let globalStorage: string;
 let builtinEntityTypes: EntityType[] = [];
 const parsedExtension = new BehaviorSubject<ExtensionStub | undefined | null>(undefined);
 let baristaIcons: string[] = [];
@@ -75,7 +73,6 @@ export const initializeCache = async () => {
   // Wait for the parsed extension to be available before completing the init
   await waitForCondition(() => parsedExtension.getValue() !== undefined);
 
-  globalStorage = getActivationContext().globalStorageUri.fsPath;
   loadBuiltinEntityTypes().then(
     () => logger.debug("Built-in entity types loaded", ...fnLogTrace),
     () => logger.debug("Built-in entity types unavailable", ...fnLogTrace),
@@ -175,7 +172,7 @@ const createDefaultMibStore = async () => {
   const fnLogTrace = [...logTrace, "createDefaultMibStore"];
   logger.debug("Creating SNMP MIB store", ...fnLogTrace);
 
-  await downloadActiveGateMibFiles(globalStorage);
+  await downloadActiveGateMibFiles();
 
   logger.debug("ActiveGate MIBs ready. Building MIB store", ...fnLogTrace);
   mibStore = new MibModuleStore();

@@ -23,13 +23,13 @@ import { existsSync, mkdirSync, readFileSync, readdirSync, renameSync } from "fs
 import * as path from "path";
 import AdmZip = require("adm-zip");
 import axios from "axios";
+import { getActivationContext } from "../extension";
 import { notify } from "./logging";
 import * as logger from "./logging";
 
 const logTrace = ["utils", "snmp"];
 const AG_MIB_VERSION = "1.281"; // For now, we hardcode this.
 const BASE_URL = "https://oid-rep.orange-labs.fr/get"; // URL to online OID Repository
-let mibStoragePath: string;
 
 export interface OidInformation {
   description?: string;
@@ -45,19 +45,28 @@ export interface OidInformation {
 /**
  * @returns path to MIB storage
  */
-export function getMibStoragePath() {
-  return mibStoragePath;
-}
+export const getMibStoragePath = (() => {
+  let mibStoragePath: string | undefined;
+
+  return () => {
+    mibStoragePath =
+      mibStoragePath === undefined
+        ? path.resolve(getActivationContext().globalStorageUri.fsPath, "mibs", AG_MIB_VERSION)
+        : mibStoragePath;
+
+    return mibStoragePath;
+  };
+})();
 
 /**
  * Downloads the latest MIB files that are shipped with the ActiveGate and stores them in the
  * global storage provided by VS Code.
  * @param globalStorage path to global storage
  */
-export async function downloadActiveGateMibFiles(globalStorage: string) {
+export async function downloadActiveGateMibFiles() {
   const fnLogTrace = [...logTrace, "downloadActiveGateMibFiles"];
 
-  mibStoragePath = path.resolve(globalStorage, "mibs", AG_MIB_VERSION);
+  const mibStoragePath = getMibStoragePath();
   if (existsSync(mibStoragePath) && readdirSync(mibStoragePath).length > 0) {
     logger.debug(
       `ActiveGate MIBs version ${AG_MIB_VERSION} already exist. Skipping download.`,
@@ -1128,11 +1137,12 @@ export class MibModuleStore {
   ];
 
   constructor() {
-    this.parser = new MibParser(mibStoragePath);
+    this.parser = new MibParser(getMibStoragePath());
     this.loadBaseModules();
   }
 
   private loadBaseModules() {
+    const mibStoragePath = getMibStoragePath();
     // First, load the base modules in order to resolve dependencies
     this.BASE_MODULES.forEach(({ name, source }) => {
       const mibPath =
