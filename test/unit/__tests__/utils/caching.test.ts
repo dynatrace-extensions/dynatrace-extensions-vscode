@@ -35,6 +35,7 @@ import {
   getCachedWmiQueryResult,
   getCachedWmiStatus,
   initializeCache,
+  pushManifestTextForParsing,
   setCachedPrometheusData,
   setCachedSelectorStatus,
   setCachedWmiQueryResult,
@@ -253,7 +254,7 @@ describe("Caching Utils", () => {
 
       await updateCachedSnmpOids(Object.keys(mockSnmpOids));
 
-      const actual = getCachedSnmpOids();
+      const actual = Array.from(getCachedSnmpOids().values());
       expect(actual).toEqual(expected);
     });
   });
@@ -358,6 +359,70 @@ describe("Caching Utils", () => {
       ).resolves.not.toThrow();
       const actual = getCachedParsedExtension();
       expect(actual).toEqual(expected);
+    });
+  });
+
+  describe("pushManifestTextForParsing", () => {
+    const initialManifestText = readTestDataFile(path.join("manifests", "basic_extension.yaml"));
+    const initialParsedExtension = yaml.parse(initialManifestText) as ExtensionStub;
+    let readExtensionManifestSpy: jest.SpyInstance;
+
+    beforeEach(async () => {
+      readExtensionManifestSpy = jest.spyOn(fileSystemUtils, "readExtensionManifest");
+      // Load initial manifest
+      readExtensionManifestSpy.mockReturnValue(initialManifestText);
+      await initializeCache();
+      await waitForCondition(() => getCachedParsedExtension() !== null, {
+        interval: 1,
+        timeout: 1000,
+      });
+    });
+
+    afterEach(() => {
+      jest.restoreAllMocks();
+    });
+
+    it("updates the parsed extension value", async () => {
+      const updatedManifest = readTestDataFile(path.join("manifests", "snmp_extension.yaml"));
+      readExtensionManifestSpy.mockReturnValue(updatedManifest);
+      const expected = yaml.parse(updatedManifest) as ExtensionStub;
+
+      pushManifestTextForParsing();
+
+      await expect(
+        waitForCondition(
+          () =>
+            getCachedParsedExtension() !== null &&
+            getCachedParsedExtension()?.name !== "custom:mock_basic_extension",
+          {
+            interval: 1,
+            timeout: 1000,
+          },
+        ),
+      ).resolves.not.toThrow();
+      const actual = getCachedParsedExtension();
+      expect(actual).toEqual(expected);
+    });
+
+    test.each([
+      { case: "invalid YAML", updatedManifest: "  name:\naaaa\n" },
+      { case: "empty manifest", updatedManifest: "" },
+    ])("keeps previous value for $case", async ({ updatedManifest }) => {
+      // Simulate content update
+      readExtensionManifestSpy.mockReturnValue(updatedManifest);
+
+      pushManifestTextForParsing();
+
+      await expect(
+        waitForCondition(
+          () =>
+            yaml.stringify(getCachedParsedExtension()) !== yaml.stringify(initialParsedExtension),
+          {
+            interval: 1,
+            timeout: 500,
+          },
+        ),
+      ).rejects.toThrow("Timeout after 500 ms");
     });
   });
 });

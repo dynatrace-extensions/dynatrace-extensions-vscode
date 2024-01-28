@@ -49,22 +49,24 @@ interface BaristaMeta {
 
 const logTrace = ["utils", "caching"];
 let builtinEntityTypes: EntityType[] = [];
-const parsedExtension = new BehaviorSubject<ExtensionStub | undefined | null>(undefined);
+let parsedExtension = new BehaviorSubject<ExtensionStub | undefined | null>(undefined);
 let baristaIcons: string[] = [];
-const selectorStatuses = new Map<string, ValidationStatus>();
+let selectorStatuses = new Map<string, ValidationStatus>();
 let prometheusData: PromData = {};
-const wmiQueryResults = new Map<string, WmiQueryResult>();
-const wmiQueryStatuses = new Map<string, ValidationStatus>();
-const snmpOIDs = new Map<string, OidInformation>();
-const entityInstances = new Map<string, Entity[]>();
+let wmiQueryResults = new Map<string, WmiQueryResult>();
+let wmiQueryStatuses = new Map<string, ValidationStatus>();
+let snmpOIDs = new Map<string, OidInformation>();
+let entityInstances = new Map<string, Entity[]>();
 let localSnmpDatabase: OidInformation[] = [];
 let mibStore: MibModuleStore;
-const mibFilesLoaded: LoadedMibFile[] = [];
+let mibFilesLoaded: LoadedMibFile[] = [];
 let manifestParsingPipeline: Subscriber<string>;
 
 export const initializeCache = async () => {
   const fnLogTrace = [...logTrace, "initializeCache"];
   logger.info("Initializing Data Cache...", ...fnLogTrace);
+
+  setDefaultValues();
 
   const initialManifestContent = readExtensionManifest();
   createManifestProcessingPipeline(initialManifestContent);
@@ -89,6 +91,20 @@ export const initializeCache = async () => {
   }
 
   logger.info("Data Cache initialized.", ...fnLogTrace);
+};
+
+const setDefaultValues = () => {
+  builtinEntityTypes = [];
+  parsedExtension = new BehaviorSubject<ExtensionStub | undefined | null>(undefined);
+  baristaIcons = [];
+  selectorStatuses = new Map<string, ValidationStatus>();
+  prometheusData = {};
+  wmiQueryResults = new Map<string, WmiQueryResult>();
+  wmiQueryStatuses = new Map<string, ValidationStatus>();
+  snmpOIDs = new Map<string, OidInformation>();
+  entityInstances = new Map<string, Entity[]>();
+  localSnmpDatabase = [];
+  mibFilesLoaded = [];
 };
 
 const createManifestProcessingPipeline = (initialContent: string) => {
