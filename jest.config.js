@@ -10,7 +10,8 @@ const config = {
     'src/utils/fileSystem.ts',
     'src/utils/caching.ts',
     'src/utils/cryptography.ts',
-    'src/utils/code.ts'
+    'src/utils/code.ts',
+    'src/utils/extensionParsing.ts',
   ],
 };
 
