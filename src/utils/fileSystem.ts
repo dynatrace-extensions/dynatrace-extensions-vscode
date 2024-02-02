@@ -39,7 +39,7 @@ import {
   RemoteExecutionSummary,
   RemoteTarget,
 } from "../interfaces/simulator";
-import { DynatraceTenantDto, ExtensionWorkspace } from "../interfaces/treeViews";
+import { DynatraceTenantDto, ExtensionWorkspaceDto } from "../interfaces/treeViews";
 import { notify } from "./logging";
 import * as logger from "./logging";
 
@@ -157,7 +157,7 @@ export async function registerWorkspace() {
     return;
   }
   const workspaces = getAllWorkspaces();
-  const workspace: ExtensionWorkspace = {
+  const workspace: ExtensionWorkspaceDto = {
     name: vscode.workspace.name ?? "",
     id: path.basename(path.dirname(context.storageUri.fsPath)),
     folder: vscode.workspace.workspaceFolders[0].uri.toString(),
@@ -183,15 +183,8 @@ export async function registerWorkspace() {
 /**
  * Gets metadata of all extension workspaces currently registered in the global storage.
  */
-export function getAllWorkspaces(): ExtensionWorkspace[] {
-  return (JSON.parse(readFileSync(getWorkspacesJsonPath()).toString()) as ExtensionWorkspace[]).map(
-    (extension: ExtensionWorkspace) =>
-      ({
-        id: extension.id,
-        name: extension.name,
-        folder: vscode.Uri.parse(decodeURI(extension.folder as string)),
-      } as ExtensionWorkspace),
-  );
+export function getAllWorkspaces(): ExtensionWorkspaceDto[] {
+  return JSON.parse(readFileSync(getWorkspacesJsonPath()).toString()) as ExtensionWorkspaceDto[];
 }
 
 /**
@@ -201,7 +194,7 @@ export function getAllWorkspaces(): ExtensionWorkspace[] {
 export function findWorkspace(
   workspaceName?: string,
   workspaceId?: string,
-): ExtensionWorkspace | undefined {
+): ExtensionWorkspaceDto | undefined {
   if (workspaceName) {
     return getAllWorkspaces().find(ws => ws.name === workspaceName);
   }
@@ -786,11 +779,7 @@ export async function migrateFromLegacyExtension() {
 
       progress.report({ message: "Migrating workspace settings" });
       for (const workspace of workspaces) {
-        const settingsFilePath = path.resolve(
-          (workspace.folder as vscode.Uri).fsPath,
-          ".vscode",
-          "settings.json",
-        );
+        const settingsFilePath = path.resolve(workspace.folder, ".vscode", "settings.json");
         // For any workspace that has settings
         if (existsSync(settingsFilePath)) {
           // Change the old ID for new one

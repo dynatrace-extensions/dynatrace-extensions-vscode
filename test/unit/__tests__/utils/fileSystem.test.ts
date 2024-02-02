@@ -27,7 +27,11 @@ import {
   RemoteExecutionSummary,
   RemoteTarget,
 } from "../../../../src/interfaces/simulator";
-import { DynatraceTenantDto, ExtensionWorkspace } from "../../../../src/interfaces/treeViews";
+import {
+  DynatraceTenantDto,
+  ExtensionWorkspace,
+  ExtensionWorkspaceDto,
+} from "../../../../src/interfaces/treeViews";
 import {
   cleanUpSimulatorLogs,
   createUniqueFileName,
@@ -68,7 +72,7 @@ const mockWorkspacePath = path.join("mock", "my-workspace");
 const mockWorkspaceFolders = [
   { index: 0, name: "MockWorkspace", uri: new MockUri(mockWorkspacePath) },
 ];
-const mockExtensionWorkspacesEntries: ExtensionWorkspace[] = [
+const mockExtensionWorkspacesEntries: ExtensionWorkspaceDto[] = [
   { name: "MockWorkspace", folder: "file://mock/my-workspace", id: "mock" },
   { name: "OtherWorkspace", folder: "file://mock/other-workspace", id: "other" },
 ];
@@ -440,9 +444,7 @@ describe("Filesystem Utils", () => {
       actual.forEach((actualWorkspace, i) => {
         const expectedWorkspace = expected[i];
 
-        expect(actualWorkspace.name).toBe(expectedWorkspace.name);
-        expect((actualWorkspace.folder as MockUri).fsPath).toBe(expectedWorkspace.folder);
-        expect(actualWorkspace.id).toBe(expectedWorkspace.id);
+        expect(actualWorkspace).toEqual(expectedWorkspace);
       });
     });
   });
@@ -465,18 +467,14 @@ describe("Filesystem Utils", () => {
       const actual = findWorkspace(expected.name);
 
       expect(actual).toBeDefined();
-      expect(actual?.name).toBe(expected.name);
-      expect((actual?.folder as MockUri).fsPath).toBe(expected.folder);
-      expect(actual?.id).toBe(expected.id);
+      expect(actual).toEqual(expected);
     });
 
     it("should find workspace by id", () => {
       const actual = findWorkspace(undefined, "mock");
 
       expect(actual).toBeDefined();
-      expect(actual?.name).toBe(expected.name);
-      expect((actual?.folder as MockUri).fsPath).toBe(expected.folder);
-      expect(actual?.id).toBe(expected.id);
+      expect(actual).toEqual(expected);
     });
 
     it("should return undefined if no workspaces exist", () => {
