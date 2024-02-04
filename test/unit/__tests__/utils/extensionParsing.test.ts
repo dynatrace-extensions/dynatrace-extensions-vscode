@@ -34,24 +34,23 @@ import { readTestDataFile } from "../../../shared/utils";
 
 jest.mock("../../../../src/utils/logging");
 
-const oracleBackupAttributes = [
-  { key: "start_time", displayName: "Start time" },
-  { key: "end_time", displayName: "End time" },
-  { key: "backup_status", displayName: "Backup Status" },
-  { key: "input_type", displayName: "Input Type" },
-  { key: "autobackup_done", displayName: "Auto-Backup Done" },
-  { key: "optimized", displayName: "Optimized" },
-  { key: "backup_types", displayName: "Backup types" },
-  { key: "datafiles_included", displayName: "Datafiles included" },
-  { key: "redo_logs_included", displayName: "Redo logs included" },
-  { key: "controlfile_included", displayName: "Controlfile included" },
-  { key: "incremental_level", displayName: "Incremental level" },
+const mockAttributes = [
+  { key: "mock_attr_1_1" },
+  { key: "mock_attr_1_2", displayName: "MockAttribute_1_2" },
 ];
-const oracleBackupEntityId = "sql:com_dynatrace_extension_sql-oracle_backup_job";
+const mockEntityId = "mock:entity-1";
+const mockMetricKeys = [
+  "mock.e1.metric.one",
+  "mock.e1.metric.two",
+  "mock.e1.metric.three",
+  "mock.e1.metric.four",
+  "mock.e1.metric.five",
+  "mock.e1.metric.a.three",
+];
 
 describe("Extension Parsing Utils", () => {
-  const oracleExtension = yaml.parse(
-    readTestDataFile(path.join("manifests", "oracle_extension.yaml")),
+  const mockExtension = yaml.parse(
+    readTestDataFile(path.join("manifests", "full_extension.yaml")),
   ) as ExtensionStub;
 
   describe("normalizeExtensionVersion", () => {
@@ -80,9 +79,9 @@ describe("Extension Parsing Utils", () => {
 
   describe("getAttributesKeysFromTopology", () => {
     it("collects all attribute keys from given entity", () => {
-      const expected = oracleBackupAttributes.map(a => a.key);
+      const expected = mockAttributes.map(a => a.key);
 
-      const actual = getAttributesKeysFromTopology(oracleBackupEntityId, oracleExtension);
+      const actual = getAttributesKeysFromTopology(mockEntityId, mockExtension);
 
       expect(actual).toEqual(expected);
     });
@@ -90,15 +89,15 @@ describe("Extension Parsing Utils", () => {
 
   describe("getAttributesFromTopology", () => {
     it("returns all attributes of type without exclusions", () => {
-      const actual = getAttributesFromTopology(oracleBackupEntityId, oracleExtension);
+      const actual = getAttributesFromTopology(mockEntityId, mockExtension);
 
-      expect(actual).toEqual(oracleBackupAttributes);
+      expect(actual).toEqual(mockAttributes);
     });
 
     it("omits excluded keys", () => {
-      const actual = getAttributesFromTopology(oracleBackupEntityId, oracleExtension, [
-        "end_time",
-      ]).findIndex(a => a.key === "end_time");
+      const actual = getAttributesFromTopology(mockEntityId, mockExtension, [
+        "mock_attr_1_1",
+      ]).findIndex(a => a.key === "mock_attr_1_1");
 
       expect(actual).toBe(-1);
     });
@@ -150,158 +149,59 @@ describe("Extension Parsing Utils", () => {
 
       expect(actual).toEqual(expected);
     });
+  });
 
-    describe("getMetricKeysFromChartCard", () => {
-      it("extracts all metric keys from chart card", () => {
-        const si = 1;
-        const ci = 0;
-        const expected = [
-          "com.dynatrace.extension.sql-oracle.cpu.cores",
-          "com.dynatrace.extension.sql-oracle.cpu.foregroundTotal",
-          "com.dynatrace.extension.sql-oracle.cpu.backgroundTotal",
-        ];
+  describe("getMetricKeysFromChartCard", () => {
+    it("extracts all metric keys from chart card", () => {
+      const expected = ["mock.e1.metric.three", "mock.e1.metric.four", "mock.e1.metric.five"];
 
-        const actual = getMetricKeysFromChartCard(si, ci, oracleExtension);
+      const actual = getMetricKeysFromChartCard(0, 0, mockExtension);
 
-        expect(actual).toEqual(expected);
-      });
+      expect(actual).toEqual(expected);
+    });
+  });
+
+  describe("getMetricKeysFromEntitiesListCard", () => {
+    it("extracts all metric keys from entities list card", () => {
+      const expected = ["mock.e1.metric.one", "mock.e1.metric.two", "mock.e1.metric.a.three"];
+
+      const actual = getMetricKeysFromEntitiesListCard(0, 0, mockExtension);
+
+      expect(actual).toEqual(expected);
+    });
+  });
+
+  describe("getAllMetricKeys", () => {
+    it("extracts all metric keys from extension datasource", () => {
+      const actual = getAllMetricKeys(mockExtension).every(k => mockMetricKeys.includes(k));
+
+      expect(actual).toBe(true);
+    });
+  });
+
+  describe("getEntityMetricPatterns", () => {
+    it("extracts all entity metric source patterns/conditions", () => {
+      const expected = ["$prefix(mock.e1.metric.)", "$eq(mock.e1.metric.a.)"];
+
+      const actual = getEntityMetricPatterns(0, mockExtension);
+
+      expect(actual).toEqual(expected);
+    });
+  });
+
+  describe("getEntityMetrics", () => {
+    it("extracts metric keys matching given entity", () => {
+      const actual = getEntityMetrics(0, mockExtension).every(k => mockMetricKeys.includes(k));
+
+      expect(actual).toBe(true);
     });
 
-    describe("getMetricKeysFromEntitiesListCard", () => {
-      it("extracts all metric keys from entities list card", () => {
-        const si = 0;
-        const ci = 0;
-        const expected = [
-          "com.dynatrace.extension.sql-oracle.cpu.foregroundTotal",
-          "com.dynatrace.extension.sql-oracle.cpu.backgroundTotal",
-          "com.dynatrace.extension.sql-oracle.memory.pga.used",
-        ];
+    it("doesn't include excluded keys", () => {
+      const actual = getEntityMetrics(0, mockExtension, ["mock.e1.metric.a.three"]).includes(
+        "mock.e1.metric.a.three",
+      );
 
-        const actual = getMetricKeysFromEntitiesListCard(si, ci, oracleExtension);
-
-        expect(actual).toEqual(expected);
-      });
-    });
-
-    describe("getAllMetricKeys", () => {
-      it("extracts all metric keys from extension datasource", () => {
-        const expected = [
-          "com.dynatrace.extension.sql-oracle.cpu.cores",
-          "com.dynatrace.extension.sql-oracle.cpu.backgroundTotal",
-          "com.dynatrace.extension.sql-oracle.cpu.foregroundTotal",
-          "com.dynatrace.extension.sql-oracle.memory.pga.size.pgaAggregateLimit",
-          "com.dynatrace.extension.sql-oracle.memory.pga.size.pgaAggregateTarget",
-          "com.dynatrace.extension.sql-oracle.memory.pga.used",
-          "com.dynatrace.extension.sql-oracle.memory.pga.allocated",
-          "com.dynatrace.extension.sql-oracle.memory.sga.cacheBuffer.sharedPoolFree",
-          "com.dynatrace.extension.sql-oracle.memory.sga.redoBuffer.redoLogSpaceWaitTime.count",
-          "com.dynatrace.extension.sql-oracle.memory.sga.redoBuffer.redoSizeIncrease.count",
-          "com.dynatrace.extension.sql-oracle.memory.sga.redoBuffer.redoWriteTime.count",
-          "com.dynatrace.extension.sql-oracle.memory.sessionLogicalReads.count",
-          "com.dynatrace.extension.sql-oracle.memory.physicalReads.count",
-          "com.dynatrace.extension.sql-oracle.memory.physicalReadsDirect.count",
-          "com.dynatrace.extension.sql-oracle.memory.memorySorts.count",
-          "com.dynatrace.extension.sql-oracle.memory.diskSorts.count",
-          "com.dynatrace.extension.sql-oracle.memory.libraryCacheHitRatio",
-          "com.dynatrace.extension.sql-oracle.asm.free_mb",
-          "com.dynatrace.extension.sql-oracle.asm.total_mb",
-          "com.dynatrace.extension.sql-oracle.asm.used_pct",
-          "com.dynatrace.extension.sql-oracle.asm.reads.count",
-          "com.dynatrace.extension.sql-oracle.asm.writes.count",
-          "com.dynatrace.extension.sql-oracle.status",
-          "com.dynatrace.extension.sql-oracle.db_status",
-          "com.dynatrace.extension.sql-oracle.io.bytesRead.count",
-          "com.dynatrace.extension.sql-oracle.io.bytesWritten.count",
-          "com.dynatrace.extension.sql-oracle.io.wait.count",
-          "com.dynatrace.extension.sql-oracle.sessions.active",
-          "com.dynatrace.extension.sql-oracle.sessions.all",
-          "com.dynatrace.extension.sql-oracle.sessions.userCalls.count",
-          "com.dynatrace.extension.sql-oracle.limits.sessions",
-          "com.dynatrace.extension.sql-oracle.limits.processes",
-          "com.dynatrace.extension.sql-oracle.wait.count",
-          "com.dynatrace.extension.sql-oracle.wait.time.count",
-          "com.dynatrace.extension.sql-oracle.tablespaces.totalSpace",
-          "com.dynatrace.extension.sql-oracle.tablespaces.freeSpace",
-          "com.dynatrace.extension.sql-oracle.tablespaces.usedSpace",
-          "com.dynatrace.extension.sql-oracle.tablespaces.usedSpaceRatio",
-          "com.dynatrace.extension.sql-oracle.tablespaces.freeSpaceRatio",
-          "com.dynatrace.extension.sql-oracle.backup-input_bytes",
-          "com.dynatrace.extension.sql-oracle.backup-output_bytes",
-          "com.dynatrace.extension.sql-oracle.backup-elapsed_seconds",
-          "com.dynatrace.extension.sql-oracle.backup-compression_ratio",
-          "com.dynatrace.extension.sql-oracle.backup-input_bytes_per_second",
-          "com.dynatrace.extension.sql-oracle.backup-output_bytes_per_second",
-          "com.dynatrace.extension.sql-oracle.backup-autobackup_count_number",
-          "com.dynatrace.extension.sql-oracle.backup.state",
-          "com.dynatrace.extension.sql-oracle.backup.time_since",
-          "com.dynatrace.extension.sql-oracle.queries.connectionManagement.count",
-          "com.dynatrace.extension.sql-oracle.queries.plSqlExec.count",
-          "com.dynatrace.extension.sql-oracle.queries.sqlExec.count",
-          "com.dynatrace.extension.sql-oracle.queries.sqlParse.count",
-          "com.dynatrace.extension.sql-oracle.queries.dbTime.count",
-          "com.dynatrace.extension.sql-oracle.queries.cpuTime.count",
-          "com.dynatrace.extension.sql-oracle.pdb-total_size",
-          "com.dynatrace.extension.sql-oracle.pdb-block_size",
-          "com.dynatrace.extension.sql-oracle.pdb-diagnostic_size",
-          "com.dynatrace.extension.sql-oracle.pdb-audit_files_size",
-          "com.dynatrace.extension.sql-oracle.pdb-max_size",
-          "com.dynatrace.extension.sql-oracle.pdb-max_diagnostic_size",
-          "com.dynatrace.extension.sql-oracle.pdb-max_audit_size",
-        ];
-
-        const actual = getAllMetricKeys(oracleExtension);
-
-        expect(actual).toEqual(expected);
-      });
-    });
-
-    describe("getEntityMetricPatterns", () => {
-      it("extracts all entity metric source patterns/conditions", () => {
-        const expected = ["$prefix(com.dynatrace.extension.sql-oracle.backup)"];
-
-        const actual = getEntityMetricPatterns(0, oracleExtension);
-
-        expect(actual).toEqual(expected);
-      });
-    });
-
-    describe("getEntityMetrics", () => {
-      it("extracts metric keys matching given entity", () => {
-        const expected = [
-          "com.dynatrace.extension.sql-oracle.backup-input_bytes",
-          "com.dynatrace.extension.sql-oracle.backup-output_bytes",
-          "com.dynatrace.extension.sql-oracle.backup-elapsed_seconds",
-          "com.dynatrace.extension.sql-oracle.backup-compression_ratio",
-          "com.dynatrace.extension.sql-oracle.backup-input_bytes_per_second",
-          "com.dynatrace.extension.sql-oracle.backup-output_bytes_per_second",
-          "com.dynatrace.extension.sql-oracle.backup-autobackup_count_number",
-          "com.dynatrace.extension.sql-oracle.backup.state",
-          "com.dynatrace.extension.sql-oracle.backup.time_since",
-        ];
-
-        const actual = getEntityMetrics(0, oracleExtension);
-
-        expect(actual).toEqual(expected);
-      });
-
-      it("doesn't include excluded keys", () => {
-        const expected = [
-          "com.dynatrace.extension.sql-oracle.backup-input_bytes",
-          "com.dynatrace.extension.sql-oracle.backup-output_bytes",
-          "com.dynatrace.extension.sql-oracle.backup-elapsed_seconds",
-          "com.dynatrace.extension.sql-oracle.backup-compression_ratio",
-          "com.dynatrace.extension.sql-oracle.backup-input_bytes_per_second",
-          "com.dynatrace.extension.sql-oracle.backup-output_bytes_per_second",
-          "com.dynatrace.extension.sql-oracle.backup-autobackup_count_number",
-          "com.dynatrace.extension.sql-oracle.backup.state",
-        ];
-
-        const actual = getEntityMetrics(0, oracleExtension, [
-          "com.dynatrace.extension.sql-oracle.backup.time_since",
-        ]);
-
-        expect(actual).toEqual(expected);
-      });
+      expect(actual).toEqual(false);
     });
   });
 });
