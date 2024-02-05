@@ -1,0 +1,24 @@
+name: custom:mock.prometheus.extension
+version: 1.0.0
+minDynatraceVersion: 1.280.0
+minEECVersion: 1.275.0
+author:
+  name: Mock Testing
+
+prometheus:
+  - group: metrics
+    dimensions:
+      - key: mock.dimension.one
+        value: label:prom_label_one
+    metrics:
+      - key: mock.metric.one
+        value: metric:prom_key_one
+  - group: metrics2
+    subgroups:
+      - subgroup: metrics
+        dimensions:
+          - key: mock.dimension.two
+            value: label:prom_label_two
+        metrics:
+          - key: mock.metric.two
+            value: metric:prom_key_two

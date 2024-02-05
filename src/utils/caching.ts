@@ -15,7 +15,7 @@
  */
 
 import * as path from "path";
-import Axios from "axios";
+import axios from "axios";
 import { BehaviorSubject, Observable, Subscriber, delay, map, of, switchMap } from "rxjs";
 import * as vscode from "vscode";
 import * as yaml from "yaml";
@@ -48,26 +48,25 @@ interface BaristaMeta {
 }
 
 const logTrace = ["utils", "caching"];
-let initialized = false;
-let globalStorage: string;
 let builtinEntityTypes: EntityType[] = [];
-const parsedExtension = new BehaviorSubject<ExtensionStub | undefined>(undefined);
+let parsedExtension = new BehaviorSubject<ExtensionStub | undefined | null>(undefined);
 let baristaIcons: string[] = [];
-const selectorStatuses = new Map<string, ValidationStatus>();
+let selectorStatuses = new Map<string, ValidationStatus>();
 let prometheusData: PromData = {};
-const wmiQueryResults = new Map<string, WmiQueryResult>();
-const wmiQueryStatuses = new Map<string, ValidationStatus>();
-const snmpOIDs = new Map<string, OidInformation>();
-const entityInstances = new Map<string, Entity[]>();
+let wmiQueryResults = new Map<string, WmiQueryResult>();
+let wmiQueryStatuses = new Map<string, ValidationStatus>();
+let snmpOIDs = new Map<string, OidInformation>();
+let entityInstances = new Map<string, Entity[]>();
 let localSnmpDatabase: OidInformation[] = [];
 let mibStore: MibModuleStore;
-const mibFilesLoaded: LoadedMibFile[] = [];
+let mibFilesLoaded: LoadedMibFile[] = [];
 let manifestParsingPipeline: Subscriber<string>;
 
-export const initializeCache = async (globalStoragePath: string) => {
-  if (initialized) return;
+export const initializeCache = async () => {
   const fnLogTrace = [...logTrace, "initializeCache"];
   logger.info("Initializing Data Cache...", ...fnLogTrace);
+
+  setDefaultValues();
 
   const initialManifestContent = readExtensionManifest();
   createManifestProcessingPipeline(initialManifestContent);
@@ -76,7 +75,6 @@ export const initializeCache = async (globalStoragePath: string) => {
   // Wait for the parsed extension to be available before completing the init
   await waitForCondition(() => parsedExtension.getValue() !== undefined);
 
-  globalStorage = globalStoragePath;
   loadBuiltinEntityTypes().then(
     () => logger.debug("Built-in entity types loaded", ...fnLogTrace),
     () => logger.debug("Built-in entity types unavailable", ...fnLogTrace),
@@ -93,7 +91,57 @@ export const initializeCache = async (globalStoragePath: string) => {
   }
 
   logger.info("Data Cache initialized.", ...fnLogTrace);
-  initialized = true;
+};
+
+const setDefaultValues = () => {
+  builtinEntityTypes = [];
+  parsedExtension = new BehaviorSubject<ExtensionStub | undefined | null>(undefined);
+  baristaIcons = [];
+  selectorStatuses = new Map<string, ValidationStatus>();
+  prometheusData = {};
+  wmiQueryResults = new Map<string, WmiQueryResult>();
+  wmiQueryStatuses = new Map<string, ValidationStatus>();
+  snmpOIDs = new Map<string, OidInformation>();
+  entityInstances = new Map<string, Entity[]>();
+  localSnmpDatabase = [];
+  mibFilesLoaded = [];
+};
+
+const createManifestProcessingPipeline = (initialContent: string) => {
+  new Observable<string>(subscriber => {
+    manifestParsingPipeline = subscriber;
+    subscriber.next(initialContent);
+  })
+    .pipe<string, ExtensionStub | undefined | null>(
+      switchMap<string, Observable<string>>(value => of(value).pipe(delay(200))),
+      map<string, ExtensionStub | undefined | null>(manifestText => {
+        try {
+          return yaml.parse(manifestText) as ExtensionStub;
+        } catch {
+          return parsedExtension.getValue();
+        }
+      }),
+    )
+    .subscribe(parsedExtension);
+};
+
+const setManifestChangeListeners = () => {
+  vscode.workspace.onDidChangeTextDocument(change => {
+    pushDocumentChangeForParsing(change.document);
+  });
+  vscode.workspace.onDidSaveTextDocument(document => {
+    pushDocumentChangeForParsing(document);
+  });
+  vscode.workspace.onDidOpenTextDocument(document => {
+    pushDocumentChangeForParsing(document);
+  });
+};
+
+const pushDocumentChangeForParsing = (doc: vscode.TextDocument) => {
+  const manifestFilePath = getExtensionFilePath();
+  if (manifestFilePath && path.resolve(doc.fileName) === path.resolve(manifestFilePath)) {
+    manifestParsingPipeline.next(doc.getText());
+  }
 };
 
 const loadBuiltinEntityTypes = async () => {
@@ -115,7 +163,8 @@ const loadBaristaIcons = async () => {
 };
 
 const loadBaristaIconsFromUrl = async (url: string) => {
-  const icons = await Axios.get<BaristaResponse>(url)
+  const icons = await axios
+    .get<BaristaResponse>(url)
     .then(res => {
       return res.data.icons ? res.data.icons.map((i: BaristaMeta) => i.name) : [];
     })
@@ -139,7 +188,7 @@ const createDefaultMibStore = async () => {
   const fnLogTrace = [...logTrace, "createDefaultMibStore"];
   logger.debug("Creating SNMP MIB store", ...fnLogTrace);
 
-  await downloadActiveGateMibFiles(globalStorage);
+  await downloadActiveGateMibFiles();
 
   logger.debug("ActiveGate MIBs ready. Building MIB store", ...fnLogTrace);
   mibStore = new MibModuleStore();
@@ -174,43 +223,6 @@ const findUnprocessedMibFiles = () => {
           loadedMib.filePath === file,
       ) === -1,
   );
-};
-
-const createManifestProcessingPipeline = (initialContent: string) => {
-  new Observable<string>(subscriber => {
-    manifestParsingPipeline = subscriber;
-    subscriber.next(initialContent);
-  })
-    .pipe<string, ExtensionStub | undefined>(
-      switchMap<string, Observable<string>>(value => of(value).pipe(delay(200))),
-      map<string, ExtensionStub | undefined>(manifestText => {
-        try {
-          return yaml.parse(manifestText) as ExtensionStub;
-        } catch {
-          return parsedExtension.getValue();
-        }
-      }),
-    )
-    .subscribe(parsedExtension);
-};
-
-const setManifestChangeListeners = () => {
-  vscode.workspace.onDidChangeTextDocument(change => {
-    pushDocumentChangeForParsing(change.document);
-  });
-  vscode.workspace.onDidSaveTextDocument(document => {
-    pushDocumentChangeForParsing(document);
-  });
-  vscode.workspace.onDidOpenTextDocument(document => {
-    pushDocumentChangeForParsing(document);
-  });
-};
-
-const pushDocumentChangeForParsing = (doc: vscode.TextDocument) => {
-  const manifestFilePath = getExtensionFilePath();
-  if (manifestFilePath && path.resolve(doc.fileName) === path.resolve(manifestFilePath)) {
-    manifestParsingPipeline.next(doc.getText());
-  }
 };
 
 export const pushManifestTextForParsing = () => {

@@ -101,7 +101,7 @@ export async function activate(context: vscode.ExtensionContext) {
   setContextProperty("numEnvironments", getAllTenants().length);
 
   logger.debug("Instantiating feature providers", ...fnLogTrace);
-  await initializeCache(context.globalStorageUri.fsPath);
+  await initializeCache();
   simulatorManager = new SimulatorManager();
 
   // Register all features and allow VSCode access to the disposables.
