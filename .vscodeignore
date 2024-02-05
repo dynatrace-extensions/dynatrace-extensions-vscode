@@ -11,6 +11,8 @@
 .vscodeignore
 tsconfig.src.json
 tsconfig.test.json
+tsconfig.json
+jest.config.js
 package.json
 package-lock.json
 *.md
