@@ -5,6 +5,14 @@ minEECVersion: 1.275.0
 author:
   name: Mock Testing
 
+metrics:
+  - key: mock.e1.metric.six
+    metadata:
+      displayName: Mock metric six
+      description: Mock metric six
+      sourceEntityType: mock:entity-1
+  - key: mock.some.metric
+
 topology:
   types:
     - name: mock:entity-1
@@ -34,11 +42,19 @@ topology:
 snmp:
   - group: metrics
     subgroups:
-      - subgroups: metrics1
+      - subgroup: metrics1
+        featureSet: fs1
+        dimensions:
+          - key: mock.dimension.one
+            value: oid:1.1.1.1.0
         metrics:
           - key: mock.e1.metric.one
             value: oid:1.1.1.1.1
   - group: metrics2
+    featureSet: fs2
+    dimensions:
+      - key: mock.dimension.two
+        value: oid:1.1.1.0.0
     metrics:
       - key: mock.e1.metric.two
         value: oid:2.2.2.2.2.2
@@ -48,8 +64,15 @@ snmp:
         value: oid:4.4.4.4.4.4
       - key: mock.e1.metric.five
         value: oid:5.5.5.5.5.5
+        type: count
+        featureSet: fs3
       - key: mock.e1.metric.a.three
         value: oid:3.3.3.3.33
+        featureSet: fs3
+  - group: metrics3
+    metrics:
+      - key: mock.e1.metric.six
+        value: oid:6.6.6.6.6
 
 screens:
   - entityType: mock:entity-1

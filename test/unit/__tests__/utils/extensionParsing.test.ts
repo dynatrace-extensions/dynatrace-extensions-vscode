@@ -19,14 +19,22 @@ import * as yaml from "yaml";
 import { ExtensionStub } from "../../../../src/interfaces/extensionMeta";
 import {
   getAllMetricKeys,
+  getAllMetricsByFeatureSet,
   getAttributesFromTopology,
   getAttributesKeysFromTopology,
   getDatasourceName,
+  getDimensionsFromDataSource,
+  getEntityForMetric,
   getEntityMetricPatterns,
   getEntityMetrics,
   getExtensionDatasource,
+  getMetricDisplayName,
   getMetricKeysFromChartCard,
   getMetricKeysFromEntitiesListCard,
+  getMetricValue,
+  getMetricsFromDataSource,
+  getPrometheusLabelKeys,
+  getPrometheusMetricKeys,
   incrementExtensionVersion,
   normalizeExtensionVersion,
 } from "../../../../src/utils/extensionParsing";
@@ -38,7 +46,7 @@ const mockAttributes = [
   { key: "mock_attr_1_1" },
   { key: "mock_attr_1_2", displayName: "MockAttribute_1_2" },
 ];
-const mockEntityId = "mock:entity-1";
+const mockEntityType = "mock:entity-1";
 const mockMetricKeys = [
   "mock.e1.metric.one",
   "mock.e1.metric.two",
@@ -46,11 +54,15 @@ const mockMetricKeys = [
   "mock.e1.metric.four",
   "mock.e1.metric.five",
   "mock.e1.metric.a.three",
+  "mock.e1.metric.six",
 ];
 
 describe("Extension Parsing Utils", () => {
   const mockExtension = yaml.parse(
     readTestDataFile(path.join("manifests", "full_extension.yaml")),
+  ) as ExtensionStub;
+  const mockPrometheusExtension = yaml.parse(
+    readTestDataFile(path.join("manifests", "prometheus_extension.yaml")),
   ) as ExtensionStub;
 
   describe("normalizeExtensionVersion", () => {
@@ -81,7 +93,7 @@ describe("Extension Parsing Utils", () => {
     it("collects all attribute keys from given entity", () => {
       const expected = mockAttributes.map(a => a.key);
 
-      const actual = getAttributesKeysFromTopology(mockEntityId, mockExtension);
+      const actual = getAttributesKeysFromTopology(mockEntityType, mockExtension);
 
       expect(actual).toEqual(expected);
     });
@@ -89,13 +101,13 @@ describe("Extension Parsing Utils", () => {
 
   describe("getAttributesFromTopology", () => {
     it("returns all attributes of type without exclusions", () => {
-      const actual = getAttributesFromTopology(mockEntityId, mockExtension);
+      const actual = getAttributesFromTopology(mockEntityType, mockExtension);
 
       expect(actual).toEqual(mockAttributes);
     });
 
     it("omits excluded keys", () => {
-      const actual = getAttributesFromTopology(mockEntityId, mockExtension, [
+      const actual = getAttributesFromTopology(mockEntityType, mockExtension, [
         "mock_attr_1_1",
       ]).findIndex(a => a.key === "mock_attr_1_1");
 
@@ -173,9 +185,9 @@ describe("Extension Parsing Utils", () => {
 
   describe("getAllMetricKeys", () => {
     it("extracts all metric keys from extension datasource", () => {
-      const actual = getAllMetricKeys(mockExtension).every(k => mockMetricKeys.includes(k));
+      const actual = getAllMetricKeys(mockExtension);
 
-      expect(actual).toBe(true);
+      expect(actual).toEqual(mockMetricKeys);
     });
   });
 
@@ -191,9 +203,9 @@ describe("Extension Parsing Utils", () => {
 
   describe("getEntityMetrics", () => {
     it("extracts metric keys matching given entity", () => {
-      const actual = getEntityMetrics(0, mockExtension).every(k => mockMetricKeys.includes(k));
+      const actual = getEntityMetrics(0, mockExtension);
 
-      expect(actual).toBe(true);
+      expect(actual).toEqual(mockMetricKeys);
     });
 
     it("doesn't include excluded keys", () => {
@@ -202,6 +214,165 @@ describe("Extension Parsing Utils", () => {
       );
 
       expect(actual).toEqual(false);
+    });
+  });
+
+  describe("getEntityForMetric", () => {
+    it("returns the entity type based on metric metadata", () => {
+      const actual = getEntityForMetric("mock.e1.metric.six", mockExtension);
+
+      expect(actual).toBe(mockEntityType);
+    });
+
+    it("returns the entity type based on topology", () => {
+      const actual = getEntityForMetric("mock.e1.metric.one", mockExtension);
+
+      expect(actual).toBe(mockEntityType);
+    });
+  });
+
+  describe("getPrometheusMetricKeys", () => {
+    it("extracts metric keys from a group", () => {
+      const expected = ["prom_key_one"];
+
+      const actual = getPrometheusMetricKeys(mockPrometheusExtension, 0);
+
+      expect(actual).toEqual(expected);
+    });
+
+    it("extracts metric keys from a subgroup", () => {
+      const expected = ["prom_key_two"];
+
+      const actual = getPrometheusMetricKeys(mockPrometheusExtension, 1, 0);
+
+      expect(actual).toEqual(expected);
+    });
+  });
+
+  describe("getPrometheusLabelKeys", () => {
+    it("extracts label keys from a group", () => {
+      const expected = ["prom_label_one"];
+
+      const actual = getPrometheusLabelKeys(mockPrometheusExtension, 0);
+
+      expect(actual).toEqual(expected);
+    });
+
+    it("extracts label keys from a subgroup", () => {
+      const expected = ["prom_label_two"];
+
+      const actual = getPrometheusLabelKeys(mockPrometheusExtension, 1, 0);
+
+      expect(actual).toEqual(expected);
+    });
+  });
+
+  describe("getMetricValue", () => {
+    it("extracts metric value from a group", () => {
+      const expected = "oid:2.2.2.2.2.2";
+
+      const actual = getMetricValue("mock.e1.metric.two", mockExtension);
+
+      expect(actual).toEqual(expected);
+    });
+
+    it("extracts metric value from a subgroup", () => {
+      const expected = "oid:1.1.1.1.1";
+
+      const actual = getMetricValue("mock.e1.metric.one", mockExtension);
+
+      expect(actual).toEqual(expected);
+    });
+  });
+
+  describe("getMetricDisplayName", () => {
+    it("extracts displayName from metadata", () => {
+      const expected = "Mock metric six";
+
+      const actual = getMetricDisplayName("mock.e1.metric.six", mockExtension);
+
+      expect(actual).toEqual(expected);
+    });
+
+    it("returns empty string if displayName is not present", () => {
+      const expected = "";
+
+      const actual = getMetricDisplayName("mock.some.metric", mockExtension);
+
+      expect(actual).toEqual(expected);
+    });
+  });
+
+  describe("getAllMetricsByFeatureSet", () => {
+    it("maps all metrics to feature set", () => {
+      const expected = [
+        { name: "default", metrics: ["mock.e1.metric.six"] },
+        { name: "fs1", metrics: ["mock.e1.metric.one"] },
+        {
+          name: "fs2",
+          metrics: ["mock.e1.metric.two", "mock.e1.metric.three", "mock.e1.metric.four"],
+        },
+        { name: "fs3", metrics: ["mock.e1.metric.five", "mock.e1.metric.a.three"] },
+      ];
+
+      const actual = getAllMetricsByFeatureSet(mockExtension);
+
+      expect(actual).toEqual(expected);
+    });
+  });
+
+  describe("getMetricsFromDataSource", () => {
+    it("returns metric keys and types", () => {
+      const expected = [
+        { key: "mock.e1.metric.one", type: "gauge" },
+        { key: "mock.e1.metric.two", type: "gauge" },
+        { key: "mock.e1.metric.three", type: "gauge" },
+        { key: "mock.e1.metric.four", type: "gauge" },
+        { key: "mock.e1.metric.five", type: "count" },
+        { key: "mock.e1.metric.a.three", type: "gauge" },
+        { key: "mock.e1.metric.six", type: "gauge" },
+      ];
+
+      const actual = getMetricsFromDataSource(mockExtension, false);
+
+      expect(actual).toEqual(expected);
+    });
+
+    it("includes values if enabled", () => {
+      const expected = [
+        { key: "mock.e1.metric.one", type: "gauge", value: "oid:1.1.1.1.1" },
+        { key: "mock.e1.metric.two", type: "gauge", value: "oid:2.2.2.2.2.2" },
+        { key: "mock.e1.metric.three", type: "gauge", value: "oid:3.3.3.3.3.3" },
+        { key: "mock.e1.metric.four", type: "gauge", value: "oid:4.4.4.4.4.4" },
+        { key: "mock.e1.metric.five", type: "count", value: "oid:5.5.5.5.5.5" },
+        { key: "mock.e1.metric.a.three", type: "gauge", value: "oid:3.3.3.3.33" },
+        { key: "mock.e1.metric.six", type: "gauge", value: "oid:6.6.6.6.6" },
+      ];
+
+      const actual = getMetricsFromDataSource(mockExtension, true);
+
+      expect(actual).toEqual(expected);
+    });
+  });
+
+  describe("getDimensionsFromDataSource", () => {
+    it("returns dimension keys", () => {
+      const expected = [{ key: "mock.dimension.one" }, { key: "mock.dimension.two" }];
+
+      const actual = getDimensionsFromDataSource(mockExtension, false);
+
+      expect(actual).toEqual(expected);
+    });
+
+    it("includes values if enabled", () => {
+      const expected = [
+        { key: "mock.dimension.one", value: "oid:1.1.1.1.0" },
+        { key: "mock.dimension.two", value: "oid:1.1.1.0.0" },
+      ];
+
+      const actual = getDimensionsFromDataSource(mockExtension, true);
+
+      expect(actual).toEqual(expected);
     });
   });
 });
