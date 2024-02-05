@@ -19,7 +19,7 @@ import { ExtensionStub } from "../interfaces/extensionMeta";
 
 import { getCachedParsedExtension, getCachedPrometheusData } from "../utils/caching";
 import {
-  getAllMetricKeysAndValuesFromDataSource,
+  getMetricsFromDataSource,
   getPrometheusLabelKeys,
   getPrometheusMetricKeys,
 } from "../utils/extensionParsing";
@@ -245,7 +245,11 @@ class PrometheusActionProvider implements vscode.CodeActionProvider {
     extension: ExtensionStub,
   ): vscode.CodeAction[] {
     const codeActions: vscode.CodeAction[] = [];
-    const datasourceMetrics = getAllMetricKeysAndValuesFromDataSource(extension);
+    const datasourceMetrics = getMetricsFromDataSource(extension, true) as {
+      key: string;
+      type: string;
+      value: string;
+    }[];
     const metadataMetrics = extension.metrics ? extension.metrics.map(m => m.key) : [];
 
     const metricsToInsert = datasourceMetrics

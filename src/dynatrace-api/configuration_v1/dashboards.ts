@@ -31,13 +31,15 @@ export class DashboardService {
   /**
    * Create a dashboard
    * @param dashboard dashboard definition
+   * @param signal cancellation signal
    * @returns
    */
-  async post(dashboard: Dashboard) {
-    return this.httpClient.makeRequest(
-      this.endpoint,
-      dashboard as unknown as Record<string, unknown>,
-      "POST",
-    );
+  async post(dashboard: Dashboard, signal?: AbortSignal) {
+    return this.httpClient.makeRequest({
+      path: this.endpoint,
+      method: "POST",
+      body: dashboard as unknown as Record<string, unknown>,
+      signal,
+    });
   }
 }

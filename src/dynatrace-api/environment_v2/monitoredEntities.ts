@@ -38,6 +38,7 @@ export class EntityServiceV2 {
    * @param fields Defines the list of entity properties included in the response. The ID and the
    * name of an entity are always included to the response.
    * @param sort Defines the ordering of the entities returned.
+   * @param signal cancellation signal
    * @returns list of entities
    */
   async list(
@@ -46,13 +47,13 @@ export class EntityServiceV2 {
     to?: string,
     fields?: string,
     sort?: string,
+    signal?: AbortSignal,
   ): Promise<Entity[]> {
-    return this.httpClient.paginatedCall(this.endpoint, "entities", {
-      entitySelector: entitySelector,
-      from: from,
-      to: to,
-      fields: fields,
-      sort: sort,
+    return this.httpClient.paginatedCall({
+      path: this.endpoint,
+      item: "entities",
+      params: { entitySelector, from, to, fields, sort },
+      signal,
     });
   }
 
@@ -63,30 +64,38 @@ export class EntityServiceV2 {
    * @param to The end of the requested timeframe. Defaults to current timestamp.
    * @param fields Defines the list of entity properties included in the response. The ID and the
    * name of an entity are always included to the response.
+   * @param signal cancellation signal
    * @returns the requested entity
    */
-  async get(entityId: string, from?: string, to?: string, fields?: string) {
-    return this.httpClient.makeRequest(`${this.endpoint}/${entityId}`, {
-      from: from,
-      to: to,
-      fields: fields,
+  async get(entityId: string, from?: string, to?: string, fields?: string, signal?: AbortSignal) {
+    return this.httpClient.makeRequest({
+      path: `${this.endpoint}/${entityId}`,
+      params: { from, to, fields },
+      signal,
     });
   }
 
   /**
    * Fetches the list of all entity types within Dynatrace
+   * @param signal cancellation signal
    * @returns list of entity types
    */
-  async listTypes(): Promise<EntityType[]> {
-    return this.httpClient.paginatedCall(this.typesEndpoint, "types", { pageSize: 500 });
+  async listTypes(signal?: AbortSignal): Promise<EntityType[]> {
+    return this.httpClient.paginatedCall({
+      path: this.typesEndpoint,
+      item: "types",
+      params: { pageSize: 500 },
+      signal,
+    });
   }
 
   /**
    * Fetches the details of a given entity type
    * @param type the entity type to fetch details for
+   * @param signal cancellation signal
    * @returns details of the entity type
    */
-  async getType(type: string): Promise<EntityType> {
-    return this.httpClient.makeRequest(`${this.typesEndpoint}/${type}`);
+  async getType(type: string, signal?: AbortSignal): Promise<EntityType> {
+    return this.httpClient.makeRequest({ path: `${this.typesEndpoint}/${type}`, signal });
   }
 }

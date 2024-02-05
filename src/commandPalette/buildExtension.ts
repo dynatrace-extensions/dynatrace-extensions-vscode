@@ -32,6 +32,7 @@ import { DynatraceAPIError } from "../dynatrace-api/errors";
 import { getActivationContext } from "../extension";
 import { showFastModeStatusBar } from "../statusBar/fastMode";
 import { getDynatraceClient } from "../treeViews/tenantsTreeView";
+import { useMemo } from "../utils/caching";
 import { loopSafeWait } from "../utils/code";
 import {
   checkCertificateExists,
@@ -60,9 +61,7 @@ export const buildExtensionWorkflow = async () => {
     (await checkCertificateExists("dev")) &&
     (await checkNoProblemsInManifest())
   ) {
-    const manifestFilePath = getExtensionFilePath();
-    if (!manifestFilePath) throw Error("Extension manifest file does not exist.");
-    await buildExtension(manifestFilePath, await getDynatraceClient());
+    await buildExtension();
   }
 };
 
@@ -72,25 +71,24 @@ export const buildExtensionWorkflow = async () => {
  */
 export const fastModeBuildWorkflow = async (doc: vscode.TextDocument) => {
   if (
-    isFastModeEnabled() &&
+    vscode.workspace
+      .getConfiguration("dynatraceExtensions", null)
+      .get<boolean>("fastDevelopmentMode") &&
     doc.fileName.endsWith("extension.yaml") &&
     (await isExtensionsWorkspace(false)) &&
     (await checkTenantConnected())
   ) {
-    await buildExtension(doc.fileName, await getDynatraceClient(), true);
+    await buildExtension(doc.fileName, true);
   }
 };
-
-const isFastModeEnabled = () =>
-  vscode.workspace
-    .getConfiguration("dynatraceExtensions", null)
-    .get<boolean>("fastDevelopmentMode");
 
 /**
  * Builds an Extension 2.0 and its artefacts into a .zip package ready to upload to Dynatrace.
  * If successful, the command is linked to uploading the package to Dynatrace.
  */
-async function buildExtension(manifestFilePath: string, dt?: Dynatrace, fastMode: boolean = false) {
+async function buildExtension(filePath?: string, fastMode: boolean = false) {
+  const manifestFilePath = await filePathMemo(filePath ?? getExtensionFilePath());
+
   const fnLogTrace = [...logTrace, "buildExtension"];
   logger.info("Executing Build Extension command", ...fnLogTrace);
   const oc = fastMode ? logger.getFastModeChannel() : logger.getGenericChannel();
@@ -104,36 +102,35 @@ async function buildExtension(manifestFilePath: string, dt?: Dynatrace, fastMode
         cancellable: true,
       },
       async (progress, cancelToken) => {
+        const abortController = new AbortController();
+        const signal = abortController.signal;
         cancelToken.onCancellationRequested(async () => {
-          logger.notify("WARN", "Operation cancelled.");
+          logger.notify("WARN", "Operation cancelled.", ...fnLogTrace);
+          abortController.abort();
           throw Error("Operation cancelled.");
         });
 
-        await saveFileChanges(manifestFilePath);
+        await saveFileChanges();
 
         progress.report({ message: "Checking prerequisites" });
-        await preBuildTasks(manifestFilePath, manifestFileContent, fastMode, dt);
+        await preBuildTasks(manifestFileContent, fastMode, signal);
         const extensionVersion = getExtensionVersion(readFileSync(manifestFilePath).toString());
 
         progress.report({ message: "Building extension package" });
         if (isPythonExtension(manifestFileContent)) {
-          await assemblePython(manifestFilePath, oc);
+          await assemblePython(oc, cancelToken);
         } else {
-          assembleStandard(manifestFilePath, manifestFileContent, extensionVersion);
+          await assembleStandard(manifestFileContent, extensionVersion);
         }
 
         if (fastMode) {
           progress.report({ message: "Uploading & activating extension" });
-          if (!dt) {
-            logger.warn("Dynatrace client unavailable. Upload not possible", ...fnLogTrace);
-          } else {
-            await uploadAndActivate(manifestFileContent, extensionVersion, dt);
-          }
+          await uploadAndActivate(manifestFileContent, extensionVersion, signal);
           return false;
         } else {
           progress.report({ message: "Validating extension" });
           const zipFileName = getZipFilename(manifestFileContent, extensionVersion);
-          const isValid = await validateExtension(zipFileName, oc, dt);
+          const isValid = await validateExtension(zipFileName, oc, signal);
           return isValid;
         }
       },
@@ -147,6 +144,8 @@ async function buildExtension(manifestFilePath: string, dt?: Dynatrace, fastMode
     );
 
   removeOldBuildFiles();
+  await clearFilePathMemo();
+  await clearDtMemo();
 
   // Follow-up is carried out separately to keep notification messages cleaner
   if (promptForUpload) {
@@ -165,8 +164,9 @@ async function buildExtension(manifestFilePath: string, dt?: Dynatrace, fastMode
   }
 }
 
-const saveFileChanges = async (manifestFilePath: string) => {
+const saveFileChanges = async () => {
   const fnLogTrace = [...logTrace, "saveFileChanges"];
+  const manifestFilePath = await filePathMemo();
   const extensionDocument = vscode.workspace.textDocuments.find(
     doc => doc.fileName === manifestFilePath,
   );
@@ -180,30 +180,46 @@ const saveFileChanges = async (manifestFilePath: string) => {
   }
 };
 
+const filePathMemo = async (manifestFilePath?: string) => {
+  const value = await useMemo<string | undefined>(() => manifestFilePath, []);
+  if (!value) throw Error("Extension manifest file does not exist.");
+  return value;
+};
+
+const clearFilePathMemo = async (manifestFilePath?: string) => {
+  await useMemo(() => manifestFilePath, [], true);
+};
+
+const dtMemo = async () => {
+  const value = await useMemo<Dynatrace | undefined>(getDynatraceClient, []);
+  return value;
+};
+
+const clearDtMemo = async () => {
+  await useMemo(getDynatraceClient, [], true);
+};
+
 /**
  * Carries out general tasks that should be executed before the build workflow.
- * @param manifestFilePath path to manifest file
  * @param manifestFileContent content of the manifest file
  * @param forceIncrement whether to enforce the increment of currentVersion
- * @param dt optional Dynatrace API Client
  */
 async function preBuildTasks(
-  manifestFilePath: string,
   manifestFileContent: string,
   forceIncrement: boolean = false,
-  dt?: Dynatrace,
+  signal?: AbortSignal,
 ) {
   try {
     ensureDistDirExists();
-    removeInvalidDsStoreFiles(getManifestDirPath(manifestFilePath));
+    removeInvalidDsStoreFiles(await getManifestDirPath());
 
     const extensionName = getExtensionName(manifestFileContent);
     const currentVersion = getExtensionVersion(manifestFileContent);
 
-    if (forceIncrement || (await shouldIncrementVersion(extensionName, currentVersion, dt))) {
+    if (forceIncrement || (await shouldIncrementVersion(extensionName, currentVersion, signal))) {
       const incrementedVersion = incrementExtensionVersion(currentVersion);
       writeFileSync(
-        manifestFilePath,
+        await filePathMemo(),
         manifestFileContent.replace(/^version: ("?[0-9.]+"?)/gm, `version: ${incrementedVersion}`),
       );
       logger.notify("INFO", "Extension version automatically increased.");
@@ -243,8 +259,9 @@ const removeInvalidDsStoreFiles = (extensionDir: string) => {
 const shouldIncrementVersion = async (
   extensionName: string,
   extensionVersion: string,
-  dt?: Dynatrace,
+  signal?: AbortSignal,
 ) => {
+  const dt = await dtMemo();
   if (!dt) return false;
 
   const fnLogTrace = [...logTrace, "shouldIncrementVersion"];
@@ -253,7 +270,7 @@ const shouldIncrementVersion = async (
     ...fnLogTrace,
   );
   const deployedVersions = await dt.extensionsV2
-    .listVersions(extensionName)
+    .listVersions(extensionName, signal)
     .then(ext => ext.map(e => e.version))
     .catch(() => [] as string[]);
 
@@ -270,32 +287,32 @@ const isPythonExtension = (manifestFileContent: string) => /^python:$/gm.test(ma
 
 /**
  * Archives and signs a python extension using `dt-sdk`
- * @param manifestFilePath path to the extension manifest
  * @param oc JSON output channel for communicating errors
+ * @param cancelToken workflow cancellation token
  */
-async function assemblePython(manifestFilePath: string, oc: vscode.OutputChannel) {
+async function assemblePython(oc: vscode.OutputChannel, cancelToken: vscode.CancellationToken) {
   try {
     const fnLogTrace = [...logTrace, "assemblePython"];
     logger.debug("Building package for a python extension", ...fnLogTrace);
 
     const envOptions = await getPythonVenvOpts();
-    const sdkAvailable = await checkDtSdkPresent(oc, undefined, envOptions);
+    const sdkAvailable = await checkDtSdkPresent(oc, cancelToken, envOptions);
     if (!sdkAvailable) throw Error("Cannot continue without SDK");
 
     const platformsParam = getExtraPlatformsParameter();
     logger.debug(`Assembling for python with platform param "${platformsParam}"`, ...fnLogTrace);
     const workspaceStorage = getWorkspaceStorage();
     const certKeyPath = getDevCertKey();
-    const extensionDir = getManifestDirPath(manifestFilePath);
+    const setupPyDir = path.resolve(await getManifestDirPath(), "..");
 
     await runCommand(
-      `dt-sdk build -k "${certKeyPath}" "${extensionDir}" -t "${workspaceStorage}" ${platformsParam}`,
+      `dt-sdk build -k "${certKeyPath}" -t "${workspaceStorage}" ${platformsParam} "${setupPyDir}"`,
       oc,
-      undefined,
+      cancelToken,
       envOptions,
     );
 
-    const libDir = path.join(getManifestDirPath(manifestFilePath), "lib");
+    const libDir = path.join(await getManifestDirPath(), "lib");
     if (existsSync(libDir)) {
       try {
         rmSync(libDir, { recursive: true, force: true });
@@ -328,23 +345,23 @@ const getDistDir = () => {
   return path.resolve(workspaceRoot, "dist");
 };
 
-const getManifestDirPath = (manifestFilePath: string) => path.resolve(manifestFilePath, "..");
+const getManifestDirPath = async () => path.resolve(await filePathMemo(), "..");
 
 const getExtraPlatformsParameter = () => {
   // By default, we add the linux_x86_64 and/or win_amd64 platforms
   let platformString =
     process.platform === "win32"
-      ? "-e linux_x86_64"
+      ? '-e "linux_x86_64"'
       : process.platform === "linux"
-      ? "-e win_amd64"
-      : "-e linux_x86_64 -e win_amd64";
+      ? '-e "win_amd64"'
+      : '-e "linux_x86_64" -e "win_amd64"';
 
   // The user's configuration can override this
   const extraPlatforms = vscode.workspace
     .getConfiguration("dynatraceExtensions", null)
     .get<string[]>("pythonExtraPlatforms");
   if (extraPlatforms && extraPlatforms.length > 0) {
-    platformString = `-e ${extraPlatforms.join(" -e ")}`;
+    platformString = extraPlatforms.map(extraPlatform => `-e "${extraPlatform}"`).join(" ");
   }
 
   return platformString;
@@ -352,14 +369,10 @@ const getExtraPlatformsParameter = () => {
 
 /**
  * Archives and signs a non-python extension.
- * @param manifestFilePath path to the extension manifest
+ * @param manifestFileContent content of the extension manifest
  * @param extensionVersion version of the extension being packaged
  */
-function assembleStandard(
-  manifestFilePath: string,
-  manifestFileContent: string,
-  extensionVersion: string,
-) {
+async function assembleStandard(manifestFileContent: string, extensionVersion: string) {
   try {
     const fnLogTrace = [...logTrace, "assembleStandard"];
     logger.debug("Building package for a non-python extension", ...fnLogTrace);
@@ -369,7 +382,7 @@ function assembleStandard(
 
     // Build the inner .zip archive
     const innerZip = new AdmZip();
-    innerZip.addLocalFolder(getManifestDirPath(manifestFilePath));
+    innerZip.addLocalFolder(await getManifestDirPath());
     const innerZipPath = path.resolve(workspaceStorage, "extension.zip");
     innerZip.writeZip(innerZipPath);
     logger.info(`Built the inner archive: ${innerZipPath}`, ...fnLogTrace);
@@ -417,23 +430,27 @@ const removeOldBuildFiles = () => {
  * This skips any prompts compared to regular flow and does not preform any validation.
  * @param manifestFileContent content of the extension manifest
  * @param extensionVersion version of the extension
- * @param dt Dynatrace API Client
  */
 async function uploadAndActivate(
   manifestFileContent: string,
   extensionVersion: string,
-  dt: Dynatrace,
+  signal: AbortSignal,
 ) {
   const fnLogTrace = [...logTrace, "uploadAndActivate"];
+  const dt = await dtMemo();
+  if (!dt) {
+    logger.warn("Dynatrace client unavailable. Upload not possible", ...fnLogTrace);
+    return;
+  }
   const oc = logger.getFastModeChannel();
   const workspaceStorage = getWorkspaceStorage();
   const extensionName = getExtensionName(manifestFileContent);
   const zipFileName = getZipFilename(manifestFileContent, extensionVersion);
   try {
-    await ensureVersionUploadPossible(dt, extensionName);
-    await uploadExtension(dt, zipFileName);
+    await ensureVersionUploadPossible(extensionName, dt, signal);
+    await uploadExtension(zipFileName, dt, signal);
     logger.debug("Activating environment configuration.", ...fnLogTrace);
-    await dt.extensionsV2.putEnvironmentConfiguration(extensionName, extensionVersion);
+    await dt.extensionsV2.putEnvironmentConfiguration(extensionName, extensionVersion, signal);
 
     // Copy .zip archive into dist dir
     copyFileSync(
@@ -469,9 +486,13 @@ async function uploadAndActivate(
  * Ensures uploading a new version of the extension will be possible by checking the maximum limit.
  * If the limit is reached, it will automatically delete either the oldest or newest deployed version.
  */
-const ensureVersionUploadPossible = async (dt: Dynatrace, extensionName: string) => {
+const ensureVersionUploadPossible = async (
+  extensionName: string,
+  dt: Dynatrace,
+  signal: AbortSignal,
+) => {
   const fnLogTrace = [...logTrace, "ensureVersionUploadPossible"];
-  const existingVersions = await dt.extensionsV2.listVersions(extensionName).catch(() => {
+  const existingVersions = await dt.extensionsV2.listVersions(extensionName, signal).catch(() => {
     return [];
   });
   if (existingVersions.length >= 10) {
@@ -480,12 +501,13 @@ const ensureVersionUploadPossible = async (dt: Dynatrace, extensionName: string)
       ...fnLogTrace,
     );
     await dt.extensionsV2
-      .deleteVersion(extensionName, existingVersions[0].version)
+      .deleteVersion(extensionName, existingVersions[0].version, signal)
       .catch(async () => {
         logger.debug("Couldn't delete oldest version. Trying to delete newest one.", ...fnLogTrace);
         await dt.extensionsV2.deleteVersion(
           extensionName,
           existingVersions[existingVersions.length - 1].version,
+          signal,
         );
       });
   }
@@ -494,7 +516,7 @@ const ensureVersionUploadPossible = async (dt: Dynatrace, extensionName: string)
 /**
  * Uploads an extension package to the Dynatrace tenant.
  */
-const uploadExtension = async (dt: Dynatrace, fileName: string) => {
+const uploadExtension = async (fileName: string, dt: Dynatrace, signal: AbortSignal) => {
   const fnLogTrace = [...logTrace, "uploadExtension"];
   const workspaceStorage = getWorkspaceStorage();
   const file = readFileSync(path.resolve(workspaceStorage, fileName));
@@ -503,7 +525,7 @@ const uploadExtension = async (dt: Dynatrace, fileName: string) => {
   let uploadStatus: string;
   do {
     [uploadStatus, lastError] = await dt.extensionsV2
-      .upload(file)
+      .upload(file, false, signal)
       .then(() => ["success", undefined] as [string, undefined])
       .catch(
         (err: DynatraceAPIError) => [err.errorParams.message, err] as [string, DynatraceAPIError],
@@ -528,21 +550,30 @@ const uploadExtension = async (dt: Dynatrace, fileName: string) => {
  * removed from the VSCode workspace storage folder (intermediary location).
  * @param zipFileName the name of the .zip file for this build
  * @param oc JSON output channel for communicating errors
- * @param dt optional Dynatrace API Client (needed for real validation)
+ * @param signal optional AbortSignal
  * @returns validation status
  */
-async function validateExtension(zipFileName: string, oc: vscode.OutputChannel, dt?: Dynatrace) {
+async function validateExtension(
+  zipFileName: string,
+  oc: vscode.OutputChannel,
+  signal?: AbortSignal,
+) {
   let valid = true;
   const outerZipPath = path.resolve(getWorkspaceStorage(), zipFileName);
   const finalZipPath = path.resolve(getDistDir(), zipFileName);
+  const dt = await dtMemo();
   if (dt) {
     valid = await dt.extensionsV2
-      .upload(readFileSync(outerZipPath), true)
+      .upload(readFileSync(outerZipPath), true, signal)
       .then(() => true)
-      .catch(async (err: DynatraceAPIError) => {
-        logger.notify("ERROR", "Extension validation failed.");
-        oc.replace(JSON.stringify(err.errorParams, null, 2));
-        oc.show();
+      .catch((err: DynatraceAPIError) => {
+        if (err.errorParams.message === "canceled") {
+          logger.notify("WARN", "Operation cancelled.");
+        } else {
+          logger.notify("ERROR", "Extension validation failed.");
+          oc.replace(JSON.stringify(err.errorParams, null, 2));
+          oc.show();
+        }
         return false;
       });
   }
