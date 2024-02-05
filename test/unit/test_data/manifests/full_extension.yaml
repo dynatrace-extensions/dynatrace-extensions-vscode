@@ -1,0 +1,134 @@
+name: custom:mock.full.extension
+version: 1.0.0
+minDynatraceVersion: 1.280.0
+minEECVersion: 1.275.0
+author:
+  name: Mock Testing
+
+metrics:
+  - key: mock.e1.metric.six
+    metadata:
+      displayName: Mock metric six
+      description: Mock metric six
+      sourceEntityType: mock:entity-1
+  - key: mock.some.metric
+
+topology:
+  types:
+    - name: mock:entity-1
+      displayName: Mock Entity 1
+      enabled: true
+      rules:
+        - idPattern: mock_e1_{mock_attr_1_1}
+          instanceNamePattern: "{mock_attr_1_1}"
+          sources:
+            - sourceType: Metrics
+              condition: $prefix(mock.e1.metric.)
+          attributes:
+            - pattern: "{mock_attr_1_1}"
+              key: mock_attr_1_1
+          role: default
+        - idPattern: mock_e1_{mock_attr_1_1}
+          instanceNamePattern: "{mock_attr_1_1}"
+          sources:
+            - sourceType: Metrics
+              condition: $eq(mock.e1.metric.a.)
+          attributes:
+            - pattern: "{mock_attr_1_2}"
+              key: mock_attr_1_2
+              displayName: MockAttribute_1_2
+          role: default
+
+snmp:
+  - group: metrics
+    subgroups:
+      - subgroup: metrics1
+        featureSet: fs1
+        dimensions:
+          - key: mock.dimension.one
+            value: oid:1.1.1.1.0
+        metrics:
+          - key: mock.e1.metric.one
+            value: oid:1.1.1.1.1
+  - group: metrics2
+    featureSet: fs2
+    dimensions:
+      - key: mock.dimension.two
+        value: oid:1.1.1.0.0
+    metrics:
+      - key: mock.e1.metric.two
+        value: oid:2.2.2.2.2.2
+      - key: mock.e1.metric.three
+        value: oid:3.3.3.3.3.3
+      - key: mock.e1.metric.four
+        value: oid:4.4.4.4.4.4
+      - key: mock.e1.metric.five
+        value: oid:5.5.5.5.5.5
+        type: count
+        featureSet: fs3
+      - key: mock.e1.metric.a.three
+        value: oid:3.3.3.3.33
+        featureSet: fs3
+  - group: metrics3
+    metrics:
+      - key: mock.e1.metric.six
+        value: oid:6.6.6.6.6
+
+screens:
+  - entityType: mock:entity-1
+    chartsCards:
+      - key: charts-card-1
+        displayName: Charts Card 1
+        numberOfVisibleCharts: 2
+        mode: NORMAL
+        charts:
+          - displayName: Metric 3 chart
+            visualizationType: SINGLE_VALUE
+            singleValueConfig:
+              foldTransformation: LAST_VALUE
+              showSparkline: false
+              showTrend: false
+              metric:
+                metricSelector: mock.e1.metric.three:splitBy("dt.entity.mock:entity-1")
+          - displayName: Metric 4 chart
+            visualizationType: GRAPH_CHART
+            graphChartConfig:
+              stacked: true
+              metrics:
+                - metricSelector: mock.e1.metric.four:splitBy("dt.entity.mock:entity-1")
+                  visualization:
+                    seriesType: AREA
+                - metricSelector: mock.e1.metric.five:splitBy("dt.entity.mock:entity-1")
+                  visualization:
+                    seriesType: AREA
+    entitiesListCards:
+      - key: entity-list-card-1
+        pageSize: 20
+        displayName: Entity List Card 1
+        displayCharts: false
+        enableDetailsExpandability: true
+        numberOfVisibleCharts: 2
+        displayIcons: true
+        charts:
+          - displayName: Metric 1 chart
+            detailedChart: true
+            chartAsColumn: true
+            visualizationType: GRAPH_CHART
+            graphChartConfig:
+              stacked: true
+              metrics:
+                - metricSelector: mock.e1.metric.one:splitBy("dt.entity.mock:entity-1"):sum
+                  visualization:
+                    seriesType: AREA
+                - metricSelector: mock.e1.metric.two:splitBy("dt.entity.mock:entity-1"):sum
+                  visualization:
+                    seriesType: AREA
+          - displayName: Metric two chart
+            detailedChart: true
+            chartAsColumn: true
+            visualizationType: GRAPH_CHART
+            graphChartConfig:
+              metrics:
+                - metricSelector: mock.e1.metric.a.three:splitBy("dt.entity.mock:entity-1"):sum
+                  visualization:
+                    seriesType: AREA

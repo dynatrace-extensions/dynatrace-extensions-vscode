@@ -27,7 +27,7 @@ import {
 } from "../interfaces/treeViews";
 import { showConnectedStatusBar } from "../statusBar/connection";
 import { decryptToken } from "../utils/cryptography";
-import { getAllEnvironments } from "../utils/fileSystem";
+import { getAllTenants } from "../utils/fileSystem";
 import * as logger from "../utils/logging";
 
 const ICONS_PATH = path.join(__filename, "..", "..", "src", "assets", "icons");
@@ -205,7 +205,7 @@ class TenantsTreeDataProviderImpl implements TenantsTreeDataProvider {
     }
 
     // If no item specified, grab all environments from global storage
-    return getAllEnvironments().map((tenant: DynatraceTenantDto) => {
+    return getAllTenants().map((tenant: DynatraceTenantDto) => {
       const { id, url, apiUrl, label, current, token } = tenant;
       if (current) {
         showConnectedStatusBar(tenant).catch(() => {});

@@ -29,10 +29,10 @@ import { checkUrlReachable } from "../../utils/conditionCheckers";
 import { encryptToken } from "../../utils/cryptography";
 import {
   createUniqueFileName,
-  getAllEnvironments,
+  getAllTenants,
   getExtensionFilePath,
-  registerEnvironment,
-  removeEnvironment,
+  registerTenant,
+  removeTenant,
 } from "../../utils/fileSystem";
 import * as logger from "../../utils/logging";
 import { createObjectFromSchema } from "../../utils/schemaParsing";
@@ -104,7 +104,7 @@ export const registerTenantsViewCommands = () => {
       `${commandPrefix}.useEnvironment`,
       async (tenant: DynatraceTenant) => {
         const { url, apiUrl, token, label } = tenant;
-        await registerEnvironment(url, apiUrl, encryptToken(token), label, true);
+        await registerTenant(url, apiUrl, encryptToken(token), label, true);
         showConnectedStatusBar(tenant).catch(() => {});
         refreshTenantsTreeView();
       },
@@ -296,7 +296,7 @@ async function addEnvironment() {
     ignoreFocusOut: true,
   });
 
-  await registerEnvironment(url, apiUrl, encryptToken(token), name, current === "Yes");
+  await registerTenant(url, apiUrl, encryptToken(token), name, current === "Yes");
 }
 
 /**
@@ -364,7 +364,7 @@ async function editEnvironment(environment: DynatraceTenant) {
     ignoreFocusOut: true,
   });
 
-  await registerEnvironment(url, apiUrl, encryptToken(token), name, current === "Yes");
+  await registerTenant(url, apiUrl, encryptToken(token), name, current === "Yes");
 }
 
 /**
@@ -385,7 +385,7 @@ async function deleteEnvironment(environment: DynatraceTenant) {
     return;
   }
 
-  await removeEnvironment(environment.id);
+  await removeTenant(environment.id);
 }
 
 /**
@@ -398,7 +398,7 @@ async function deleteEnvironment(environment: DynatraceTenant) {
  */
 async function changeConnection() {
   const fnLogTrace = [...logTrace, "changeConnection"];
-  const environments = getAllEnvironments();
+  const environments = getAllTenants();
 
   // No point showing a list of 1 or empty
   if (environments.length < 2) {
@@ -421,7 +421,7 @@ async function changeConnection() {
     const environment = environments.find(e => e.label === choice);
     if (environment) {
       const { url, apiUrl, token, label } = environment;
-      await registerEnvironment(url, apiUrl, token, label, true);
+      await registerTenant(url, apiUrl, token, label, true);
       showConnectedStatusBar(environment).catch(() => {});
       return;
     }

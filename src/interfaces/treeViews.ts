@@ -17,10 +17,16 @@
 import * as vscode from "vscode";
 import { Dynatrace } from "../dynatrace-api/dynatrace";
 
+export interface ExtensionWorkspaceDto {
+  name: string;
+  id: string;
+  folder: string;
+}
+
 export interface ExtensionWorkspace {
   name: string;
   id: string;
-  folder: string | vscode.Uri;
+  folder: vscode.Uri;
 }
 
 export interface DynatraceTenantDto {

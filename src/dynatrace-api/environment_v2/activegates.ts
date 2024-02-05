@@ -33,9 +33,15 @@ export class ActiveGatesService {
    * The response includes all ActiveGates that are currently connected to the environment or have
    * been connected during last 2 hours.
    * @param params query string parameters for the request
+   * @param signal cancellation signal
    * @returns list of ActiveGates
    */
-  async list(params?: Record<string, unknown>): Promise<ActiveGate[]> {
-    return this.httpClient.paginatedCall<ActiveGate>(this.endpoint, "activeGates", params);
+  async list(params?: Record<string, unknown>, signal?: AbortSignal): Promise<ActiveGate[]> {
+    return this.httpClient.paginatedCall<ActiveGate>({
+      path: this.endpoint,
+      item: "activeGates",
+      params,
+      signal,
+    });
   }
 }

@@ -1,0 +1,5 @@
+name: custom:mock_basic_extension
+version: 0.0.1
+minDynatraceVersion: 1.275.0
+author:
+  name: Mock

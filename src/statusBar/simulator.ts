@@ -458,8 +458,6 @@ export class SimulatorManager {
     }
     const startTime = new Date();
     let success = true;
-    // If needed, make room for new log
-    cleanUpSimulatorLogs();
     const logFilePath = path.join(
       workspaceFolders[0].uri.fsPath,
       "logs",
@@ -650,6 +648,8 @@ export class SimulatorManager {
         `Error starting the simulation ${(err as Error).message}`,
         ...fnLogTrace,
       );
+    } finally {
+      cleanUpSimulatorLogs();
     }
   }
 

@@ -276,7 +276,7 @@ export function getMetricKeysFromEntitiesListCard(
   extension: ExtensionStub,
 ): string[] {
   const metrics: string[] = [];
-  const card = extension.screens?.[screenIdx].chartsCards?.[cardIdx];
+  const card = extension.screens?.[screenIdx].entitiesListCards?.[cardIdx];
   if (card?.charts) {
     card.charts.forEach(c => {
       if (c.graphChartConfig) {
@@ -454,7 +454,7 @@ export function getPrometheusMetricKeys(
   subgroupIdx: number = -2,
 ): string[] {
   const metricKeys: string[] = [];
-  if (groupIdx !== -2) {
+  if (groupIdx >= 0) {
     // Metrics at group level
     const group = extension.prometheus?.[groupIdx];
     if (group?.metrics && group.metrics.length > 0) {
@@ -464,7 +464,7 @@ export function getPrometheusMetricKeys(
           .map(metric => metric.value.split("metric:")[1]),
       );
     }
-    if (subgroupIdx !== -2) {
+    if (subgroupIdx >= 0) {
       // Metrics at subgroup level
       const subgroup = group?.subgroups?.[subgroupIdx];
       if (subgroup?.metrics && subgroup.metrics.length > 0) {
@@ -494,7 +494,7 @@ export function getPrometheusLabelKeys(
   subgroupIdx: number = -2,
 ): string[] {
   const labelKeys: string[] = [];
-  if (groupIdx !== -2) {
+  if (groupIdx >= 0) {
     // Dimensions at group level
     const group = extension.prometheus?.[groupIdx];
     if (group?.dimensions && group.dimensions.length > 0) {
@@ -504,7 +504,7 @@ export function getPrometheusLabelKeys(
           .map(dimension => dimension.value.split("label:")[1]),
       );
     }
-    if (subgroupIdx !== -2) {
+    if (subgroupIdx >= 0) {
       // Dimensions at subgroup level
       const subgroup = group?.subgroups?.[subgroupIdx];
       if (subgroup?.dimensions && subgroup.dimensions.length > 0) {
@@ -520,10 +520,10 @@ export function getPrometheusLabelKeys(
 }
 
 /**
- * Iterates through the datasource group and subgroup metrics to extract the value given
- * a specific metric key.
+ * Iterates through the datasource group and subgroup metrics to extract the value for a specific
+ * metric key.
  * @param metricKey metric key to extract the value for
- * @param extension extesnion.yaml serialized as object
+ * @param extension extension.yaml serialized as object
  * @returns value or empty string of not found
  */
 export function getMetricValue(metricKey: string, extension: ExtensionStub): string {
@@ -664,8 +664,8 @@ export function getAllMetricsByFeatureSet(extension: ExtensionStub): FeatureSetD
 }
 
 /**
- * Extracts all metric keys and types detected within the datasource section of the extension.yaml.
- * Can optionally include values of metrics too.
+ * Extracts all metric information from within the datasource section of the extension.yaml.
+ * Metric values are excluded by default.
  * @param extension extension.yaml serialized as object
  * @returns list of metric keys and their types
  */
@@ -744,39 +744,6 @@ export function getDimensionsFromDataSource(
   });
 
   return dimensions;
-}
-
-/**
- * Extracts all metrics keys and values detected within the datasource section of the extension.yaml
- * @param extension extension.yaml serialized as object
- * @returns list of metric keys
- */
-export function getAllMetricKeysAndValuesFromDataSource(
-  extension: ExtensionStub,
-): { key: string; value: string }[] {
-  const data: { key: string; value: string }[] = [];
-  const datasource = getExtensionDatasource(extension);
-  datasource.forEach(group => {
-    if (group.metrics) {
-      group.metrics.forEach(metric => {
-        if (!data.map(d => d.key).includes(metric.key)) {
-          data.push({ key: metric.key, value: metric.value });
-        }
-      });
-    }
-    if (group.subgroups) {
-      group.subgroups.forEach(subgroup => {
-        if (subgroup.metrics.length > 0) {
-          subgroup.metrics.forEach(metric => {
-            if (!data.map(d => d.key).includes(metric.key)) {
-              data.push({ key: metric.key, value: metric.value });
-            }
-          });
-        }
-      });
-    }
-  });
-  return data;
 }
 
 /**
