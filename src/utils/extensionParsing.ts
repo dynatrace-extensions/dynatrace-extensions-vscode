@@ -834,7 +834,7 @@ export function getRequiredDimensions(
   ruleIdx: number,
   extension: ExtensionStub,
 ): string[] {
-  const rule = extension.topology?.types?.[typeIdx].rules[ruleIdx];
+  const rule = extension.topology?.types?.[typeIdx]?.rules?.[ruleIdx];
   if (!rule?.requiredDimensions) {
     return [];
   }
@@ -934,7 +934,7 @@ export function getEntityName(entityType: string, extension: ExtensionStub) {
  * @returns list of card keys
  */
 export function getEntitiesListCardKeys(screenIdx: number, extension: ExtensionStub) {
-  const cards = extension.screens?.[screenIdx].entitiesListCards;
+  const cards = extension.screens?.[screenIdx]?.entitiesListCards;
   if (cards) {
     return cards.map(card => card.key);
   }
@@ -949,7 +949,7 @@ export function getEntitiesListCardKeys(screenIdx: number, extension: ExtensionS
  * @returns list of chart card keys
  */
 export function getEntityChartCardKeys(screenIdx: number, extension: ExtensionStub): string[] {
-  const cards = extension.screens?.[screenIdx].chartsCards;
+  const cards = extension.screens?.[screenIdx]?.chartsCards;
   if (cards) {
     return cards.map(card => card.key);
   }
@@ -1002,7 +1002,7 @@ export function getReferencedCardsMeta(screenIdx: number, extension: ExtensionSt
 
   unparsedCards.forEach(card => {
     if (parsedCards.findIndex(c => c.key === card.key) === -1) {
-      // Only add valid cards. User may have mis-typed keys.
+      // Entity selector means card is referenced from another entity's screen
       if (!card.entitySelectorTemplate) {
         parsedCards.push({ key: card.key, type: card.type });
       }
