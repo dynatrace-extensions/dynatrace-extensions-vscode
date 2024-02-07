@@ -11,6 +11,8 @@
 .vscodeignore
 tsconfig.src.json
 tsconfig.test.json
+tsconfig.json
+jest.config.js
 package.json
 package-lock.json
 *.md
@@ -34,3 +36,6 @@ dist/
 # All webview-ui files except build
 webview-ui/
 !webview-ui/build/static/js/main.js
+
+# Test coverage
+coverage

@@ -19,7 +19,6 @@
  ********************************************************************************/
 
 import {
-  copyFileSync,
   existsSync,
   mkdirSync,
   readFileSync,
@@ -40,7 +39,7 @@ import {
   RemoteExecutionSummary,
   RemoteTarget,
 } from "../interfaces/simulator";
-import { DynatraceTenantDto, ExtensionWorkspace } from "../interfaces/treeViews";
+import { DynatraceTenantDto, ExtensionWorkspaceDto } from "../interfaces/treeViews";
 import { notify } from "./logging";
 import * as logger from "./logging";
 
@@ -157,9 +156,8 @@ export async function registerWorkspace() {
     );
     return;
   }
-  const workspacesJson = path.join(context.globalStorageUri.fsPath, "extensionWorkspaces.json");
-  const workspaces = JSON.parse(readFileSync(workspacesJson).toString()) as ExtensionWorkspace[];
-  const workspace: ExtensionWorkspace = {
+  const workspaces = getAllWorkspaces();
+  const workspace: ExtensionWorkspaceDto = {
     name: vscode.workspace.name ?? "",
     id: path.basename(path.dirname(context.storageUri.fsPath)),
     folder: vscode.workspace.workspaceFolders[0].uri.toString(),
@@ -172,7 +170,7 @@ export async function registerWorkspace() {
     workspaces[currentIndex] = workspace;
   }
 
-  writeFileSync(workspacesJson, JSON.stringify(workspaces));
+  writeFileSync(getWorkspacesJsonPath(), JSON.stringify(workspaces));
 
   // Update the state
   await vscode.commands.executeCommand(
@@ -185,17 +183,8 @@ export async function registerWorkspace() {
 /**
  * Gets metadata of all extension workspaces currently registered in the global storage.
  */
-export function getAllWorkspaces(): ExtensionWorkspace[] {
-  const context = getActivationContext();
-  const workspacesJson = path.join(context.globalStorageUri.fsPath, "extensionWorkspaces.json");
-  return (JSON.parse(readFileSync(workspacesJson).toString()) as ExtensionWorkspace[]).map(
-    (extension: ExtensionWorkspace) =>
-      ({
-        id: extension.id,
-        name: extension.name,
-        folder: vscode.Uri.parse(decodeURI(extension.folder as string)),
-      } as ExtensionWorkspace),
-  );
+export function getAllWorkspaces(): ExtensionWorkspaceDto[] {
+  return JSON.parse(readFileSync(getWorkspacesJsonPath()).toString()) as ExtensionWorkspaceDto[];
 }
 
 /**
@@ -205,7 +194,7 @@ export function getAllWorkspaces(): ExtensionWorkspace[] {
 export function findWorkspace(
   workspaceName?: string,
   workspaceId?: string,
-): ExtensionWorkspace | undefined {
+): ExtensionWorkspaceDto | undefined {
   if (workspaceName) {
     return getAllWorkspaces().find(ws => ws.name === workspaceName);
   }
@@ -215,81 +204,69 @@ export function findWorkspace(
 }
 
 /**
- * Gets metadata of all Dynatrace environments currently registered in the global storage.
- * @returns all environments
+ * Gets metadata of all Dynatrace tenants currently registered in the global storage.
  */
-export function getAllEnvironments(): DynatraceTenantDto[] {
-  const context = getActivationContext();
-  const environmentsJson = path.join(context.globalStorageUri.fsPath, "dynatraceEnvironments.json");
-  return JSON.parse(readFileSync(environmentsJson).toString()) as DynatraceTenantDto[];
+export function getAllTenants(): DynatraceTenantDto[] {
+  return JSON.parse(readFileSync(getTenantsJsonPath()).toString()) as DynatraceTenantDto[];
 }
 
 /**
- * Saves the metadata of a workspace in the global storage. If previous metadata exists, it
- * will be overwritten.
- * @param url URL for this environment
- * @param token API Token for Dynatrace API Calls. Note: this is stored as is, so encrypt it
- *              before sending it through
+ * Saves the metadata of a tenant in the global storage. Previous values are overwritten.
+ * @param url URL for browser pages of the tenant
+ * @param apiUrl URL for API calls to the tenant
+ * @param token API Token for Dynatrace API Calls. Note: must be encrypted already.
  * @param name An optional name/label for this environment
  * @param current if true, this will be set as the currently used environment
  */
-export async function registerEnvironment(
+export async function registerTenant(
   url: string,
   apiUrl: string,
   token: string,
   name?: string,
   current: boolean = false,
 ) {
-  const context = getActivationContext();
-  const environmentsJson = path.join(context.globalStorageUri.fsPath, "dynatraceEnvironments.json");
   const id = url.includes("/e/") ? url.split("/e/")[1] : url.split("https://")[1].substring(0, 8);
-  const environment: DynatraceTenantDto = { id, url, apiUrl, token, current, label: name ?? id };
+  const tenant: DynatraceTenantDto = { id, url, apiUrl, token, current, label: name ?? id };
 
   // If this will be the currently used environment, deactivate others
-  let environments = JSON.parse(readFileSync(environmentsJson).toString()) as DynatraceTenantDto[];
+  let tenants = getAllTenants();
   if (current) {
-    environments = environments.map(e => {
-      e.current = e.current ? !e.current : e.current;
-      return e;
+    tenants = tenants.map(t => {
+      t.current = t.current ? !t.current : t.current;
+      return t;
     });
   }
 
   // Update any existing entries, otherwise create new
-  const index = environments.findIndex(e => e.id === id);
+  const index = tenants.findIndex(t => t.id === id);
   if (index === -1) {
-    environments.push(environment);
+    tenants.push(tenant);
   } else {
-    environments[index] = environment;
+    tenants[index] = tenant;
   }
-  writeFileSync(environmentsJson, JSON.stringify(environments));
+  writeFileSync(getTenantsJsonPath(), JSON.stringify(tenants));
 
   // Update the state
   await vscode.commands.executeCommand(
     "setContext",
     "dynatrace-extensions.numEnvironments",
-    environments.length,
+    tenants.length,
   );
 }
 
 /**
- * Removes a Dynatrace Environment from global extension storage, thus unregistering it from the
- * extension. The environment is specified by ID.
- * @param environmentId id of the environment to remove
+ * Removes a Dynatrace Tenant from global extension storage, thus unregistering it from the
+ * extension. The tenant is specified by ID.
  */
-export async function removeEnvironment(environmentId: string) {
-  const context = getActivationContext();
-  const environmentsJson = path.join(context.globalStorageUri.fsPath, "dynatraceEnvironments.json");
-  const environments = JSON.parse(
-    readFileSync(environmentsJson).toString(),
-  ) as DynatraceTenantDto[];
-
-  writeFileSync(environmentsJson, JSON.stringify(environments.filter(e => e.id !== environmentId)));
+export async function removeTenant(tenantId: string) {
+  const tenants = getAllTenants();
+  writeFileSync(getTenantsJsonPath(), JSON.stringify(tenants.filter(t => t.id !== tenantId)));
 
   // Update the state
   await vscode.commands.executeCommand(
     "setContext",
     "dynatrace-extensions.numEnvironments",
-    environments.length - 1,
+    getAllTenants().length,
   );
 }
 
@@ -299,38 +276,39 @@ export async function removeEnvironment(environmentId: string) {
  * @param workspaceId id of the workspace to remove
  */
 export async function removeWorkspace(workspaceId: string) {
-  const context = getActivationContext();
-  const workspacesJson = path.join(context.globalStorageUri.fsPath, "extensionWorkspaces.json");
-  const workspaces = JSON.parse(readFileSync(workspacesJson).toString()) as ExtensionWorkspace[];
-
-  writeFileSync(workspacesJson, JSON.stringify(workspaces.filter(w => w.id !== workspaceId)));
+  const workspaces = getAllWorkspaces();
+  writeFileSync(
+    getWorkspacesJsonPath(),
+    JSON.stringify(
+      workspaces
+        .filter(w => w.id !== workspaceId)
+        .map(({ name, id, folder }) => ({
+          name,
+          id,
+          folder: folder.toString(),
+        })),
+    ),
+  );
 
   // Update the state
   await vscode.commands.executeCommand(
     "setContext",
     "dynatrace-extensions.numWorkspaces",
-    workspaces.length - 1,
+    getAllWorkspaces().length,
   );
 }
 
 /**
  * Writes an extension simulator summary to the global storage.
- * @param summary - the summary to write
  */
 export function registerSimulatorSummary(summary: LocalExecutionSummary | RemoteExecutionSummary) {
-  const context = getActivationContext();
-  const summariesJson = path.join(context.globalStorageUri.fsPath, "summaries.json");
-  const summaries = JSON.parse(readFileSync(summariesJson).toString()) as (
-    | LocalExecutionSummary
-    | RemoteExecutionSummary
-  )[];
+  const summaries = getSimulatorSummaries();
   summaries.push(summary);
-  writeFileSync(summariesJson, JSON.stringify(summaries));
+  writeFileSync(getSummariesJsonPath(), JSON.stringify(summaries));
 }
 
 /**
  * Gets all extension simulator summaries from the global storage.
- * @returns all summaries
  */
 export function getSimulatorSummaries(): (LocalExecutionSummary | RemoteExecutionSummary)[] {
   const context = getActivationContext();
@@ -350,17 +328,15 @@ export function getSimulatorSummaries(): (LocalExecutionSummary | RemoteExecutio
  * Does some basic clean-up of the simulator log files for the current workspace.
  * The user can disable the feature and also control the max number of files kept.
  * The max number of files is not handled per workspace yet.
- * @param context - Extension Context
  */
 export function cleanUpSimulatorLogs() {
-  // eslint-disable-next-line no-secrets/no-secrets
   const fnLogTrace = [...logTrace, "cleanUpSimulatorLogs"];
   const maxFiles = vscode.workspace
     .getConfiguration("dynatraceExtensions.simulator", null)
     .get<number>("maximumLogFiles");
 
   // No clean-up is done if user disabled it
-  if (!maxFiles || maxFiles < 0) return;
+  if (maxFiles === undefined || maxFiles < 0) return;
 
   logger.debug(`Cleaning up simulator logs. Keeping only ${String(maxFiles)} files`, ...fnLogTrace);
 
@@ -376,13 +352,13 @@ export function cleanUpSimulatorLogs() {
 
   // Keep the summaries based on max number of files, delete the rest
   Object.values(summariesByWorkspace).forEach(summaryList => {
-    if ((summaryList ?? []).length <= maxFiles - 1) {
+    if ((summaryList ?? []).length <= maxFiles) {
       newSummaries.push(...(summaryList ?? []));
     } else {
       summaryList
         ?.sort((a, b) => b.startTime.getTime() - a.startTime.getTime())
         .forEach((summary, i) => {
-          if (i < maxFiles - 1) {
+          if (i < maxFiles) {
             newSummaries.push(summary);
           } else {
             try {
@@ -399,29 +375,21 @@ export function cleanUpSimulatorLogs() {
   });
 
   // Write the new summaries list to disk
-  const context = getActivationContext();
-  const summariesPath = path.join(context.globalStorageUri.fsPath, "summaries.json");
-  writeFileSync(summariesPath, JSON.stringify(newSummaries));
+  writeFileSync(getSummariesJsonPath(), JSON.stringify(newSummaries));
 }
 
 /**
  * Registers a list of targets for the extension simulator in the global storage.
- * @param targets - the targets to write
  */
 export function registerSimulatorTargets(targets: RemoteTarget[]) {
-  const context = getActivationContext();
-  const targetsJson = path.join(context.globalStorageUri.fsPath, "targets.json");
-  writeFileSync(targetsJson, JSON.stringify(targets));
+  writeFileSync(getTargetsJsonPath(), JSON.stringify(targets));
 }
 
 /**
  * Registers a list of targets for the extension simulator in the global storage.
- * @param targets - the targets to write
  */
 export function registerSimulatorTarget(target: RemoteTarget) {
-  const context = getActivationContext();
-  const targetsJson = path.join(context.globalStorageUri.fsPath, "targets.json");
-  const currentTargets = JSON.parse(readFileSync(targetsJson).toString()) as RemoteTarget[];
+  const currentTargets = getSimulatorTargets();
 
   // If target already exists, update the details
   const foundIdx = currentTargets.findIndex(t => t.name === target.name);
@@ -431,31 +399,24 @@ export function registerSimulatorTarget(target: RemoteTarget) {
     currentTargets.push(target);
   }
 
-  writeFileSync(targetsJson, JSON.stringify(currentTargets));
+  registerSimulatorTargets(currentTargets);
 }
 
 /**
  * Deletes a target from the extension's global storage.
- * @param target - the target to delete
  */
 export function deleteSimulatorTarget(target: RemoteTarget) {
-  const context = getActivationContext();
-  const targetsJson = path.join(context.globalStorageUri.fsPath, "targets.json");
-  const currentTargets = JSON.parse(readFileSync(targetsJson).toString()) as RemoteTarget[];
-
+  const currentTargets = getSimulatorTargets();
   const newTargets = currentTargets.filter(t => t.name !== target.name);
 
-  writeFileSync(targetsJson, JSON.stringify(newTargets));
+  writeFileSync(getTargetsJsonPath(), JSON.stringify(newTargets));
 }
 
 /**
  * Fetches all extension simulator summaries from the global storage.
- * @returns - all targets
  */
 export function getSimulatorTargets(): RemoteTarget[] {
-  const context = getActivationContext();
-  const targetsJson = path.join(context.globalStorageUri.fsPath, "targets.json");
-  return JSON.parse(readFileSync(targetsJson).toString()) as RemoteTarget[];
+  return JSON.parse(readFileSync(getTargetsJsonPath()).toString()) as RemoteTarget[];
 }
 
 /**
@@ -465,37 +426,28 @@ export function getSimulatorTargets(): RemoteTarget[] {
  * @param component the component where the certificate will be written
  */
 export function uploadComponentCert(certPath: string, component: "OneAgent" | "ActiveGate") {
+  // Transform filename for easy recognition
   let certFilename = path.basename(path.resolve(certPath));
+  const [name, ext = ""] = certFilename.split(".");
+  const workspaceName = vscode.workspace.name ?? "generic";
+  const fileExtension = ext !== "" ? `.${ext}` : "";
+  certFilename = `${name}_${workspaceName}${fileExtension}`;
 
-  const uploadDir =
-    process.platform === "win32"
-      ? component === "OneAgent"
-        ? "C:\\ProgramData\\dynatrace\\oneagent\\agent\\config\\certificates"
-        : "C:\\ProgramData\\dynatrace\\remotepluginmodule\\agent\\conf\\certificates"
-      : component === "OneAgent"
-      ? "/var/lib/dynatrace/oneagent/agent/config/certificates"
-      : "/var/lib/dynatrace/remotepluginmodule/agent/conf/certificates";
-
+  // Ensure directory exists
+  const uploadDir = getExtensionCertLocation(component);
+  const uploadPath = path.join(uploadDir, certFilename);
   if (!existsSync(uploadDir)) {
-    mkdirSync(uploadDir);
+    mkdirSync(uploadDir, { recursive: true });
   }
+
   // Avoid potential overwrites to some degree
-  if (
-    (existsSync(path.join(uploadDir, certFilename)) &&
-      !(
-        readFileSync(certPath).toString() ===
-        readFileSync(path.join(uploadDir, certFilename)).toString()
-      )) ||
-    !existsSync(path.join(uploadDir, certFilename))
-  ) {
+  if (isDifferentFile(certPath, uploadPath)) {
     logger.info(
       `Copying certificate file from ${certPath} to ${uploadDir}`,
       ...logTrace,
       "uploadComponentCert",
     );
-    const [name, ext] = certFilename.split(".");
-    certFilename = `${name}_${vscode.workspace.name ?? ""}.${ext}`;
-    copyFileSync(certPath, path.join(uploadDir, certFilename));
+    writeFileSync(uploadPath, readFileSync(certPath));
   }
 }
 
@@ -515,7 +467,6 @@ export const readExtensionManifest = () => {
  * Searches the known extension workspace path for the extension.yaml file and returns the
  * found result so long as the extension directory is in the root of the workspace or one
  * directory deep (e.g. src/extension/extension.yaml)
- * @returns
  */
 export function getExtensionFilePath(): string | undefined {
   if (!vscode.workspace.workspaceFolders) {
@@ -546,20 +497,20 @@ export function getExtensionWorkspaceDir(): string | undefined {
   const rootEntries = readdirSync(rootPath);
   if (
     rootEntries.includes("extension") &&
-    statSync(path.resolve(rootPath, "extension")).isDirectory()
+    statSync(path.join(rootPath, "extension")).isDirectory()
   ) {
-    return path.resolve(rootPath, "extension");
+    return path.join(rootPath, "extension");
   }
 
   // Look one level deep
-  const rootFolders = rootEntries.filter(f => statSync(path.resolve(rootPath, f)).isDirectory());
+  const rootFolders = rootEntries.filter(f => statSync(path.join(rootPath, f)).isDirectory());
   for (const folder of rootFolders) {
-    const folderEntries = readdirSync(path.resolve(rootPath, folder));
+    const folderEntries = readdirSync(path.join(rootPath, folder));
     if (
       folderEntries.includes("extension") &&
-      statSync(path.resolve(rootPath, folder, "extension")).isDirectory()
+      statSync(path.join(rootPath, folder, "extension")).isDirectory()
     ) {
-      return path.resolve(rootPath, folder, "extension");
+      return path.join(rootPath, folder, "extension");
     }
   }
 }
@@ -568,8 +519,6 @@ export function getExtensionWorkspaceDir(): string | undefined {
  * Resolves relative paths correctly. This is needed because VS Code extensions do not have
  * correct awareness of path relativity - they are all rooted in vscode installation directory
  * e.g. "C:\Program Files\Microsoft VS Code"
- * @param pathToResolve
- * @returns resolved absolute path
  */
 export function resolveRealPath(pathToResolve: string): string {
   // Absolute paths return straight away
@@ -772,7 +721,7 @@ export async function migrateFromLegacyExtension() {
       copySync(legacyGlobalStoragePath, globalStoragePath, { overwrite: true });
 
       // Convert all environments to new format with apiUrl attribute
-      const environments = getAllEnvironments();
+      const environments = getAllTenants();
       if (environments.length > 0) {
         writeFileSync(
           path.resolve(globalStoragePath, "dynatraceEnvironments.json"),
@@ -830,11 +779,7 @@ export async function migrateFromLegacyExtension() {
 
       progress.report({ message: "Migrating workspace settings" });
       for (const workspace of workspaces) {
-        const settingsFilePath = path.resolve(
-          (workspace.folder as vscode.Uri).fsPath,
-          ".vscode",
-          "settings.json",
-        );
+        const settingsFilePath = path.resolve(workspace.folder, ".vscode", "settings.json");
         // For any workspace that has settings
         if (existsSync(settingsFilePath)) {
           // Change the old ID for new one
@@ -890,3 +835,40 @@ export function getSnmpMibFiles(): string[] {
   }
   return [];
 }
+
+const getTenantsJsonPath = () => {
+  const context = getActivationContext();
+  return path.join(context.globalStorageUri.fsPath, "dynatraceEnvironments.json");
+};
+
+const getWorkspacesJsonPath = () => {
+  const context = getActivationContext();
+  return path.join(context.globalStorageUri.fsPath, "extensionWorkspaces.json");
+};
+
+const getSummariesJsonPath = () => {
+  const context = getActivationContext();
+  return path.join(context.globalStorageUri.fsPath, "summaries.json");
+};
+
+const getTargetsJsonPath = () => {
+  const context = getActivationContext();
+  return path.join(context.globalStorageUri.fsPath, "targets.json");
+};
+
+const getExtensionCertLocation = (component: "OneAgent" | "ActiveGate") => {
+  return process.platform === "win32"
+    ? component === "OneAgent"
+      ? "C:\\ProgramData\\dynatrace\\oneagent\\agent\\config\\certificates"
+      : "C:\\ProgramData\\dynatrace\\remotepluginmodule\\agent\\conf\\certificates"
+    : component === "OneAgent"
+    ? "/var/lib/dynatrace/oneagent/agent/config/certificates"
+    : "/var/lib/dynatrace/remotepluginmodule/agent/conf/certificates";
+};
+
+const isDifferentFile = (srcPath: string, destPath: string) => {
+  return !existsSync(destPath) || (existsSync(destPath) && !hasSameContent(srcPath, destPath));
+};
+
+const hasSameContent = (srcPath: string, destPath: string) =>
+  readFileSync(srcPath).toString() === readFileSync(destPath).toString();

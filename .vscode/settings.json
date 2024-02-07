@@ -12,5 +12,7 @@
     "eslint.workingDirectories": [
       "./", "./webview-ui"
     ],
-    "jest.jestCommandLine": ".\\node_modules\\.bin\\jest"
+    "[typescript]": {
+      "editor.defaultFormatter": "esbenp.prettier-vscode"
+    }
 }

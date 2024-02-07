@@ -36,10 +36,11 @@ export class SettingsService {
 
   /**
    * Lists all available settings schemas
+   * @param signal cancellation signal
    * @returns schemas
    */
-  async listSchemas(): Promise<SchemaStub[]> {
-    return this.httpClient.paginatedCall(this.schemasEndpoint, "items");
+  async listSchemas(signal?: AbortSignal): Promise<SchemaStub[]> {
+    return this.httpClient.paginatedCall({ path: this.schemasEndpoint, item: "items", signal });
   }
 
   /**
@@ -50,6 +51,7 @@ export class SettingsService {
    * @param fields A list of fields to be included to the response. The provided set of fields
    * replaces the default set.
    * @param pageSize The amount of settings objects in a single response payload.
+   * @param signal cancellation signal
    * @returns list of settings objects matching criteria
    */
   async listObjects(
@@ -57,12 +59,13 @@ export class SettingsService {
     scopes?: string,
     fields?: string,
     pageSize?: number,
+    signal?: AbortSignal,
   ): Promise<SettingsObject[]> {
-    return this.httpClient.paginatedCall(this.objectsEndpoint, "items", {
-      schemaIds: schemaIds,
-      scopes: scopes,
-      fields: fields,
-      pageSize: pageSize,
+    return this.httpClient.paginatedCall({
+      path: this.objectsEndpoint,
+      item: "items",
+      params: { schemaIds, scopes, fields, pageSize },
+      signal,
     });
   }
 
@@ -70,14 +73,16 @@ export class SettingsService {
    * Updates an existing settings object.
    * @param objectId The ID of the required settings object.
    * @param payload The updated details of the settings object.
+   * @param signal cancellation signal
    * @returns
    */
-  async putObject(objectId: string, payload: SettingsObjectUpdate) {
-    return this.httpClient.makeRequest(
-      `${this.objectsEndpoint}/${objectId}`,
-      payload as unknown as Record<string, unknown>,
-      "PUT",
-    );
+  async putObject(objectId: string, payload: SettingsObjectUpdate, signal?: AbortSignal) {
+    return this.httpClient.makeRequest({
+      path: `${this.objectsEndpoint}/${objectId}`,
+      method: "PUT",
+      body: payload as unknown as Record<string, unknown>,
+      signal,
+    });
   }
 
   /**
@@ -86,15 +91,20 @@ export class SettingsService {
    * @param payload Contains the settings objects to be created.
    * @param validateOnly If true, the request runs only validation of the submitted settings objects
    * without saving them.
+   * @param signal cancellation signal
    * @returns
    */
-  async postObject(payload: SettingsObjectCreate[], validateOnly: boolean = false) {
-    return this.httpClient.makeRequest(
-      `${this.objectsEndpoint}`,
-      payload as unknown as Record<string, unknown>,
-      "POST",
-      {},
-      { validateOnly: validateOnly },
-    );
+  async postObject(
+    payload: SettingsObjectCreate[],
+    validateOnly: boolean = false,
+    signal?: AbortSignal,
+  ) {
+    return this.httpClient.makeRequest({
+      path: `${this.objectsEndpoint}`,
+      method: "POST",
+      body: payload as unknown as Record<string, unknown>,
+      params: { validateOnly },
+      signal,
+    });
   }
 }

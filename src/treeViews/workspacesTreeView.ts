@@ -64,7 +64,7 @@ export const refreshWorkspacesTreeView = () => {
  * or an extension manifest within that workspace.
  * @param label the label to be shown in the tree view (as node)
  * @param collapsibleState whether the item supports and is either collapsed or expanded
- * @param path the path to the workspace or extension (depending on item type)
+ * @param workspacePath the path to the workspace or extension (depending on item type)
  * @param icon the icon to display next to the label
  * @param contextValue a keyword that can be referenced in package.json to single out this item type
  * @param version if item represents an extension, what version is it
@@ -72,7 +72,7 @@ export const refreshWorkspacesTreeView = () => {
 const createWorkspacesTreeItem = (
   label: string,
   collapsibleState: vscode.TreeItemCollapsibleState,
-  workspacePath: vscode.Uri,
+  workspacePath: string,
   icon:
     | string
     | vscode.Uri
@@ -87,7 +87,9 @@ const createWorkspacesTreeItem = (
   version: version,
   tooltip: version ? `${label}-${version}` : label,
   description: version,
-  path: workspacePath,
+  path: workspacePath.startsWith("file://")
+    ? vscode.Uri.parse(workspacePath)
+    : vscode.Uri.file(workspacePath),
   iconPath: icon,
   contextValue: contextValue,
 });
@@ -136,14 +138,13 @@ class WorkspacesTreeDataProviderImpl implements WorkspacesTreeDataProvider {
         ...glob.sync("*/extension/extension.yaml", { cwd: workspacePath }),
       ];
       extensionFiles.forEach(filepath => {
-        const extension = yaml.parse(
-          readFileSync(path.join(workspacePath, filepath)).toString(),
-        ) as ExtensionStub;
+        const extensionFilePath = path.join(workspacePath, filepath);
+        const extension = yaml.parse(readFileSync(extensionFilePath).toString()) as ExtensionStub;
         extensions.push(
           createWorkspacesTreeItem(
             extension.name,
             vscode.TreeItemCollapsibleState.None,
-            vscode.Uri.file(path.join(workspacePath, filepath)),
+            extensionFilePath,
             ICONS.EXTENSION_MANIFEST,
             "extension",
             `${extension.name}-${extension.version}`,
@@ -158,10 +159,9 @@ class WorkspacesTreeDataProviderImpl implements WorkspacesTreeDataProvider {
       createWorkspacesTreeItem(
         workspace.name.toUpperCase(),
         vscode.TreeItemCollapsibleState.Collapsed,
-        workspace.folder as vscode.Uri,
+        workspace.folder,
         vscode.workspace.workspaceFolders &&
-          vscode.workspace.workspaceFolders[0].uri.fsPath ===
-            (workspace.folder as vscode.Uri).fsPath
+          vscode.workspace.workspaceFolders[0].uri.toString() === workspace.folder
           ? ICONS.EXTENSION_CURRENT
           : ICONS.EXTENSION,
         "extensionWorkspace",
