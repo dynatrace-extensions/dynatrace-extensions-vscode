@@ -35,6 +35,8 @@ import {
   OID_SYNTAX_INVALID,
   OID_TABLE_OBJ_AS_STATIC,
   REFERENCED_CARD_NOT_DEFINED,
+  DEFINED_VAR_NOT_REFERENCED,
+  REFERENCED_VAR_NOT_DEFINED,
 } from "../constants";
 import { ExtensionStub } from "../interfaces/extensionMeta";
 import {
@@ -129,6 +131,7 @@ const updateDiagnosticsCollection = async (document?: vscode.TextDocument) => {
     diagnoseCardKeys(document, parsedExtension),
     diagnoseMetricOids(document, parsedExtension),
     diagnoseDimensionOids(document, parsedExtension),
+    diagnoseVariables(document, parsedExtension),
   ]).then(results => results.reduce((collection, result) => collection.concat(result), []));
 
   getDiagnosticsCollection().set(document.uri, diagnostics);
@@ -308,6 +311,56 @@ const diagnoseCardKeys = async (
           ),
         );
       });
+  });
+
+  return diagnostics;
+};
+
+/**
+ * Provide diagnostics related to variables within an extension.
+ * Users are warned if variables are defined but are not referenced.
+ * Errors are raised if variables are referenced that are not defined.
+ * @param document text document where diagnostics should be applied
+ * @param extension extension.yaml serialized as object
+ * @returns list of diagnostics
+ */
+const diagnoseVariables = async (
+  document: vscode.TextDocument,
+  extension: ExtensionStub,
+): Promise<vscode.Diagnostic[]> => {
+  const content = document.getText();
+  const diagnostics: vscode.Diagnostic[] = [];
+  const refVars: Array<string> = [];
+  const defVars: Array<string> = [];
+  const varRegEx = /\s(var:[a-zA-z.-_]+)\s/gm;
+
+  extension.vars?.forEach(v => defVars.push(v.id));
+
+  let match;
+  while ((match = varRegEx.exec(content)) != null) {
+    const referencedVarKey = match[1].split(":")[1];
+    refVars.push(referencedVarKey);
+    if (!defVars.includes(referencedVarKey)) {
+      diagnostics.push(
+        createExtensionDiagnostic(
+          document.positionAt(match.index + 1),
+          document.positionAt(match.index + `var:${referencedVarKey} `.length),
+          REFERENCED_VAR_NOT_DEFINED,
+        ),
+      );
+    }
+  }
+  defVars.forEach(dv => {
+    if (!refVars.includes(dv)) {
+      const keyStart = content.indexOf(`id: ${dv}`);
+      diagnostics.push(
+        createExtensionDiagnostic(
+          document.positionAt(keyStart),
+          document.positionAt(keyStart + `id: ${dv})`.length),
+          DEFINED_VAR_NOT_REFERENCED,
+        ),
+      );
+    }
   });
 
   return diagnostics;
