@@ -112,7 +112,7 @@ export class MockExtensionContext implements vscode.ExtensionContext {
   storagePath;
   globalStorageUri;
   globalStoragePath;
-  logUri = new MockUri();
+  logUri;
   logPath = "";
   extensionMode = 3;
   extension = {
@@ -131,6 +131,7 @@ export class MockExtensionContext implements vscode.ExtensionContext {
   constructor(globalStoragePath?: string, workspaceStoragePath?: string) {
     this.globalStoragePath = globalStoragePath ?? "";
     this.globalStorageUri = new MockUri(this.globalStoragePath);
+    this.logUri = new MockUri(`${this.globalStoragePath}/logs`);
 
     this.storagePath = workspaceStoragePath;
     if (workspaceStoragePath) {

@@ -1,4 +1,3 @@
-import * as path from "path";
 import AdmZip = require("adm-zip");
 import * as vscode from "vscode";
 import { getActivationContext } from "../extension";
@@ -6,8 +5,7 @@ import * as logger from "../utils/logging";
 
 export const downloadSupportArchiveWorkflow = async () => {
   const context = getActivationContext();
-  const logsDir = path.join(context.globalStorageUri.fsPath, "logs");
-  await downloadSupportArchive(logsDir);
+  await downloadSupportArchive(context.logUri.fsPath);
 };
 
 /**

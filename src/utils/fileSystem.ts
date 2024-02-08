@@ -85,7 +85,7 @@ export function initializeGlobalStorage() {
   const idTokenPath = path.join(globalStoragePath, "idToken.txt");
   const targetsJson = path.join(globalStoragePath, "targets.json");
   const summariesJson = path.join(globalStoragePath, "summaries.json");
-  const logsDir = path.join(globalStoragePath, "logs");
+  const logsDir = context.logUri.fsPath;
 
   // Create global storage folder if needed
   if (!existsSync(globalStoragePath)) {

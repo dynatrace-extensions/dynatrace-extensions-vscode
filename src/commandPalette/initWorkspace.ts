@@ -14,10 +14,11 @@
   limitations under the License.
  */
 
-import { existsSync, mkdirSync, readFileSync, readdirSync, renameSync, rmdirSync } from "fs";
+import { existsSync, mkdirSync, readFileSync, readdirSync, rmdirSync } from "fs";
 import * as path from "path";
 import { TextEncoder } from "util";
 import AdmZip = require("adm-zip");
+import { moveSync } from "fs-extra";
 import * as vscode from "vscode";
 import { Dynatrace } from "../dynatrace-api/dynatrace";
 import { getActivationContext } from "../extension";
@@ -345,11 +346,8 @@ async function pythonExtensionSetup(
     envOptions,
   );
 
-  // Tidy up
-  // TODO - This doesn't work if the workspace is in another drive in Windows.
-  // Can't rename from C: to D: for example
   readdirSync(path.resolve(tempPath, chosenName)).forEach(p =>
-    renameSync(path.resolve(tempPath, chosenName, p), path.resolve(rootPath, p)),
+    moveSync(path.resolve(tempPath, chosenName, p), path.resolve(rootPath, p)),
   );
   rmdirSync(path.resolve(tempPath, chosenName));
 }
