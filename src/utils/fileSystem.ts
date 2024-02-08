@@ -759,6 +759,7 @@ export async function migrateFromLegacyExtension() {
         "diagnostics.extensionName",
         "diagnostics.metricKeys",
         "diagnostics.cardKeys",
+        "diagnostics.variables",
         "diagnostics.snmp",
         "developerCertkeyLocation",
         "rootOrCaCertificateLocation",

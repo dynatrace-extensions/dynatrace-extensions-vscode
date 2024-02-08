@@ -330,6 +330,16 @@ const diagnoseVariables = async (
 ): Promise<vscode.Diagnostic[]> => {
   const content = document.getText();
   const diagnostics: vscode.Diagnostic[] = [];
+
+  // Honor the user's settings
+  if (
+    !vscode.workspace
+      .getConfiguration("dynatraceExtensions", null)
+      .get("diagnostics.variables", false) as boolean
+  ) {
+    return [];
+  }
+
   const refVars: Array<string> = [];
   const defVars: Array<string> = [];
   const varRegEx = /\s(var:[a-zA-z.-_]+)\s/gm;
