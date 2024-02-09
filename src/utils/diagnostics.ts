@@ -342,7 +342,7 @@ const diagnoseVariables = async (
 
   const refVars: Array<string> = [];
   const defVars: Array<string> = [];
-  const varRegEx = /\s(var:[a-zA-z.-_]+)\s/gm;
+  const varRegEx = /(var:[a-zA-z.-_]+)/gm;
 
   extension.vars?.forEach(v => defVars.push(v.id));
 
