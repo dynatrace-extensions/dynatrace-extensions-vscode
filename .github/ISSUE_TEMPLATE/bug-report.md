@@ -1,6 +1,6 @@
 ---
 name: Bug report
-description: Help us fix something that's broken
+about: Help us fix something that's broken
 title: '# 🪲 Bug: -- title --'
 labels: bug
 assignees: ''
