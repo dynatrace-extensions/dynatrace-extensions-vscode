@@ -16,7 +16,7 @@ body:
     attributes:
       label: Description
       description: What is this bug about? What happened? What were you expecting to happen?
-    validators:
+    validations:
       required: true
   - id: bug-steps
     type: textarea
@@ -28,7 +28,7 @@ body:
         2. Click on '....'
         3. Scroll down to '....'
         4. See error
-    validators:
+    validations:
       required: true
   - id: bug-support
     type: checkboxes
