@@ -34,7 +34,7 @@ body:
     type: checkboxes
     attributes:
       label: Support information
-      description: Attachements to support us in troubleshooting this bug
+      description: Attachments to support us in troubleshooting this bug. * Please attach these to the description field! *
       options:
         - label: Screenshots
         - label: Extension manifest file
