@@ -1,10 +1,11 @@
 ---
 name: Bug report
 about: Help us fix something that's broken
-title: '# 🪲 Bug: -- title --'
+title: ''
 labels: bug
 assignees: ''
 ---
+# 🪲 Bug: -- title --
 
 Please provide a clear and concise description of what the bug is about, and what was your expected behavior at that point.
 
