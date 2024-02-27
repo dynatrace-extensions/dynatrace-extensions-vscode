@@ -68,50 +68,9 @@ export interface ExtensionDiagnosticDto {
 }
 
 /**
- * Sets up event-based diagnostic updates. Our diagnostic collection will be updated whenever the
- * extension manifest file is opened, or after every save (with a 0.5 sec delay to reduce frequency).
- */
-export const registerDiagnosticsEventListeners = (() => {
-  let initialized = false;
-  let editTimeout: NodeJS.Timeout | undefined;
-
-  return () => {
-    if (!initialized) {
-      initialized = true;
-      return [
-        vscode.window.onDidChangeActiveTextEditor(editor => {
-          updateDiagnosticsCollection(editor?.document).catch(err => {
-            logger.error(
-              `Could not provide diagnostics. ${(err as Error).message}`,
-              "updateDiagnosticsCollection",
-            );
-          });
-        }),
-        vscode.workspace.onDidChangeTextDocument(change => {
-          if (editTimeout) {
-            clearTimeout(editTimeout);
-            editTimeout = undefined;
-          }
-          editTimeout = setTimeout(() => {
-            updateDiagnosticsCollection(change.document).catch(err => {
-              logger.error(
-                `Could not provide diagnostics. ${(err as Error).message}`,
-                "updateDiagnosticsCollection",
-              );
-            });
-            editTimeout = undefined;
-          }, 500);
-        }),
-      ];
-    }
-    return [];
-  };
-})();
-
-/**
  * Collects Extension 2.0 diagnostics and updates the collection managed by this module.
  */
-const updateDiagnosticsCollection = async (document?: vscode.TextDocument) => {
+export const updateDiagnosticsCollection = async (document?: vscode.TextDocument) => {
   if (!document?.fileName.endsWith("extension.yaml")) return;
 
   // Bail early if needed
@@ -133,7 +92,6 @@ const updateDiagnosticsCollection = async (document?: vscode.TextDocument) => {
     diagnoseDimensionOids(document, parsedExtension),
     diagnoseVariables(document, parsedExtension),
   ]).then(results => results.reduce((collection, result) => collection.concat(result), []));
-
   getDiagnosticsCollection().set(document.uri, diagnostics);
 };
 
