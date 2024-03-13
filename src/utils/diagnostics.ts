@@ -59,7 +59,6 @@ import {
   getNextElementIdx,
   isSameList,
 } from "../utils/yamlParsing";
-import * as logger from "./logging";
 
 export interface ExtensionDiagnosticDto {
   code: string | number | { value: string | number; target: vscode.Uri } | undefined;
@@ -130,7 +129,7 @@ const diagnoseExtensionName = async (
   // Honor the user's settings
   if (
     !vscode.workspace
-      .getConfiguration("dynatraceExtensions, null")
+      .getConfiguration("dynatraceExtensions", null)
       .get("diagnostics.extensionName", false) as boolean
   ) {
     return [];

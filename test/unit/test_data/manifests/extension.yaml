@@ -1,3 +1,4 @@
+name: diagnostics.test
 version: "0.0.1"
 minDynatraceVersion: "1.279.0"
 author:
@@ -11,9 +12,10 @@ vars:
     id: test2
     type: text
 
-prometheus:
-  - group: test
-    dimensions:
-      - key: test
-        value: test
-        filter: var:testf 
+
+snmp:
+  - group: metrics
+    metrics:
+      - key: my.metric.one.count
+        value: oid:0.0.0.0.0
+        type: gauge
