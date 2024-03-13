@@ -87,7 +87,9 @@ const createWorkspacesTreeItem = (
   version: version,
   tooltip: version ? `${label}-${version}` : label,
   description: version,
-  path: vscode.Uri.parse(workspacePath),
+  path: workspacePath.startsWith("file://")
+    ? vscode.Uri.parse(workspacePath)
+    : vscode.Uri.file(workspacePath),
   iconPath: icon,
   contextValue: contextValue,
 });
@@ -136,14 +138,13 @@ class WorkspacesTreeDataProviderImpl implements WorkspacesTreeDataProvider {
         ...glob.sync("*/extension/extension.yaml", { cwd: workspacePath }),
       ];
       extensionFiles.forEach(filepath => {
-        const extension = yaml.parse(
-          readFileSync(path.join(workspacePath, filepath)).toString(),
-        ) as ExtensionStub;
+        const extensionFilePath = path.join(workspacePath, filepath);
+        const extension = yaml.parse(readFileSync(extensionFilePath).toString()) as ExtensionStub;
         extensions.push(
           createWorkspacesTreeItem(
             extension.name,
             vscode.TreeItemCollapsibleState.None,
-            path.join(workspacePath, filepath),
+            extensionFilePath,
             ICONS.EXTENSION_MANIFEST,
             "extension",
             `${extension.name}-${extension.version}`,

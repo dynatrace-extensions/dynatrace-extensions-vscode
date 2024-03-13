@@ -1,0 +1,21 @@
+name: diagnostics.test
+version: "0.0.1"
+minDynatraceVersion: "1.279.0"
+author:
+  name: Your Name Here
+
+vars:
+  - displayName: Test
+    id: test
+    type: text
+  - displayName: Test2
+    id: test2
+    type: text
+
+
+snmp:
+  - group: metrics
+    metrics:
+      - key: my.metric.one.count
+        value: oid:0.0.0.0.0
+        type: gauge

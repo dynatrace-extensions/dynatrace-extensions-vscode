@@ -240,6 +240,14 @@
         "title": "Disable card key diagnostics"
       },
       {
+        "command": "dynatrace-extensions-workspaces.enableVariableDiagnostics",
+        "title": "Enable variable diagnostics"
+      },
+      {
+        "command": "dynatrace-extensions-workspaces.disableVariableDiagnostics",
+        "title": "Disable variable diagnostics"
+      },
+      {
         "command": "dynatrace-extensions-workspaces.enableSnmpDiagnostics",
         "title": "Enable SNMP diagnostics"
       },
@@ -368,6 +376,13 @@
           "dynatraceExtensions.diagnostics.cardKeys": {
             "type": "boolean",
             "description": "When enabled, extension manifest diagnostics are provided for issues related to keys used for screen card definitions.",
+            "order": 6,
+            "scope": "resource",
+            "default": true
+          },
+          "dynatraceExtensions.diagnostics.variables": {
+            "type": "boolean",
+            "description": "When enabled, extension manifest diagnostics are provided for issues related to variables defined or referenced within an extension.",
             "order": 6,
             "scope": "resource",
             "default": true
@@ -629,6 +644,14 @@
           "when": "false"
         },
         {
+          "command": "dynatrace-extensions-workspaces.enableVariableDiagnostics",
+          "when": "false"
+        },
+        {
+          "command": "dynatrace-extensions-workspaces.disableVariableDiagnostics",
+          "when": "false"
+        },
+        {
           "command": "dynatrace-extensions-workspaces.enableSnmpDiagnostics",
           "when": "false"
         },
@@ -807,6 +830,16 @@
         {
           "command": "dynatrace-extensions-workspaces.disableCardKeyDiagnostics",
           "when": "view == dynatrace-extensions-workspaces && viewItem == extensionWorkspace && config.dynatraceExtensions.diagnostics.cardKeys",
+          "group": "navigation@3"
+        },
+        {
+          "command": "dynatrace-extensions-workspaces.enableVariableDiagnostics",
+          "when": "view == dynatrace-extensions-workspaces && viewItem == extensionWorkspace && !config.dynatraceExtensions.diagnostics.variables",
+          "group": "navigation@3"
+        },
+        {
+          "command": "dynatrace-extensions-workspaces.disableVariableDiagnostics",
+          "when": "view == dynatrace-extensions-workspaces && viewItem == extensionWorkspace && config.dynatraceExtensions.diagnostics.variables",
           "group": "navigation@3"
         },
         {

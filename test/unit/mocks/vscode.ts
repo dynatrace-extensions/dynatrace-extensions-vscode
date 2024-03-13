@@ -21,6 +21,45 @@ export class MockCancellationToken implements vscode.CancellationToken {
   onCancellationRequested = jest.fn();
 }
 
+export class MockDiagnosticCollection implements vscode.DiagnosticCollection {
+  name: string;
+  collection: Map<vscode.Uri, readonly vscode.Diagnostic[]>;
+
+  set(uri: vscode.Uri, diagnostics: readonly vscode.Diagnostic[] | undefined): void;
+  set(entries: readonly [vscode.Uri, readonly vscode.Diagnostic[] | undefined][]): void;
+  set(
+    uriOrEntries: vscode.Uri | readonly [vscode.Uri, readonly vscode.Diagnostic[] | undefined][],
+    diagnostics?: readonly vscode.Diagnostic[] | undefined,
+  ): void {
+    if (Array.isArray(uriOrEntries)) {
+      const [uri, innerDiagnostics] = uriOrEntries as [
+        vscode.Uri,
+        readonly vscode.Diagnostic[] | undefined,
+      ];
+      this.collection.set(uri, innerDiagnostics ?? []);
+    } else {
+      const uri = uriOrEntries as vscode.Uri;
+      this.collection.set(uri, diagnostics ?? []);
+    }
+  }
+
+  get(uri: vscode.Uri): readonly vscode.Diagnostic[] | undefined {
+    return this.collection.get(uri);
+  }
+
+  delete = jest.fn();
+  clear = jest.fn();
+  forEach = jest.fn();
+  dispose = jest.fn();
+  has = jest.fn();
+  [Symbol.iterator] = jest.fn();
+
+  constructor(name: string) {
+    this.name = name;
+    this.collection = new Map<vscode.Uri, readonly vscode.Diagnostic[]>();
+  }
+}
+
 export class MockProgress implements vscode.Progress<{ message?: string; increment?: number }> {
   report = jest.fn();
 }

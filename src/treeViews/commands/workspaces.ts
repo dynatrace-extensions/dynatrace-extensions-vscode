@@ -59,6 +59,7 @@ export const registerWorkspaceViewCommands = (): vscode.Disposable[] => {
     ...registerFeatureSwitchCommands("NameDiagnostics", "diagnostics.extensionName"),
     ...registerFeatureSwitchCommands("MetricKeyDiagnostics", "diagnostics.metricKeys"),
     ...registerFeatureSwitchCommands("CardKeyDiagnostics", "diagnostics.cardKeys"),
+    ...registerFeatureSwitchCommands("VariableDiagnostics", "diagnostics.variables"),
     ...registerFeatureSwitchCommands("SnmpDiagnostics", "diagnostics.snmp"),
     ...registerFeatureSwitchCommands(
       "AllDiagnostics",
@@ -66,6 +67,7 @@ export const registerWorkspaceViewCommands = (): vscode.Disposable[] => {
       "diagnostics.extensionName",
       "diagnostics.metricKeys",
       "diagnostics.cardKeys",
+      "diagnostics.variables",
       "diagnostics.snmp",
     ),
   ];
