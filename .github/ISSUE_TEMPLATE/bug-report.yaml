@@ -1,0 +1,44 @@
+---
+name: Bug report
+description: "Help us fix something that's broken"
+title: "[Bug]: "
+labels: ["bug"]
+assignees: []
+body:
+  - id: bug-header
+    type: markdown
+    attributes:
+      value: >
+        Thank you for taking the time to submit this bug report, please fill in the required
+        details and we'll take a look at it as soon as possible.
+  - id: bug-description
+    type: textarea
+    attributes:
+      label: Description
+      description: What is this bug about? What happened? What were you expecting to happen?
+    validations:
+      required: true
+  - id: bug-steps
+    type: textarea
+    attributes:
+      label: Steps to reproduce
+      description: A series of steps that led you to run into this issue
+      placeholder: |-
+        1. Go to '...'
+        2. Click on '....'
+        3. Scroll down to '....'
+        4. See error
+    validations:
+      required: true
+  - id: bug-support
+    type: checkboxes
+    attributes:
+      label: Support information
+      description: Attachments to support us in troubleshooting this bug. * Please attach these to the description field! *
+      options:
+        - label: Screenshots
+        - label: Extension manifest file
+        - label: YAML snippets
+        - label: Support archive ([see here](https://developer.dynatrace.com/extensions-v2/dynatrace-extensions-vscode/troubleshooting/#collect-a-log-archive))
+          required: true
+---
