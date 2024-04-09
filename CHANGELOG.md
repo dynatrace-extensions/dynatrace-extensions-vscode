@@ -1,14 +1,17 @@
 # Change Log
 
-## Version 2.5.0 (unreleased)
+## Version 2.5.0 (09.04.2024)
 
 ### 🚀 Improved in this version:
 - [#158 - Switch to using Jest for all tests](https://github.com/dynatrace-extensions/dynatrace-extensions-vscode/issues/158)
+- [#180 - Logs are stored in vscode location](https://github.com/dynatrace-extensions/dynatrace-extensions-vscode/issues/180)
 
 ### 🪲 Fixed in this version:
 - [#190 - Converting JMX extension breaks when choosing not to include metrics on Host view](https://github.com/dynatrace-extensions/dynatrace-extensions-vscode/issues/190)
 - [#184 - Cancellation Token not processed for subprocess commands](https://github.com/dynatrace-extensions/dynatrace-extensions-vscode/issues/184)
-
+- [#207 - Error initializing workspace with existing custom extension. "Invalid CEN header"](https://github.com/dynatrace-extensions/dynatrace-extensions-vscode/issues/207)
+- [#208 - Uploaded extensions can't be downloaded and unpacked on Windows](https://github.com/dynatrace-extensions/dynatrace-extensions-vscode/issues/208)
+- [#191 - Windows - creating extensions in a different drive doesn't work](https://github.com/dynatrace-extensions/dynatrace-extensions-vscode/issues/191)
 
 ---
 
