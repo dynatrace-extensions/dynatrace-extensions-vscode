@@ -1,5 +1,17 @@
 # Change Log
 
+## Version 2.5.0 (unreleased)
+
+### 🚀 Improved in this version:
+- [#158 - Switch to using Jest for all tests](https://github.com/dynatrace-extensions/dynatrace-extensions-vscode/issues/158)
+
+### 🪲 Fixed in this version:
+- [#190 - Converting JMX extension breaks when choosing not to include metrics on Host view](https://github.com/dynatrace-extensions/dynatrace-extensions-vscode/issues/190)
+- [#184 - Cancellation Token not processed for subprocess commands](https://github.com/dynatrace-extensions/dynatrace-extensions-vscode/issues/184)
+
+
+---
+
 ## Version 2.4.3 (10.01.2024)
 
 ### 🚀 Improved in this version:
