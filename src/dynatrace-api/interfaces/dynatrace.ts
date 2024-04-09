@@ -59,8 +59,8 @@ export interface DynatraceRequestConfig {
   /* additional request headers */
   headers: Record<string, string>;
 
-  /* files to be uploaded */
-  files?: { file: Buffer; name: string };
+  /* file to be uploaded */
+  file?: Buffer;
 
   /* expected response type (default is json) */
   responseType?: ResponseType;
