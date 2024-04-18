@@ -130,18 +130,14 @@ const TECH_OPTIONS = [
 ];
 
 export const convertJmxExtensionWorkflow = async (outputPath?: string) => {
-  // Unless explicitly specified, try to detect output path
   if (!outputPath) {
     const extensionDir = getExtensionWorkspaceDir();
     if (extensionDir) {
-      await convertJMXExtension(
-        await getDynatraceClient(),
-        path.resolve(extensionDir, "extension.yaml"),
-      );
+      outputPath = path.resolve(extensionDir, "extension.yaml");
     }
-  } else {
-    await convertJMXExtension(await getDynatraceClient(), outputPath);
   }
+
+  await convertJMXExtension(await getDynatraceClient(), outputPath);
 };
 
 /**
