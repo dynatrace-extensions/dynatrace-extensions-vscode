@@ -60,7 +60,7 @@ export function validateEnvironmentUrl(value: string): string | null {
     return "This URL is invalid. Must start with http:// or https://";
   }
   if (value.includes("/e/")) {
-    return !/^https?:\/\/[a-zA-Z.0-9-]+?\/e\/[a-z0-9-]*?(?:\/|$)$/.test(value)
+    return !/^https?:\/\/[a-z:A-Z.0-9-]+?\/e\/[a-z0-9-]*?(?:\/|$)$/.test(value)
       ? "This does not look right. It should be the base URL to your Managed environment."
       : null;
   }
@@ -265,7 +265,7 @@ async function addEnvironment() {
     apiUrl = apiUrl.replace(".apps.dynatracelabs.com", ".dynatracelabs.com");
   }
 
-  const reachable = await checkUrlReachable(`${apiUrl}/api/v1/time`, true);
+  const reachable = await checkUrlReachable(apiUrl, "/api/v1/time", true);
   if (!reachable) {
     logger.notify("ERROR", "The environment URL entered is not reachable.", ...fnLogTrace);
     return;
@@ -331,7 +331,7 @@ async function editEnvironment(environment: DynatraceTenant) {
     apiUrl = apiUrl.replace(".apps.dynatracelabs.com", ".dynatracelabs.com");
   }
 
-  const reachable = await checkUrlReachable(`${apiUrl}/api/v1/time`, true);
+  const reachable = await checkUrlReachable(apiUrl, "/api/v1/time", true);
   if (!reachable) {
     logger.notify("ERROR", "The environment URL entered is not reachable.", ...fnLogTrace);
     return;

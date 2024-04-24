@@ -18,6 +18,11 @@
  * UTILITIES FOR CODE PATTERNS AND ANY REUSABLE FUNCTIONS
  ********************************************************************************/
 
+import { readFileSync } from "fs";
+import { globalAgent } from "https";
+import * as vscode from "vscode";
+import * as logger from "./logging";
+
 /**
  * Loop-safe function to make use of setTimeout
  */
@@ -83,3 +88,45 @@ export function waitForCondition(
     }
   });
 }
+
+interface TenantConnectivitySettings {
+  tenantUrl: string;
+  disableSSLVerification?: boolean;
+  certificatePath?: string;
+}
+
+export const setHttpsAgent = (baseUrl: string) => {
+  let caFile = "";
+  let disableSSL = false;
+
+  let configList = vscode.workspace
+    .getConfiguration("dynatraceExtensions", null)
+    .get<TenantConnectivitySettings[]>("tenantConnectivitySettings", []);
+
+  // The defaultValue in vscode's .get method is buggy. Returns undefined if not found.
+  // eslint-disable-next-line
+  configList = configList === undefined ? [] : configList.filter(cfg => baseUrl.startsWith(cfg.tenantUrl));
+
+  if (configList.length > 0) {
+    caFile = configList[0].certificatePath ?? "";
+    disableSSL = configList[0].disableSSLVerification ?? false;
+
+    if (caFile !== "") {
+      logger.debug(
+        `Using ${
+          disableSSL ? "insecure connection" : `secure connection with CA "${caFile}"`
+        } for URL ${baseUrl}`,
+      );
+      globalAgent.options.ca = [readFileSync(caFile)];
+      globalAgent.options.rejectUnauthorized = !disableSSL;
+    } else if (disableSSL) {
+      logger.debug(`Using insecure connection for URL ${baseUrl}`);
+      globalAgent.options.ca = undefined;
+      globalAgent.options.rejectUnauthorized = false;
+    }
+  } else {
+    logger.debug(`Using secure connection for URL ${baseUrl}`);
+    globalAgent.options.ca = undefined;
+    globalAgent.options.rejectUnauthorized = true;
+  }
+};
