@@ -1,5 +1,20 @@
 # Change Log
 
+## Version 2.6.0 (24.04.2024)
+
+### 🚀 Improved in this version:
+- [#192 - Support for self-signed SSL certificates](https://github.com/dynatrace-extensions/dynatrace-extensions-vscode/issues/192)
+
+### 🪲 Fixed in this version:
+- JMX Conversion would not work offline
+
+### 🔒 Security patches:
+- [Express.js open redirect in malformed urls](https://github.com/dynatrace-extensions/dynatrace-extensions-vscode/security/dependabot/19)
+- [Path traversal in webpack-dev-middleware](https://github.com/dynatrace-extensions/dynatrace-extensions-vscode/security/dependabot/18)
+- [Follow-redirects' proxy-authorization header kept across hosts](https://github.com/dynatrace-extensions/dynatrace-extensions-vscode/security/dependabot/17)
+
+---
+
 ## Version 2.5.0 (09.04.2024)
 
 ### 🚀 Improved in this version:
