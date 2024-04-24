@@ -34,7 +34,6 @@ import {
 } from "../interfaces/simulator";
 import { ToastOptions } from "../interfaces/webview";
 import { getCachedParsedExtension } from "../utils/caching";
-import { loopSafeWait } from "../utils/general";
 import { checkDtSdkPresent } from "../utils/conditionCheckers";
 import { getDatasourceName } from "../utils/extensionParsing";
 import {
@@ -47,6 +46,7 @@ import {
   registerSimulatorSummary,
   registerSimulatorTarget,
 } from "../utils/fileSystem";
+import { loopSafeWait } from "../utils/general";
 import * as logger from "../utils/logging";
 import { getPythonVenvOpts } from "../utils/otherExtensions";
 import {
