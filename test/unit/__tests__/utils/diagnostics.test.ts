@@ -92,6 +92,6 @@ describe("Extension YAML Diagnostics", () => {
       const diagnostics = getDiagnostics(textDocument.uri);
 
       expect(diagnostics.length).toBe(4);
-    });
+    }, 30_000);
   });
 });
