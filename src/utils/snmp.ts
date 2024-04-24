@@ -24,7 +24,7 @@ import * as path from "path";
 import AdmZip = require("adm-zip");
 import axios from "axios";
 import { getActivationContext } from "../extension";
-import { setHttpsAgent } from "./code";
+import { setHttpsAgent } from "./general";
 import { notify } from "./logging";
 import * as logger from "./logging";
 

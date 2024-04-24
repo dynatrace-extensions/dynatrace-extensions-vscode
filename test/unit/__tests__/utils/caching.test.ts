@@ -45,7 +45,7 @@ import {
   updateEntityInstances,
   useMemo,
 } from "../../../../src/utils/caching";
-import { waitForCondition } from "../../../../src/utils/code";
+import { waitForCondition } from "../../../../src/utils/general";
 import * as fileSystemUtils from "../../../../src/utils/fileSystem";
 import * as snmpUtils from "../../../../src/utils/snmp";
 import { OidInformation } from "../../../../src/utils/snmp";

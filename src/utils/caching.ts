@@ -26,7 +26,7 @@ import { Entity, EntityType } from "../dynatrace-api/interfaces/monitoredEntitie
 import { ExtensionStub } from "../interfaces/extensionMeta";
 import { getDynatraceClient } from "../treeViews/tenantsTreeView";
 import * as logger from "../utils/logging";
-import { setHttpsAgent, waitForCondition } from "./code";
+import { setHttpsAgent, waitForCondition } from "./general";
 import { getExtensionFilePath, getSnmpMibFiles, readExtensionManifest } from "./fileSystem";
 import {
   MibModuleStore,

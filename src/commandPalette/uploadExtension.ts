@@ -23,7 +23,7 @@ import { Dynatrace } from "../dynatrace-api/dynatrace";
 import { DynatraceAPIError } from "../dynatrace-api/errors";
 import { ExtensionStub } from "../interfaces/extensionMeta";
 import { getConnectedTenant, getDynatraceClient } from "../treeViews/tenantsTreeView";
-import { loopSafeWait } from "../utils/code";
+import { loopSafeWait } from "../utils/general";
 import {
   checkExtensionZipExists,
   checkTenantConnected,

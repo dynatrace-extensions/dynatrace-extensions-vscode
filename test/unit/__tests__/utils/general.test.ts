@@ -14,7 +14,7 @@
   limitations under the License.
  */
 
-import { loopSafeWait, waitForCondition } from "../../../../src/utils/code";
+import { loopSafeWait, waitForCondition } from "../../../../src/utils/general";
 
 describe("Code Utils", () => {
   describe("loopSafeWait", () => {

@@ -95,6 +95,10 @@ interface TenantConnectivitySettings {
   certificatePath?: string;
 }
 
+/**
+ * Function reads through the extension settings and sets a custom HTTPS Agent where needed.
+ * @param baseUrl base URL to match against the configuration
+ */
 export const setHttpsAgent = (baseUrl: string) => {
   let caFile = "";
   let disableSSL = false;

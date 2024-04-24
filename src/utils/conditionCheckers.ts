@@ -25,7 +25,7 @@ import axios from "axios";
 import * as vscode from "vscode";
 import { getActivationContext } from "../extension";
 import { getConnectedTenant } from "../treeViews/tenantsTreeView";
-import { setHttpsAgent } from "./code";
+import { setHttpsAgent } from "./general";
 import { getDiagnostics } from "./diagnostics";
 import { getExtensionFilePath, resolveRealPath } from "./fileSystem";
 import * as logger from "./logging";

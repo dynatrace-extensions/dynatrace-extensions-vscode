@@ -33,7 +33,7 @@ import { getActivationContext } from "../extension";
 import { showFastModeStatusBar } from "../statusBar/fastMode";
 import { getDynatraceClient } from "../treeViews/tenantsTreeView";
 import { useMemo } from "../utils/caching";
-import { loopSafeWait } from "../utils/code";
+import { loopSafeWait } from "../utils/general";
 import {
   checkCertificateExists,
   checkDtSdkPresent,

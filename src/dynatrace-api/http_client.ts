@@ -15,7 +15,7 @@
  */
 
 import axios from "axios";
-import { setHttpsAgent } from "../utils/code";
+import { setHttpsAgent } from "../utils/general";
 import * as logger from "../utils/logging";
 import { DynatraceAPIError } from "./errors";
 import {

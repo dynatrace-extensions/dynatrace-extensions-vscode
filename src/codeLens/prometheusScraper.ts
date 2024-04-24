@@ -18,7 +18,7 @@ import { readFileSync } from "fs";
 import axios from "axios";
 import * as vscode from "vscode";
 import { getCachedPrometheusData, setCachedPrometheusData } from "../utils/caching";
-import { setHttpsAgent } from "../utils/code";
+import { setHttpsAgent } from "../utils/general";
 import * as logger from "../utils/logging";
 
 export type PromData = Record<string, PromDetails>;
