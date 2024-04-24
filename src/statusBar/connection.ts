@@ -42,7 +42,7 @@ export const getConnectionStatusBar = (() => {
 export const showConnectedStatusBar = async (tenant: DynatraceTenantDto) => {
   const statusBar = getConnectionStatusBar();
   statusBar.text = `$(dt-platform) Using ${tenant.label}`;
-  const reachable = await checkUrlReachable(`${tenant.apiUrl}/api/v1/time`);
+  const reachable = await checkUrlReachable(tenant.apiUrl, "/api/v1/time", false);
   if (reachable) {
     statusBar.tooltip = "Using this environment for API calls";
     statusBar.backgroundColor = undefined;

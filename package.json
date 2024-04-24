@@ -346,6 +346,35 @@
             "order": 9,
             "scope": "machine",
             "default": 10
+          },
+          "dynatraceExtensions.tenantConnectivitySettings": {
+            "type": "array",
+            "description": "A list of Dynatrace tenant endpoints where special connectivity settings are needed.",
+            "scope": "machine",
+            "items": {
+              "type": "object",
+              "required": [
+                "tenantUrl"
+              ],
+              "properties": {
+                "tenantUrl": {
+                  "type": "string",
+                  "format": "uri",
+                  "default": "",
+                  "description": "The Base URL of the tenant"
+                },
+                "disableSSLVerification": {
+                  "type": "boolean",
+                  "default": false,
+                  "description": "When enabled, SSL verification is skipped for this URL. Please use with caution as the SSL certificate is completly ignored for the tenant endpoint."
+                },
+                "certificatePath": {
+                  "type": "string",
+                  "default": "",
+                  "description": "The path to the CA file (in PEM or CRT format) linked to the tenant SSL certificate. This will be added to the trusted CAs for this endpoint."
+                }
+              }
+            }
           }
         }
       },

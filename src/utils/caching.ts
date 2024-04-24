@@ -26,7 +26,7 @@ import { Entity, EntityType } from "../dynatrace-api/interfaces/monitoredEntitie
 import { ExtensionStub } from "../interfaces/extensionMeta";
 import { getDynatraceClient } from "../treeViews/tenantsTreeView";
 import * as logger from "../utils/logging";
-import { waitForCondition } from "./code";
+import { setHttpsAgent, waitForCondition } from "./code";
 import { getExtensionFilePath, getSnmpMibFiles, readExtensionManifest } from "./fileSystem";
 import {
   MibModuleStore,
@@ -163,6 +163,7 @@ const loadBaristaIcons = async () => {
 };
 
 const loadBaristaIconsFromUrl = async (url: string) => {
+  setHttpsAgent(url);
   const icons = await axios
     .get<BaristaResponse>(url)
     .then(res => {
