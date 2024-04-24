@@ -18,6 +18,7 @@ import { readFileSync } from "fs";
 import axios from "axios";
 import * as vscode from "vscode";
 import { getCachedPrometheusData, setCachedPrometheusData } from "../utils/caching";
+import { setHttpsAgent } from "../utils/general";
 import * as logger from "../utils/logging";
 
 export type PromData = Record<string, PromDetails>;
@@ -278,6 +279,7 @@ class PrometheusCodeLensProvider implements vscode.CodeLensProvider {
       try {
         switch (this.method) {
           case "Endpoint":
+            setHttpsAgent(this.promUrl);
             switch (this.promAuth) {
               case "No authentication":
                 await axios.get(this.promUrl).then(res => {

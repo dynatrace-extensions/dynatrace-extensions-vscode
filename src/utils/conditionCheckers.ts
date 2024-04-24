@@ -27,6 +27,7 @@ import { getActivationContext } from "../extension";
 import { getConnectedTenant } from "../treeViews/tenantsTreeView";
 import { getDiagnostics } from "./diagnostics";
 import { getExtensionFilePath, resolveRealPath } from "./fileSystem";
+import { setHttpsAgent } from "./general";
 import * as logger from "./logging";
 import { runCommand } from "./subprocesses";
 
@@ -262,8 +263,14 @@ export async function checkExtensionZipExists(): Promise<boolean> {
  * @param showError whether to print the error received or just supress it
  * @returns status of check
  */
-export async function checkUrlReachable(url: string, showError: boolean = false): Promise<boolean> {
+export async function checkUrlReachable(
+  baseUrl: string,
+  urlPath: string,
+  showError: boolean = false,
+): Promise<boolean> {
+  const url = `${baseUrl}${urlPath}`;
   const fnLogTrace = [...logTrace, "checkUrlReachable"];
+  setHttpsAgent(baseUrl);
   const status = await axios
     .get(url)
     .then(res => res.status === 200)

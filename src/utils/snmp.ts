@@ -24,6 +24,7 @@ import * as path from "path";
 import AdmZip = require("adm-zip");
 import axios from "axios";
 import { getActivationContext } from "../extension";
+import { setHttpsAgent } from "./general";
 import { notify } from "./logging";
 import * as logger from "./logging";
 
@@ -83,6 +84,7 @@ export async function downloadActiveGateMibFiles() {
   // Download MIBs from our public repo
   logger.debug("Downloading MIBs to global storage", ...fnLogTrace);
   const zipUrl = `https://api.github.com/repos/dynatrace-extensions/snmp-mib-files/zipball/${AG_MIB_VERSION}`;
+  setHttpsAgent(zipUrl);
   await axios
     .request<Buffer>({
       url: zipUrl,
@@ -173,6 +175,7 @@ function processOidData(details: string, oid?: string): OidInformation {
 export async function fetchOID(oid: string) {
   const fnLogTrace = [...logTrace, "fetchOID"];
   logger.debug(`Fetching OID ${oid} from online database`, ...fnLogTrace);
+  setHttpsAgent(BASE_URL);
   return axios
     .get(`${BASE_URL}/${oid}`)
     .then(res => {

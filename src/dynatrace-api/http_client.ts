@@ -15,6 +15,7 @@
  */
 
 import axios from "axios";
+import { setHttpsAgent } from "../utils/general";
 import * as logger from "../utils/logging";
 import { DynatraceAPIError } from "./errors";
 import {
@@ -55,7 +56,7 @@ export class HttpClient {
     };
     const fnLogTrace = [...this.logTrace, "makeRequest"];
     const url = `${this.baseUrl}${path}`;
-
+    setHttpsAgent(this.baseUrl);
     if (!("Content-Type" in headers)) {
       headers["Content-type"] = "application/json";
     }
