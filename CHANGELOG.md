@@ -1,5 +1,16 @@
 # Change Log
 
+## Version 2.6.1 (07.05.2024)
+
+### 🚀 Improved in this version:
+- All requests through axios given a higher limit for following redirects
+
+### 🪲 Fixed in this version:
+- Prometheus scraping would not read any data
+- [#218 - null properties in configUi break python extension conversion](https://github.com/dynatrace-extensions/dynatrace-extensions-vscode/issues/218)
+
+---
+
 ## Version 2.6.0 (24.04.2024)
 
 ### 🚀 Improved in this version:
