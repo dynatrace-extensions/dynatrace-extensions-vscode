@@ -151,7 +151,8 @@ export async function convertPluginJsonToActivationSchema(
 
     // Find the corresponding property in the configUI, if it exists
     const configUI = v1Extension.configUI ?? { properties: [] };
-    const configUIProperty = configUI.properties.find(p => p.key === key);
+    const configUIProperties = configUI.properties ?? [];
+    const configUIProperty = configUIProperties.find(p => p.key === key);
 
     // Convert the property and add it to the activation schema
     const v2Property = convertSingleProperty(property, configUIProperty);
