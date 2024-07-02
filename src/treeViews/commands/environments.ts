@@ -67,8 +67,10 @@ export function validateEnvironmentUrl(value: string): string | null {
   if (value.includes(".apps")) {
     if (
       !(
-        /^https:\/\/[a-z0-9]*?\.apps\.dynatrace\.com(?:\/|$)$/.test(value) ||
-        /^https:\/\/[a-z0-9]*?\.(?:dev|sprint)\.apps\.dynatracelabs\.com(?:\/|$)$/.test(value)
+        /^https:\/\/[a-zA-Z:.-_0-9]*?\.apps\.dynatrace\.com(?:\/|$)$/.test(value) ||
+        /^https:\/\/[a-zA-Z:.-_0-9]*?\.(?:dev|sprint)\.apps\.dynatracelabs\.com(?:\/|$)$/.test(
+          value,
+        )
       )
     ) {
       return "This does not look right. It should be the base URL to your Platform environment.";
@@ -78,8 +80,8 @@ export function validateEnvironmentUrl(value: string): string | null {
   if ([".live.", ".dev.", ".sprint."].some(x => value.includes(x))) {
     if (
       !(
-        /^https:\/\/[a-z0-9]*?\.live\.dynatrace\.com(?:\/|$)$/.test(value) ||
-        /^https:\/\/[a-z0-9]*?\.(?:dev|sprint)\.dynatracelabs\.com(?:\/|$)$/.test(value)
+        /^https:\/\/[a-zA-Z:.-_0-9]*?\.live\.dynatrace\.com(?:\/|$)$/.test(value) ||
+        /^https:\/\/[a-zA-Z:.-_0-9]*?\.(?:dev|sprint)\.dynatracelabs\.com(?:\/|$)$/.test(value)
       )
     ) {
       return "This does not look right. It should be the base URL to your SaaS environment.";

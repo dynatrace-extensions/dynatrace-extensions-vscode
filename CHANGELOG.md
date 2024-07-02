@@ -1,5 +1,13 @@
 # Change Log
 
+## Version 2.6.2 (02.07.2024)
+
+### 🪲 Fixed in this version:
+- [#225 - generated certificates not used when initializing workspace](https://github.com/dynatrace-extensions/dynatrace-extensions-vscode/issues/225)
+- [#224 - Cannot add tenant by friendly-name alias](https://github.com/dynatrace-extensions/dynatrace-extensions-vscode/issues/224)
+
+---
+
 ## Version 2.6.1 (07.05.2024)
 
 ### 🚀 Improved in this version:

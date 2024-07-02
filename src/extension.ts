@@ -183,10 +183,14 @@ const registerWorkflowCommand = <T extends any[]>(
   const commandId = `dynatrace-extensions.${workflowName}`;
   return vscode.commands.registerCommand(commandId, async (...args: T) => {
     logger.info("Command called.", commandId);
-    await workflow(...args).then(
-      () => logger.info("Completed normally", commandId),
+    const result = await workflow(...args).then(
+      val => {
+        logger.info("Completed normally", commandId);
+        return val;
+      },
       err => logger.notify("ERROR", `Unexpected error: ${(err as Error).message}`, commandId),
     );
+    return result;
   });
 };
 
