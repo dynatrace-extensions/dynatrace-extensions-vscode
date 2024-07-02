@@ -28,7 +28,7 @@ const logTrace = ["commandPalette", "generateCertificates"];
 export const generateCertificatesWorkflow = async () => {
   if (await checkWorkspaceOpen()) {
     initWorkspaceStorage();
-    return checkOverwriteCertificates().then(async approved => {
+    return checkOverwriteCertificates().then(approved => {
       if (approved) {
         return generateCerts();
       }
