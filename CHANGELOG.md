@@ -1,5 +1,31 @@
 # Change Log
 
+## Version 2.6.1 (07.05.2024)
+
+### 🚀 Improved in this version:
+- All requests through axios given a higher limit for following redirects
+
+### 🪲 Fixed in this version:
+- Prometheus scraping would not read any data
+- [#218 - null properties in configUi break python extension conversion](https://github.com/dynatrace-extensions/dynatrace-extensions-vscode/issues/218)
+
+---
+
+## Version 2.6.0 (24.04.2024)
+
+### 🚀 Improved in this version:
+- [#192 - Support for self-signed SSL certificates](https://github.com/dynatrace-extensions/dynatrace-extensions-vscode/issues/192)
+
+### 🪲 Fixed in this version:
+- JMX Conversion would not work offline
+
+### 🔒 Security patches:
+- [Express.js open redirect in malformed urls](https://github.com/dynatrace-extensions/dynatrace-extensions-vscode/security/dependabot/19)
+- [Path traversal in webpack-dev-middleware](https://github.com/dynatrace-extensions/dynatrace-extensions-vscode/security/dependabot/18)
+- [Follow-redirects' proxy-authorization header kept across hosts](https://github.com/dynatrace-extensions/dynatrace-extensions-vscode/security/dependabot/17)
+
+---
+
 ## Version 2.5.0 (09.04.2024)
 
 ### 🚀 Improved in this version:

@@ -272,7 +272,7 @@ export async function checkUrlReachable(
   const fnLogTrace = [...logTrace, "checkUrlReachable"];
   setHttpsAgent(baseUrl);
   const status = await axios
-    .get(url)
+    .get(url, { maxRedirects: 20 })
     .then(res => res.status === 200)
     .catch(err => {
       if (showError) {

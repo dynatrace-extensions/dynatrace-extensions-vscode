@@ -81,6 +81,7 @@ export class HttpClient {
         data: file !== undefined ? file : body,
         responseType,
         signal,
+        maxRedirects: 20,
       })
       .then(res => {
         if (res.status >= 400) {
