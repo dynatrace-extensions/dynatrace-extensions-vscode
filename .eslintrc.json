@@ -109,7 +109,6 @@
     "@typescript-eslint/no-redeclare": ["error", { "builtinGlobals": false }],
     "@typescript-eslint/lines-between-class-members": [
       "error",
-      "always",
       {
         "exceptAfterSingleLine": true,
         "exceptAfterOverload": true
