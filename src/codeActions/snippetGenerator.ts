@@ -16,10 +16,10 @@
 
 import * as vscode from "vscode";
 import {
-  AttributeProperty,
   ExtensionStub,
-  Property,
   RelationProperty,
+  isAttributeProperty,
+  isRelationProperty,
 } from "../interfaces/extensionMeta";
 import { getCachedParsedExtension } from "../utils/caching";
 import {
@@ -494,11 +494,9 @@ class SnippetGenerator implements vscode.CodeActionProvider {
     // Find already inserted attributes
     let attributeKeysInserted: string[] = [];
     if (insertionType === "properties" && screen.propertiesCard) {
-      attributeKeysInserted = (
-        screen.propertiesCard.properties.filter(
-          prop => prop.type === "ATTRIBUTE",
-        ) as AttributeProperty[]
-      ).map(prop => prop.attribute.key);
+      attributeKeysInserted = screen.propertiesCard.properties
+        .filter(isAttributeProperty)
+        .map(prop => prop.attribute.key);
     } else {
       const cardIdx = getBlockItemIndexAtLine(
         "entitiesListCards",
@@ -513,9 +511,9 @@ class SnippetGenerator implements vscode.CodeActionProvider {
         }
         const columns = cards[cardIdx].columns;
         if (columns) {
-          attributeKeysInserted = (
-            columns.filter(col => col.type === "ATTRIBUTE") as AttributeProperty[]
-          ).map(prop => prop.attribute.key);
+          attributeKeysInserted = columns
+            .filter(isAttributeProperty)
+            .map(prop => prop.attribute.key);
         }
       }
     }
@@ -568,9 +566,7 @@ class SnippetGenerator implements vscode.CodeActionProvider {
     if (insertionType === "properties") {
       const card = screen.propertiesCard;
       if (card) {
-        relationsInserted = card.properties.filter(
-          (prop: Property) => prop.type === "RELATION",
-        ) as RelationProperty[];
+        relationsInserted = card.properties.filter(isRelationProperty);
       }
     } else {
       const cardIdx = getBlockItemIndexAtLine(
@@ -586,9 +582,7 @@ class SnippetGenerator implements vscode.CodeActionProvider {
           entityType = selectorTemplate.split("type(")[1].split(")")[0].replace(/"/g, "");
         }
         if (card.columns) {
-          relationsInserted = card.columns.filter(
-            col => col.type === "RELATION",
-          ) as RelationProperty[];
+          relationsInserted = card.columns.filter(isRelationProperty);
         }
       }
     }

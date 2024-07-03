@@ -24,11 +24,10 @@ import {
   Radio,
   Container,
   Text,
-  Select,
-  SelectOption,
-  SelectedKeys,
   Switch,
   Button,
+  SelectV2,
+  Label,
 } from "@dynatrace/strato-components-preview";
 import { WarningIcon } from "@dynatrace/strato-icons";
 import React, { useEffect, useState } from "react";
@@ -45,9 +44,9 @@ import {
 interface RemoteTargetsFieldSetProps {
   targets: RemoteTarget[];
   eecType: EecType;
-  selectedId: SelectedKeys | null;
+  selectedId: string | null;
   register: UseFormRegister<ExecutionForm>;
-  onChange: (value: SelectedKeys | null) => void;
+  onChange: (value: string | null) => void;
   controlState: {
     state: "valid" | "error";
     hint: string | undefined;
@@ -72,20 +71,23 @@ const RemoteTargetsFieldSet = ({
       </Flex>
     </Container>
   ) : (
-    <FormField label='Select a target' required>
-      <Select
+    <FormField required>
+      <Label>Select a target</Label>
+      <SelectV2
         {...register("target", { required: { value: true, message: "Please select a target" } })}
         name='target'
-        selectedId={selectedId}
+        value={selectedId}
         onChange={onChange}
         controlState={controlState}
       >
-        {filteredTargets.map(t => (
-          <SelectOption key={t.name} id={t.name}>
-            {`${t.name} (${t.username}@${t.address})`}
-          </SelectOption>
-        ))}
-      </Select>
+        <SelectV2.Content>
+          {filteredTargets.map(t => (
+            <SelectV2.Option key={t.name} id={t.name} value={t.name}>
+              {`${t.name} (${t.username}@${t.address})`}
+            </SelectV2.Option>
+          ))}
+        </SelectV2.Content>
+      </SelectV2>
     </FormField>
   );
 };
@@ -124,14 +126,14 @@ export const SettingsForm = ({
   const [eecType, setEecType] = useState<EecType>(
     specs.dsSupportsOneAgentEec ? "ONEAGENT" : "ACTIVEGATE",
   );
-  const [target, setTarget] = useState<SelectedKeys | null>(null);
+  const [target, setTarget] = useState<string | null>(null);
   const [sendMetrics, setSendMetrics] = useState(false);
 
   useEffect(() => {
     if (currentConfig) {
       setLocation(currentConfig.location);
       setEecType(currentConfig.eecType);
-      setTarget(currentConfig.target ? [currentConfig.target.name] : null);
+      setTarget(currentConfig.target ? currentConfig.target.name : null);
       setSendMetrics(currentConfig.sendMetrics);
     }
   }, [currentConfig]);
@@ -199,7 +201,8 @@ export const SettingsForm = ({
           </FieldSet>
           <FieldSet legend='Execution details' name='execution-details'>
             <Flex gap={32}>
-              <FormField label='Location' required>
+              <FormField required>
+                <Label>Location</Label>
                 <RadioGroup
                   value={location}
                   onChange={value => {
@@ -224,7 +227,8 @@ export const SettingsForm = ({
                   </Radio>
                 </RadioGroup>
               </FormField>
-              <FormField label='EEC' required>
+              <FormField required>
+                <Label>EEC</Label>
                 <RadioGroup
                   value={eecType}
                   onChange={value => {

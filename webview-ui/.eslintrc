@@ -123,14 +123,7 @@
     "@typescript-eslint/restrict-template-expressions": "error",
     "@typescript-eslint/no-unused-vars": ["warn", {"argsIgnorePattern": "^_"}],
     "@typescript-eslint/no-redeclare": ["error", {"builtinGlobals": false}],
-    "@typescript-eslint/lines-between-class-members": [
-      "error",
-      {
-        "exceptAfterSingleLine": true,
-        "exceptAfterOverload": true
-      }
-    ],
-
+    "@typescript-eslint/lines-between-class-members": "off",
     "@lwc/lwc/no-inner-html": "error",
     "no-unsanitized/method": "error",
     "no-unsanitized/property": "error",

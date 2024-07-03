@@ -75,8 +75,8 @@ export const showFastModeStatusBar = (version?: string, passing?: boolean) => {
     passing === undefined
       ? "Builds are triggered whenever you save changes."
       : passing
-      ? "Build passed!"
-      : "Build has failed. Click to see last known failure details.";
+        ? "Build passed!"
+        : "Build has failed. Click to see last known failure details.";
   statusBar.backgroundColor =
     passing === false ? new vscode.ThemeColor("statusBarItem.errorBackground") : undefined;
   statusBar.show();

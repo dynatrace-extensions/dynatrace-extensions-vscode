@@ -1195,7 +1195,7 @@ export class MibModuleStore {
             syntax: oid.SYNTAX,
             oid: oid.OID,
             source: `Local MIB file \`${oid.ModuleName ?? ""}\``,
-          } as OidInformation),
+          }) as OidInformation,
       );
   }
 }

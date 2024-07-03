@@ -661,16 +661,10 @@ export class SimulatorManager {
     const fnLogTrace = [...this.logTrace, "stop"];
     logger.info("Stopping simulator", ...fnLogTrace);
     try {
-      if (this.simulatorProcess) {
+      if (this.simulatorProcess && this.simulatorProcess.pid) {
         // Datasource is detached from main process, so we need to kill the entire process tree
-        pidtree(this.simulatorProcess.pid, (err, pids) => {
-          if (err) {
-            logger.notify(
-              "ERROR",
-              `Error getting all PIDs: ${err.message}. Please ensure all processes are manually stopped.`,
-              ...fnLogTrace,
-            );
-          } else {
+        pidtree(this.simulatorProcess.pid)
+          .then(pids => {
             pids.forEach(pid => {
               try {
                 process.kill(pid, "SIGKILL");
@@ -678,8 +672,14 @@ export class SimulatorManager {
                 logger.notify("ERROR", `Process ${pid} must be stopped manually.`, ...fnLogTrace);
               }
             });
-          }
-        });
+          })
+          .catch(err => {
+            logger.notify(
+              "ERROR",
+              `Error getting all PIDs: ${(err as Error).message}. Please ensure all processes are manually stopped.`,
+              ...fnLogTrace,
+            );
+          });
         // Finally, kill our main process
         this.simulatorProcess.kill("SIGKILL");
         this.simulatorProcess = undefined;

@@ -14,7 +14,15 @@
   limitations under the License.
  */
 
+import { ReactNode } from "react";
+
 export interface PanelData {
   dataType: string;
   data: unknown;
+}
+
+/** Helper type to add children to props */
+export interface WithChildren {
+  /** Children provided to the component. */
+  children?: ReactNode;
 }

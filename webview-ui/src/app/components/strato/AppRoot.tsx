@@ -13,7 +13,7 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-import { FocusProvider } from "@dynatrace/strato-components-preview";
+// import { FocusProvider } from "@dynatrace/strato-components-preview";
 import Colors from "@dynatrace/strato-design-tokens/colors";
 import Typography from "@dynatrace/strato-design-tokens/typography";
 import VariablesLight from "@dynatrace/strato-design-tokens/variables";
@@ -24,8 +24,8 @@ import React, { forwardRef, useLayoutEffect } from "react";
 import { IntlProvider } from "react-intl";
 import { createGlobalStyle } from "styled-components";
 import "wicg-inert";
-
-import type { WithChildren } from "@dynatrace/strato-components-preview";
+import { WithChildren } from "src/app/interfaces/general";
+import { FocusProvider } from "@dynatrace/strato-components-preview";
 
 const GlobalStyle = createGlobalStyle(() => {
   const tokens = document.body.classList.contains("vscode-light") ? VariablesLight : VariablesDark;
