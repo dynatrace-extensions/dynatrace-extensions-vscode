@@ -8,7 +8,7 @@
     "email": "extensions@dynatrace.com",
     "url": "https://info.dynatrace.com/global_all_wp_dynatrace_services_platform_extensions_fact_sheet_13656_fulfillment.html"
   },
-  "version": "2.5.0",
+  "version": "2.6.2",
   "repository": {
     "type": "git",
     "url": "https://github.com/dynatrace-extensions/dynatrace-extensions-vscode.git"
@@ -240,6 +240,14 @@
         "title": "Disable card key diagnostics"
       },
       {
+        "command": "dynatrace-extensions-workspaces.enableVariableDiagnostics",
+        "title": "Enable variable diagnostics"
+      },
+      {
+        "command": "dynatrace-extensions-workspaces.disableVariableDiagnostics",
+        "title": "Disable variable diagnostics"
+      },
+      {
         "command": "dynatrace-extensions-workspaces.enableSnmpDiagnostics",
         "title": "Enable SNMP diagnostics"
       },
@@ -338,6 +346,35 @@
             "order": 9,
             "scope": "machine",
             "default": 10
+          },
+          "dynatraceExtensions.tenantConnectivitySettings": {
+            "type": "array",
+            "description": "A list of Dynatrace tenant endpoints where special connectivity settings are needed.",
+            "scope": "machine",
+            "items": {
+              "type": "object",
+              "required": [
+                "tenantUrl"
+              ],
+              "properties": {
+                "tenantUrl": {
+                  "type": "string",
+                  "format": "uri",
+                  "default": "",
+                  "description": "The Base URL of the tenant"
+                },
+                "disableSSLVerification": {
+                  "type": "boolean",
+                  "default": false,
+                  "description": "When enabled, SSL verification is skipped for this URL. Please use with caution as the SSL certificate is completly ignored for the tenant endpoint."
+                },
+                "certificatePath": {
+                  "type": "string",
+                  "default": "",
+                  "description": "The path to the CA file (in PEM or CRT format) linked to the tenant SSL certificate. This will be added to the trusted CAs for this endpoint."
+                }
+              }
+            }
           }
         }
       },
@@ -368,6 +405,13 @@
           "dynatraceExtensions.diagnostics.cardKeys": {
             "type": "boolean",
             "description": "When enabled, extension manifest diagnostics are provided for issues related to keys used for screen card definitions.",
+            "order": 6,
+            "scope": "resource",
+            "default": true
+          },
+          "dynatraceExtensions.diagnostics.variables": {
+            "type": "boolean",
+            "description": "When enabled, extension manifest diagnostics are provided for issues related to variables defined or referenced within an extension.",
             "order": 6,
             "scope": "resource",
             "default": true
@@ -629,6 +673,14 @@
           "when": "false"
         },
         {
+          "command": "dynatrace-extensions-workspaces.enableVariableDiagnostics",
+          "when": "false"
+        },
+        {
+          "command": "dynatrace-extensions-workspaces.disableVariableDiagnostics",
+          "when": "false"
+        },
+        {
           "command": "dynatrace-extensions-workspaces.enableSnmpDiagnostics",
           "when": "false"
         },
@@ -807,6 +859,16 @@
         {
           "command": "dynatrace-extensions-workspaces.disableCardKeyDiagnostics",
           "when": "view == dynatrace-extensions-workspaces && viewItem == extensionWorkspace && config.dynatraceExtensions.diagnostics.cardKeys",
+          "group": "navigation@3"
+        },
+        {
+          "command": "dynatrace-extensions-workspaces.enableVariableDiagnostics",
+          "when": "view == dynatrace-extensions-workspaces && viewItem == extensionWorkspace && !config.dynatraceExtensions.diagnostics.variables",
+          "group": "navigation@3"
+        },
+        {
+          "command": "dynatrace-extensions-workspaces.disableVariableDiagnostics",
+          "when": "view == dynatrace-extensions-workspaces && viewItem == extensionWorkspace && config.dynatraceExtensions.diagnostics.variables",
           "group": "navigation@3"
         },
         {

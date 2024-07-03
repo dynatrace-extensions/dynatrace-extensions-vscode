@@ -262,7 +262,7 @@ const getCurrentLogFile = (() => {
       statSync(currentLogFile).size / (1024 * 1024) > getConfiguredMaxFileSize()
     ) {
       const context = getActivationContext();
-      const logsDir = path.join(context.globalStorageUri.fsPath, "logs");
+      const logsDir = context.logUri.fsPath;
       const workspaceName = vscode.workspace.workspaceFolders?.[0].name ?? "no-workspace";
       const fileName = `${workspaceName}_${new Date()
         .toISOString()
@@ -295,7 +295,7 @@ const getConfiguredMaxFileSize = (() => {
  */
 export const cleanUpLogFiles = () => {
   const context = getActivationContext();
-  removeOldestFiles(path.join(context.globalStorageUri.fsPath, "logs"), getConfiguredMaxFiles());
+  removeOldestFiles(context.logUri.fsPath, getConfiguredMaxFiles());
 };
 
 const getConfiguredMaxFiles = (() => {

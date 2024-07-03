@@ -33,7 +33,6 @@ import { getActivationContext } from "../extension";
 import { showFastModeStatusBar } from "../statusBar/fastMode";
 import { getDynatraceClient } from "../treeViews/tenantsTreeView";
 import { useMemo } from "../utils/caching";
-import { loopSafeWait } from "../utils/code";
 import {
   checkCertificateExists,
   checkDtSdkPresent,
@@ -45,6 +44,7 @@ import {
 import { sign } from "../utils/cryptography";
 import { normalizeExtensionVersion, incrementExtensionVersion } from "../utils/extensionParsing";
 import { getExtensionFilePath, removeOldestFiles, resolveRealPath } from "../utils/fileSystem";
+import { loopSafeWait } from "../utils/general";
 import * as logger from "../utils/logging";
 import { getPythonVenvOpts } from "../utils/otherExtensions";
 import { runCommand } from "../utils/subprocesses";

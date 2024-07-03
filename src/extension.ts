@@ -62,7 +62,7 @@ import { getTenantsTreeDataProvider } from "./treeViews/tenantsTreeView";
 import { getWorkspacesTreeDataProvider } from "./treeViews/workspacesTreeView";
 import { initializeCache } from "./utils/caching";
 import { isExtensionsWorkspace } from "./utils/conditionCheckers";
-import { registerDiagnosticsEventListeners } from "./utils/diagnostics";
+import { updateDiagnosticsCollection } from "./utils/diagnostics";
 import {
   getAllTenants,
   getAllWorkspaces,
@@ -183,10 +183,14 @@ const registerWorkflowCommand = <T extends any[]>(
   const commandId = `dynatrace-extensions.${workflowName}`;
   return vscode.commands.registerCommand(commandId, async (...args: T) => {
     logger.info("Command called.", commandId);
-    await workflow(...args).then(
-      () => logger.info("Completed normally", commandId),
+    const result = await workflow(...args).then(
+      val => {
+        logger.info("Completed normally", commandId);
+        return val;
+      },
       err => logger.notify("ERROR", `Unexpected error: ${(err as Error).message}`, commandId),
     );
+    return result;
   });
 };
 
@@ -259,6 +263,47 @@ const registerSerializersForPanels = (webviewPanels: string[]) =>
   webviewPanels.map(panel =>
     vscode.window.registerWebviewPanelSerializer(panel, getWebviewPanelManager()),
   );
+
+/**
+ * Sets up event-based diagnostic updates. Our diagnostic collection will be updated whenever the
+ * extension manifest file is opened, or after every save (with a 0.5 sec delay to reduce frequency).
+ */
+const registerDiagnosticsEventListeners = (() => {
+  let initialized = false;
+  let editTimeout: NodeJS.Timeout | undefined;
+
+  return () => {
+    if (!initialized) {
+      initialized = true;
+      return [
+        vscode.window.onDidChangeActiveTextEditor(editor => {
+          updateDiagnosticsCollection(editor?.document).catch(err => {
+            logger.error(
+              `Could not provide diagnostics. ${(err as Error).message}`,
+              "updateDiagnosticsCollection",
+            );
+          });
+        }),
+        vscode.workspace.onDidChangeTextDocument(change => {
+          if (editTimeout) {
+            clearTimeout(editTimeout);
+            editTimeout = undefined;
+          }
+          editTimeout = setTimeout(() => {
+            updateDiagnosticsCollection(change.document).catch(err => {
+              logger.error(
+                `Could not provide diagnostics. ${(err as Error).message}`,
+                "updateDiagnosticsCollection",
+              );
+            });
+            editTimeout = undefined;
+          }, 500);
+        }),
+      ];
+    }
+    return [];
+  };
+})();
 
 /**
  * Checks if there is workspace initialization pending from a previous window/activation and

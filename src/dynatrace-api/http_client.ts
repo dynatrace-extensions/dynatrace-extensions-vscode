@@ -15,7 +15,7 @@
  */
 
 import axios from "axios";
-import FormData = require("form-data");
+import { setHttpsAgent } from "../utils/general";
 import * as logger from "../utils/logging";
 import { DynatraceAPIError } from "./errors";
 import {
@@ -50,20 +50,18 @@ export class HttpClient {
    * @returns response data
    */
   async makeRequest<T = never>(config: Partial<DynatraceRequestConfig>): Promise<T> {
-    const { path, params, method, headers, body, files, responseType, signal } = {
+    const { path, params, method, headers, body, file, responseType, signal } = {
       ...HttpClient.requestDefaults,
       ...config,
     };
     const fnLogTrace = [...this.logTrace, "makeRequest"];
     const url = `${this.baseUrl}${path}`;
-
+    setHttpsAgent(this.baseUrl);
     if (!("Content-Type" in headers)) {
       headers["Content-type"] = "application/json";
     }
-    const form = new FormData();
-    if (files) {
-      headers["Content-type"] = "multipart/form-data";
-      form.append("file", files.file, files.name);
+    if (file !== undefined) {
+      headers["Content-type"] = "application/octet-stream";
     }
     headers.Authorization = `Api-Token ${this.apiToken}`;
 
@@ -80,9 +78,10 @@ export class HttpClient {
         headers,
         params,
         method,
-        data: files ? form : body,
+        data: file !== undefined ? file : body,
         responseType,
         signal,
+        maxRedirects: 20,
       })
       .then(res => {
         if (res.status >= 400) {

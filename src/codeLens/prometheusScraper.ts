@@ -18,6 +18,7 @@ import { readFileSync } from "fs";
 import axios from "axios";
 import * as vscode from "vscode";
 import { getCachedPrometheusData, setCachedPrometheusData } from "../utils/caching";
+import { setHttpsAgent } from "../utils/general";
 import * as logger from "../utils/logging";
 
 export type PromData = Record<string, PromDetails>;
@@ -274,59 +275,59 @@ class PrometheusCodeLensProvider implements vscode.CodeLensProvider {
    * @returns whether scraping was successful (any errors) or not
    */
   private async scrape() {
-    if (this.promUrl && this.promFile) {
-      try {
-        switch (this.method) {
-          case "Endpoint":
-            switch (this.promAuth) {
-              case "No authentication":
-                await axios.get(this.promUrl).then(res => {
+    try {
+      switch (this.method) {
+        case "Endpoint":
+          if (!this.promUrl) {
+            return false;
+          }
+          setHttpsAgent(this.promUrl);
+          switch (this.promAuth) {
+            case "No authentication":
+              await axios.get(this.promUrl).then(res => {
+                this.processPrometheusData(res.data as string);
+              });
+              return true;
+            case "Username & password":
+              if (!this.promUsername || !this.promPassword) {
+                return false;
+              }
+              await axios
+                .get(this.promUrl, {
+                  auth: { username: this.promUsername, password: this.promPassword },
+                })
+                .then(res => {
                   this.processPrometheusData(res.data as string);
                 });
-                return true;
-              case "Username & password":
-                if (!this.promUsername || !this.promPassword) {
-                  return false;
-                }
-                await axios
-                  .get(this.promUrl, {
-                    auth: { username: this.promUsername, password: this.promPassword },
-                  })
-                  .then(res => {
-                    this.processPrometheusData(res.data as string);
-                  });
-                return true;
-              case "Bearer token":
-                if (!this.promToken) {
-                  return false;
-                }
-                await axios
-                  .get(this.promUrl, { headers: { Authorization: `Bearer ${this.promToken}` } })
-                  .then(res => {
-                    this.processPrometheusData(res.data as string);
-                  });
-                return true;
-              default:
-                return false;
-            }
-          case "File":
-            if (!this.promFile) {
-              return false;
-            }
-            try {
-              const data = readFileSync(this.promFile, "utf-8");
-              this.processPrometheusData(data);
               return true;
-            } catch (err) {
-              logger.error(err, ...this.logTrace);
+            case "Bearer token":
+              if (!this.promToken) {
+                return false;
+              }
+              await axios
+                .get(this.promUrl, { headers: { Authorization: `Bearer ${this.promToken}` } })
+                .then(res => {
+                  this.processPrometheusData(res.data as string);
+                });
+              return true;
+            default:
               return false;
-            }
-        }
-      } catch (err) {
-        logger.error(err, ...this.logTrace);
-        return false;
+          }
+        case "File":
+          if (!this.promFile) {
+            return false;
+          }
+          try {
+            const data = readFileSync(this.promFile, "utf-8");
+            this.processPrometheusData(data);
+            return true;
+          } catch (err) {
+            logger.error(err, ...this.logTrace);
+            return false;
+          }
       }
-    } else {
+    } catch (err) {
+      logger.error(err, ...this.logTrace);
       return false;
     }
   }

@@ -1,5 +1,54 @@
 # Change Log
 
+## Version 2.6.2 (02.07.2024)
+
+### 🪲 Fixed in this version:
+- [#225 - generated certificates not used when initializing workspace](https://github.com/dynatrace-extensions/dynatrace-extensions-vscode/issues/225)
+- [#224 - Cannot add tenant by friendly-name alias](https://github.com/dynatrace-extensions/dynatrace-extensions-vscode/issues/224)
+
+---
+
+## Version 2.6.1 (07.05.2024)
+
+### 🚀 Improved in this version:
+- All requests through axios given a higher limit for following redirects
+
+### 🪲 Fixed in this version:
+- Prometheus scraping would not read any data
+- [#218 - null properties in configUi break python extension conversion](https://github.com/dynatrace-extensions/dynatrace-extensions-vscode/issues/218)
+
+---
+
+## Version 2.6.0 (24.04.2024)
+
+### 🚀 Improved in this version:
+- [#192 - Support for self-signed SSL certificates](https://github.com/dynatrace-extensions/dynatrace-extensions-vscode/issues/192)
+
+### 🪲 Fixed in this version:
+- JMX Conversion would not work offline
+
+### 🔒 Security patches:
+- [Express.js open redirect in malformed urls](https://github.com/dynatrace-extensions/dynatrace-extensions-vscode/security/dependabot/19)
+- [Path traversal in webpack-dev-middleware](https://github.com/dynatrace-extensions/dynatrace-extensions-vscode/security/dependabot/18)
+- [Follow-redirects' proxy-authorization header kept across hosts](https://github.com/dynatrace-extensions/dynatrace-extensions-vscode/security/dependabot/17)
+
+---
+
+## Version 2.5.0 (09.04.2024)
+
+### 🚀 Improved in this version:
+- [#158 - Switch to using Jest for all tests](https://github.com/dynatrace-extensions/dynatrace-extensions-vscode/issues/158)
+- [#180 - Logs are stored in vscode location](https://github.com/dynatrace-extensions/dynatrace-extensions-vscode/issues/180)
+
+### 🪲 Fixed in this version:
+- [#190 - Converting JMX extension breaks when choosing not to include metrics on Host view](https://github.com/dynatrace-extensions/dynatrace-extensions-vscode/issues/190)
+- [#184 - Cancellation Token not processed for subprocess commands](https://github.com/dynatrace-extensions/dynatrace-extensions-vscode/issues/184)
+- [#207 - Error initializing workspace with existing custom extension. "Invalid CEN header"](https://github.com/dynatrace-extensions/dynatrace-extensions-vscode/issues/207)
+- [#208 - Uploaded extensions can't be downloaded and unpacked on Windows](https://github.com/dynatrace-extensions/dynatrace-extensions-vscode/issues/208)
+- [#191 - Windows - creating extensions in a different drive doesn't work](https://github.com/dynatrace-extensions/dynatrace-extensions-vscode/issues/191)
+
+---
+
 ## Version 2.4.3 (10.01.2024)
 
 ### 🚀 Improved in this version:

@@ -60,15 +60,17 @@ export function validateEnvironmentUrl(value: string): string | null {
     return "This URL is invalid. Must start with http:// or https://";
   }
   if (value.includes("/e/")) {
-    return !/^https?:\/\/[a-zA-Z.0-9-]+?\/e\/[a-z0-9-]*?(?:\/|$)$/.test(value)
+    return !/^https?:\/\/[a-z:A-Z.0-9-]+?\/e\/[a-z0-9-]*?(?:\/|$)$/.test(value)
       ? "This does not look right. It should be the base URL to your Managed environment."
       : null;
   }
   if (value.includes(".apps")) {
     if (
       !(
-        /^https:\/\/[a-z0-9]*?\.apps\.dynatrace\.com(?:\/|$)$/.test(value) ||
-        /^https:\/\/[a-z0-9]*?\.(?:dev|sprint)\.apps\.dynatracelabs\.com(?:\/|$)$/.test(value)
+        /^https:\/\/[a-zA-Z:.-_0-9]*?\.apps\.dynatrace\.com(?:\/|$)$/.test(value) ||
+        /^https:\/\/[a-zA-Z:.-_0-9]*?\.(?:dev|sprint)\.apps\.dynatracelabs\.com(?:\/|$)$/.test(
+          value,
+        )
       )
     ) {
       return "This does not look right. It should be the base URL to your Platform environment.";
@@ -78,8 +80,8 @@ export function validateEnvironmentUrl(value: string): string | null {
   if ([".live.", ".dev.", ".sprint."].some(x => value.includes(x))) {
     if (
       !(
-        /^https:\/\/[a-z0-9]*?\.live\.dynatrace\.com(?:\/|$)$/.test(value) ||
-        /^https:\/\/[a-z0-9]*?\.(?:dev|sprint)\.dynatracelabs\.com(?:\/|$)$/.test(value)
+        /^https:\/\/[a-zA-Z:.-_0-9]*?\.live\.dynatrace\.com(?:\/|$)$/.test(value) ||
+        /^https:\/\/[a-zA-Z:.-_0-9]*?\.(?:dev|sprint)\.dynatracelabs\.com(?:\/|$)$/.test(value)
       )
     ) {
       return "This does not look right. It should be the base URL to your SaaS environment.";
@@ -265,7 +267,7 @@ async function addEnvironment() {
     apiUrl = apiUrl.replace(".apps.dynatracelabs.com", ".dynatracelabs.com");
   }
 
-  const reachable = await checkUrlReachable(`${apiUrl}/api/v1/time`, true);
+  const reachable = await checkUrlReachable(apiUrl, "/api/v1/time", true);
   if (!reachable) {
     logger.notify("ERROR", "The environment URL entered is not reachable.", ...fnLogTrace);
     return;
@@ -331,7 +333,7 @@ async function editEnvironment(environment: DynatraceTenant) {
     apiUrl = apiUrl.replace(".apps.dynatracelabs.com", ".dynatracelabs.com");
   }
 
-  const reachable = await checkUrlReachable(`${apiUrl}/api/v1/time`, true);
+  const reachable = await checkUrlReachable(apiUrl, "/api/v1/time", true);
   if (!reachable) {
     logger.notify("ERROR", "The environment URL entered is not reachable.", ...fnLogTrace);
     return;

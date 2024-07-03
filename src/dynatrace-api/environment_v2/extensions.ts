@@ -121,7 +121,7 @@ export class ExtensionsServiceV2 {
       path: `${this.endpoint}`,
       method: "POST",
       params: { validateOnly: validateOnly },
-      files: { file: file, name: "extension.zip" },
+      file,
       signal,
     });
   }

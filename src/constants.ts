@@ -144,3 +144,15 @@ export const OID_TABLE_OBJ_AS_STATIC: ExtensionDiagnosticDto = {
     "Type conflict. " +
     "This OID maps to table entries but is not being used inside a 'table' subgroup.",
 };
+
+export const DEFINED_VAR_NOT_REFERENCED: ExtensionDiagnosticDto = {
+  code: "DED020",
+  severity: vscode.DiagnosticSeverity.Warning,
+  message: "This variable is defined but is not used within this extension",
+};
+
+export const REFERENCED_VAR_NOT_DEFINED: ExtensionDiagnosticDto = {
+  code: "DED021",
+  severity: vscode.DiagnosticSeverity.Error,
+  message: "A variable is referenced but is not defined.",
+};
