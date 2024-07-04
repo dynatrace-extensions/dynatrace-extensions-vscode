@@ -1034,8 +1034,9 @@ export function getDefinedCardsMeta(
   const cards: CardMeta[] = [];
 
   if (!cardType || cardType === "entitiesListCards") {
-    if (extension.screens?.[screenIdx].entitiesListCards) {
-      extension.screens[screenIdx].entitiesListCards?.forEach(card => {
+    const elc = extension.screens?.[screenIdx].entitiesListCards;
+    if (elc) {
+      elc.forEach(card => {
         if (cards.findIndex(c => c.key === card.key) === -1) {
           cards.push({ key: card.key, type: "ENTITIES_LIST" });
         }
@@ -1043,8 +1044,9 @@ export function getDefinedCardsMeta(
     }
   }
   if (!cardType || cardType === "chartsCards") {
-    if (extension.screens?.[screenIdx].chartsCards) {
-      extension.screens[screenIdx].chartsCards?.forEach(card => {
+    const cc = extension.screens?.[screenIdx].chartsCards;
+    if (cc) {
+      cc.forEach(card => {
         if (cards.findIndex(c => c.key === card.key) === -1) {
           cards.push({ key: card.key, type: "CHART_GROUP" });
         }
@@ -1052,8 +1054,9 @@ export function getDefinedCardsMeta(
     }
   }
   if (!cardType || cardType === "messageCards") {
-    if (extension.screens?.[screenIdx].messageCards) {
-      extension.screens[screenIdx].messageCards?.forEach(card => {
+    const mc = extension.screens?.[screenIdx].messageCards;
+    if (mc) {
+      mc.forEach(card => {
         if (cards.findIndex(c => c.key === card.key) === -1) {
           cards.push({ key: card.key, type: "MESSAGE" });
         }
@@ -1061,8 +1064,9 @@ export function getDefinedCardsMeta(
     }
   }
   if (!cardType || cardType === "logsCards") {
-    if (extension.screens?.[screenIdx].logsCards) {
-      extension.screens[screenIdx].logsCards?.forEach(card => {
+    const lc = extension.screens?.[screenIdx].logsCards;
+    if (lc) {
+      lc.forEach(card => {
         if (cards.findIndex(c => c.key === card.key) === -1) {
           cards.push({ key: card.key, type: "LOGS" });
         }
@@ -1070,8 +1074,9 @@ export function getDefinedCardsMeta(
     }
   }
   if (!cardType || cardType === "eventsCards") {
-    if (extension.screens?.[screenIdx].eventsCards) {
-      extension.screens[screenIdx].eventsCards?.forEach(card => {
+    const ec = extension.screens?.[screenIdx].eventsCards;
+    if (ec) {
+      ec.forEach(card => {
         if (cards.findIndex(c => c.key === card.key) === -1) {
           cards.push({ key: card.key, type: "EVENTS" });
         }
@@ -1079,8 +1084,9 @@ export function getDefinedCardsMeta(
     }
   }
   if (!cardType || cardType === "metricTableCards") {
-    if (extension.screens?.[screenIdx].metricTableCards) {
-      extension.screens[screenIdx].metricTableCards?.forEach(card => {
+    const mtc = extension.screens?.[screenIdx].metricTableCards;
+    if (mtc) {
+      mtc.forEach(card => {
         if (cards.findIndex(c => c.key === card.key) === -1) {
           cards.push({ key: card.key, type: "METRIC_TABLE" });
         }
