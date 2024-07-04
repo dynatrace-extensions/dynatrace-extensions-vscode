@@ -95,7 +95,7 @@ const tableColumns: TableColumn[] = [
     id: "actions",
     autoWidth: true,
     ratioWidth: 1,
-    cell: ({ row }) => {
+    cell: ({ row }: { row: { original: unknown } }) => {
       const fileUri = {
         scheme: "file",
         path: (row.original as ExecutionSummary).logPath,

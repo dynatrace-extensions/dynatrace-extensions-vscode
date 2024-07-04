@@ -259,6 +259,11 @@ export interface RelationProperty {
   };
 }
 
+export const isAttributeProperty = (prop: Property | Column): prop is AttributeProperty =>
+  prop.type === "ATTRIBUTE";
+export const isRelationProperty = (prop: Property | Column): prop is RelationProperty =>
+  prop.type === "RELATION";
+
 interface CustomColumn {
   type: "CUSTOM";
   conditions?: string[];

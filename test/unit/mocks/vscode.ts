@@ -165,6 +165,11 @@ export class MockExtensionContext implements vscode.ExtensionContext {
     activate: jest.fn(),
   };
 
+  languageModelAccessInformation = {
+    onDidChange: jest.fn(),
+    canSendRequest: jest.fn(),
+  };
+
   subscriptions = [];
 
   constructor(globalStoragePath?: string, workspaceStoragePath?: string) {
