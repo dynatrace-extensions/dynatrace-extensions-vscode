@@ -15,8 +15,28 @@
  */
 
 import { readFileSync } from "fs";
+import * as fs from "fs";
 import * as path from "path";
 
 export const readTestDataFile = (relativePath: string) => {
   return readFileSync(path.resolve(__dirname, "..", "unit", "test_data", relativePath)).toString();
+};
+
+export const mockExistsSync = (mockFs: jest.Mocked<typeof fs>, items: string[]) => {
+  mockFs.existsSync.mockImplementation(p => {
+    return items.includes(p.toString());
+  });
+};
+
+export const mockReadFileSync = (mockFs: jest.Mocked<typeof fs>, items: [string, string][]) => {
+  mockFs.existsSync.mockImplementation(p => {
+    return items.find(i => i[0] === p.toString()) !== undefined;
+  });
+  mockFs.readFileSync.mockImplementation(p => {
+    const item = items.find(i => i[0] === p.toString());
+    if (item) {
+      return item[1];
+    }
+    throw new Error("File not found");
+  });
 };
