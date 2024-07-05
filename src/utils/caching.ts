@@ -152,7 +152,8 @@ const loadBuiltinEntityTypes = async () => {
 };
 
 const loadBaristaIcons = async () => {
-  const publicURL = "https://barista.dynatrace.com/data/resources/icons.json";
+  const publicURL =
+    "https://raw.githubusercontent.com/dynatrace-oss/barista/master/docs/barista-icons/icons.json";
   const internalURL = "https://barista.lab.dynatrace.org/data/resources/icons.json";
 
   let icons = await loadBaristaIconsFromUrl(internalURL);
