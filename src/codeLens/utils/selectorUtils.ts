@@ -86,7 +86,7 @@ export async function validateSelector(
   if (selectorType === "metric") {
     return dt.metrics
       .query(selector)
-      .then(() => ({ status: "valid" } as ValidationStatus))
+      .then(() => ({ status: "valid" }) as ValidationStatus)
       .catch(
         (err: DynatraceAPIError) =>
           ({
@@ -95,12 +95,12 @@ export async function validateSelector(
               code: err.errorParams.code,
               message: err.errorParams.message,
             },
-          } as ValidationStatus),
+          }) as ValidationStatus,
       );
   }
   return dt.entitiesV2
     .list(selector)
-    .then(() => ({ status: "valid" } as ValidationStatus))
+    .then(() => ({ status: "valid" }) as ValidationStatus)
     .catch(
       (err: DynatraceAPIError) =>
         ({
@@ -109,7 +109,7 @@ export async function validateSelector(
             code: err.errorParams.code,
             message: err.errorParams.message,
           },
-        } as ValidationStatus),
+        }) as ValidationStatus,
     );
 }
 

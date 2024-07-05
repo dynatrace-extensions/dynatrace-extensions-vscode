@@ -33,7 +33,7 @@ interface SubPrecondition {
   expectedValues?: string[];
 }
 interface Precondition {
-  type: "EQUALS" | "IN" | "NULL" | "NOT" | "AND" | "OR" | string;
+  type: string;
   property?: string;
   expectedValue?: string;
   expectedValues?: string[];

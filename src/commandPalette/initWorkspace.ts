@@ -365,9 +365,7 @@ async function existingExtensionSetup(dt: Dynatrace, rootPath: string) {
   logger.debug("Setting up workspace with an existing extension", ...fnLogTrace);
 
   const download = await vscode.window.showQuickPick(
-    (
-      await dt.extensionsV2.list()
-    ).map(ext => ({
+    (await dt.extensionsV2.list()).map(ext => ({
       label: `${ext.extensionName} (${ext.version})`,
       extension: ext,
     })),

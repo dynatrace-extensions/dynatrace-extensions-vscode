@@ -243,7 +243,7 @@ const createDynatraceTenantTreeItem = (
     current: current,
     contextValue: current ? "currentDynatraceEnvironment" : "dynatraceEnvironment",
     iconPath: current ? ICONS.ENVIRONMENT_CURRENT : ICONS.ENVIRONMENT,
-  } as DynatraceTenant);
+  }) as DynatraceTenant;
 
 /**
  * Creates a TreeItem object that represents an Extension 2.0 that is deployed to the connected
@@ -268,7 +268,7 @@ const createDeployedExtension = (
     extensionVersion: extensionVersion,
     contextValue: "deployedExtension",
     iconPath: ICONS.DEPLOYED_EXTENSION,
-  } as DeployedExtension);
+  }) as DeployedExtension;
 
 /**
  * Creates an object that represents an instance of an Extension 2.0 monitoring configuration that
@@ -298,4 +298,4 @@ const createMonitoringConfiguration = (
     contextValue: "monitoringConfiguration",
     iconPath: new vscode.ThemeIcon("gear"),
     dt: dt,
-  } as MonitoringConfiguration);
+  }) as MonitoringConfiguration;
