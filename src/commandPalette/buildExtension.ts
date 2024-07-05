@@ -225,8 +225,6 @@ async function preBuildTasks(
       logger.notify("INFO", "Extension version automatically increased.");
     }
   } catch (err) {
-    // eslint-disable-next-line
-    console.log(err);
     throw Error(`Error during pre-build phase: ${(err as Error).message}`);
   }
 }
@@ -403,8 +401,6 @@ async function assembleStandard(manifestFileContent: string, extensionVersion: s
     outerZip.writeZip(outerZipPath);
     logger.info(`Wrote initial outer zip at: ${outerZipPath}`, ...fnLogTrace);
   } catch (err) {
-    // eslint-disable-next-line
-    console.log(err);
     throw Error(`Error during standard build phase: ${(err as Error).message}`);
   }
 }
