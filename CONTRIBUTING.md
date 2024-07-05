@@ -102,8 +102,8 @@ This project is structured as follows:
 	|   |    |-- fonts/			# Custom fonts (i.e. for symbols)
 	|   |    |-- icons/			# Icons
 	|   |    |-- logos/			# Logos (e.g. Dynatrace logo)
-	|   |    |-- jsonSchemas/     # Custom JSON schemas (i.e. for monitoring configs)
-	|   |    |-- mibs/            # MIB files for the local SNMP database
+	|   |    |-- jsonSchemas/		# Custom JSON schemas (i.e. for monitoring configs)
+	|   |    |-- mibs/			# MIB files for the local SNMP database
 	|   |
 	|   |-- codeActions/			# Main folder for Code Action providers
 	|   |    |-- utils/			# Utility functions for code action providers
