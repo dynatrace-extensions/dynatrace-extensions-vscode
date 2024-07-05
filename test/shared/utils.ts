@@ -22,21 +22,26 @@ export const readTestDataFile = (relativePath: string) => {
   return readFileSync(path.resolve(__dirname, "..", "unit", "test_data", relativePath)).toString();
 };
 
-export const mockExistsSync = (mockFs: jest.Mocked<typeof fs>, items: string[]) => {
-  mockFs.existsSync.mockImplementation(p => {
-    return items.includes(p.toString());
-  });
-};
+interface FileSystemItem {
+  pathParts: string[];
+  content?: string;
+}
 
-export const mockReadFileSync = (mockFs: jest.Mocked<typeof fs>, items: [string, string][]) => {
+export const mockFileSystemItem = (mockFs: jest.Mocked<typeof fs>, items: FileSystemItem[]) => {
   mockFs.existsSync.mockImplementation(p => {
-    return items.find(i => i[0] === p.toString()) !== undefined;
+    return (
+      items.find(i =>
+        [path.join(...i.pathParts), path.resolve(...i.pathParts)].includes(p.toString()),
+      ) !== undefined
+    );
   });
   mockFs.readFileSync.mockImplementation(p => {
-    const item = items.find(i => i[0] === p.toString());
+    const item = items.find(i =>
+      [path.join(...i.pathParts), path.resolve(...i.pathParts)].includes(p.toString()),
+    );
     if (item) {
-      return item[1];
+      return item.content ?? "";
     }
-    throw new Error("File not found");
+    throw new Error(`File not found ${p.toString()}`);
   });
 };

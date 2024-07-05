@@ -55,7 +55,7 @@ import {
   uploadComponentCert,
   writeGititnore,
 } from "../../../../src/utils/fileSystem";
-import { mockExistsSync, mockReadFileSync } from "../../../shared/utils";
+import { mockFileSystemItem } from "../../../shared/utils";
 import { MockExtensionContext, MockUri, MockWorkspaceConfiguration } from "../../mocks/vscode";
 
 jest.mock("../../../../src/utils/logging");
@@ -318,8 +318,10 @@ describe("Filesystem Utils", () => {
       const expectedWorkspaceJson = JSON.stringify([
         { name: "MockWorkspace", id: "mock", folder: mockWorkspacePath },
       ]);
-      mockExistsSync(mockFs, [mockWorkspacesJsonPath, mockWorkspaceStoragePath]);
-      mockReadFileSync(mockFs, [[mockWorkspacesJsonPath, emptyWorkspaceJson]]);
+      mockFileSystemItem(mockFs, [
+        { pathParts: [mockWorkspaceStoragePath] },
+        { pathParts: [mockWorkspacesJsonPath], content: emptyWorkspaceJson },
+      ]);
 
       await registerWorkspace();
 
@@ -342,8 +344,10 @@ describe("Filesystem Utils", () => {
         { name: "OtherWorkspace", folder: "mock/other-workspace", id: "other" },
         { name: "MockWorkspace", id: "mock", folder: mockWorkspacePath },
       ]);
-      mockExistsSync(mockFs, [mockWorkspacesJsonPath, mockWorkspaceStoragePath]);
-      mockReadFileSync(mockFs, [[mockWorkspacesJsonPath, otherWorkspaceJson]]);
+      mockFileSystemItem(mockFs, [
+        { pathParts: [mockWorkspaceStoragePath] },
+        { pathParts: [mockWorkspacesJsonPath], content: otherWorkspaceJson },
+      ]);
 
       await registerWorkspace();
 
@@ -367,8 +371,10 @@ describe("Filesystem Utils", () => {
         { name: "MockWorkspace", id: "mock", folder: mockWorkspacePath },
         { name: "OtherWorkspace", folder: "mock/other-workspace", id: "other" },
       ]);
-      mockExistsSync(mockFs, [mockWorkspacesJsonPath, mockWorkspaceStoragePath]);
-      mockReadFileSync(mockFs, [[mockWorkspacesJsonPath, twoWorkspaceJson]]);
+      mockFileSystemItem(mockFs, [
+        { pathParts: [mockWorkspaceStoragePath] },
+        { pathParts: [mockWorkspacesJsonPath], content: twoWorkspaceJson },
+      ]);
 
       await registerWorkspace();
 
@@ -403,8 +409,10 @@ describe("Filesystem Utils", () => {
       { case: "single", expected: mockExtensionWorkspacesEntries.slice(0, 1) },
       { case: "multiple", expected: mockExtensionWorkspacesEntries },
     ])("$case entries should return expected value", ({ expected }) => {
-      mockExistsSync(mockFs, [mockWorkspacesJsonPath]);
-      mockReadFileSync(mockFs, [[mockWorkspacesJsonPath, JSON.stringify(expected)]]);
+      mockFileSystemItem(mockFs, [
+        { pathParts: [mockWorkspaceStoragePath] },
+        { pathParts: [mockWorkspacesJsonPath], content: JSON.stringify(expected) },
+      ]);
 
       jest.spyOn(vscode.Uri, "parse").mockImplementation((val: string) => new MockUri(val));
 
@@ -423,8 +431,10 @@ describe("Filesystem Utils", () => {
     const expected = mockExtensionWorkspacesEntries[0];
 
     beforeEach(() => {
-      mockExistsSync(mockFs, [mockWorkspacesJsonPath]);
-      mockReadFileSync(mockFs, [[mockWorkspacesJsonPath, JSON.stringify([expected])]]);
+      mockFileSystemItem(mockFs, [
+        { pathParts: [mockWorkspaceStoragePath] },
+        { pathParts: [mockWorkspacesJsonPath], content: JSON.stringify([expected]) },
+      ]);
       jest.spyOn(vscode.Uri, "parse").mockImplementation((val: string) => new MockUri(val));
       setupContextWithStorage();
     });
@@ -448,7 +458,9 @@ describe("Filesystem Utils", () => {
     });
 
     it("should return undefined if no workspaces exist", () => {
-      mockReadFileSync(mockFs, [[mockWorkspacesJsonPath, "[]"]]);
+      mockFileSystemItem(mockFs, [
+        { pathParts: [mockWorkspacesJsonPath], content: JSON.stringify([expected]) },
+      ]);
 
       const actual = findWorkspace("notExisting");
 
@@ -467,10 +479,6 @@ describe("Filesystem Utils", () => {
       setupContextWithStorage();
     });
 
-    beforeEach(() => {
-      mockExistsSync(mockFs, [mockGlobalStoragePath]);
-    });
-
     afterEach(() => {
       mockFs.existsSync.mockReset();
       mockFs.readFileSync.mockReset();
@@ -485,8 +493,10 @@ describe("Filesystem Utils", () => {
       { case: "single", expected: mockDynatraceEnvironmentsEntries.slice(0, 1) },
       { case: "multiple", expected: mockDynatraceEnvironmentsEntries },
     ])("$case entries should return expected value", ({ expected }) => {
-      mockExistsSync(mockFs, [mockEnvironmentsJsonPath]);
-      mockReadFileSync(mockFs, [[mockEnvironmentsJsonPath, JSON.stringify(expected)]]);
+      mockFileSystemItem(mockFs, [
+        { pathParts: [mockGlobalStoragePath] },
+        { pathParts: [mockEnvironmentsJsonPath], content: JSON.stringify(expected) },
+      ]);
 
       const actual = getAllTenants();
 
@@ -508,10 +518,6 @@ describe("Filesystem Utils", () => {
       setupContextWithStorage();
     });
 
-    beforeEach(() => {
-      mockExistsSync(mockFs, [mockEnvironmentsJsonPath]);
-    });
-
     afterEach(() => {
       jest.clearAllMocks();
     });
@@ -521,7 +527,7 @@ describe("Filesystem Utils", () => {
     });
 
     it("should update the numEnvironments context variable", async () => {
-      mockReadFileSync(mockFs, [[mockEnvironmentsJsonPath, "[]"]]);
+      mockFileSystemItem(mockFs, [{ pathParts: [mockEnvironmentsJsonPath], content: "[]" }]);
       const executeCommandSpy = jest.spyOn(vscode.commands, "executeCommand");
 
       await registerTenant("https://a/e/X", "", "");
@@ -534,7 +540,7 @@ describe("Filesystem Utils", () => {
     });
 
     it("should add a new tenant to the list", async () => {
-      mockReadFileSync(mockFs, [[mockEnvironmentsJsonPath, "[]"]]);
+      mockFileSystemItem(mockFs, [{ pathParts: [mockEnvironmentsJsonPath], content: "[]" }]);
       const { url, apiUrl, token, current, label } = mockDynatraceEnvironmentsEntries[0];
       const expectedTenantsJson = JSON.stringify([mockDynatraceEnvironmentsEntries[0]]);
 
@@ -552,7 +558,9 @@ describe("Filesystem Utils", () => {
         existingWorkspace,
         { id: "X", url: "https://a/e/X", apiUrl: "", token: "", current: false, label: "X" },
       ]);
-      mockReadFileSync(mockFs, [[mockEnvironmentsJsonPath, JSON.stringify([existingWorkspace])]]);
+      mockFileSystemItem(mockFs, [
+        { pathParts: [mockEnvironmentsJsonPath], content: JSON.stringify([existingWorkspace]) },
+      ]);
 
       await registerTenant("https://a/e/X", "", "");
 
@@ -571,8 +579,11 @@ describe("Filesystem Utils", () => {
         current: false,
         label: "",
       };
-      mockReadFileSync(mockFs, [
-        [mockEnvironmentsJsonPath, JSON.stringify(mockDynatraceEnvironmentsEntries)],
+      mockFileSystemItem(mockFs, [
+        {
+          pathParts: [mockEnvironmentsJsonPath],
+          content: JSON.stringify(mockDynatraceEnvironmentsEntries),
+        },
       ]);
 
       await registerTenant(expected.url, expected.apiUrl, expected.token, expected.label);
@@ -585,7 +596,9 @@ describe("Filesystem Utils", () => {
 
     it("should disconnect other tenants when adding a current tenant", async () => {
       const existingWorkspace = mockDynatraceEnvironmentsEntries[0];
-      mockReadFileSync(mockFs, [[mockEnvironmentsJsonPath, JSON.stringify([existingWorkspace])]]);
+      mockFileSystemItem(mockFs, [
+        { pathParts: [mockEnvironmentsJsonPath], content: JSON.stringify([existingWorkspace]) },
+      ]);
 
       await registerTenant("https://a/e/X", "", "", "", true);
 
@@ -599,7 +612,7 @@ describe("Filesystem Utils", () => {
     });
 
     it("should throw if json file doesn't exist", async () => {
-      mockReadFileSync(mockFs, []);
+      mockFileSystemItem(mockFs, []);
       await expect(registerTenant("https://a/e/X", "", "", "", true)).rejects.toThrow();
     });
   });
@@ -607,7 +620,7 @@ describe("Filesystem Utils", () => {
   describe("removeTenant", () => {
     beforeEach(() => {
       setupContextWithStorage();
-      mockReadFileSync(mockFs, [[mockEnvironmentsJsonPath, "[]"]]);
+      mockFileSystemItem(mockFs, [{ pathParts: [mockEnvironmentsJsonPath], content: "[]" }]);
     });
 
     afterEach(() => {
@@ -627,15 +640,18 @@ describe("Filesystem Utils", () => {
     });
 
     it("throws if json file doesn't exist", async () => {
-      mockReadFileSync(mockFs, []);
+      mockFileSystemItem(mockFs, []);
 
       await expect(removeTenant("A")).rejects.toThrow();
     });
 
     it("removes a tenant from the list", async () => {
       const expectedTenant = mockDynatraceEnvironmentsEntries[1];
-      mockReadFileSync(mockFs, [
-        [mockEnvironmentsJsonPath, JSON.stringify(mockDynatraceEnvironmentsEntries)],
+      mockFileSystemItem(mockFs, [
+        {
+          pathParts: [mockEnvironmentsJsonPath],
+          content: JSON.stringify(mockDynatraceEnvironmentsEntries),
+        },
       ]);
 
       await removeTenant("abc12345");
@@ -647,7 +663,7 @@ describe("Filesystem Utils", () => {
     });
 
     it("it leaves the list unchanged if empty", async () => {
-      mockReadFileSync(mockFs, [[mockEnvironmentsJsonPath, "[]"]]);
+      mockFileSystemItem(mockFs, [{ pathParts: [mockEnvironmentsJsonPath], content: "[]" }]);
 
       await removeTenant("abc12345");
 
@@ -655,8 +671,11 @@ describe("Filesystem Utils", () => {
     });
 
     it("it leaves the list unchanged if tenant doesn't exist", async () => {
-      mockReadFileSync(mockFs, [
-        [mockEnvironmentsJsonPath, JSON.stringify(mockDynatraceEnvironmentsEntries)],
+      mockFileSystemItem(mockFs, [
+        {
+          pathParts: [mockEnvironmentsJsonPath],
+          content: JSON.stringify(mockDynatraceEnvironmentsEntries),
+        },
       ]);
 
       await removeTenant("X");
@@ -671,7 +690,7 @@ describe("Filesystem Utils", () => {
   describe("removeWorkspace", () => {
     beforeEach(() => {
       setupContextWithStorage();
-      mockReadFileSync(mockFs, [[mockWorkspacesJsonPath, "[]"]]);
+      mockFileSystemItem(mockFs, [{ pathParts: [mockWorkspacesJsonPath], content: "[]" }]);
     });
 
     afterEach(() => {
@@ -691,15 +710,18 @@ describe("Filesystem Utils", () => {
     });
 
     it("throws if json file doesn't exist", async () => {
-      mockReadFileSync(mockFs, []);
+      mockFileSystemItem(mockFs, []);
 
       await expect(removeWorkspace("A")).rejects.toThrow();
     });
 
     it("removes a workspace from the list", async () => {
       const expectedWorkspace = mockExtensionWorkspacesEntries[1];
-      mockReadFileSync(mockFs, [
-        [mockWorkspacesJsonPath, JSON.stringify(mockExtensionWorkspacesEntries)],
+      mockFileSystemItem(mockFs, [
+        {
+          pathParts: [mockWorkspacesJsonPath],
+          content: JSON.stringify(mockExtensionWorkspacesEntries),
+        },
       ]);
 
       await removeWorkspace("mock");
@@ -717,8 +739,11 @@ describe("Filesystem Utils", () => {
     });
 
     it("it leaves the list unchanged if workspace doesn't exist", async () => {
-      mockReadFileSync(mockFs, [
-        [mockWorkspacesJsonPath, JSON.stringify(mockExtensionWorkspacesEntries)],
+      mockFileSystemItem(mockFs, [
+        {
+          pathParts: [mockWorkspacesJsonPath],
+          content: JSON.stringify(mockExtensionWorkspacesEntries),
+        },
       ]);
 
       await removeWorkspace("X");
@@ -733,7 +758,7 @@ describe("Filesystem Utils", () => {
   describe("registerSimulatorSummary", () => {
     beforeEach(() => {
       setupContextWithStorage();
-      mockReadFileSync(mockFs, [[mockSummaryJsonPath, "[]"]]);
+      mockFileSystemItem(mockFs, [{ pathParts: [mockSummaryJsonPath], content: "[]" }]);
     });
 
     afterEach(() => {
@@ -752,7 +777,7 @@ describe("Filesystem Utils", () => {
     });
 
     it("throws error if json file doesn't exist", () => {
-      mockReadFileSync(mockFs, []);
+      mockFileSystemItem(mockFs, []);
 
       expect(() => {
         registerSimulatorSummary(mockSummariesEntries[0]);
@@ -761,7 +786,9 @@ describe("Filesystem Utils", () => {
 
     it("preserves existing summaries", () => {
       const existingSummary = mockSummariesEntries[0];
-      mockReadFileSync(mockFs, [[mockSummaryJsonPath, JSON.stringify([existingSummary])]]);
+      mockFileSystemItem(mockFs, [
+        { pathParts: [mockSummaryJsonPath], content: JSON.stringify([existingSummary]) },
+      ]);
 
       registerSimulatorSummary(mockSummariesEntries[1]);
 
@@ -786,7 +813,9 @@ describe("Filesystem Utils", () => {
       { case: "single", expectedSummaries: mockSummariesEntries.slice(0, 1) },
       { case: "multiple", expectedSummaries: mockSummariesEntries },
     ])("$case entries should return expected value", ({ expectedSummaries }) => {
-      mockReadFileSync(mockFs, [[mockSummaryJsonPath, JSON.stringify(expectedSummaries)]]);
+      mockFileSystemItem(mockFs, [
+        { pathParts: [mockSummaryJsonPath], content: JSON.stringify(expectedSummaries) },
+      ]);
 
       const actualSummaries = getSimulatorSummaries();
 
@@ -798,7 +827,7 @@ describe("Filesystem Utils", () => {
     });
 
     it("throws error if json file doesn't exist", () => {
-      mockReadFileSync(mockFs, []);
+      mockFileSystemItem(mockFs, []);
 
       expect(() => {
         getSimulatorSummaries();
@@ -809,7 +838,9 @@ describe("Filesystem Utils", () => {
   describe("cleanUpSimulatorLogs", () => {
     beforeEach(() => {
       setupContextWithStorage();
-      mockReadFileSync(mockFs, [[mockSummaryJsonPath, JSON.stringify(mockSummariesEntries)]]);
+      mockFileSystemItem(mockFs, [
+        { pathParts: [mockSummaryJsonPath], content: JSON.stringify(mockSummariesEntries) },
+      ]);
     });
 
     afterEach(() => {
@@ -860,7 +891,7 @@ describe("Filesystem Utils", () => {
   describe("registerSimulatorTargets", () => {
     beforeEach(() => {
       setupContextWithStorage();
-      mockReadFileSync(mockFs, [[mockSimulatorTargetsJsonPath, "[]"]]);
+      mockFileSystemItem(mockFs, [{ pathParts: [mockSimulatorTargetsJsonPath], content: "[]" }]);
     });
 
     afterEach(() => {
@@ -879,8 +910,11 @@ describe("Filesystem Utils", () => {
   describe("registerSimulatorTarget", () => {
     beforeEach(() => {
       setupContextWithStorage();
-      mockReadFileSync(mockFs, [
-        [mockSimulatorTargetsJsonPath, JSON.stringify([mockSimulatorTargetEntries[0]])],
+      mockFileSystemItem(mockFs, [
+        {
+          pathParts: [mockSimulatorTargetsJsonPath],
+          content: JSON.stringify([mockSimulatorTargetEntries[0]]),
+        },
       ]);
     });
 
@@ -909,8 +943,11 @@ describe("Filesystem Utils", () => {
   describe("deleteSimulatorTarget", () => {
     beforeEach(() => {
       setupContextWithStorage();
-      mockReadFileSync(mockFs, [
-        [mockSimulatorTargetsJsonPath, JSON.stringify(mockSimulatorTargetEntries)],
+      mockFileSystemItem(mockFs, [
+        {
+          pathParts: [mockSimulatorTargetsJsonPath],
+          content: JSON.stringify(mockSimulatorTargetEntries),
+        },
       ]);
     });
 
@@ -927,7 +964,7 @@ describe("Filesystem Utils", () => {
     });
 
     it("throws if the file doesn't exist", () => {
-      mockReadFileSync(mockFs, []);
+      mockFileSystemItem(mockFs, []);
 
       expect(() => {
         deleteSimulatorTarget(mockSimulatorTargetEntries[0]);
@@ -958,7 +995,9 @@ describe("Filesystem Utils", () => {
       { case: "one", expectedTargets: mockSimulatorTargetEntries.slice(0, 1) },
       { case: "multiple", expectedTargets: mockSimulatorTargetEntries },
     ])("returns expected value for $case entries", ({ expectedTargets }) => {
-      mockReadFileSync(mockFs, [[mockSimulatorTargetsJsonPath, JSON.stringify(expectedTargets)]]);
+      mockFileSystemItem(mockFs, [
+        { pathParts: [mockSimulatorTargetsJsonPath], content: JSON.stringify(expectedTargets) },
+      ]);
 
       const actualTargets = getSimulatorTargets();
 
@@ -969,7 +1008,7 @@ describe("Filesystem Utils", () => {
     });
 
     it("throws if the file doesn't exist", () => {
-      mockReadFileSync(mockFs, []);
+      mockFileSystemItem(mockFs, []);
 
       expect(() => {
         getSimulatorTargets();
@@ -980,9 +1019,9 @@ describe("Filesystem Utils", () => {
   describe("uploadComponentCert", () => {
     beforeEach(() => {
       setupContextWithStorage();
-      mockReadFileSync(mockFs, [
-        [path.join("mock", "certificate"), "AAA"],
-        [path.join("mock", "certificate.pem"), "AAA"],
+      mockFileSystemItem(mockFs, [
+        { pathParts: ["mock", "certificate"], content: "AAA" },
+        { pathParts: ["mock", "certificate.pem"], content: "AAA" },
       ]);
     });
 
@@ -1009,9 +1048,9 @@ describe("Filesystem Utils", () => {
     test.each(["OneAgent", "ActiveGate"])("doesn't overwrite existing files on %s", component => {
       const typedComponentParam = component as "OneAgent" | "ActiveGate";
       const certPath = getCertPath(typedComponentParam);
-      mockReadFileSync(mockFs, [
-        [path.join(certPath, "certificate_mock-workspace"), "AAA"],
-        [path.join("mock", "certificate"), "AAA"],
+      mockFileSystemItem(mockFs, [
+        { pathParts: [certPath, "certificate_mock-workspace"], content: "AAA" },
+        { pathParts: ["mock", "certificate"], content: "AAA" },
       ]);
 
       uploadComponentCert(path.join("mock", "certificate"), typedComponentParam);
@@ -1032,7 +1071,7 @@ describe("Filesystem Utils", () => {
 
     it("returns manifest content", () => {
       const expected = "AAA";
-      mockReadFileSync(mockFs, [[mockManifestPath, expected]]);
+      mockFileSystemItem(mockFs, [{ pathParts: [mockManifestPath], content: expected }]);
 
       const actual = readExtensionManifest();
 
@@ -1041,7 +1080,7 @@ describe("Filesystem Utils", () => {
 
     it("it returns empty string in case of issues", () => {
       const expected = "";
-      mockReadFileSync(mockFs, []);
+      mockFileSystemItem(mockFs, []);
 
       const actual = readExtensionManifest();
 
@@ -1233,7 +1272,7 @@ describe("Filesystem Utils", () => {
           path.resolve(__dirname, "..", "..", "test_data", "workspace_files", "base_gitignore"),
         )
         .toString();
-      mockExistsSync(mockFs, [path.join("mock", "my-workspace")]);
+      mockFileSystemItem(mockFs, [{ pathParts: ["mock", "my-workspace"] }]);
 
       await writeGititnore();
 
@@ -1254,7 +1293,7 @@ describe("Filesystem Utils", () => {
     beforeEach(() => {
       setupContextWithStorage();
       jest.spyOn(vscode.workspace, "workspaceFolders", "get").mockReturnValue(mockWorkspaceFolders);
-      mockReadFileSync(mockFs, [[mockManifestPath, "AAA"]]);
+      mockFileSystemItem(mockFs, [{ pathParts: [mockManifestPath], content: "AAA" }]);
     });
 
     afterEach(() => {

@@ -26,7 +26,7 @@ import {
   getDatasourcePath,
   loadDefaultSimulationConfig,
 } from "../../../../src/utils/simulator";
-import { mockReadFileSync } from "../../../shared/utils";
+import { mockFileSystemItem } from "../../../shared/utils";
 import { MockExtensionContext, MockWorkspaceConfiguration } from "../../mocks/vscode";
 
 jest.mock("../../../../src/utils/logging");
@@ -34,7 +34,7 @@ jest.mock("fs");
 const mockFs = fs as jest.Mocked<typeof fs>;
 
 const mockGlobalStorage = path.join("mock", "globalStorage");
-const mockTargetsJson = path.join(mockGlobalStorage, "targets.json");
+const targetsJsonPathParts = ["mock", "globalStorage", "targets.json"];
 
 describe("Simulator Utils", () => {
   const DATASOURCES = {
@@ -206,7 +206,12 @@ describe("Simulator Utils", () => {
 
     it("should add target details for remote location", () => {
       setupWorkspaceWithConfiguration("REMOTE", "ACTIVEGATE", false, "mockTarget");
-      mockReadFileSync(mockFs, [[mockTargetsJson, JSON.stringify([remoteTarget])]]);
+      mockFileSystemItem(mockFs, [
+        {
+          pathParts: targetsJsonPathParts,
+          content: JSON.stringify([remoteTarget]),
+        },
+      ]);
 
       const actual = loadDefaultSimulationConfig();
 
@@ -241,7 +246,9 @@ describe("Simulator Utils", () => {
       },
     ])("should return fallback value if $condition", ({ setup }) => {
       setup();
-      mockReadFileSync(mockFs, [[mockTargetsJson, JSON.stringify([remoteTarget])]]);
+      mockFileSystemItem(mockFs, [
+        { pathParts: targetsJsonPathParts, content: JSON.stringify([remoteTarget]) },
+      ]);
       const expected: SimulationConfig = {
         eecType: "ONEAGENT",
         location: "LOCAL",

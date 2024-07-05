@@ -14,43 +14,51 @@
   limitations under the License.
  */
 
-import { readFileSync } from "fs";
+import * as fs from "fs";
 import * as path from "path";
-import mock = require("mock-fs");
 import { sign } from "../../../../src/utils/cryptography";
+import { mockFileSystemItem } from "../../../shared/utils";
 
 jest.mock("../../../../src/utils/logging");
+jest.mock("fs");
+const mockFs = fs as jest.Mocked<typeof fs>;
 
 describe("Cryptography Utils", () => {
   describe("sign", () => {
     let expectedCms: string;
     let developerCertKey: string;
+    const actualFs = jest.requireActual<typeof fs>("fs");
 
     beforeAll(() => {
-      developerCertKey = readFileSync(
-        path.resolve(__dirname, "..", "..", "test_data", "cryptography", "test_developer.pem"),
-      ).toString();
+      developerCertKey = actualFs
+        .readFileSync(
+          path.resolve(__dirname, "..", "..", "test_data", "cryptography", "test_developer.pem"),
+        )
+        .toString();
 
-      expectedCms = readFileSync(
-        path.resolve(__dirname, "..", "..", "test_data", "cryptography", "expected_cms.pem"),
-      ).toString();
+      expectedCms = actualFs
+        .readFileSync(
+          path.resolve(__dirname, "..", "..", "test_data", "cryptography", "expected_cms.pem"),
+        )
+        .toString();
 
-      mock({
-        mock: {
-          "extension.zip": "AAA",
-          "developer.pem": developerCertKey,
-        },
-      });
+      mockFileSystemItem(mockFs, [
+        [path.join("mock", "extension.zip"), "AAA"],
+        [path.join("mock", "developer.pem"), developerCertKey],
+      ]);
     });
 
     it("should create expected signature", () => {
       // Sign and normalize line endings
-      const cms = sign("mock/extension.zip", "mock/developer.pem").replace(/\r?\n|\r/g, "\n");
+      const cms = sign(
+        path.join("mock", "extension.zip"),
+        path.join("mock", "developer.pem"),
+      ).replace(/\r?\n|\r/g, "\n");
       expect(cms).toEqual(expectedCms);
     });
 
     afterAll(() => {
-      mock.restore();
+      jest.restoreAllMocks();
     });
   });
 });

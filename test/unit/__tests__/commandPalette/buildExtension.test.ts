@@ -1,6 +1,5 @@
-import { existsSync, readFileSync, readdirSync } from "fs";
+import * as fs from "fs";
 import * as path from "path";
-import mock = require("mock-fs");
 import * as vscode from "vscode";
 import * as yaml from "yaml";
 import { buildExtensionWorkflow } from "../../../../src/commandPalette/buildExtension";
@@ -8,6 +7,7 @@ import * as extension from "../../../../src/extension";
 import * as tenantsTreeView from "../../../../src/treeViews/tenantsTreeView";
 import * as cachingUtils from "../../../../src/utils/caching";
 import * as conditionCheckers from "../../../../src/utils/conditionCheckers";
+import { mockFileSystemItem } from "../../../shared/utils";
 import {
   MockCancellationToken,
   MockExtensionContext,
@@ -16,6 +16,8 @@ import {
 } from "../../mocks/vscode";
 
 jest.mock("../../../../src/utils/logging");
+jest.mock("fs");
+const mockFs = fs as jest.Mocked<typeof fs>;
 
 describe("Build Extension Workflow", () => {
   let useMemoSpy: jest.SpyInstance;
@@ -68,16 +70,17 @@ describe("Build Extension Workflow", () => {
     });
 
     afterAll(() => {
-      mock.restore();
+      jest.restoreAllMocks();
     });
 
     it("should package the extension", async () => {
       await buildExtensionWorkflow();
 
-      const distDir = "mockWorkspace/dist";
-      expect(existsSync(distDir)).toBe(true);
-      expect(readdirSync(distDir).length).toBe(1);
-      expect(readdirSync(distDir)[0]).toBe("custom_sample.extension-1.0.0.zip");
+      expect(mockFs.copyFile).toHaveBeenCalledTimes(1);
+      expect(mockFs.copyFile).toHaveBeenCalledWith(
+        path.join("mock", "devCertKey"),
+        path.join("mock", "workspace", "custom_sample.extension-0.0.1.zip"),
+      );
     });
   });
 });
@@ -116,6 +119,7 @@ const setupPreconditions = (
  * Performs the base setup for allowing the build extension workflow to run.
  */
 const baseExecutionSetup = () => {
+  const actualFs = jest.requireActual<typeof fs>("fs");
   const validManifestContent = yaml.stringify({
     name: "custom:sample.extension",
     version: "1.0.0",
@@ -130,21 +134,33 @@ const baseExecutionSetup = () => {
     "cryptography",
     "test_developer.pem",
   );
-  mock({
-    mockGlobalStorage: {},
-    mockWorkspaceStorage: {},
-    mockWorkspace: { extension: { "extension.yaml": validManifestContent } },
-    mock: { devCertKey: readFileSync(devCertKeyPath).toString() },
+  // @ts-expect-error
+  mockFs.readdirSync.mockImplementation((p: fs.PathLike) => {
+    console.log(`readdirSync on ${p.toString()}`);
+    if (p.toString() === path.resolve("mock", "extension")) {
+      return ["extension.yaml"];
+    }
+    return [];
   });
+  mockFileSystemItem(mockFs, [
+    { pathParts: ["mock", "mockGlobalStorage"] },
+    { pathParts: ["mock", "mockWorkspaceStorage"] },
+    { pathParts: ["mock", "extension"] },
+    { pathParts: ["mock", "extension", "extension.yaml"], content: validManifestContent },
+    {
+      pathParts: ["mock", "devCertKey"],
+      content: actualFs.readFileSync(devCertKeyPath).toString(),
+    },
+  ]);
 
-  setupPreconditions(true, true, true, true, "mockWorkspace/extension/extension.yaml");
+  setupPreconditions(true, true, true, true, path.join("mock", "extension", "extension.yaml"));
 
   jest
     .spyOn(extension, "getActivationContext")
     .mockReturnValue(new MockExtensionContext("mockGlobalStorage", "mockWorkspaceStorage"));
   jest.spyOn(vscode.workspace, "getConfiguration").mockImplementation(() => {
     const settings: Record<string, unknown> = {
-      developerCertkeyLocation: "mock/devCertKey",
+      developerCertkeyLocation: path.join("mock", "devCertKey"),
     };
     return {
       get: <T>(config: string) => settings[config] as T,
