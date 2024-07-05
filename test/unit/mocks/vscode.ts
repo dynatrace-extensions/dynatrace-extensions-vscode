@@ -14,6 +14,7 @@
   limitations under the License.
  */
 
+import * as path from "path";
 import * as vscode from "vscode";
 
 export class MockCancellationToken implements vscode.CancellationToken {
@@ -99,9 +100,9 @@ export class MockUri implements vscode.Uri {
   with = jest.fn();
   toJSON = jest.fn();
 
-  constructor(path?: string) {
-    this.path = path ?? "";
-    this.fsPath = path ?? "";
+  constructor(p?: string) {
+    this.path = p ?? "";
+    this.fsPath = p ?? "";
   }
 
   toString(): string {
@@ -175,7 +176,7 @@ export class MockExtensionContext implements vscode.ExtensionContext {
   constructor(globalStoragePath?: string, workspaceStoragePath?: string) {
     this.globalStoragePath = globalStoragePath ?? "";
     this.globalStorageUri = new MockUri(this.globalStoragePath);
-    this.logUri = new MockUri(`${this.globalStoragePath}/logs`);
+    this.logUri = new MockUri(path.join(this.globalStoragePath, "logs"));
 
     this.storagePath = workspaceStoragePath;
     if (workspaceStoragePath) {
