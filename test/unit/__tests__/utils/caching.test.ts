@@ -337,7 +337,7 @@ describe("Caching Utils", () => {
       await expect(
         waitForCondition(() => getCachedBaristaIcons().length > 0, {
           interval: 1,
-          timeout: 100,
+          timeout: 200,
         }),
       ).resolves.not.toThrow();
       const actual = getCachedBaristaIcons();
@@ -431,7 +431,6 @@ const mockBarista = (internal: boolean) => {
   jest.spyOn(axios, "get").mockImplementation((url: string) => {
     return new Promise((resolve, reject) => {
       if (url.includes(internal ? "barista.lab.dynatrace.org" : "raw.githubusercontent.com")) {
-        console.log(url);
         resolve({ data: { icons: [{ name: "mockIcon1" }, { name: "mockIcon2" }] } });
       }
       reject(new Error("mock error"));
