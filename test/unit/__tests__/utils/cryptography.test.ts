@@ -43,8 +43,8 @@ describe("Cryptography Utils", () => {
         .toString();
 
       mockFileSystemItem(mockFs, [
-        [path.join("mock", "extension.zip"), "AAA"],
-        [path.join("mock", "developer.pem"), developerCertKey],
+        { pathParts: ["mock", "extension.zip"], content: "AAA" },
+        { pathParts: ["mock", "developer.pem"], content: developerCertKey },
       ]);
     });
 

@@ -74,12 +74,14 @@ describe("Build Extension Workflow", () => {
     });
 
     it("should package the extension", async () => {
+      const expectedExtName = "custom_sample.extension-1.0.0.zip";
+
       await buildExtensionWorkflow();
 
-      expect(mockFs.copyFile).toHaveBeenCalledTimes(1);
-      expect(mockFs.copyFile).toHaveBeenCalledWith(
-        path.join("mock", "devCertKey"),
-        path.join("mock", "workspace", "custom_sample.extension-0.0.1.zip"),
+      expect(mockFs.copyFileSync).toHaveBeenCalledTimes(1);
+      expect(mockFs.copyFileSync).toHaveBeenCalledWith(
+        path.resolve("mockWorkspaceStorage", expectedExtName),
+        path.resolve("mockWorkspace", "dist", expectedExtName),
       );
     });
   });
@@ -136,15 +138,15 @@ const baseExecutionSetup = () => {
   );
   // @ts-expect-error
   mockFs.readdirSync.mockImplementation((p: fs.PathLike) => {
-    console.log(`readdirSync on ${p.toString()}`);
     if (p.toString() === path.resolve("mock", "extension")) {
       return ["extension.yaml"];
     }
     return [];
   });
   mockFileSystemItem(mockFs, [
-    { pathParts: ["mock", "mockGlobalStorage"] },
-    { pathParts: ["mock", "mockWorkspaceStorage"] },
+    { pathParts: ["mockGlobalStorage"] },
+    { pathParts: ["mockWorkspaceStorage"] },
+    { pathParts: ["mockWorkspaceStorage", "extension.zip"], content: "AAA" },
     { pathParts: ["mock", "extension"] },
     { pathParts: ["mock", "extension", "extension.yaml"], content: validManifestContent },
     {
