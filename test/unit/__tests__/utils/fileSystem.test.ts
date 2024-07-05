@@ -1070,7 +1070,10 @@ describe("Filesystem Utils", () => {
     });
 
     it("returns manifest content", () => {
+      const expectedPath = path.join("extension", "extension.yaml");
+      jest.spyOn(glob, "sync").mockReturnValue([expectedPath]);
       const expected = "AAA";
+
       mockFileSystemItem(mockFs, [{ pathParts: [mockManifestPath], content: expected }]);
 
       const actual = readExtensionManifest();
@@ -1080,6 +1083,7 @@ describe("Filesystem Utils", () => {
 
     it("it returns empty string in case of issues", () => {
       const expected = "";
+      jest.spyOn(glob, "sync").mockReturnValue([]);
       mockFileSystemItem(mockFs, []);
 
       const actual = readExtensionManifest();
@@ -1113,7 +1117,7 @@ describe("Filesystem Utils", () => {
 
     it("find the path one level under workspace root", () => {
       const expectedPath = path.join("src", "extension", "extension.yaml");
-      const globSpy = jest.spyOn(glob, "sync").mockImplementation((p: string) => {
+      const globSpy = jest.spyOn(glob, "sync").mockImplementation((p: string | string[]) => {
         if (p === "extension/extension.yaml") {
           return [];
         }
@@ -1302,6 +1306,7 @@ describe("Filesystem Utils", () => {
     });
 
     it("resolves a directory above the manifest path", () => {
+      jest.spyOn(glob, "sync").mockReturnValue([path.join("extension", "extension.yaml")]);
       const expected = path.resolve(mockManifestPath, "..", "snmp");
 
       const actual = getSnmpDirPath();
@@ -1336,6 +1341,7 @@ describe("Filesystem Utils", () => {
     });
 
     it("returns an array of mib files", () => {
+      jest.spyOn(glob, "sync").mockReturnValue([path.join("extension", "extension.yaml")]);
       mockFs.existsSync.mockReturnValue(true);
       //@ts-expect-error
       mockFs.readdirSync.mockImplementation((p: fs.PathLike) => {
@@ -1359,8 +1365,8 @@ const getCertPath = (component: "OneAgent" | "ActiveGate") => {
       ? "C:\\ProgramData\\dynatrace\\oneagent\\agent\\config\\certificates"
       : "C:\\ProgramData\\dynatrace\\remotepluginmodule\\agent\\conf\\certificates"
     : component === "OneAgent"
-    ? "/var/lib/dynatrace/oneagent/agent/config/certificates"
-    : "/var/lib/dynatrace/remotepluginmodule/agent/conf/certificates";
+      ? "/var/lib/dynatrace/oneagent/agent/config/certificates"
+      : "/var/lib/dynatrace/remotepluginmodule/agent/conf/certificates";
 };
 
 const setupContextWithStorage = () => {
