@@ -353,8 +353,8 @@ const getExtraPlatformsParameter = () => {
     process.platform === "win32"
       ? '-e "linux_x86_64"'
       : process.platform === "linux"
-      ? '-e "win_amd64"'
-      : '-e "linux_x86_64" -e "win_amd64"';
+        ? '-e "win_amd64"'
+        : '-e "linux_x86_64" -e "win_amd64"';
 
   // The user's configuration can override this
   const extraPlatforms = vscode.workspace

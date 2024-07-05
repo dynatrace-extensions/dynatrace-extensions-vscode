@@ -661,7 +661,7 @@ export class SimulatorManager {
     const fnLogTrace = [...this.logTrace, "stop"];
     logger.info("Stopping simulator", ...fnLogTrace);
     try {
-      if (this.simulatorProcess) {
+      if (this.simulatorProcess && this.simulatorProcess.pid) {
         // Datasource is detached from main process, so we need to kill the entire process tree
         pidtree(this.simulatorProcess.pid, (err, pids) => {
           if (err) {

@@ -862,8 +862,8 @@ const getExtensionCertLocation = (component: "OneAgent" | "ActiveGate") => {
       ? "C:\\ProgramData\\dynatrace\\oneagent\\agent\\config\\certificates"
       : "C:\\ProgramData\\dynatrace\\remotepluginmodule\\agent\\conf\\certificates"
     : component === "OneAgent"
-    ? "/var/lib/dynatrace/oneagent/agent/config/certificates"
-    : "/var/lib/dynatrace/remotepluginmodule/agent/conf/certificates";
+      ? "/var/lib/dynatrace/oneagent/agent/config/certificates"
+      : "/var/lib/dynatrace/remotepluginmodule/agent/conf/certificates";
 };
 
 const isDifferentFile = (srcPath: string, destPath: string) => {
