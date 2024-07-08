@@ -72,7 +72,7 @@ jobs:
     needs: build
     if: success()
     steps:
-      - uses: actions/download-artifact@v3
+      - uses: actions/download-artifact@v4
       - run: npx vsce publish --packagePath $(find . -iname *.vsix)
         env:
           VSCE_PAT: ${{ secrets.VSCE_PAT }}
