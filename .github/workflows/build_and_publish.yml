@@ -1,4 +1,4 @@
-name: Multi-platform build & publish
+name: Marketplace release
 
 on: workflow_dispatch
 
