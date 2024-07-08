@@ -8,13 +8,13 @@
   },
   "plugins": [
     "@typescript-eslint",
-    "prettier",
     "import",
     "functional",
     "no-unsanitized",
     "no-secrets",
     "react",
-    "@lwc/eslint-plugin-lwc"
+    "@lwc/eslint-plugin-lwc",
+    "prettier"
   ],
   "extends": [
     "eslint:recommended",
@@ -22,8 +22,8 @@
     "plugin:@typescript-eslint/recommended",
     "plugin:@typescript-eslint/strict",
     "plugin:@typescript-eslint/recommended-requiring-type-checking",
-    "prettier",
-    "airbnb-typescript"
+    "airbnb-typescript",
+    "prettier"
   ],
   "overrides": [
     {

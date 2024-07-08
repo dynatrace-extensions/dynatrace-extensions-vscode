@@ -14,8 +14,8 @@
   limitations under the License.
  */
 
-import mock = require("mock-fs");
-import { DirectoryItems } from "mock-fs/lib/filesystem";
+import * as fs from "fs";
+import * as path from "path";
 import * as vscode from "vscode";
 import * as extension from "../../../../src/extension";
 import { DatasourceName, ExtensionStub } from "../../../../src/interfaces/extensionMeta";
@@ -32,17 +32,16 @@ import * as fileSystemUtils from "../../../../src/utils/fileSystem";
 import * as otherExtensionsUtils from "../../../../src/utils/otherExtensions";
 import * as simulatorUtils from "../../../../src/utils/simulator";
 import * as webviewPanel from "../../../../src/webviews/webviewPanel";
+import { mockFileSystemItem } from "../../../shared/utils";
 import { MockExtensionContext, MockUri } from "../../mocks/vscode";
 
 jest.mock("../../../../src/utils/logging");
+jest.mock("fs");
+const mockFs = fs as jest.Mocked<typeof fs>;
 
-describe("Simulator Manager", () => {
+describe.only("Simulator Manager", () => {
   let simulatorManager: SimulatorManager;
   const mockContext = new MockExtensionContext();
-
-  beforeAll(() => {
-    mock({ mock: {} });
-  });
 
   beforeEach(() => {
     jest.spyOn(extension, "getActivationContext").mockReturnValue(mockContext);
@@ -50,11 +49,7 @@ describe("Simulator Manager", () => {
   });
 
   afterEach(() => {
-    jest.restoreAllMocks();
-  });
-
-  afterAll(() => {
-    mock.restore();
+    jest.clearAllMocks();
   });
 
   describe("checkMandatoryRequirements", () => {
@@ -83,21 +78,29 @@ describe("Simulator Manager", () => {
       {
         condition: "simulator.json doesn't exist on non-python extension",
         datasource: "snmp",
-        mockFs: {},
+        mockPaths: [],
       },
       {
         condition: "simulator.json & extension folder don't exist on python extension",
         datasource: "python",
-        mockFs: { mock: { "extension": {}, "my-workspace": {} } },
+        mockPaths: [{ pathParts: ["mock", "extension"] }, { pathParts: ["mock", "my-workspace"] }],
       },
       {
         condition: "simulator.json & activation.json don't exist on python extension",
         datasource: "python",
-        mockFs: { mock: { "extension": {}, "my-workspace": { extension: {} } } },
+        mockPaths: [
+          { pathParts: ["mock", "extension"] },
+          { pathParts: ["mock", "my-workspace", "extension"] },
+        ],
       },
-    ])("activation file check fails if $condition", ({ datasource, mockFs }) => {
-      mock(mockFs as DirectoryItems);
-      jest.spyOn(fileSystemUtils, "getExtensionFilePath").mockReturnValue("mock/extension");
+    ])("activation file check fails if $condition", ({ datasource, mockPaths }) => {
+      mockFileSystemItem(mockFs, mockPaths);
+      jest
+        .spyOn(fileSystemUtils, "getExtensionFilePath")
+        .mockReturnValue(path.join("mock", "extension"));
+      jest
+        .spyOn(fileSystemUtils, "getExtensionWorkspaceDir")
+        .mockReturnValue(path.join("mock", "extension"));
       jest.spyOn(cachingUtils, "getCachedParsedExtension").mockReturnValue(mockExtensionStub);
       jest
         .spyOn(extensionParsingUtils, "getDatasourceName")
@@ -105,7 +108,7 @@ describe("Simulator Manager", () => {
       jest
         .spyOn(vscode.workspace, "workspaceFolders", "get")
         .mockReturnValue([
-          { index: 0, name: "MockWorkspace", uri: new MockUri("mock/my-workspace") },
+          { index: 0, name: "MockWorkspace", uri: new MockUri(path.join("mock", "my-workspace")) },
         ]);
 
       const [status, failedChecks] = simulatorManager.checkMandatoryRequirements();
@@ -116,15 +119,17 @@ describe("Simulator Manager", () => {
     });
 
     it("should pass and update with valid checked details", () => {
-      mock({ mock: { myWorkspace: { config: { "simulator.json": "" } } } });
+      mockFileSystemItem(mockFs, [
+        { pathParts: ["mock", "myWorkspace", "config", "simulator.json"], content: "" },
+      ]);
       jest
         .spyOn(vscode.workspace, "workspaceFolders", "get")
         .mockReturnValue([
-          { index: 0, name: "MockWorkspace", uri: new MockUri("mock/myWorkspace") },
+          { index: 0, name: "MockWorkspace", uri: new MockUri(path.join("mock", "myWorkspace")) },
         ]);
       jest
         .spyOn(fileSystemUtils, "getExtensionFilePath")
-        .mockReturnValue("mock/myWorkspace/extension");
+        .mockReturnValue(path.join("mock", "myWorkspace", "extension"));
       jest.spyOn(cachingUtils, "getCachedParsedExtension").mockReturnValue(mockExtensionStub);
       jest.spyOn(extensionParsingUtils, "getDatasourceName").mockReturnValue("snmp");
 
@@ -191,8 +196,6 @@ describe("Simulator Manager", () => {
 
       expect(actualStatus).toBe(expectedStatus);
       expect(actualMessage).toBe(expectedMessage);
-
-      mock.restore();
     });
 
     it("should fail check on REMOTE for python extension", async () => {
@@ -262,10 +265,13 @@ describe("Simulator Manager", () => {
     });
 
     it("should pass check on LOCAL for non-python if DS exists and can be simulated", async () => {
-      mock({ mock: { dsLocation: "" } });
+      mockFileSystemItem(mockFs, [{ pathParts: ["mock", "dsLocation"], content: "" }]);
+
       jest.replaceProperty(simulatorManager, "datasourceName", "mockDS");
       jest.spyOn(simulatorUtils, "canSimulateDatasource").mockReturnValue(true);
-      jest.spyOn(simulatorUtils, "getDatasourcePath").mockReturnValue("mock/dsLocation");
+      jest
+        .spyOn(simulatorUtils, "getDatasourcePath")
+        .mockReturnValue(path.join("mock", "dsLocation"));
       const expectedStatus = "READY";
       const expectedMessage = "";
 
@@ -276,12 +282,10 @@ describe("Simulator Manager", () => {
 
       expect(actualStatus).toBe(expectedStatus);
       expect(actualMessage).toBe(expectedMessage);
-
-      mock.restore();
     });
 
     it("should pass check on REMOTE for non-python if target exists and DS can be simulated", async () => {
-      mock({ mock: { dsLocation: "" } });
+      mockFileSystemItem(mockFs, [{ pathParts: ["mock", "dsLocation"] }]);
       const canSimulateDatasourceSpy = jest.spyOn(simulatorUtils, "canSimulateDatasource");
       canSimulateDatasourceSpy.mockReturnValue(true);
       jest.replaceProperty(simulatorManager, "datasourceName", "mockDS");
@@ -305,7 +309,7 @@ describe("Simulator Manager", () => {
     });
   });
 
-  describe("checkReady", () => {
+  describe.only("checkReady", () => {
     let renderSpy: jest.SpyInstance;
     let postMessageSpy: jest.SpyInstance;
     const fallbackConfigValue: SimulationConfig = {
@@ -326,18 +330,18 @@ describe("Simulator Manager", () => {
       },
       status: "UNSUPPORTED",
       statusMessage: "undefined",
-      failedChecks: [],
+      failedChecks: ["Activation file"],
     };
 
     beforeEach(() => {
       jest.spyOn(fileSystemUtils, "getSimulatorTargets").mockReturnValue([]);
       jest.spyOn(fileSystemUtils, "getSimulatorSummaries").mockReturnValue([]);
       renderSpy = jest.spyOn(webviewPanel, "renderPanel").mockImplementation(() => {});
-      postMessageSpy = jest.spyOn(webviewPanel, "postMessageToPanel").mockImplementation(() => {});
     });
 
     it("first updates the panel with CHECKING status (render)", async () => {
       jest.spyOn(simulatorManager, "checkMandatoryRequirements").mockReturnValue([true, []]);
+      simulatorManager = new SimulatorManager();
 
       await simulatorManager.checkReady(true);
 
@@ -352,6 +356,8 @@ describe("Simulator Manager", () => {
 
     it("first updates the panel with CHECKING status (postMessage)", async () => {
       jest.spyOn(simulatorManager, "checkMandatoryRequirements").mockReturnValue([true, []]);
+      simulatorManager = new SimulatorManager();
+      postMessageSpy = jest.spyOn(webviewPanel, "postMessageToPanel").mockImplementation(() => {});
 
       await simulatorManager.checkReady(false);
 

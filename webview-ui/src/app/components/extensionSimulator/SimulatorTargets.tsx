@@ -23,7 +23,7 @@ import {
   TableColumn,
   TitleBar,
 } from "@dynatrace/strato-components-preview";
-import { PlusIcon, EditIcon, DeleteIcon, IntegrationsIcon } from "@dynatrace/strato-icons";
+import { PlusIcon, EditIcon, DeleteIcon, ConnectorIcon } from "@dynatrace/strato-icons";
 import React, { useState } from "react";
 import {
   SIMULATOR_ADD_TARGERT_CMD,
@@ -87,7 +87,7 @@ export const SimulatorTargets = ({ targets }: SimulatorTargetsProps) => {
       id: "actions",
       autoWidth: true,
       ratioWidth: 1,
-      cell: ({ row }) => {
+      cell: ({ row }: { row: { original: unknown } }) => {
         return (
           <Flex gap={4}>
             <Button onClick={() => handleEditTarget(row.original as RemoteTarget)}>
@@ -114,7 +114,7 @@ export const SimulatorTargets = ({ targets }: SimulatorTargetsProps) => {
           <TitleBar.Subtitle>Manage your target machines for remote simulations</TitleBar.Subtitle>
           <TitleBar.Prefix>
             <Container as={Flex}>
-              <IntegrationsIcon size='large' />
+              <ConnectorIcon size='large' />
             </Container>
           </TitleBar.Prefix>
           <TitleBar.Suffix>

@@ -14,7 +14,8 @@
   limitations under the License.
  */
 
-import mock = require("mock-fs");
+import * as fs from "fs";
+import * as path from "path";
 import * as vscode from "vscode";
 import * as extension from "../../../../src/extension";
 import { EecType, OsType, SimulationConfig } from "../../../../src/interfaces/simulator";
@@ -25,9 +26,15 @@ import {
   getDatasourcePath,
   loadDefaultSimulationConfig,
 } from "../../../../src/utils/simulator";
+import { mockFileSystemItem } from "../../../shared/utils";
 import { MockExtensionContext, MockWorkspaceConfiguration } from "../../mocks/vscode";
 
 jest.mock("../../../../src/utils/logging");
+jest.mock("fs");
+const mockFs = fs as jest.Mocked<typeof fs>;
+
+const mockGlobalStorage = path.join("mock", "globalStorage");
+const targetsJsonPathParts = ["mock", "globalStorage", "targets.json"];
 
 describe("Simulator Utils", () => {
   const DATASOURCES = {
@@ -166,7 +173,8 @@ describe("Simulator Utils", () => {
     };
 
     beforeAll(() => {
-      mock({ mock: { globalStorage: { "targets.json": "[]" } } });
+      mockFs.existsSync.mockReturnValue(true);
+      mockFs.readFileSync.mockReturnValue(JSON.stringify([remoteTarget]));
     });
 
     beforeEach(() => {
@@ -180,7 +188,8 @@ describe("Simulator Utils", () => {
     });
 
     afterAll(() => {
-      mock.restore();
+      jest.clearAllMocks();
+      jest.restoreAllMocks();
     });
 
     it("should return workspace settings if defined", () => {
@@ -197,7 +206,12 @@ describe("Simulator Utils", () => {
 
     it("should add target details for remote location", () => {
       setupWorkspaceWithConfiguration("REMOTE", "ACTIVEGATE", false, "mockTarget");
-      mock({ mock: { globalStorage: { "targets.json": JSON.stringify([remoteTarget]) } } });
+      mockFileSystemItem(mockFs, [
+        {
+          pathParts: targetsJsonPathParts,
+          content: JSON.stringify([remoteTarget]),
+        },
+      ]);
 
       const actual = loadDefaultSimulationConfig();
 
@@ -232,7 +246,9 @@ describe("Simulator Utils", () => {
       },
     ])("should return fallback value if $condition", ({ setup }) => {
       setup();
-      mock({ mock: { globalStorage: { "targets.json": JSON.stringify([remoteTarget]) } } });
+      mockFileSystemItem(mockFs, [
+        { pathParts: targetsJsonPathParts, content: JSON.stringify([remoteTarget]) },
+      ]);
       const expected: SimulationConfig = {
         eecType: "ONEAGENT",
         location: "LOCAL",

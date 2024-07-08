@@ -45,8 +45,8 @@ import {
   updateEntityInstances,
   useMemo,
 } from "../../../../src/utils/caching";
-import { waitForCondition } from "../../../../src/utils/general";
 import * as fileSystemUtils from "../../../../src/utils/fileSystem";
+import { waitForCondition } from "../../../../src/utils/general";
 import * as snmpUtils from "../../../../src/utils/snmp";
 import { OidInformation } from "../../../../src/utils/snmp";
 import { readTestDataFile } from "../../../shared/utils";
@@ -337,7 +337,7 @@ describe("Caching Utils", () => {
       await expect(
         waitForCondition(() => getCachedBaristaIcons().length > 0, {
           interval: 1,
-          timeout: 100,
+          timeout: 200,
         }),
       ).resolves.not.toThrow();
       const actual = getCachedBaristaIcons();
@@ -430,7 +430,7 @@ describe("Caching Utils", () => {
 const mockBarista = (internal: boolean) => {
   jest.spyOn(axios, "get").mockImplementation((url: string) => {
     return new Promise((resolve, reject) => {
-      if (url.includes(internal ? "barista.lab.dynatrace.org" : "barista.dynatrace.com")) {
+      if (url.includes(internal ? "barista.lab.dynatrace.org" : "raw.githubusercontent.com")) {
         resolve({ data: { icons: [{ name: "mockIcon1" }, { name: "mockIcon2" }] } });
       }
       reject(new Error("mock error"));

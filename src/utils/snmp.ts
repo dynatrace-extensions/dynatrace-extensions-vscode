@@ -1040,7 +1040,7 @@ class MibParser {
           if (Object.keys(this.Modules[ModuleName]).includes(ObjectName)) {
             if (this.Modules[ModuleName][ObjectName].OID) {
               //OID
-              summary += `${this.Modules[ModuleName][ObjectName].OID ?? ""} : ${ObjectName}\r\n`;
+              summary += `${this.Modules[ModuleName][ObjectName].OID} : ${ObjectName}\r\n`;
               //callback(this.Modules[ModuleName][ObjectName]);
               //break;
             }
@@ -1195,7 +1195,7 @@ export class MibModuleStore {
             syntax: oid.SYNTAX,
             oid: oid.OID,
             source: `Local MIB file \`${oid.ModuleName ?? ""}\``,
-          } as OidInformation),
+          }) as OidInformation,
       );
   }
 }

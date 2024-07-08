@@ -15,11 +15,9 @@
  */
 
 import * as fs from "fs";
-import { rmSync } from "fs";
 import * as os from "os";
 import * as path from "path";
-import mock = require("mock-fs");
-import FileSystem = require("mock-fs/lib/filesystem");
+import { glob } from "glob";
 import * as vscode from "vscode";
 import * as extension from "../../../../src/extension";
 import {
@@ -27,11 +25,7 @@ import {
   RemoteExecutionSummary,
   RemoteTarget,
 } from "../../../../src/interfaces/simulator";
-import {
-  DynatraceTenantDto,
-  ExtensionWorkspace,
-  ExtensionWorkspaceDto,
-} from "../../../../src/interfaces/treeViews";
+import { DynatraceTenantDto, ExtensionWorkspaceDto } from "../../../../src/interfaces/treeViews";
 import {
   cleanUpSimulatorLogs,
   createUniqueFileName,
@@ -61,20 +55,27 @@ import {
   uploadComponentCert,
   writeGititnore,
 } from "../../../../src/utils/fileSystem";
-import { readTestDataFile } from "../../../shared/utils";
+import { mockFileSystemItem } from "../../../shared/utils";
 import { MockExtensionContext, MockUri, MockWorkspaceConfiguration } from "../../mocks/vscode";
 
 jest.mock("../../../../src/utils/logging");
+jest.mock("fs");
+const mockFs = fs as jest.Mocked<typeof fs>;
 
-const mockGlobalStoragePath = "mock/globalStorage";
-const mockWorkspaceStoragePath = "mock/workspaceStorage";
+const mockGlobalStoragePath = path.join("mock", "globalStorage");
+const mockWorkspaceStoragePath = path.join("mock", "workspaceStorage");
 const mockWorkspacePath = path.join("mock", "my-workspace");
+const mockWorkspacesJsonPath = path.join(mockGlobalStoragePath, "extensionWorkspaces.json");
+const mockEnvironmentsJsonPath = path.join(mockGlobalStoragePath, "dynatraceEnvironments.json");
+const mockSimulatorTargetsJsonPath = path.join(mockGlobalStoragePath, "targets.json");
+const mockSummaryJsonPath = path.join(mockGlobalStoragePath, "summaries.json");
+const mockManifestPath = path.join(mockWorkspacePath, "extension", "extension.yaml");
 const mockWorkspaceFolders = [
   { index: 0, name: "MockWorkspace", uri: new MockUri(mockWorkspacePath) },
 ];
 const mockExtensionWorkspacesEntries: ExtensionWorkspaceDto[] = [
-  { name: "MockWorkspace", folder: "file://mock/my-workspace", id: "mock" },
-  { name: "OtherWorkspace", folder: "file://mock/other-workspace", id: "other" },
+  { name: "MockWorkspace", id: "mock", folder: "file://mock/my-workspace" },
+  { name: "OtherWorkspace", id: "other", folder: "file://mock/other-workspace" },
 ];
 const mockDynatraceEnvironmentsEntries: DynatraceTenantDto[] = [
   {
@@ -150,11 +151,11 @@ describe("Filesystem Utils", () => {
   describe("initGlobalStorage", () => {
     const logsPath = path.join(mockGlobalStoragePath, "logs");
     const expectedFiles = [
-      { path: path.join(mockGlobalStoragePath, "extensionWorkspaces.json"), default: "[]" },
-      { path: path.join(mockGlobalStoragePath, "dynatraceEnvironments.json"), default: "[]" },
+      { path: mockWorkspacesJsonPath, default: "[]" },
+      { path: mockEnvironmentsJsonPath, default: "[]" },
       { path: path.join(mockGlobalStoragePath, "idToken.txt"), default: "1234" },
-      { path: path.join(mockGlobalStoragePath, "summaries.json"), default: "[]" },
-      { path: path.join(mockGlobalStoragePath, "targets.json"), default: "[]" },
+      { path: mockSimulatorTargetsJsonPath, default: "[]" },
+      { path: mockSummaryJsonPath, default: "[]" },
     ];
 
     beforeAll(() => {
@@ -163,93 +164,80 @@ describe("Filesystem Utils", () => {
         .mockReturnValue(new MockExtensionContext(mockGlobalStoragePath));
     });
 
+    afterEach(() => {
+      jest.clearAllMocks();
+    });
+
     afterAll(() => {
-      mock.restore();
       jest.restoreAllMocks();
     });
 
     it("should create folders and files on new init", () => {
-      mock({ mock: {} });
-
+      mockFs.existsSync.mockReturnValue(false);
       initializeGlobalStorage();
 
-      expect(fs.existsSync(mockGlobalStoragePath)).toBe(true);
-      expect(fs.existsSync(logsPath)).toBe(true);
-      expectedFiles.forEach(file => {
-        expect(fs.existsSync(file.path)).toBe(true);
+      expect(mockFs.mkdirSync).toHaveBeenNthCalledWith(1, mockGlobalStoragePath, {
+        recursive: true,
       });
-    });
-
-    it("should create content with default values on new init", () => {
-      mock({ mock: {} });
-
-      initializeGlobalStorage();
-
-      expectedFiles.forEach(file => {
-        expect(fs.readFileSync(file.path).toString()).toBe(file.default);
+      expect(mockFs.mkdirSync).toHaveBeenNthCalledWith(2, logsPath, { recursive: true });
+      expectedFiles.forEach((file, i) => {
+        expect(mockFs.writeFileSync).toHaveBeenNthCalledWith(i + 1, file.path, file.default);
       });
     });
 
     it("should preserve content if already initialized", () => {
-      const expectedValue = "ABCD1234";
-      mock({
-        mock: {
-          globalStorage: {
-            "extensionWorkspaces.json": expectedValue,
-            "dynatraceEnvironments.json": expectedValue,
-            "idToken.txt": expectedValue,
-            "summaries.json": expectedValue,
-            "targets.json": expectedValue,
-            "logs": {},
-          },
-        },
-      });
+      mockFs.existsSync.mockReturnValue(true);
 
       initializeGlobalStorage();
 
-      expectedFiles.forEach(file => {
-        expect(fs.readFileSync(file.path).toString()).toBe(expectedValue);
-      });
+      expect(mockFs.writeFileSync).not.toHaveBeenCalled();
     });
   });
 
   describe("removeOldestFiles", () => {
     beforeEach(() => {
-      mock({
-        mock: {
-          f1: mock.file({ content: "A", mtime: new Date(1) }),
-          f2: mock.file({ content: "A", mtime: new Date(2) }),
-          f3: mock.file({ content: "A", mtime: new Date(3) }),
-        },
+      // @ts-expect-error
+      mockFs.readdirSync.mockReturnValue(["f1", "f2", "f3"]);
+      mockFs.statSync.mockImplementation((p: fs.PathLike) => {
+        const stats = new fs.Stats();
+        switch (p) {
+          case path.join("mock", "f1"):
+            stats.mtime = new Date(1);
+            return stats;
+          case path.join("mock", "f2"):
+            stats.mtime = new Date(2);
+            return stats;
+          case path.join("mock", "f3"):
+            stats.mtime = new Date(3);
+            return stats;
+          default:
+            stats.mtime = new Date(0);
+            return stats;
+        }
       });
     });
 
-    afterAll(() => {
-      mock.restore();
+    afterEach(() => {
+      jest.clearAllMocks();
     });
 
     it("should remove extra files by age and count", () => {
       removeOldestFiles("mock", 1);
 
-      expect(fs.existsSync("mock/f1")).toBe(false);
-      expect(fs.existsSync("mock/f2")).toBe(false);
-      expect(fs.existsSync("mock/f3")).toBe(true);
+      expect(mockFs.rmSync).toHaveBeenNthCalledWith(1, path.join("mock", "f3"));
+      expect(mockFs.rmSync).toHaveBeenNthCalledWith(2, path.join("mock", "f2"));
     });
 
     it("should not remove files within limit", () => {
       removeOldestFiles("mock", 3);
 
-      expect(fs.existsSync("mock/f1")).toBe(true);
-      expect(fs.existsSync("mock/f2")).toBe(true);
-      expect(fs.existsSync("mock/f3")).toBe(true);
+      expect(mockFs.rmSync).not.toHaveBeenCalled();
     });
 
     it("should not remove any files if a negative count given", () => {
       removeOldestFiles("mock", -2);
 
-      expect(fs.existsSync("mock/f1")).toBe(true);
-      expect(fs.existsSync("mock/f2")).toBe(true);
-      expect(fs.existsSync("mock/f3")).toBe(true);
+      expect(mockFs.rmSync).not.toHaveBeenCalled();
     });
   });
 
@@ -260,16 +248,8 @@ describe("Filesystem Utils", () => {
       getActivationContextSpy = jest.spyOn(extension, "getActivationContext");
     });
 
-    beforeEach(() => {
-      mock({ mock: {} });
-    });
-
     afterEach(() => {
       jest.resetAllMocks();
-    });
-
-    afterAll(() => {
-      mock.restore();
     });
 
     it("shouldn't do anything if no workspace is open", () => {
@@ -277,7 +257,7 @@ describe("Filesystem Utils", () => {
 
       initWorkspaceStorage();
 
-      expect(fs.readdirSync("mock").length).toBe(0);
+      expect(mockFs.mkdirSync).not.toHaveBeenCalled();
     });
 
     it("should create directories if workspace path doesn't exist", () => {
@@ -287,33 +267,31 @@ describe("Filesystem Utils", () => {
 
       initWorkspaceStorage();
 
-      expect(fs.existsSync(mockWorkspaceStoragePath)).toBe(true);
+      expect(mockFs.mkdirSync).toHaveBeenCalledWith(mockWorkspaceStoragePath, { recursive: true });
     });
 
     it("should preserve content if workspace path already exists", () => {
       getActivationContextSpy.mockReturnValue(
         new MockExtensionContext(undefined, mockWorkspaceStoragePath),
       );
-      mock({ mock: { workspaceStorage: { f1: "AAA" } } });
+      mockFs.existsSync.mockReturnValue(true);
 
       initWorkspaceStorage();
 
-      expect(fs.existsSync(`${mockWorkspaceStoragePath}/f1`)).toBe(true);
-      expect(fs.readFileSync(`${mockWorkspaceStoragePath}/f1`).toString()).toBe("AAA");
+      expect(mockFs.existsSync).toHaveBeenCalledWith(mockWorkspaceStoragePath);
+      expect(mockFs.mkdirSync).not.toHaveBeenCalled();
     });
   });
 
   describe("registerWorkspace", () => {
     let getActivationContextSpy: jest.SpyInstance;
     let executeCommandSpy: jest.SpyInstance;
-    const mockWorkspacesJsonPath = path.join(mockGlobalStoragePath, "extensionWorkspaces.json");
 
     beforeAll(() => {
       getActivationContextSpy = jest.spyOn(extension, "getActivationContext");
     });
 
     beforeEach(() => {
-      mock({ mock: {} });
       getActivationContextSpy.mockReturnValue(
         new MockExtensionContext(mockGlobalStoragePath, mockWorkspaceStoragePath),
       );
@@ -323,11 +301,8 @@ describe("Filesystem Utils", () => {
     });
 
     afterEach(() => {
+      jest.clearAllMocks();
       jest.resetAllMocks();
-    });
-
-    afterAll(() => {
-      mock.restore();
     });
 
     it("should bail early if no storage URI available", async () => {
@@ -335,28 +310,25 @@ describe("Filesystem Utils", () => {
 
       await registerWorkspace();
 
-      expect(fs.readdirSync("mock").length).toBe(0);
       expect(executeCommandSpy).not.toHaveBeenCalled();
     });
 
     it("should add a new workspace to the list", async () => {
       const emptyWorkspaceJson = "[]";
-      mock({
-        mock: {
-          globalStorage: { "extensionWorkspaces.json": emptyWorkspaceJson },
-          workspaceStorage: {},
-        },
-      });
+      const expectedWorkspaceJson = JSON.stringify([
+        { name: "MockWorkspace", id: "mock", folder: mockWorkspacePath },
+      ]);
+      mockFileSystemItem(mockFs, [
+        { pathParts: [mockWorkspaceStoragePath] },
+        { pathParts: [mockWorkspacesJsonPath], content: emptyWorkspaceJson },
+      ]);
 
       await registerWorkspace();
 
-      const actualWorkspaces = JSON.parse(
-        fs.readFileSync(mockWorkspacesJsonPath).toString(),
-      ) as ExtensionWorkspace[];
-      expect(actualWorkspaces).toHaveLength(1);
-      expect(actualWorkspaces[0].name).toBe("MockWorkspace");
-      expect(actualWorkspaces[0].folder).toBe(mockWorkspacePath);
-      expect(actualWorkspaces[0].id).toBe("mock");
+      expect(mockFs.writeFileSync).toHaveBeenCalledWith(
+        mockWorkspacesJsonPath,
+        expectedWorkspaceJson,
+      );
       expect(executeCommandSpy).toHaveBeenCalledWith(
         "setContext",
         "dynatrace-extensions.numWorkspaces",
@@ -368,21 +340,21 @@ describe("Filesystem Utils", () => {
       const otherWorkspaceJson = JSON.stringify([
         { name: "OtherWorkspace", folder: "mock/other-workspace", id: "other" },
       ]);
-      mock({
-        mock: {
-          globalStorage: { "extensionWorkspaces.json": otherWorkspaceJson },
-          workspaceStorage: {},
-        },
-      });
+      const expectedWorkspaceJson = JSON.stringify([
+        { name: "OtherWorkspace", folder: "mock/other-workspace", id: "other" },
+        { name: "MockWorkspace", id: "mock", folder: mockWorkspacePath },
+      ]);
+      mockFileSystemItem(mockFs, [
+        { pathParts: [mockWorkspaceStoragePath] },
+        { pathParts: [mockWorkspacesJsonPath], content: otherWorkspaceJson },
+      ]);
 
       await registerWorkspace();
 
-      const actualWorkspaces = JSON.parse(
-        fs.readFileSync(mockWorkspacesJsonPath).toString(),
-      ) as ExtensionWorkspace[];
-      expect(actualWorkspaces).toHaveLength(2);
-      expect(actualWorkspaces[0].name).toBe("OtherWorkspace");
-      expect(actualWorkspaces[1].name).toBe("MockWorkspace");
+      expect(mockFs.writeFileSync).toHaveBeenCalledWith(
+        mockWorkspacesJsonPath,
+        expectedWorkspaceJson,
+      );
       expect(executeCommandSpy).toHaveBeenCalledWith(
         "setContext",
         "dynatrace-extensions.numWorkspaces",
@@ -395,23 +367,22 @@ describe("Filesystem Utils", () => {
         { name: "MockOldWorkspace", folder: "mock/my-old-workspace", id: "mock" },
         { name: "OtherWorkspace", folder: "mock/other-workspace", id: "other" },
       ]);
-      mock({
-        mock: {
-          globalStorage: { "extensionWorkspaces.json": twoWorkspaceJson },
-          workspaceStorage: {},
-        },
-      });
+      const expectedWorkspaceJson = JSON.stringify([
+        { name: "MockWorkspace", id: "mock", folder: mockWorkspacePath },
+        { name: "OtherWorkspace", folder: "mock/other-workspace", id: "other" },
+      ]);
+      mockFileSystemItem(mockFs, [
+        { pathParts: [mockWorkspaceStoragePath] },
+        { pathParts: [mockWorkspacesJsonPath], content: twoWorkspaceJson },
+      ]);
 
       await registerWorkspace();
 
-      const actualWorkspaces = JSON.parse(
-        fs.readFileSync(mockWorkspacesJsonPath).toString(),
-      ) as ExtensionWorkspace[];
-      expect(actualWorkspaces).toHaveLength(2);
-      expect(actualWorkspaces[0].name).toBe("MockWorkspace");
-      expect(actualWorkspaces[0].folder).toBe(mockWorkspacePath);
-      expect(actualWorkspaces[0].id).toBe("mock");
-      expect(actualWorkspaces[1].name).toBe("OtherWorkspace");
+      expect(mockFs.writeFileSync).toHaveBeenCalledWith(
+        mockWorkspacesJsonPath,
+        expectedWorkspaceJson,
+      );
+
       expect(executeCommandSpy).toHaveBeenCalledWith(
         "setContext",
         "dynatrace-extensions.numWorkspaces",
@@ -426,8 +397,11 @@ describe("Filesystem Utils", () => {
     });
 
     afterAll(() => {
-      mock.restore();
       jest.restoreAllMocks();
+    });
+
+    afterEach(() => {
+      jest.clearAllMocks();
     });
 
     test.each([
@@ -435,7 +409,11 @@ describe("Filesystem Utils", () => {
       { case: "single", expected: mockExtensionWorkspacesEntries.slice(0, 1) },
       { case: "multiple", expected: mockExtensionWorkspacesEntries },
     ])("$case entries should return expected value", ({ expected }) => {
-      mock({ mock: { globalStorage: { "extensionWorkspaces.json": JSON.stringify(expected) } } });
+      mockFileSystemItem(mockFs, [
+        { pathParts: [mockWorkspaceStoragePath] },
+        { pathParts: [mockWorkspacesJsonPath], content: JSON.stringify(expected) },
+      ]);
+
       jest.spyOn(vscode.Uri, "parse").mockImplementation((val: string) => new MockUri(val));
 
       const actual = getAllWorkspaces();
@@ -453,13 +431,15 @@ describe("Filesystem Utils", () => {
     const expected = mockExtensionWorkspacesEntries[0];
 
     beforeEach(() => {
-      mock({ mock: { globalStorage: { "extensionWorkspaces.json": JSON.stringify([expected]) } } });
+      mockFileSystemItem(mockFs, [
+        { pathParts: [mockWorkspaceStoragePath] },
+        { pathParts: [mockWorkspacesJsonPath], content: JSON.stringify([expected]) },
+      ]);
       jest.spyOn(vscode.Uri, "parse").mockImplementation((val: string) => new MockUri(val));
       setupContextWithStorage();
     });
 
     afterAll(() => {
-      mock.restore();
       jest.restoreAllMocks();
     });
 
@@ -478,7 +458,9 @@ describe("Filesystem Utils", () => {
     });
 
     it("should return undefined if no workspaces exist", () => {
-      mock({ mock: { globalStorage: { "extensionWorkspaces.json": "[]" } } });
+      mockFileSystemItem(mockFs, [
+        { pathParts: [mockWorkspacesJsonPath], content: JSON.stringify([expected]) },
+      ]);
 
       const actual = findWorkspace("notExisting");
 
@@ -497,12 +479,12 @@ describe("Filesystem Utils", () => {
       setupContextWithStorage();
     });
 
-    beforeEach(() => {
-      mock({ mock: { globalStorage: {} } });
+    afterEach(() => {
+      mockFs.existsSync.mockReset();
+      mockFs.readFileSync.mockReset();
     });
 
     afterAll(() => {
-      mock.restore();
       jest.restoreAllMocks();
     });
 
@@ -511,7 +493,10 @@ describe("Filesystem Utils", () => {
       { case: "single", expected: mockDynatraceEnvironmentsEntries.slice(0, 1) },
       { case: "multiple", expected: mockDynatraceEnvironmentsEntries },
     ])("$case entries should return expected value", ({ expected }) => {
-      mock({ mock: { globalStorage: { "dynatraceEnvironments.json": JSON.stringify(expected) } } });
+      mockFileSystemItem(mockFs, [
+        { pathParts: [mockGlobalStoragePath] },
+        { pathParts: [mockEnvironmentsJsonPath], content: JSON.stringify(expected) },
+      ]);
 
       const actual = getAllTenants();
 
@@ -529,22 +514,20 @@ describe("Filesystem Utils", () => {
   });
 
   describe("registerTenant", () => {
-    const mockEnvironmentsJsonPath = path.join(mockGlobalStoragePath, "dynatraceEnvironments.json");
-
     beforeAll(() => {
       setupContextWithStorage();
     });
 
-    beforeEach(() => {
-      mock({ mock: { globalStorage: { "dynatraceEnvironments.json": "[]" } } });
+    afterEach(() => {
+      jest.clearAllMocks();
     });
 
     afterAll(() => {
-      mock.restore();
       jest.resetAllMocks();
     });
 
     it("should update the numEnvironments context variable", async () => {
+      mockFileSystemItem(mockFs, [{ pathParts: [mockEnvironmentsJsonPath], content: "[]" }]);
       const executeCommandSpy = jest.spyOn(vscode.commands, "executeCommand");
 
       await registerTenant("https://a/e/X", "", "");
@@ -557,32 +540,34 @@ describe("Filesystem Utils", () => {
     });
 
     it("should add a new tenant to the list", async () => {
+      mockFileSystemItem(mockFs, [{ pathParts: [mockEnvironmentsJsonPath], content: "[]" }]);
       const { url, apiUrl, token, current, label } = mockDynatraceEnvironmentsEntries[0];
+      const expectedTenantsJson = JSON.stringify([mockDynatraceEnvironmentsEntries[0]]);
 
       await registerTenant(url, apiUrl, token, label, current);
 
-      const actualTenants = JSON.parse(
-        fs.readFileSync(mockEnvironmentsJsonPath).toString(),
-      ) as DynatraceTenantDto[];
-      expect(actualTenants).toHaveLength(1);
-      expect(actualTenants[0]).toEqual(mockDynatraceEnvironmentsEntries[0]);
+      expect(mockFs.writeFileSync).toHaveBeenCalledWith(
+        mockEnvironmentsJsonPath,
+        expectedTenantsJson,
+      );
     });
 
     it("should preserve existing tenants", async () => {
       const existingWorkspace = mockDynatraceEnvironmentsEntries[0];
-      mock({
-        mock: {
-          globalStorage: { "dynatraceEnvironments.json": JSON.stringify([existingWorkspace]) },
-        },
-      });
+      const expectedTenantsJson = JSON.stringify([
+        existingWorkspace,
+        { id: "X", url: "https://a/e/X", apiUrl: "", token: "", current: false, label: "X" },
+      ]);
+      mockFileSystemItem(mockFs, [
+        { pathParts: [mockEnvironmentsJsonPath], content: JSON.stringify([existingWorkspace]) },
+      ]);
 
       await registerTenant("https://a/e/X", "", "");
 
-      const actualTenants = JSON.parse(
-        fs.readFileSync(mockEnvironmentsJsonPath).toString(),
-      ) as DynatraceTenantDto[];
-      expect(actualTenants).toHaveLength(2);
-      expect(actualTenants[0]).toEqual(existingWorkspace);
+      expect(mockFs.writeFileSync).toHaveBeenCalledWith(
+        mockEnvironmentsJsonPath,
+        expectedTenantsJson,
+      );
     });
 
     it("should update details if tenant re-registers", async () => {
@@ -594,45 +579,40 @@ describe("Filesystem Utils", () => {
         current: false,
         label: "",
       };
-      mock({
-        mock: {
-          globalStorage: {
-            "dynatraceEnvironments.json": JSON.stringify(mockDynatraceEnvironmentsEntries),
-          },
+      mockFileSystemItem(mockFs, [
+        {
+          pathParts: [mockEnvironmentsJsonPath],
+          content: JSON.stringify(mockDynatraceEnvironmentsEntries),
         },
-      });
+      ]);
 
-      await registerTenant("https://abc12345.com", "", "", "");
+      await registerTenant(expected.url, expected.apiUrl, expected.token, expected.label);
 
-      const actualTenants = JSON.parse(
-        fs.readFileSync(mockEnvironmentsJsonPath).toString(),
-      ) as DynatraceTenantDto[];
-      const actual = actualTenants[0];
-      expect(actualTenants).toHaveLength(2);
-      expect(actual).toEqual(expected);
+      expect(mockFs.writeFileSync).toHaveBeenCalledWith(
+        mockEnvironmentsJsonPath,
+        JSON.stringify([expected, mockDynatraceEnvironmentsEntries[1]]),
+      );
     });
 
     it("should disconnect other tenants when adding a current tenant", async () => {
       const existingWorkspace = mockDynatraceEnvironmentsEntries[0];
-      mock({
-        mock: {
-          globalStorage: { "dynatraceEnvironments.json": JSON.stringify([existingWorkspace]) },
-        },
-      });
+      mockFileSystemItem(mockFs, [
+        { pathParts: [mockEnvironmentsJsonPath], content: JSON.stringify([existingWorkspace]) },
+      ]);
 
       await registerTenant("https://a/e/X", "", "", "", true);
 
-      const actualTenants = JSON.parse(
-        fs.readFileSync(mockEnvironmentsJsonPath).toString(),
-      ) as DynatraceTenantDto[];
-      expect(actualTenants).toHaveLength(2);
-      expect(actualTenants[0].current).toBe(false);
-      expect(actualTenants[1].current).toBe(true);
+      expect(mockFs.writeFileSync).toHaveBeenCalledWith(
+        mockEnvironmentsJsonPath,
+        JSON.stringify([
+          { ...existingWorkspace, current: false },
+          { id: "X", url: "https://a/e/X", apiUrl: "", token: "", current: true, label: "" },
+        ]),
+      );
     });
 
     it("should throw if json file doesn't exist", async () => {
-      mock({ mock: { globalStorage: {} } });
-
+      mockFileSystemItem(mockFs, []);
       await expect(registerTenant("https://a/e/X", "", "", "", true)).rejects.toThrow();
     });
   });
@@ -640,12 +620,11 @@ describe("Filesystem Utils", () => {
   describe("removeTenant", () => {
     beforeEach(() => {
       setupContextWithStorage();
-      mock({ mock: { globalStorage: { "dynatraceEnvironments.json": "[]" } } });
+      mockFileSystemItem(mockFs, [{ pathParts: [mockEnvironmentsJsonPath], content: "[]" }]);
     });
 
     afterEach(() => {
       jest.resetAllMocks();
-      mock.restore();
     });
 
     it("updates the numEnvironments context variable", async () => {
@@ -661,70 +640,61 @@ describe("Filesystem Utils", () => {
     });
 
     it("throws if json file doesn't exist", async () => {
-      mock({ mock: { globalStorage: {} } });
+      mockFileSystemItem(mockFs, []);
 
       await expect(removeTenant("A")).rejects.toThrow();
     });
 
     it("removes a tenant from the list", async () => {
       const expectedTenant = mockDynatraceEnvironmentsEntries[1];
-      mock({
-        mock: {
-          globalStorage: {
-            "dynatraceEnvironments.json": JSON.stringify(mockDynatraceEnvironmentsEntries),
-          },
+      mockFileSystemItem(mockFs, [
+        {
+          pathParts: [mockEnvironmentsJsonPath],
+          content: JSON.stringify(mockDynatraceEnvironmentsEntries),
         },
-      });
+      ]);
 
       await removeTenant("abc12345");
 
-      const actualTenants = JSON.parse(
-        fs.readFileSync(path.join(mockGlobalStoragePath, "dynatraceEnvironments.json")).toString(),
-      ) as DynatraceTenantDto[];
-      expect(actualTenants).toHaveLength(1);
-      expect(actualTenants[0]).toEqual(expectedTenant);
+      expect(mockFs.writeFileSync).toHaveBeenCalledWith(
+        mockEnvironmentsJsonPath,
+        JSON.stringify([expectedTenant]),
+      );
     });
 
     it("it leaves the list unchanged if empty", async () => {
+      mockFileSystemItem(mockFs, [{ pathParts: [mockEnvironmentsJsonPath], content: "[]" }]);
+
       await removeTenant("abc12345");
 
-      const actualTenants = JSON.parse(
-        fs.readFileSync(path.join(mockGlobalStoragePath, "dynatraceEnvironments.json")).toString(),
-      ) as DynatraceTenantDto[];
-      expect(actualTenants).toHaveLength(0);
+      expect(mockFs.writeFileSync).toHaveBeenCalledWith(mockEnvironmentsJsonPath, "[]");
     });
 
     it("it leaves the list unchanged if tenant doesn't exist", async () => {
-      mock({
-        mock: {
-          globalStorage: {
-            "dynatraceEnvironments.json": JSON.stringify(mockDynatraceEnvironmentsEntries),
-          },
+      mockFileSystemItem(mockFs, [
+        {
+          pathParts: [mockEnvironmentsJsonPath],
+          content: JSON.stringify(mockDynatraceEnvironmentsEntries),
         },
-      });
+      ]);
 
       await removeTenant("X");
 
-      const actualTenants = JSON.parse(
-        fs.readFileSync(path.join(mockGlobalStoragePath, "dynatraceEnvironments.json")).toString(),
-      ) as DynatraceTenantDto[];
-      expect(actualTenants).toHaveLength(2);
-      actualTenants.forEach((actualTenant, i) => {
-        const expectedTenant = mockDynatraceEnvironmentsEntries[i];
-        expect(actualTenant).toEqual(expectedTenant);
-      });
+      expect(mockFs.writeFileSync).toHaveBeenCalledWith(
+        mockEnvironmentsJsonPath,
+        JSON.stringify(mockDynatraceEnvironmentsEntries),
+      );
     });
   });
 
   describe("removeWorkspace", () => {
     beforeEach(() => {
       setupContextWithStorage();
-      mock({ mock: { globalStorage: { "extensionWorkspaces.json": "[]" } } });
+      mockFileSystemItem(mockFs, [{ pathParts: [mockWorkspacesJsonPath], content: "[]" }]);
     });
 
     afterEach(() => {
       jest.resetAllMocks();
-      mock.restore();
     });
 
     it("updates the numWorkspaces context variable", async () => {
@@ -740,71 +710,59 @@ describe("Filesystem Utils", () => {
     });
 
     it("throws if json file doesn't exist", async () => {
-      mock({ mock: { globalStorage: {} } });
+      mockFileSystemItem(mockFs, []);
 
       await expect(removeWorkspace("A")).rejects.toThrow();
     });
 
     it("removes a workspace from the list", async () => {
       const expectedWorkspace = mockExtensionWorkspacesEntries[1];
-      mock({
-        mock: {
-          globalStorage: {
-            "extensionWorkspaces.json": JSON.stringify(mockExtensionWorkspacesEntries),
-          },
+      mockFileSystemItem(mockFs, [
+        {
+          pathParts: [mockWorkspacesJsonPath],
+          content: JSON.stringify(mockExtensionWorkspacesEntries),
         },
-      });
+      ]);
 
       await removeWorkspace("mock");
 
-      const actualWorkspaces = JSON.parse(
-        fs.readFileSync(path.join(mockGlobalStoragePath, "extensionWorkspaces.json")).toString(),
-      ) as ExtensionWorkspace[];
-      const actualWorkspace = actualWorkspaces[0];
-      expect(actualWorkspaces).toHaveLength(1);
-      expect(actualWorkspace).toEqual(expectedWorkspace);
+      expect(mockFs.writeFileSync).toHaveBeenCalledWith(
+        mockWorkspacesJsonPath,
+        JSON.stringify([expectedWorkspace]),
+      );
     });
 
     it("it leaves the list unchanged if empty", async () => {
       await removeWorkspace("mock");
 
-      const actualWorkspaces = JSON.parse(
-        fs.readFileSync(path.join(mockGlobalStoragePath, "extensionWorkspaces.json")).toString(),
-      ) as ExtensionWorkspace[];
-      expect(actualWorkspaces).toHaveLength(0);
+      expect(mockFs.writeFileSync).toHaveBeenCalledWith(mockWorkspacesJsonPath, "[]");
     });
 
     it("it leaves the list unchanged if workspace doesn't exist", async () => {
-      mock({
-        mock: {
-          globalStorage: {
-            "extensionWorkspaces.json": JSON.stringify(mockExtensionWorkspacesEntries),
-          },
+      mockFileSystemItem(mockFs, [
+        {
+          pathParts: [mockWorkspacesJsonPath],
+          content: JSON.stringify(mockExtensionWorkspacesEntries),
         },
-      });
+      ]);
 
       await removeWorkspace("X");
 
-      const actualWorkspaces = JSON.parse(
-        fs.readFileSync(path.join(mockGlobalStoragePath, "extensionWorkspaces.json")).toString(),
-      ) as ExtensionWorkspace[];
-      expect(actualWorkspaces).toHaveLength(2);
-      actualWorkspaces.forEach((actualWorkspace, i) => {
-        const expectedWorkspace = mockExtensionWorkspacesEntries[i];
-        expect(actualWorkspace).toEqual(expectedWorkspace);
-      });
+      expect(mockFs.writeFileSync).toHaveBeenCalledWith(
+        mockWorkspacesJsonPath,
+        JSON.stringify(mockExtensionWorkspacesEntries),
+      );
     });
   });
 
   describe("registerSimulatorSummary", () => {
     beforeEach(() => {
       setupContextWithStorage();
-      mock({ mock: { globalStorage: { "summaries.json": "[]" } } });
+      mockFileSystemItem(mockFs, [{ pathParts: [mockSummaryJsonPath], content: "[]" }]);
     });
 
     afterEach(() => {
       jest.resetAllMocks();
-      mock.restore();
     });
 
     it("adds a summary to the list", () => {
@@ -812,21 +770,14 @@ describe("Filesystem Utils", () => {
 
       registerSimulatorSummary(expected);
 
-      const actualSummaries = JSON.parse(
-        fs.readFileSync(path.join(mockGlobalStoragePath, "summaries.json")).toString(),
-      ) as (LocalExecutionSummary | RemoteExecutionSummary)[];
-      const actual = actualSummaries[0] as LocalExecutionSummary;
-      expect(actualSummaries).toHaveLength(1);
-      expect(actual.duration).toBe(expected.duration);
-      expect(actual.location).toBe(expected.location);
-      expect(actual.logPath).toBe(expected.logPath);
-      expect(actual.startTime).toBe(expected.startTime.toISOString());
-      expect(actual.success).toBe(expected.success);
-      expect(actual.workspace).toBe(expected.workspace);
+      expect(mockFs.writeFileSync).toHaveBeenCalledWith(
+        mockSummaryJsonPath,
+        JSON.stringify([expected]),
+      );
     });
 
     it("throws error if json file doesn't exist", () => {
-      mock({ mock: { globalStorage: {} } });
+      mockFileSystemItem(mockFs, []);
 
       expect(() => {
         registerSimulatorSummary(mockSummariesEntries[0]);
@@ -835,27 +786,16 @@ describe("Filesystem Utils", () => {
 
     it("preserves existing summaries", () => {
       const existingSummary = mockSummariesEntries[0];
-      mock({
-        mock: {
-          globalStorage: { "summaries.json": JSON.stringify([existingSummary]) },
-        },
-      });
+      mockFileSystemItem(mockFs, [
+        { pathParts: [mockSummaryJsonPath], content: JSON.stringify([existingSummary]) },
+      ]);
 
       registerSimulatorSummary(mockSummariesEntries[1]);
 
-      const actualSummaries = JSON.parse(
-        fs.readFileSync(path.join(mockGlobalStoragePath, "summaries.json")).toString(),
-      ) as (LocalExecutionSummary | RemoteExecutionSummary)[];
-      expect(actualSummaries).toHaveLength(2);
-      actualSummaries.forEach((actual, i) => {
-        const expected = mockSummariesEntries[i];
-        expect(actual.duration).toBe(expected.duration);
-        expect(actual.location).toBe(expected.location);
-        expect(actual.logPath).toBe(expected.logPath);
-        expect(actual.startTime).toBe(expected.startTime.toISOString());
-        expect(actual.success).toBe(expected.success);
-        expect(actual.workspace).toBe(expected.workspace);
-      });
+      expect(mockFs.writeFileSync).toHaveBeenCalledWith(
+        mockSummaryJsonPath,
+        JSON.stringify(mockSummariesEntries),
+      );
     });
   });
 
@@ -865,7 +805,6 @@ describe("Filesystem Utils", () => {
     });
 
     afterEach(() => {
-      mock.restore();
       jest.resetAllMocks();
     });
 
@@ -874,7 +813,9 @@ describe("Filesystem Utils", () => {
       { case: "single", expectedSummaries: mockSummariesEntries.slice(0, 1) },
       { case: "multiple", expectedSummaries: mockSummariesEntries },
     ])("$case entries should return expected value", ({ expectedSummaries }) => {
-      mock({ mock: { globalStorage: { "summaries.json": JSON.stringify(expectedSummaries) } } });
+      mockFileSystemItem(mockFs, [
+        { pathParts: [mockSummaryJsonPath], content: JSON.stringify(expectedSummaries) },
+      ]);
 
       const actualSummaries = getSimulatorSummaries();
 
@@ -886,7 +827,7 @@ describe("Filesystem Utils", () => {
     });
 
     it("throws error if json file doesn't exist", () => {
-      mock({ mock: { globalStorage: {} } });
+      mockFileSystemItem(mockFs, []);
 
       expect(() => {
         getSimulatorSummaries();
@@ -897,28 +838,25 @@ describe("Filesystem Utils", () => {
   describe("cleanUpSimulatorLogs", () => {
     beforeEach(() => {
       setupContextWithStorage();
-      mock({ mock: { globalStorage: { "summaries.json": JSON.stringify(mockSummariesEntries) } } });
+      mockFileSystemItem(mockFs, [
+        { pathParts: [mockSummaryJsonPath], content: JSON.stringify(mockSummariesEntries) },
+      ]);
     });
 
     afterEach(() => {
-      mock.restore();
       jest.resetAllMocks();
     });
 
     test.each([{ settingValue: undefined }, { settingValue: -1 }])(
       "should not do anything if setting is $settingValue",
       ({ settingValue }) => {
-        const expected = JSON.stringify(mockSummariesEntries);
         jest
           .spyOn(vscode.workspace, "getConfiguration")
           .mockReturnValue(new MockWorkspaceConfiguration({ maximumLogFiles: settingValue }));
 
         cleanUpSimulatorLogs();
 
-        const actual = fs
-          .readFileSync(path.join(mockGlobalStoragePath, "summaries.json"))
-          .toString();
-        expect(actual).toBe(expected);
+        expect(mockFs.writeFileSync).not.toHaveBeenCalled();
       },
     );
 
@@ -933,13 +871,11 @@ describe("Filesystem Utils", () => {
 
       cleanUpSimulatorLogs();
 
-      const actual = fs.readFileSync(path.join(mockGlobalStoragePath, "summaries.json")).toString();
-      expect(actual).toBe(expected);
+      expect(mockFs.writeFileSync).toHaveBeenCalledWith(mockSummaryJsonPath, expected);
     });
 
     it("should catch errors from deleting files", () => {
-      const mockFs = { rmSync };
-      jest.spyOn(mockFs, "rmSync").mockImplementation(() => {
+      mockFs.rmSync.mockImplementation(() => {
         throw new Error("Mock Error");
       });
       jest
@@ -955,12 +891,11 @@ describe("Filesystem Utils", () => {
   describe("registerSimulatorTargets", () => {
     beforeEach(() => {
       setupContextWithStorage();
-      mock({ mock: { globalStorage: { "targets.json": "[]" } } });
+      mockFileSystemItem(mockFs, [{ pathParts: [mockSimulatorTargetsJsonPath], content: "[]" }]);
     });
 
     afterEach(() => {
       jest.resetAllMocks();
-      mock.restore();
     });
 
     it("replaces the list of targets", () => {
@@ -968,24 +903,23 @@ describe("Filesystem Utils", () => {
 
       registerSimulatorTargets(mockSimulatorTargetEntries);
 
-      const actual = fs.readFileSync(path.join(mockGlobalStoragePath, "targets.json")).toString();
-      expect(actual).toBe(expected);
+      expect(mockFs.writeFileSync).toHaveBeenCalledWith(mockSimulatorTargetsJsonPath, expected);
     });
   });
 
   describe("registerSimulatorTarget", () => {
     beforeEach(() => {
       setupContextWithStorage();
-      mock({
-        mock: {
-          globalStorage: { "targets.json": JSON.stringify([mockSimulatorTargetEntries[0]]) },
+      mockFileSystemItem(mockFs, [
+        {
+          pathParts: [mockSimulatorTargetsJsonPath],
+          content: JSON.stringify([mockSimulatorTargetEntries[0]]),
         },
-      });
+      ]);
     });
 
     afterEach(() => {
       jest.resetAllMocks();
-      mock.restore();
     });
 
     it("should add a target to the list", () => {
@@ -993,8 +927,7 @@ describe("Filesystem Utils", () => {
 
       registerSimulatorTarget(mockSimulatorTargetEntries[1]);
 
-      const actual = fs.readFileSync(path.join(mockGlobalStoragePath, "targets.json")).toString();
-      expect(actual).toBe(expected);
+      expect(mockFs.writeFileSync).toHaveBeenCalledWith(mockSimulatorTargetsJsonPath, expected);
     });
 
     it("should update details if target re-registers", () => {
@@ -1003,24 +936,23 @@ describe("Filesystem Utils", () => {
 
       registerSimulatorTarget(newTargetDetails);
 
-      const actual = fs.readFileSync(path.join(mockGlobalStoragePath, "targets.json")).toString();
-      expect(actual).toBe(expected);
+      expect(mockFs.writeFileSync).toHaveBeenCalledWith(mockSimulatorTargetsJsonPath, expected);
     });
   });
 
   describe("deleteSimulatorTarget", () => {
     beforeEach(() => {
       setupContextWithStorage();
-      mock({
-        mock: {
-          globalStorage: { "targets.json": JSON.stringify(mockSimulatorTargetEntries) },
+      mockFileSystemItem(mockFs, [
+        {
+          pathParts: [mockSimulatorTargetsJsonPath],
+          content: JSON.stringify(mockSimulatorTargetEntries),
         },
-      });
+      ]);
     });
 
     afterEach(() => {
       jest.resetAllMocks();
-      mock.restore();
     });
 
     it("removes a target from the list", () => {
@@ -1028,12 +960,11 @@ describe("Filesystem Utils", () => {
 
       deleteSimulatorTarget(mockSimulatorTargetEntries[0]);
 
-      const actual = fs.readFileSync(path.join(mockGlobalStoragePath, "targets.json")).toString();
-      expect(actual).toBe(expected);
+      expect(mockFs.writeFileSync).toHaveBeenCalledWith(mockSimulatorTargetsJsonPath, expected);
     });
 
     it("throws if the file doesn't exist", () => {
-      mock({ mock: { globalStorage: {} } });
+      mockFileSystemItem(mockFs, []);
 
       expect(() => {
         deleteSimulatorTarget(mockSimulatorTargetEntries[0]);
@@ -1046,8 +977,7 @@ describe("Filesystem Utils", () => {
 
       deleteSimulatorTarget(targetToDelete);
 
-      const actual = fs.readFileSync(path.join(mockGlobalStoragePath, "targets.json")).toString();
-      expect(actual).toBe(expected);
+      expect(mockFs.writeFileSync).toHaveBeenCalledWith(mockSimulatorTargetsJsonPath, expected);
     });
   });
 
@@ -1057,7 +987,6 @@ describe("Filesystem Utils", () => {
     });
 
     afterEach(() => {
-      mock.restore();
       jest.resetAllMocks();
     });
 
@@ -1066,7 +995,9 @@ describe("Filesystem Utils", () => {
       { case: "one", expectedTargets: mockSimulatorTargetEntries.slice(0, 1) },
       { case: "multiple", expectedTargets: mockSimulatorTargetEntries },
     ])("returns expected value for $case entries", ({ expectedTargets }) => {
-      mock({ mock: { globalStorage: { "targets.json": JSON.stringify(expectedTargets) } } });
+      mockFileSystemItem(mockFs, [
+        { pathParts: [mockSimulatorTargetsJsonPath], content: JSON.stringify(expectedTargets) },
+      ]);
 
       const actualTargets = getSimulatorTargets();
 
@@ -1077,7 +1008,7 @@ describe("Filesystem Utils", () => {
     });
 
     it("throws if the file doesn't exist", () => {
-      mock({ mock: { globalStorage: {} } });
+      mockFileSystemItem(mockFs, []);
 
       expect(() => {
         getSimulatorTargets();
@@ -1088,11 +1019,13 @@ describe("Filesystem Utils", () => {
   describe("uploadComponentCert", () => {
     beforeEach(() => {
       setupContextWithStorage();
-      mock({ mock: { "certificate": "AAA", "certificate.pem": "AAA" } });
+      mockFileSystemItem(mockFs, [
+        { pathParts: ["mock", "certificate"], content: "AAA" },
+        { pathParts: ["mock", "certificate.pem"], content: "AAA" },
+      ]);
     });
 
     afterEach(() => {
-      mock.restore();
       jest.resetAllMocks();
     });
 
@@ -1104,51 +1037,44 @@ describe("Filesystem Utils", () => {
       ({ component, fileExt, expectedFile }) => {
         const certFile = fileExt ? "certificate.pem" : "certificate";
         const typedComponentParam = component as "OneAgent" | "ActiveGate";
+        const certPath = getCertPath(typedComponentParam);
 
-        uploadComponentCert(`mock/${certFile}`, typedComponentParam);
+        uploadComponentCert(path.join("mock", certFile), typedComponentParam);
 
-        const actualFile = path.join(getCertPath(typedComponentParam), expectedFile);
-        expect(fs.existsSync(actualFile)).toBe(true);
-        expect(fs.readFileSync(actualFile).toString()).toBe("AAA");
+        expect(mockFs.writeFileSync).toHaveBeenCalledWith(path.join(certPath, expectedFile), "AAA");
       },
     );
 
     test.each(["OneAgent", "ActiveGate"])("doesn't overwrite existing files on %s", component => {
       const typedComponentParam = component as "OneAgent" | "ActiveGate";
       const certPath = getCertPath(typedComponentParam);
-      const dirs: FileSystem.DirectoryItems = {};
-      dirs.mock = { certificate: "AAA" };
-      dirs[certPath] = {
-        "certificate_mock-workspace": mock.file({ content: "AAA", mtime: new Date(1) }),
-      };
-      mock(dirs);
+      mockFileSystemItem(mockFs, [
+        { pathParts: [certPath, "certificate_mock-workspace"], content: "AAA" },
+        { pathParts: ["mock", "certificate"], content: "AAA" },
+      ]);
 
-      uploadComponentCert("mock/certificate", typedComponentParam);
+      uploadComponentCert(path.join("mock", "certificate"), typedComponentParam);
 
-      const actualFile = path.join(getCertPath(typedComponentParam), "certificate_mock-workspace");
-      expect(fs.existsSync(actualFile)).toBe(true);
-      expect(fs.readFileSync(actualFile).toString()).toBe("AAA");
-      expect(fs.statSync(actualFile).mtime).toEqual(new Date(1));
+      expect(mockFs.writeFileSync).not.toHaveBeenCalled();
     });
   });
 
   describe("readExtensionManifest", () => {
-    const fsDirs: FileSystem.DirectoryItems = {};
-
     beforeEach(() => {
       setupContextWithStorage();
       jest.spyOn(vscode.workspace, "workspaceFolders", "get").mockReturnValue(mockWorkspaceFolders);
     });
 
     afterEach(() => {
-      mock.restore();
       jest.resetAllMocks();
     });
 
     it("returns manifest content", () => {
+      const expectedPath = path.join("extension", "extension.yaml");
+      jest.spyOn(glob, "sync").mockReturnValue([expectedPath]);
       const expected = "AAA";
-      fsDirs[mockWorkspacePath] = { extension: { "extension.yaml": expected } };
-      mock(fsDirs);
+
+      mockFileSystemItem(mockFs, [{ pathParts: [mockManifestPath], content: expected }]);
 
       const actual = readExtensionManifest();
 
@@ -1157,7 +1083,8 @@ describe("Filesystem Utils", () => {
 
     it("it returns empty string in case of issues", () => {
       const expected = "";
-      mock({ mock: {} });
+      jest.spyOn(glob, "sync").mockReturnValue([]);
+      mockFileSystemItem(mockFs, []);
 
       const actual = readExtensionManifest();
 
@@ -1166,37 +1093,51 @@ describe("Filesystem Utils", () => {
   });
 
   describe("getExtensionFilePath", () => {
-    const fsDirs: FileSystem.DirectoryItems = {};
-
     beforeEach(() => {
       setupContextWithStorage();
       jest.spyOn(vscode.workspace, "workspaceFolders", "get").mockReturnValue(mockWorkspaceFolders);
     });
 
     afterEach(() => {
-      mock.restore();
       jest.resetAllMocks();
     });
 
     it("finds the path in workspace root", () => {
-      fsDirs[mockWorkspacePath] = { extension: { "extension.yaml": "AAA" } };
-      mock(fsDirs);
+      const expectedPath = path.join("extension", "extension.yaml");
+      const globSpy = jest.spyOn(glob, "sync").mockReturnValue([expectedPath]);
 
       const actual = getExtensionFilePath();
 
-      expect(actual).toBe(path.join(mockWorkspacePath, "extension", "extension.yaml"));
+      expect(globSpy).toHaveBeenCalledTimes(1);
+      expect(globSpy).toHaveBeenNthCalledWith(1, "extension/extension.yaml", {
+        cwd: mockWorkspacePath,
+      });
+      expect(actual).toBe(mockManifestPath);
     });
 
     it("find the path one level under workspace root", () => {
-      fsDirs[mockWorkspacePath] = { src: { extension: { "extension.yaml": "AAA" } } };
-      mock(fsDirs);
+      const expectedPath = path.join("src", "extension", "extension.yaml");
+      const globSpy = jest.spyOn(glob, "sync").mockImplementation((p: string | string[]) => {
+        if (p === "extension/extension.yaml") {
+          return [];
+        }
+        return [expectedPath];
+      });
 
       const actual = getExtensionFilePath();
 
+      expect(globSpy).toHaveBeenCalledTimes(2);
+      expect(globSpy).toHaveBeenNthCalledWith(1, "extension/extension.yaml", {
+        cwd: mockWorkspacePath,
+      });
+      expect(globSpy).toHaveBeenNthCalledWith(2, "*/extension/extension.yaml", {
+        cwd: mockWorkspacePath,
+      });
       expect(actual).toBe(path.join(mockWorkspacePath, "src", "extension", "extension.yaml"));
     });
 
     it("returns undefined if not found", () => {
+      jest.spyOn(glob, "sync").mockReturnValue([]);
       const actual = getExtensionFilePath();
 
       expect(actual).toBeUndefined();
@@ -1204,15 +1145,12 @@ describe("Filesystem Utils", () => {
   });
 
   describe("getExtensionWorkspaceDir", () => {
-    const fsDirs: FileSystem.DirectoryItems = {};
-
     beforeEach(() => {
       setupContextWithStorage();
       jest.spyOn(vscode.workspace, "workspaceFolders", "get").mockReturnValue(mockWorkspaceFolders);
     });
 
     afterEach(() => {
-      mock.restore();
       jest.resetAllMocks();
     });
 
@@ -1225,8 +1163,7 @@ describe("Filesystem Utils", () => {
     });
 
     it("returns undefined if directory not found", () => {
-      fsDirs[mockWorkspacePath] = {};
-      mock(fsDirs);
+      mockFs.readdirSync.mockReturnValue([]);
 
       const actual = getExtensionWorkspaceDir();
 
@@ -1234,8 +1171,9 @@ describe("Filesystem Utils", () => {
     });
 
     it("finds directory in workspace root", () => {
-      fsDirs[mockWorkspacePath] = { extension: {} };
-      mock(fsDirs);
+      //@ts-expect-error
+      mockFs.readdirSync.mockReturnValue(["extension"]);
+      mockFs.statSync.mockReturnValue({ isDirectory: () => true } as fs.Stats);
 
       const actual = getExtensionWorkspaceDir();
 
@@ -1243,8 +1181,27 @@ describe("Filesystem Utils", () => {
     });
 
     it("finds directory one level under workspace root", () => {
-      fsDirs[mockWorkspacePath] = { src: { extension: {} } };
-      mock(fsDirs);
+      const rootPath = path.join("mock", "my-workspace");
+      //@ts-expect-error
+      mockFs.readdirSync.mockImplementation((p: fs.PathLike) => {
+        if (p.toString() === rootPath) {
+          return ["src"];
+        }
+        if (p.toString() === path.join(rootPath, "src")) {
+          return ["extension"];
+        }
+        return [];
+      });
+      mockFs.statSync.mockImplementation((p: fs.PathLike) => {
+        if (
+          [path.join(rootPath, "src"), path.join(rootPath, "src", "extension")].includes(
+            p.toString(),
+          )
+        ) {
+          return { isDirectory: () => true } as fs.Stats;
+        }
+        return { isDirectory: () => false } as fs.Stats;
+      });
 
       const actual = getExtensionWorkspaceDir();
 
@@ -1285,11 +1242,7 @@ describe("Filesystem Utils", () => {
 
   describe("createUniqueFileName", () => {
     beforeAll(() => {
-      mock({ mock: {} });
-    });
-
-    afterAll(() => {
-      mock.restore();
+      mockFs.readdirSync.mockReturnValue([]);
     });
 
     it("creates unique filename", () => {
@@ -1311,63 +1264,50 @@ describe("Filesystem Utils", () => {
     });
 
     afterEach(() => {
+      jest.clearAllMocks();
       jest.restoreAllMocks();
-      mock.restore();
     });
 
     it("writes new gitignore file with base content", async () => {
       findFilesSpy.mockReturnValue([]);
-      const expectedContent = readTestDataFile(path.join("workspace_files", "base_gitignore"));
-      mock({ mock: { "my-workspace": {} }, expectedContent });
+      const actualFs = jest.requireActual<typeof fs>("fs");
+      const expectedContent = actualFs
+        .readFileSync(
+          path.resolve(__dirname, "..", "..", "test_data", "workspace_files", "base_gitignore"),
+        )
+        .toString();
+      mockFileSystemItem(mockFs, [{ pathParts: ["mock", "my-workspace"] }]);
 
       await writeGititnore();
 
-      const actual = fs.readFileSync(gitignorePath).toString();
-      const expected = fs.readFileSync(path.join("expectedContent")).toString();
-      expect(actual).toBe(expected);
+      expect(mockFs.writeFileSync).toHaveBeenCalledWith(gitignorePath, expectedContent);
     });
 
     it("doesn't create a file if no workspace open", async () => {
       findFilesSpy.mockReturnValue([]);
       jest.spyOn(vscode.workspace, "workspaceFolders", "get").mockReturnValue(undefined);
-      mock({ mock: { "my-workspace": {} } });
 
       await writeGititnore();
 
-      const actual = fs.existsSync(gitignorePath);
-      expect(actual).toBe(false);
-    });
-
-    it("preserves existing content", async () => {
-      findFilesSpy.mockReturnValue([new MockUri(gitignorePath)]);
-      const expectedContent = readTestDataFile(path.join("workspace_files", "partial_gitignore"));
-      mock({ mock: { "my-workspace": { ".gitignore": expectedContent } }, expectedContent });
-
-      await writeGititnore(true);
-
-      const actual = fs.readFileSync(gitignorePath).toString();
-      expect(actual.startsWith(expectedContent)).toBe(true);
+      expect(mockFs.writeFileSync).not.toHaveBeenCalled();
     });
   });
 
   describe("getSnmpDirPath", () => {
-    const fsDirs: FileSystem.DirectoryItems = {};
-
     beforeEach(() => {
       setupContextWithStorage();
       jest.spyOn(vscode.workspace, "workspaceFolders", "get").mockReturnValue(mockWorkspaceFolders);
-      fsDirs[mockWorkspacePath] = { extension: { "extension.yaml": "AAA" } };
-      mock(fsDirs);
+      mockFileSystemItem(mockFs, [{ pathParts: [mockManifestPath], content: "AAA" }]);
     });
 
     afterEach(() => {
-      mock.restore();
+      jest.clearAllMocks();
       jest.restoreAllMocks();
     });
 
     it("resolves a directory above the manifest path", () => {
-      const manifestPath = path.join(mockWorkspacePath, "extension", "extension.yaml");
-      const expected = path.resolve(manifestPath, "..", "snmp");
+      jest.spyOn(glob, "sync").mockReturnValue([path.join("extension", "extension.yaml")]);
+      const expected = path.resolve(mockManifestPath, "..", "snmp");
 
       const actual = getSnmpDirPath();
 
@@ -1384,17 +1324,13 @@ describe("Filesystem Utils", () => {
   });
 
   describe("getSnmpMibFiles", () => {
-    const fsDirs: FileSystem.DirectoryItems = {};
-
     beforeEach(() => {
       setupContextWithStorage();
       jest.spyOn(vscode.workspace, "workspaceFolders", "get").mockReturnValue(mockWorkspaceFolders);
-      fsDirs[mockWorkspacePath] = { extension: { "extension.yaml": "AAA" } };
-      mock(fsDirs);
     });
 
     afterEach(() => {
-      mock.restore();
+      jest.clearAllMocks();
       jest.restoreAllMocks();
     });
 
@@ -1405,21 +1341,20 @@ describe("Filesystem Utils", () => {
     });
 
     it("returns an array of mib files", () => {
-      const snmpDir = path.resolve(
-        path.join(mockWorkspacePath, "extension", "extension.yaml"),
-        "..",
-        "snmp",
-      );
-      fsDirs[mockWorkspacePath] = {
-        extension: { "extension.yaml": "AAA", "snmp": { "a.mib": "", "b.mib": "" } },
-      };
-      mock(fsDirs);
+      jest.spyOn(glob, "sync").mockReturnValue([path.join("extension", "extension.yaml")]);
+      mockFs.existsSync.mockReturnValue(true);
+      //@ts-expect-error
+      mockFs.readdirSync.mockImplementation((p: fs.PathLike) => {
+        if (p.toString().endsWith(path.join(mockWorkspacePath, "extension", "snmp"))) {
+          return ["mib1"];
+        }
+        return [];
+      });
 
       const actual = getSnmpMibFiles();
 
-      expect(actual).toHaveLength(2);
-      expect(actual[0]).toBe(path.join(snmpDir, "a.mib"));
-      expect(actual[1]).toBe(path.join(snmpDir, "b.mib"));
+      expect(actual).toHaveLength(1);
+      expect(actual[0].endsWith(path.join("extension", "snmp", "mib1"))).toBe(true);
     });
   });
 });
@@ -1430,8 +1365,8 @@ const getCertPath = (component: "OneAgent" | "ActiveGate") => {
       ? "C:\\ProgramData\\dynatrace\\oneagent\\agent\\config\\certificates"
       : "C:\\ProgramData\\dynatrace\\remotepluginmodule\\agent\\conf\\certificates"
     : component === "OneAgent"
-    ? "/var/lib/dynatrace/oneagent/agent/config/certificates"
-    : "/var/lib/dynatrace/remotepluginmodule/agent/conf/certificates";
+      ? "/var/lib/dynatrace/oneagent/agent/config/certificates"
+      : "/var/lib/dynatrace/remotepluginmodule/agent/conf/certificates";
 };
 
 const setupContextWithStorage = () => {

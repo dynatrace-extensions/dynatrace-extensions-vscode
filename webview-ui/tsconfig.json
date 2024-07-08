@@ -6,7 +6,7 @@
     "useUnknownInCatchVariables": true,
     "noImplicitReturns": true,
     "baseUrl": ".",
-    "declaration": true,
+    "declaration": false,
     "emitDecoratorMetadata": true,
     "esModuleInterop": true,
     "experimentalDecorators": true,
@@ -21,7 +21,8 @@
     "sourceMap": true,
     "target": "ESNext",
     "types": ["node"],
-    "typeRoots": ["./node_modules/@types", "./node_modules/@dynatrace"]
+    "typeRoots": ["./node_modules/@types", "./node_modules/@dynatrace"],
+    "noEmit": true
   },
   "include": ["**/*.ts", "**/*.tsx"]
 }

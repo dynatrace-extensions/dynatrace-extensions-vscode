@@ -70,7 +70,7 @@ export const showDisconnectedStatusBar = () => {
   statusBar.show();
 };
 
-let connectionInterval: NodeJS.Timer | undefined;
+let connectionInterval: NodeJS.Timeout | undefined;
 
 const startConnectionChecks = (tenant: DynatraceTenantDto) => {
   if (!connectionInterval) {
