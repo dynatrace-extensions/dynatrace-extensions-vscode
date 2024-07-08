@@ -55,7 +55,7 @@ npm run build:all
 
 ### Running
 
-The repository already comes with VS Code launch configurations attached. The commands above, all you have to do is hit `F5`. VS Code will open a new window with the extension compiled and running inside it.
+The repository already comes with VS Code launch configurations attached. After running the commands above, all you have to do is hit `F5`. VS Code will open a new window with the extension compiled and running inside it.
 
 This does not install the extension if you don't have it. Think of it as a live copy. It also doesn't conflict with a previous installation of the extension, but will work with the same shared settings and filesystem.
 
@@ -83,7 +83,7 @@ npm run test
 
 With the extension running live, you can use `Ctrl + Shift + I` to open VS Code's developer tools (same as in a browser). All your log statements appear here.
 
-Debugging works the same as with any project. Set your breakpoints, then hit `F5` and the code will pause on them.
+Same as with any project, you can set breakpoints, then hit `F5` and the code will pause on them.
 
 There are two run configurations available: `Run extension` and `Jest current file`. The latter will run the currently open test file and allow you to debug it using breakpoints.
 
@@ -170,13 +170,13 @@ All contribution points are documented [online](https://code.visualstudio.com/ap
 
 **Tests**
 
-Two Jest projects are setup for testing, `unit` and `e2e`. These with every opened Pull Request, and must pass for your contribution to be merged. You can run them locally separately using `npm run test test:<project>` or together using `npm run test`.
+Two Jest projects are setup for testing, `unit` and `e2e`. These run automatically with every opened Pull Request, and must pass for your contribution to be merged. You can run them locally separately using `npm run test test:<project>` or together using `npm run test`.
 
 Code coverage is only enabled file by file as most of the code base is still un-tested.
 
 ### Branches and releases
 
-Releases to VS Code marketplace are triggered on-demand using the `multi-platform build and publish` GitHub Action. Releases on GitHub are done manually after a marketplace release. The cadence is irregular, but normal features tend to get implemented in a release-worthy amount roughly monthly.
+Releases to VS Code marketplace are triggered on-demand using the `multi-platform build and publish` workflow. Releases on GitHub are done manually after a marketplace release. The cadence is irregular, but normal features tend to get implemented in a release-worthy amount roughly monthly.
 
 Releases are done from the `main` branch.
 
