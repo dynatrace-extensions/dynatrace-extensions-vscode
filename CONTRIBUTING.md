@@ -176,7 +176,7 @@ Code coverage is only enabled file by file as most of the code base is still un-
 
 ### Branches and releases
 
-Releases to VS Code marketplace are triggered on-demand using the `multi-platform build and publish` workflow. Releases on GitHub are done manually after a marketplace release. The cadence is irregular, but normal features tend to get implemented in a release-worthy amount roughly monthly.
+Releases to VS Code marketplace are triggered on-demand using the [Marketplace release](https://github.com/dynatrace-extensions/dynatrace-extensions-vscode/actions/workflows/build_and_publish.yml) workflow. Releases on GitHub are done manually after a marketplace release. The cadence is irregular, but normal features tend to get implemented in a release-worthy amount roughly monthly.
 
 Releases are done from the `main` branch.
 

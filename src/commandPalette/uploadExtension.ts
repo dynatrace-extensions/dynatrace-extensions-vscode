@@ -16,7 +16,7 @@
 
 import { lstatSync, readdirSync, readFileSync } from "fs";
 import * as path from "path";
-import AdmZip = require("adm-zip");
+import JSZip from "jszip";
 import * as vscode from "vscode";
 import * as yaml from "yaml";
 import { Dynatrace } from "../dynatrace-api/dynatrace";
@@ -74,20 +74,19 @@ export async function uploadExtension(dt: Dynatrace, tenantUrl: string) {
   logger.debug(`Zip file for upload is ${extensionZip}`, ...fnLogTrace);
 
   // Browse extension archive and extract the extension name and version
-  let zip = new AdmZip(path.join(distDir, extensionZip));
-  zip = new AdmZip(
-    zip
-      .getEntries()
-      .filter(entry => entry.entryName === "extension.zip")[0]
-      .getData(),
-  );
-  const extension = yaml.parse(
-    zip
-      .getEntries()
-      .filter(entry => entry.entryName === "extension.yaml")[0]
-      .getData()
-      .toString("utf-8"),
-  ) as ExtensionStub;
+  const zip = await new JSZip().loadAsync(readFileSync(path.join(distDir, extensionZip)));
+  const innerZipFile = await zip.file("extension.zip")?.async("nodebuffer");
+  if (!innerZipFile) {
+    logger.notify("ERROR", "Latest archive is invalid: no extension.zip", ...fnLogTrace);
+    return;
+  }
+  const innerZip = await new JSZip().loadAsync(innerZipFile);
+  const extensionYaml = await innerZip.file("extension.yaml")?.async("string");
+  if (!extensionYaml) {
+    logger.notify("ERROR", "Latest archive is invalid: no extension.yaml", ...fnLogTrace);
+    return;
+  }
+  const extension = yaml.parse(extensionYaml) as ExtensionStub;
   const extensionVersion = extension.version;
   const extensionName = extension.name;
 

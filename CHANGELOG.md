@@ -1,5 +1,24 @@
 # Change Log
 
+## Version 2.6.4 (09.07.2024)
+
+### 🪲 Fixed in this version:
+  - [#245 - Building extensions on windows produces invalid .zip](https://github.com/dynatrace-extensions/dynatrace-extensions-vscode/issues/245)
+
+---
+
+## Version 2.6.3 (08.07.2024)
+
+### 🚀 Improved in this version:
+- [#221 - Generate setup.py file for downloaded python extensions]((https://github.com/dynatrace-extensions/dynatrace-extensions-vscode/issues/221))
+- [#182 - Update contributor's guide]((https://github.com/dynatrace-extensions/dynatrace-extensions-vscode/issues/182))
+- [#154 - Update Strato packages]((https://github.com/dynatrace-extensions/dynatrace-extensions-vscode/issues/154))
+
+### 🪲 Fixed in this version:
+- [#233 - Fix Barista icons URL]((https://github.com/dynatrace-extensions/dynatrace-extensions-vscode/issues/233))
+
+---
+
 ## Version 2.6.2 (02.07.2024)
 
 ### 🪲 Fixed in this version:
