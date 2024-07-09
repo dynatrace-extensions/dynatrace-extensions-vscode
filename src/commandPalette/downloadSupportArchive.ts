@@ -1,6 +1,8 @@
-import AdmZip = require("adm-zip");
+import { writeFileSync } from "fs";
+import JSZip from "jszip";
 import * as vscode from "vscode";
 import { getActivationContext } from "../extension";
+import { bundleFolder } from "../utils/fileSystem";
 import * as logger from "../utils/logging";
 
 export const downloadSupportArchiveWorkflow = async () => {
@@ -15,8 +17,8 @@ export const downloadSupportArchiveWorkflow = async () => {
 export async function downloadSupportArchive(logsDir: string) {
   const fnLogTrace = ["commandPalette", "downloadSupportArchive"];
   logger.info("Executing Download Support Archive command", ...fnLogTrace);
-  const zip = new AdmZip();
-  zip.addLocalFolder(logsDir);
+  const zip = new JSZip();
+  bundleFolder(zip, logsDir);
 
   const saveDestination = await vscode.window
     .showSaveDialog({
@@ -34,5 +36,6 @@ export async function downloadSupportArchive(logsDir: string) {
     return;
   }
 
-  zip.writeZip(saveDestination);
+  const zipContent = await zip.generateAsync({ type: "nodebuffer", platform: "UNIX" });
+  writeFileSync(saveDestination, zipContent);
 }

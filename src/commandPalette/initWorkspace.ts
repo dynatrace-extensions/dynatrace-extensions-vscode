@@ -14,12 +14,21 @@
   limitations under the License.
  */
 
-import { existsSync, mkdirSync, readFileSync, readdirSync, rmdirSync, writeFileSync } from "fs";
+import {
+  existsSync,
+  mkdirSync,
+  readFileSync,
+  readdir,
+  readdirSync,
+  rmSync,
+  rmdirSync,
+  writeFileSync,
+} from "fs";
 import * as path from "path";
 import { TextEncoder } from "util";
-import AdmZip = require("adm-zip");
 import axios from "axios";
 import { moveSync } from "fs-extra";
+import JSZip from "jszip";
 import * as vscode from "vscode";
 import { Dynatrace } from "../dynatrace-api/dynatrace";
 import { getActivationContext } from "../extension";
@@ -33,6 +42,7 @@ import {
   checkWorkspaceOpen,
 } from "../utils/conditionCheckers";
 import {
+  extractZip,
   getExtensionFilePath,
   initWorkspaceStorage,
   registerWorkspace,
@@ -395,9 +405,8 @@ async function existingExtensionSetup(dt: Dynatrace, rootPath: string) {
     download.extension.version,
     true,
   );
-  const extensionPackage = new AdmZip(zipData);
-  const extensionZip = new AdmZip(extensionPackage.getEntry("extension.zip")?.getData());
-  extensionZip.extractAllTo(extensionDir);
+  await extractZip(await new JSZip().loadAsync(zipData), extensionDir);
+  rmSync(path.join(extensionDir, "extension.zip.sig"));
 
   // Additional extraction is needed for python extensions
   const extensionYaml = readFileSync(path.resolve(extensionDir, "extension.yaml")).toString();
@@ -406,17 +415,22 @@ async function existingExtensionSetup(dt: Dynatrace, rootPath: string) {
       logger.debug("This is a python extension. Extracting relevant contents", ...fnLogTrace);
       const moduleNameMatch = /^ *module: (.*?)$/gm.exec(extensionYaml);
       if (moduleNameMatch && moduleNameMatch.length > 1) {
+        const libPath = path.join(extensionDir, "lib");
         const moduleName = moduleNameMatch[1];
-        extensionZip
-          .getEntries()
-          .filter(e => {
-            logger.info(e.name, ...fnLogTrace);
-            return e.name.startsWith(moduleName);
-          })
-          .forEach(e => {
-            const moduleZip = new AdmZip(e.getData());
-            moduleZip.extractAllTo(rootPath);
+        const whlPath = readdirSync(libPath).filter(
+          f => f.startsWith(moduleName) && f.endsWith(".whl"),
+        );
+        if (whlPath[0]) {
+          await extractZip(
+            await new JSZip().loadAsync(readFileSync(path.join(libPath, whlPath[0]))),
+            rootPath,
+          );
+          rmSync(path.join(rootPath, `${moduleName}-${download.extension.version}.dist-info`), {
+            recursive: true,
+            force: true,
           });
+        }
+        rmSync(libPath, { recursive: true, force: true });
         await writeSetupPy(moduleName, rootPath);
       }
       await writeGititnore(true);
