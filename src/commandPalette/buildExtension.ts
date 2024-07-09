@@ -24,8 +24,8 @@ import {
   writeFileSync,
 } from "fs";
 import * as path from "path";
-import AdmZip = require("adm-zip");
 import { glob } from "glob";
+import JSZip from "jszip";
 import * as vscode from "vscode";
 import { Dynatrace } from "../dynatrace-api/dynatrace";
 import { DynatraceAPIError } from "../dynatrace-api/errors";
@@ -43,7 +43,12 @@ import {
 } from "../utils/conditionCheckers";
 import { sign } from "../utils/cryptography";
 import { normalizeExtensionVersion, incrementExtensionVersion } from "../utils/extensionParsing";
-import { getExtensionFilePath, removeOldestFiles, resolveRealPath } from "../utils/fileSystem";
+import {
+  bundleFolder,
+  getExtensionFilePath,
+  removeOldestFiles,
+  resolveRealPath,
+} from "../utils/fileSystem";
 import { loopSafeWait } from "../utils/general";
 import * as logger from "../utils/logging";
 import { getPythonVenvOpts } from "../utils/otherExtensions";
@@ -353,8 +358,8 @@ const getExtraPlatformsParameter = () => {
     process.platform === "win32"
       ? '-e "linux_x86_64"'
       : process.platform === "linux"
-      ? '-e "win_amd64"'
-      : '-e "linux_x86_64" -e "win_amd64"';
+        ? '-e "win_amd64"'
+        : '-e "linux_x86_64" -e "win_amd64"';
 
   // The user's configuration can override this
   const extraPlatforms = vscode.workspace
@@ -381,10 +386,11 @@ async function assembleStandard(manifestFileContent: string, extensionVersion: s
     const zipFileName = getZipFilename(manifestFileContent, extensionVersion);
 
     // Build the inner .zip archive
-    const innerZip = new AdmZip();
-    innerZip.addLocalFolder(await getManifestDirPath());
+    const innerZip = new JSZip();
+    bundleFolder(innerZip, await getManifestDirPath());
     const innerZipPath = path.resolve(workspaceStorage, "extension.zip");
-    innerZip.writeZip(innerZipPath);
+    const innerZipArchive = await innerZip.generateAsync({ type: "nodebuffer", platform: "UNIX" });
+    writeFileSync(innerZipPath, innerZipArchive);
     logger.info(`Built the inner archive: ${innerZipPath}`, ...fnLogTrace);
 
     // Sign the inner .zip archive and write the signature file
@@ -394,11 +400,12 @@ async function assembleStandard(manifestFileContent: string, extensionVersion: s
     logger.info(`Wrote the signature file: ${sigatureFilePath}`, ...fnLogTrace);
 
     // Build the outer .zip that includes the inner .zip and the signature file
-    const outerZip = new AdmZip();
+    const outerZip = new JSZip();
     const outerZipPath = path.resolve(workspaceStorage, zipFileName);
-    outerZip.addLocalFile(innerZipPath);
-    outerZip.addLocalFile(sigatureFilePath);
-    outerZip.writeZip(outerZipPath);
+    outerZip.file("extension.zip", innerZipArchive);
+    outerZip.file("extension.zip.sig", signature);
+    const outerZipArchive = await outerZip.generateAsync({ type: "nodebuffer", platform: "UNIX" });
+    writeFileSync(outerZipPath, outerZipArchive);
     logger.info(`Wrote initial outer zip at: ${outerZipPath}`, ...fnLogTrace);
   } catch (err) {
     throw Error(`Error during standard build phase: ${(err as Error).message}`);

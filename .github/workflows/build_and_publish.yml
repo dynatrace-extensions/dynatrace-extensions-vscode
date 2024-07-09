@@ -1,4 +1,4 @@
-name: Multi-platform build & publish
+name: Marketplace release
 
 on: workflow_dispatch
 
@@ -11,10 +11,10 @@ jobs:
           platform: win32
           arch: x64
           npm_config_arch: x64
-        - os: windows-latest
-          platform: win32
-          arch: arm64
-          npm_config_arch: arm
+        # - os: windows-latest
+        #   platform: win32
+        #   arch: arm64
+        #   npm_config_arch: arm
         - os: ubuntu-latest
           platform: linux
           arch: x64
@@ -46,11 +46,11 @@ jobs:
     runs-on: ${{ matrix.os }}
     steps:
       - name: Checkout
-        uses: actions/checkout@v3
+        uses: actions/checkout@v4
       - name: Install Node
-        uses: actions/setup-node@v3
+        uses: actions/setup-node@v4
         with:
-          node-version: 20.x
+          node-version: 20
       - name: Install extension
         run: npm run install:all
         env:
@@ -62,7 +62,7 @@ jobs:
         run: echo "target=${{ matrix.platform }}-${{ matrix.arch }}" >> $env:GITHUB_ENV
       - name: Package
         run: npx vsce package --target ${{ env.target }}
-      - uses: actions/upload-artifact@v3
+      - uses: actions/upload-artifact@v4
         with:
             name: ${{ env.target }}
             path: "*.vsix"
@@ -72,7 +72,7 @@ jobs:
     needs: build
     if: success()
     steps:
-      - uses: actions/download-artifact@v3
+      - uses: actions/download-artifact@v4
       - run: npx vsce publish --packagePath $(find . -iname *.vsix)
         env:
           VSCE_PAT: ${{ secrets.VSCE_PAT }}

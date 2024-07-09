@@ -1,6 +1,6 @@
 export interface WebviewMessage {
   messageType: string;
-  data: PanelData | ToastOptions | unknown;
+  data: PanelData | ToastOptions | string;
 }
 
 export interface PanelData {
@@ -24,7 +24,7 @@ export interface ToastOptions {
   /** Message displayed in the toast notification.
    * >>> Actual type is string | JSX.Element
    */
-  message?: string | unknown;
+  message?: unknown;
   /**
    * The Toast notification will automatically close after a certain period of
    * time given in milliseconds. If 'infinite' is provided, the consumer will
@@ -35,7 +35,7 @@ export interface ToastOptions {
    * */
   lifespan?: number | "infinite";
   /**
-   * Optional actions passed to the toast element, appended on the bottom left.
+   * Optional actions passed to the toast element, appended on the bottom left.rel
    * Should only be used to either add a Button or a Link.
    * >>> Actual type is JSX.Element
    */

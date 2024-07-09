@@ -19,10 +19,10 @@
  * UTILITIES FOR WORKING WITH SNMP
  ********************************************************************************/
 
-import { existsSync, mkdirSync, readFileSync, readdirSync, renameSync } from "fs";
+import { existsSync, mkdirSync, readFileSync, readdirSync, renameSync, writeFileSync } from "fs";
 import * as path from "path";
-import AdmZip = require("adm-zip");
 import axios from "axios";
+import JSZip from "jszip";
 import { getActivationContext } from "../extension";
 import { setHttpsAgent } from "./general";
 import { notify } from "./logging";
@@ -91,12 +91,20 @@ export async function downloadActiveGateMibFiles() {
       method: "GET",
       responseType: "arraybuffer",
     })
-    .then(zipRes => {
-      // Download and extract the MIBs
-      const mibZip = new AdmZip(zipRes.data);
-      const zipEntry = mibZip.getEntries().filter(e => e.entryName.endsWith("/mibs/"))[0];
-      mibZip.extractEntryTo(zipEntry, mibStoragePath, false, true);
-
+    .then(zipRes => zipRes.data)
+    .then(data => new JSZip().loadAsync(data))
+    .then(async zip => {
+      const zipFiles = zip.files;
+      for (const relPath in zipFiles) {
+        const file = zipFiles[relPath];
+        if (relPath.includes("/mibs/") && file.dir === false) {
+          const fileContent = await file.async("nodebuffer");
+          const fpath = path.join(mibStoragePath, path.basename(file.name));
+          writeFileSync(fpath, fileContent);
+        }
+      }
+    })
+    .then(() => {
       // Ensure all end in .mib
       readdirSync(mibStoragePath).forEach(file => {
         if (!file.endsWith(".mib")) {
@@ -1040,7 +1048,7 @@ class MibParser {
           if (Object.keys(this.Modules[ModuleName]).includes(ObjectName)) {
             if (this.Modules[ModuleName][ObjectName].OID) {
               //OID
-              summary += `${this.Modules[ModuleName][ObjectName].OID ?? ""} : ${ObjectName}\r\n`;
+              summary += `${this.Modules[ModuleName][ObjectName].OID} : ${ObjectName}\r\n`;
               //callback(this.Modules[ModuleName][ObjectName]);
               //break;
             }
@@ -1195,7 +1203,7 @@ export class MibModuleStore {
             syntax: oid.SYNTAX,
             oid: oid.OID,
             source: `Local MIB file \`${oid.ModuleName ?? ""}\``,
-          } as OidInformation),
+          }) as OidInformation,
       );
   }
 }

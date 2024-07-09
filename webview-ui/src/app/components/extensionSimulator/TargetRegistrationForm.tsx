@@ -27,6 +27,7 @@ import {
   showToast,
   Text,
   ExternalLink,
+  Label,
 } from "@dynatrace/strato-components-preview";
 import { WarningIcon } from "@dynatrace/strato-icons";
 import React, { useEffect, useState } from "react";
@@ -142,7 +143,8 @@ export const TargetRegistrationForm = ({
       <form onSubmit={handleSubmit(handleSubmitClick)} onReset={() => clearForm()} noValidate>
         <Flex flexDirection='column' gap={32}>
           <FieldSet legend='Target details' name='target-details'>
-            <FormField label='Name'>
+            <FormField>
+              <Label>Name</Label>
               <TextInput
                 placeholder='Enter a unique name for this target'
                 value={targetName}
@@ -152,7 +154,8 @@ export const TargetRegistrationForm = ({
                 }}
               />
             </FormField>
-            <FormField label='Address' required>
+            <FormField required>
+              <Label>Address</Label>
               <TextInput
                 placeholder='Enter an IP address or hostname'
                 controlState={{
@@ -178,7 +181,8 @@ export const TargetRegistrationForm = ({
               />
             </FormField>
             <Flex gap={32}>
-              <FormField label='EEC' required>
+              <FormField required>
+                <Label>EEC</Label>
                 <RadioGroup
                   value={eecType}
                   onChange={value => {
@@ -190,7 +194,8 @@ export const TargetRegistrationForm = ({
                   <Radio value='ACTIVEGATE'>ActiveGate</Radio>
                 </RadioGroup>
               </FormField>
-              <FormField label='OS' required>
+              <FormField required>
+                <Label>OS</Label>
                 <RadioGroup
                   value={osType}
                   onChange={value => {
@@ -205,7 +210,8 @@ export const TargetRegistrationForm = ({
             </Flex>
           </FieldSet>
           <FieldSet legend='Authentication'>
-            <FormField label='Username' required>
+            <FormField required>
+              <Label>Username</Label>
               <TextInput
                 placeholder='Enter a username that can login'
                 value={username}
@@ -218,7 +224,8 @@ export const TargetRegistrationForm = ({
                 }}
               />
             </FormField>
-            <FormField label='Private key' required>
+            <FormField required>
+              <Label>Private key</Label>
               <TextInput
                 placeholder='/path/to/private/key'
                 controlState={{

@@ -31,6 +31,7 @@ import * as os from "os";
 import * as path from "path";
 import { copySync } from "fs-extra";
 import { glob } from "glob";
+import JSZip from "jszip";
 import * as vscode from "vscode";
 import { getActivationContext } from "../extension";
 import {
@@ -836,6 +837,67 @@ export function getSnmpMibFiles(): string[] {
   return [];
 }
 
+/**
+ * Recursively bundles a folder and all its files into the given JSZip object.
+ * Does this in a OS-agnostic way by normalizing paths.
+ * @param zip zip to bundle into
+ * @param folderPath path on the system to bundle
+ * @param prev used internally for building the archive paths
+ * @returns JSZip
+ */
+export const bundleFolder = (zip: JSZip, folderPath: string, prev: string = ""): JSZip => {
+  readdirSync(folderPath).forEach(entryName => {
+    const entryPath = path.join(folderPath, entryName);
+    if (statSync(entryPath).isDirectory()) {
+      const zipPath = `${prev}${entryName}/`;
+      zip.folder(zipPath);
+      bundleFolder(zip, entryPath, zipPath);
+    } else {
+      const zipPath = `${prev}${entryName}`;
+      const content = readFileSync(entryPath);
+      zip.file(zipPath, content, { unixPermissions: "644" });
+    }
+  });
+  return zip;
+};
+
+/**
+ * Extracts all contents of an archive int othe give folder path.
+ * @param zip archive to extract
+ * @param destPath destination path
+ */
+export const extractZip = async (zip: JSZip, destPath: string) => {
+  logger.info(`Extracting zip into ${destPath}`, ...logTrace, "extractZip");
+  const files = zip.files;
+
+  for (const relativePath in files) {
+    const file = files[relativePath];
+    if (file) {
+      const filePath = path.join(destPath, relativePath);
+
+      if (file.dir) {
+        if (!existsSync(filePath)) {
+          logger.info(`Creating dir: ${filePath}`);
+          mkdirSync(filePath, { recursive: true });
+        }
+      } else {
+        const fileContent = await file.async("nodebuffer");
+
+        if (relativePath.endsWith(".zip")) {
+          const innerZip = await JSZip.loadAsync(fileContent);
+          await extractZip(innerZip, destPath);
+        } else {
+          const basePath = filePath.split(path.sep).slice(0, -1).join(path.sep);
+          if (!existsSync(basePath)) {
+            mkdirSync(basePath, { recursive: true });
+          }
+          writeFileSync(filePath, fileContent);
+        }
+      }
+    }
+  }
+};
+
 const getTenantsJsonPath = () => {
   const context = getActivationContext();
   return path.join(context.globalStorageUri.fsPath, "dynatraceEnvironments.json");
@@ -862,8 +924,8 @@ const getExtensionCertLocation = (component: "OneAgent" | "ActiveGate") => {
       ? "C:\\ProgramData\\dynatrace\\oneagent\\agent\\config\\certificates"
       : "C:\\ProgramData\\dynatrace\\remotepluginmodule\\agent\\conf\\certificates"
     : component === "OneAgent"
-    ? "/var/lib/dynatrace/oneagent/agent/config/certificates"
-    : "/var/lib/dynatrace/remotepluginmodule/agent/conf/certificates";
+      ? "/var/lib/dynatrace/oneagent/agent/config/certificates"
+      : "/var/lib/dynatrace/remotepluginmodule/agent/conf/certificates";
 };
 
 const isDifferentFile = (srcPath: string, destPath: string) => {
