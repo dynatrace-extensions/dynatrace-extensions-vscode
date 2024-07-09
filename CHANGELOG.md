@@ -1,5 +1,12 @@
 # Change Log
 
+## Version 2.6.4 (09.07.2024)
+
+### 🪲 Fixed in this version:
+  - [#245 - Building extensions on windows produces invalid .zip](https://github.com/dynatrace-extensions/dynatrace-extensions-vscode/issues/245)
+
+---
+
 ## Version 2.6.3 (08.07.2024)
 
 ### 🚀 Improved in this version:
