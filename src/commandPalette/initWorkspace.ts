@@ -18,7 +18,6 @@ import {
   existsSync,
   mkdirSync,
   readFileSync,
-  readdir,
   readdirSync,
   rmSync,
   rmdirSync,
