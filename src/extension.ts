@@ -15,6 +15,7 @@
  */
 
 import * as vscode from "vscode";
+import { getActivationSchemaActionProvider } from "./codeActions/activationSchema";
 import { getDiagnosticFixProvider } from "./codeActions/diagnosticFixProvider";
 import { getPrometheusActionProvider } from "./codeActions/prometheus";
 import { getSnippetGenerator } from "./codeActions/snippetGenerator";
@@ -48,6 +49,7 @@ import { initWorkspaceWorkflow } from "./commandPalette/initWorkspace";
 import { loadSchemasWorkflow } from "./commandPalette/loadSchemas";
 import { uploadExtensionWorkflow } from "./commandPalette/uploadExtension";
 import {
+  ACTIVATION_SCHEMA_DOC_SELECTOR,
   MANIFEST_DOC_SELECTOR,
   QUICK_FIX_PROVIDER_METADATA,
   TEMP_CONFIG_DOC_SELECTOR,
@@ -232,6 +234,7 @@ const registerCodeActionsProviders = () => [
   registerCodeActionsProvider(getSnmpActionProvider()),
   registerCodeActionsProvider(getPrometheusActionProvider()),
   registerCodeActionsProvider(getDiagnosticFixProvider()),
+  registerCodeActionsProvider(getActivationSchemaActionProvider(), ACTIVATION_SCHEMA_DOC_SELECTOR),
 ];
 
 const registerCodeActionsProvider = (

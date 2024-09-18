@@ -12,6 +12,12 @@ export const TEMP_CONFIG_DOC_SELECTOR: vscode.DocumentSelector = {
   pattern: "**/tempConfigFile.jsonc",
 };
 
+// Document selector for the activationSchema.json file
+export const ACTIVATION_SCHEMA_DOC_SELECTOR: vscode.DocumentSelector = {
+  language: "json",
+  pattern: "**/extension/activationSchema.json",
+};
+
 export const QUICK_FIX_PROVIDER_METADATA: vscode.CodeActionProviderMetadata = {
   providedCodeActionKinds: [vscode.CodeActionKind.QuickFix],
 };
