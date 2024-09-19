@@ -183,7 +183,7 @@ const propertyTemplates: FieldMap = {
     "precondition": {
       "type": "NOT",
       "precondition": {
-        "type": "EQUALS",
+        "type": "<EQUALS>/IN/NULL/REGEX",
         "property": "useCredentialVault",
         "expectedValue": true
       }
@@ -286,18 +286,33 @@ class activationSchemaActionProvider implements vscode.CodeActionProvider {
     const codeActions: vscode.CodeAction[] = [];
 
     const lineIndex = document.lineAt(range.start.line).lineNumber;
-    const [lineList, typeLineList, enumLineList] = getPropertyValidLines(document.getText());
+    const [lineList, typeLineList, enumLineList, validLinesPerType] = getPropertyValidLines(
+      document.getText(),
+    );
+    logger.info("-----------------------");
+    logger.info(lineList);
+    logger.info(typeLineList);
+    logger.info(enumLineList);
+    logger.info(validLinesPerType);
 
     if (lineList.includes(lineIndex)) {
-      codeActions.push(...this.createMetadataInsertions(document, range, true, false));
+      codeActions.push(...this.createMetadataInsertions(document, range, true, false, ""));
     }
 
     if (typeLineList.includes(lineIndex)) {
-      codeActions.push(...this.createMetadataInsertions(document, range, true, true));
+      codeActions.push(...this.createMetadataInsertions(document, range, true, true, ""));
     }
 
     if (enumLineList.includes(lineIndex)) {
-      codeActions.push(...this.createMetadataInsertions(document, range, false, false));
+      codeActions.push(...this.createMetadataInsertions(document, range, false, false, ""));
+    }
+
+    if (validLinesPerType.number.includes(lineIndex)) {
+      codeActions.push(...this.createMetadataInsertions(document, range, false, false, "number"));
+    }
+
+    if (validLinesPerType.string.includes(lineIndex)) {
+      codeActions.push(...this.createMetadataInsertions(document, range, false, false, "text"));
     }
 
     return codeActions;
@@ -318,9 +333,8 @@ class activationSchemaActionProvider implements vscode.CodeActionProvider {
     range: vscode.Range,
   ): vscode.CodeAction | undefined {
     const indentMatch = /[^ ]/i.exec(document.lineAt(range.start.line).text);
-    const bracketMatch = /[{}]/i.exec(document.lineAt(range.start.line).text);
     const [preComma, postComma] = this.checkCommaPosition(document, range);
-    if (bracketMatch && indentMatch) {
+    if (indentMatch) {
       const indent = indentMatch.index - 2;
       const insertPosition = new vscode.Position(
         range.start.line,
@@ -352,45 +366,53 @@ class activationSchemaActionProvider implements vscode.CodeActionProvider {
     range: vscode.Range,
     property: boolean,
     onlyObject: boolean,
+    propertyType: string,
   ): vscode.CodeAction[] {
     const codeActions: vscode.CodeAction[] = [];
     let fieldType: keyof FieldMap;
-    if (property) {
-      if (onlyObject) {
-        const action = this.createInsertAction(
-          "Add object field",
-          propertyTemplates.object,
-          document,
-          range,
-        );
-        if (action) {
-          codeActions.push(action);
-        }
-      } else {
-        for (fieldType in propertyTemplates) {
-          const propertyTemplate = propertyTemplates[fieldType];
+    if (propertyType !== "") {
+      const action = this.createInsertAction("Add constraints", "test", document, range);
+      if (action) {
+        codeActions.push(action);
+      }
+    } else {
+      if (property) {
+        if (onlyObject) {
           const action = this.createInsertAction(
-            humanReadableNames[fieldType],
-            propertyTemplate,
+            "Add object field",
+            propertyTemplates.object,
             document,
             range,
           );
           if (action) {
             codeActions.push(action);
           }
+        } else {
+          for (fieldType in propertyTemplates) {
+            const propertyTemplate = propertyTemplates[fieldType];
+            const action = this.createInsertAction(
+              humanReadableNames[fieldType],
+              propertyTemplate,
+              document,
+              range,
+            );
+            if (action) {
+              codeActions.push(action);
+            }
+          }
         }
-      }
-    } else {
-      for (fieldType in componentTemplates) {
-        const componentTemplate = componentTemplates[fieldType];
-        const action = this.createInsertAction(
-          humanReadableNames[fieldType],
-          componentTemplate,
-          document,
-          range,
-        );
-        if (action) {
-          codeActions.push(action);
+      } else {
+        for (fieldType in componentTemplates) {
+          const componentTemplate = componentTemplates[fieldType];
+          const action = this.createInsertAction(
+            humanReadableNames[fieldType],
+            componentTemplate,
+            document,
+            range,
+          );
+          if (action) {
+            codeActions.push(action);
+          }
         }
       }
     }

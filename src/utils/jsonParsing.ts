@@ -21,14 +21,26 @@
 import * as vscode from "vscode";
 import * as logger from "../utils/logging";
 
-export function getPropertyValidLines(content: string): [number[], number[], number[]] {
+interface CountMap {
+  [key: string]: number[];
+}
+
+export function getPropertyValidLines(content: string): [number[], number[], number[], CountMap] {
   const validLines: number[] = [];
   const typeValidLines: number[] = [];
   const enumValidLines: number[] = [];
+  const validLinesPerType: CountMap = {
+    number: [],
+    string: [],
+  };
   const fileLines = content.split(/\r?\n/);
+  let currentCount: number[] = [];
   let typesFound = false;
   let inProperties = false;
+  let inSpecificProperty = false;
   let indentLevel = 0;
+  let currentPropertyIndex = 0;
+  let currentType = "";
   let i = 0;
   let openBrackets = 0;
   let closedBrackets = 0;
@@ -36,6 +48,15 @@ export function getPropertyValidLines(content: string): [number[], number[], num
 
   fileLines.forEach(element => {
     if (typesFound) {
+      if (inSpecificProperty) {
+        currentCount.push(i);
+        if (element.includes('"type": "text"') || element.includes('"type": "secret"')) {
+          currentType = "string";
+        }
+        if (element.includes('"type": "integer"') || element.includes('"type": "float"')) {
+          currentType = "number";
+        }
+      }
       if (openBrackets - closedBrackets == 1) {
         typesFound = false;
       } else {
@@ -60,6 +81,23 @@ export function getPropertyValidLines(content: string): [number[], number[], num
             openBrackets - closedBrackets == indentLevel
           ) {
             validLines.push(i);
+          }
+          if (inProperties && char == "{" && !inString) {
+            inSpecificProperty = true;
+            currentPropertyIndex = openBrackets - closedBrackets - 1;
+          }
+          if (
+            inSpecificProperty &&
+            char == "}" &&
+            !inString &&
+            openBrackets - closedBrackets == currentPropertyIndex
+          ) {
+            if (currentType !== "") {
+              validLinesPerType[currentType] = validLinesPerType[currentType].concat(currentCount);
+            }
+            inSpecificProperty = false;
+            currentPropertyIndex = 0;
+            currentCount = [];
           }
           if (inProperties && !inString && openBrackets - closedBrackets == indentLevel - 1) {
             inProperties = false;
@@ -101,7 +139,7 @@ export function getPropertyValidLines(content: string): [number[], number[], num
     i = i + 1;
   });
 
-  return [validLines, typeValidLines, enumValidLines];
+  return [validLines, typeValidLines, enumValidLines, validLinesPerType];
 }
 
 /*
