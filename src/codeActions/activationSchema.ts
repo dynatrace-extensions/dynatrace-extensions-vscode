@@ -254,6 +254,43 @@ const propertyTemplates: FieldMap = {
   hiVictor: "😎",
 };
 
+const constraintTemplates: FieldMap = {
+  range: `"constraints": [
+  {
+    "type": "RANGE",
+    "minimum": 0,
+    "maximum": 20,
+    "customMessage": "My custom error message"
+  }
+]`,
+  length: `"constraints": [
+  {
+    "type": "LENGTH",
+    "minLength": 1,
+    "maxLength": 500,
+    "customMessage": "My custom error message"
+  }
+]`,
+  notBlank: `"constraints": [
+  {
+    "type": "NOT_BLANK",
+    "customMessage": "My custom error message"
+  }
+]`,
+  trimmed: `"constraints": [
+  {
+    "type": "TRIMMED",
+    "customMessage": "My custom error message"
+  }
+]`,
+  noWhitespace: `"constraints": [
+  {
+    "type": "NO_WHITESPACE",
+    "customMessage": "My custom error message"
+  }
+]`,
+};
+
 /**
  * Provides singleton access to the activationSchemaActionProvider.
  */
@@ -312,7 +349,7 @@ class activationSchemaActionProvider implements vscode.CodeActionProvider {
     }
 
     if (validLinesPerType.string.includes(lineIndex)) {
-      codeActions.push(...this.createMetadataInsertions(document, range, false, false, "text"));
+      codeActions.push(...this.createMetadataInsertions(document, range, false, false, "string"));
     }
 
     return codeActions;
@@ -371,7 +408,15 @@ class activationSchemaActionProvider implements vscode.CodeActionProvider {
     const codeActions: vscode.CodeAction[] = [];
     let fieldType: keyof FieldMap;
     if (propertyType !== "") {
-      const action = this.createInsertAction("Add constraints", "test", document, range);
+      let constraintText = "";
+      if (propertyType == "number") {
+        constraintText = constraintTemplates.range;
+      } else if (propertyType == "string") {
+        constraintText = constraintTemplates.length;
+      }
+
+      const action = this.createInsertAction("Add constraints", constraintText, document, range);
+
       if (action) {
         codeActions.push(action);
       }
