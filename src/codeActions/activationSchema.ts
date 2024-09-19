@@ -15,7 +15,141 @@
  */
 
 import * as vscode from "vscode";
+import { getPropertyValidLines, getComponentValidLines } from "../utils/jsonParsing";
+import * as logger from "../utils/logging";
+
 import { indentSnippet } from "./utils/snippetBuildingUtils";
+
+interface FieldMap {
+  [key: string]: string;
+}
+
+const componentTemplates: FieldMap = {
+  enums: `"enums": {
+    "options": {
+      "description": "",
+      "documentation": "",
+      "nullable": false,
+      "type": "enum",
+      "items": [
+        {
+          "displayName": "Option A",
+          "description": "Description of option A",
+          "value": "A",
+          "icon": "apple"
+        },
+        {
+          "displayName": "Option B",
+          "description": "Description of option B",
+          "value": "B",
+          "icon": "windows"
+        },
+        {
+          "displayName": "Option C",
+          "description": "Description of option C",
+          "value": "C",
+          "icon": "linux"
+        }
+      ]
+    }
+  },`,
+};
+
+const propertyTemplates: FieldMap = {
+  boolean: `"field_name": {
+  "displayName": "Boolean Field",
+  "description": "Description",
+  "nullable": false,
+  "type": "boolean"
+},`,
+  integer: `"field_name": {
+  "displayName": "Integer Field",
+  "description": "Description",
+  "nullable": false,
+  "type": "integer"
+},`,
+  object: `"typeProp": {
+  "displayName": "",
+  "description": "",
+  "documentation": "",
+  "version": "",
+  "summaryPattern": "Summary: {textProp}",
+  "type": "object",
+  "properties": {
+    "textProp": {
+      "displayName": "Text Field",
+      "description": "Description",
+      "nullable": false,
+      "type": "text",
+      "default": "..."
+    }
+  }
+}`,
+  text: `"field_name": {
+  "displayName": "Text Field",
+  "description": "Description",
+  "nullable": false,
+  "type": "text"
+},`,
+  hiVictor: "😎",
+  secret: `"field_name": {
+  "displayName": "Secret",
+  "description": "Description",
+  "nullable": false,
+  "type": "secret",
+  "default": "***123***"
+},`,
+  float: `"field_name": {
+  "displayName": "Integer Field",
+  "description": "Description",
+  "nullable": false,
+  "type": "float"
+},`,
+  set: `"field_name": {
+  "displayName": "Set",
+  "description": "Description",
+  "nullable": false,
+  "items": {
+    "displayName": "Text Field",
+    "description": "Description",
+    "nullable": false,
+    "type": "text",
+    "default": ""
+  },
+  "type": "set"
+}`,
+  list: `"props": {
+  "displayName": "List",
+  "description": "Description",
+  "nullable": false,
+  "items": {
+    "displayName": "Text Field",
+    "description": "Description",
+    "nullable": false,
+    "type": "text",
+    "default": ""
+  },
+  "type": "list"
+}`,
+  color: `"field_name": {
+  "displayName": "Color",
+  "description": "Description",
+  "nullable": false,
+  "type": "text",
+  "subType": "color"
+}`,
+  reference: `"props": {
+  "displayName": "Object Reference",
+  "description": "Description",
+  "nullable": false,
+  "type": "set",
+  "items": {
+    "type": {
+      "$ref": "#/types/typeProp"
+    }
+  }
+}`,
+};
 
 /**
  * Provides singleton access to the PrometheusActionProvider.
@@ -48,7 +182,21 @@ class PrometheusActionProvider implements vscode.CodeActionProvider {
   ): vscode.CodeAction[] {
     const codeActions: vscode.CodeAction[] = [];
 
-    codeActions.push(...this.createMetadataInsertions(document, range));
+    const lineIndex = document.lineAt(range.start.line).lineNumber;
+    const lineList = getPropertyValidLines(document.getText());
+    const lineList2 = getComponentValidLines(document.getText());
+
+    logger.info("Full list:");
+    logger.info(lineList);
+    logger.info(lineList2);
+
+    if (lineList.includes(lineIndex)) {
+      codeActions.push(...this.createMetadataInsertions(document, range, true));
+    }
+
+    if (lineList2.includes(lineIndex)) {
+      codeActions.push(...this.createMetadataInsertions(document, range, false));
+    }
 
     return codeActions;
   }
@@ -67,12 +215,9 @@ class PrometheusActionProvider implements vscode.CodeActionProvider {
     document: vscode.TextDocument,
     range: vscode.Range,
   ): vscode.CodeAction | undefined {
-    if (document.lineCount === range.start.line + 1) {
-      textToInsert = "\n" + textToInsert;
-    }
-    const firstLineMatch = /[a-z]/i.exec(document.lineAt(range.start.line).text);
-    if (firstLineMatch) {
-      const indent = firstLineMatch.index;
+    const bracketMatch = /[{}]/i.exec(document.lineAt(range.start.line).text);
+    if (bracketMatch) {
+      const indent = bracketMatch.index;
       const insertPosition = new vscode.Position(range.start.line + 1, 0);
       const action = new vscode.CodeAction(actionName, vscode.CodeActionKind.QuickFix);
       action.edit = new vscode.WorkspaceEdit();
@@ -93,24 +238,27 @@ class PrometheusActionProvider implements vscode.CodeActionProvider {
   private createMetadataInsertions(
     document: vscode.TextDocument,
     range: vscode.Range,
+    property: boolean,
   ): vscode.CodeAction[] {
     const codeActions: vscode.CodeAction[] = [];
-
-    const metricsToInsert = "test";
-
-    // Action for all metrics in one go
-    if (metricsToInsert.length > 1) {
-      const action = this.createInsertAction(
-        "Add metadata for all metrics",
-        metricsToInsert,
-        document,
-        range,
-      );
-      if (action) {
-        codeActions.push(action);
+    let fieldType: keyof FieldMap;
+    if (property) {
+      for (fieldType in propertyTemplates) {
+        const propertyTemplate = propertyTemplates[fieldType];
+        const action = this.createInsertAction(fieldType, propertyTemplate, document, range);
+        if (action) {
+          codeActions.push(action);
+        }
+      }
+    } else {
+      for (fieldType in componentTemplates) {
+        const componentTemplate = componentTemplates[fieldType];
+        const action = this.createInsertAction(fieldType, componentTemplate, document, range);
+        if (action) {
+          codeActions.push(action);
+        }
       }
     }
-
     return codeActions;
   }
 }
