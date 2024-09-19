@@ -286,14 +286,8 @@ class activationSchemaActionProvider implements vscode.CodeActionProvider {
     const codeActions: vscode.CodeAction[] = [];
 
     const lineIndex = document.lineAt(range.start.line).lineNumber;
-    const [lineList, typeLineList, enumLineList, validLinesPerType] = getPropertyValidLines(
-      document.getText(),
-    );
-    logger.info("-----------------------");
-    logger.info(lineList);
-    logger.info(typeLineList);
-    logger.info(enumLineList);
-    logger.info(validLinesPerType);
+    const [lineList, typeLineList, enumLineList, validLinesPerType, validPreconditionLines] =
+      getPropertyValidLines(document.getText());
 
     if (lineList.includes(lineIndex)) {
       codeActions.push(...this.createMetadataInsertions(document, range, true, false, ""));
@@ -313,6 +307,10 @@ class activationSchemaActionProvider implements vscode.CodeActionProvider {
 
     if (validLinesPerType.string.includes(lineIndex)) {
       codeActions.push(...this.createMetadataInsertions(document, range, false, false, "text"));
+    }
+
+    if (validPreconditionLines.includes(lineIndex)) {
+      codeActions.push(...this.createMetadataInsertions(document, range, false, false, "all"));
     }
 
     return codeActions;
@@ -371,7 +369,15 @@ class activationSchemaActionProvider implements vscode.CodeActionProvider {
     const codeActions: vscode.CodeAction[] = [];
     let fieldType: keyof FieldMap;
     if (propertyType !== "") {
-      const action = this.createInsertAction("Add constraints", "test", document, range);
+      let constraintText = "";
+      if (propertyType == "number") {
+        constraintText = constraintTemplates.range;
+      } else if (propertyType == "string") {
+        constraintText = constraintTemplates.length;
+      }
+
+      const action = this.createInsertAction("Add constraints", constraintText, document, range);
+
       if (action) {
         codeActions.push(action);
       }

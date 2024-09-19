@@ -25,7 +25,9 @@ interface CountMap {
   [key: string]: number[];
 }
 
-export function getPropertyValidLines(content: string): [number[], number[], number[], CountMap] {
+export function getPropertyValidLines(
+  content: string,
+): [number[], number[], number[], CountMap, number[]] {
   const validLines: number[] = [];
   const typeValidLines: number[] = [];
   const enumValidLines: number[] = [];
@@ -34,6 +36,7 @@ export function getPropertyValidLines(content: string): [number[], number[], num
     string: [],
   };
   const fileLines = content.split(/\r?\n/);
+  let validPreconditionLines: number[] = [];
   let currentCount: number[] = [];
   let typesFound = false;
   let inProperties = false;
@@ -95,6 +98,7 @@ export function getPropertyValidLines(content: string): [number[], number[], num
             if (currentType !== "") {
               validLinesPerType[currentType] = validLinesPerType[currentType].concat(currentCount);
             }
+            validPreconditionLines = validPreconditionLines.concat(currentCount);
             inSpecificProperty = false;
             currentPropertyIndex = 0;
             currentCount = [];
@@ -139,7 +143,7 @@ export function getPropertyValidLines(content: string): [number[], number[], num
     i = i + 1;
   });
 
-  return [validLines, typeValidLines, enumValidLines, validLinesPerType];
+  return [validLines, typeValidLines, enumValidLines, validLinesPerType, validPreconditionLines];
 }
 
 /*
