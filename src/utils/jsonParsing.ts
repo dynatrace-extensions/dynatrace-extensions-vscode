@@ -21,8 +21,10 @@
 import * as vscode from "vscode";
 import * as logger from "../utils/logging";
 
-export function getPropertyValidLines(content: string) {
+export function getPropertyValidLines(content: string): [number[], number[], number[]] {
   const validLines: number[] = [];
+  const typeValidLines: number[] = [];
+  const enumValidLines: number[] = [];
   const fileLines = content.split(/\r?\n/);
   let typesFound = false;
   let inProperties = false;
@@ -87,19 +89,23 @@ export function getPropertyValidLines(content: string) {
         if (char == "}" && !inString) {
           closedBrackets++;
         }
+        if (char == "}" && !inString && openBrackets - closedBrackets == 1) {
+          enumValidLines.push(i);
+        }
       }
     }
     if (element.includes('"types"')) {
       typesFound = true;
-      validLines.push(i);
+      typeValidLines.push(i);
     }
     i = i + 1;
   });
 
-  return validLines;
+  return [validLines, typeValidLines, enumValidLines];
 }
 
-export function getComponentValidLines(content: string) {
+/*
+export function getComponentValidLines(content: string): number[] {
   const validLines: number[] = [];
   const fileLines = content.split(/\r?\n/);
   let inProperties = false;
@@ -157,3 +163,4 @@ export function getComponentValidLines(content: string) {
 
   return validLines;
 }
+*/
