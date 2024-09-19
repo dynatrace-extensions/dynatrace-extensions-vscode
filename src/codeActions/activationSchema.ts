@@ -20,11 +20,11 @@ import * as logger from "../utils/logging";
 
 import { indentSnippet } from "./utils/snippetBuildingUtils";
 
-interface FieldMap {
+interface Map {
   [key: string]: string;
 }
 
-const humanReadableNames: FieldMap = {
+const humanReadableNames: Map = {
   boolean: "Add boolean field",
   integer: "Add integer field",
   object: "Add object field",
@@ -40,9 +40,17 @@ const humanReadableNames: FieldMap = {
   hiVictor: "Get a picture of Victor",
   enums: "Add enumeration field",
   credentials: "Add credential vault integration",
+  base_precondition: "Add precondition",
+  not_precondition: "Add negative precondition",
+  recursive_precondition: "Add recursive precondition",
+  range: "Add range constraints",
+  length: "Add length constraints",
+  notBlank: "Add not blank constraints",
+  trimmed: "Add trimmed constraints",
+  noWhitespace: "Add no whitespace constraints",
 };
 
-const componentTemplates: FieldMap = {
+const componentTemplates: Map = {
   enums: `"enums": {
   "enum_name": {
     "description": "",
@@ -73,7 +81,7 @@ const componentTemplates: FieldMap = {
 }`,
 };
 
-const propertyTemplates: FieldMap = {
+const propertyTemplates: Map = {
   text: `"field_name": {
   "displayName": "Text Field",
   "description": "Description",
@@ -183,7 +191,7 @@ const propertyTemplates: FieldMap = {
     "precondition": {
       "type": "NOT",
       "precondition": {
-        "type": "<EQUALS>/IN/NULL/REGEX",
+        "type": "EQUALS",
         "property": "useCredentialVault",
         "expectedValue": true
       }
@@ -194,6 +202,7 @@ const propertyTemplates: FieldMap = {
 "displayName": "Color",
 "description": "Description",
 "nullable": false,
+"default": "#FFEE7C",
 "type": "text",
 "subType": "color"
 }`,
@@ -254,15 +263,18 @@ const propertyTemplates: FieldMap = {
   hiVictor: "😎",
 };
 
-const constraintTemplates: FieldMap = {
+const numberConstraintTemplates: Map = {
   range: `"constraints": [
-  {
-    "type": "RANGE",
-    "minimum": 0,
-    "maximum": 20,
-    "customMessage": "My custom error message"
-  }
-]`,
+    {
+      "type": "RANGE",
+      "minimum": 0,
+      "maximum": 20,
+      "customMessage": "My custom error message"
+    }
+  ]`,
+};
+
+const stringConstraintTemplates: Map = {
   length: `"constraints": [
   {
     "type": "LENGTH",
@@ -289,6 +301,32 @@ const constraintTemplates: FieldMap = {
     "customMessage": "My custom error message"
   }
 ]`,
+};
+
+const preconditionTemplates: Map = {
+  base_precondition: `"precondition": {
+  "type": "<EQUALS>/<IN>/<NULL>/<REGEX>",
+  "property": "property name",
+  "expectedValue": "value"
+}`,
+  not_precondition: `"precondition": {
+  "type": "NOT",
+  "precondition": {
+    "type": "<EQUALS>/<IN>/<NULL>/<REGEX>",
+    "property": "property name",
+    "expectedValue": "value"
+  }
+}`,
+  recursive_precondition: `"precondition": {
+  "type": "<AND/OR>",
+  "preconditions": [
+    {
+      "type": "<EQUALS>/<IN>/<NULL>/<REGEX>",
+      "property": "property name",
+      "expectedValue": "value"
+    }
+  ]
+}`,
 };
 
 /**
@@ -404,19 +442,49 @@ class activationSchemaActionProvider implements vscode.CodeActionProvider {
     propertyType: string,
   ): vscode.CodeAction[] {
     const codeActions: vscode.CodeAction[] = [];
-    let fieldType: keyof FieldMap;
+    let mapKey: keyof Map;
+
     if (propertyType !== "") {
-      let constraintText = "";
-      if (propertyType == "number") {
-        constraintText = constraintTemplates.range;
-      } else if (propertyType == "string") {
-        constraintText = constraintTemplates.length;
-      }
-
-      const action = this.createInsertAction("Add constraints", constraintText, document, range);
-
-      if (action) {
-        codeActions.push(action);
+      if (propertyType == "all") {
+        for (mapKey in preconditionTemplates) {
+          const action = this.createInsertAction(
+            humanReadableNames[mapKey],
+            preconditionTemplates[mapKey],
+            document,
+            range,
+          );
+          if (action) {
+            codeActions.push(action);
+          }
+        }
+      } else {
+        if (propertyType == "number") {
+          for (mapKey in numberConstraintTemplates) {
+            const constraintTemplate = numberConstraintTemplates[mapKey];
+            const action = this.createInsertAction(
+              humanReadableNames[mapKey],
+              constraintTemplate,
+              document,
+              range,
+            );
+            if (action) {
+              codeActions.push(action);
+            }
+          }
+        } else if (propertyType == "string") {
+          for (mapKey in stringConstraintTemplates) {
+            const constraintTemplate = stringConstraintTemplates[mapKey];
+            const action = this.createInsertAction(
+              humanReadableNames[mapKey],
+              constraintTemplate,
+              document,
+              range,
+            );
+            if (action) {
+              codeActions.push(action);
+            }
+          }
+        }
       }
     } else {
       if (property) {
@@ -431,10 +499,10 @@ class activationSchemaActionProvider implements vscode.CodeActionProvider {
             codeActions.push(action);
           }
         } else {
-          for (fieldType in propertyTemplates) {
-            const propertyTemplate = propertyTemplates[fieldType];
+          for (mapKey in propertyTemplates) {
+            const propertyTemplate = propertyTemplates[mapKey];
             const action = this.createInsertAction(
-              humanReadableNames[fieldType],
+              humanReadableNames[mapKey],
               propertyTemplate,
               document,
               range,
@@ -445,10 +513,10 @@ class activationSchemaActionProvider implements vscode.CodeActionProvider {
           }
         }
       } else {
-        for (fieldType in componentTemplates) {
-          const componentTemplate = componentTemplates[fieldType];
+        for (mapKey in componentTemplates) {
+          const componentTemplate = componentTemplates[mapKey];
           const action = this.createInsertAction(
-            humanReadableNames[fieldType],
+            humanReadableNames[mapKey],
             componentTemplate,
             document,
             range,
