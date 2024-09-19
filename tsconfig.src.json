@@ -12,7 +12,7 @@
     "esModuleInterop": true,
     "noFallthroughCasesInSwitch": true,
     "useUnknownInCatchVariables": true,
-    "noImplicitReturns": false
+    "noImplicitReturns": false,
   },
   "include": ["src/**/*.ts"],
 }
