@@ -22,6 +22,8 @@ export const humanReadableNames: Record<string, string> = {
   notBlank: "Add not blank constraints",
   trimmed: "Add trimmed constraints",
   noWhitespace: "Add no whitespace constraints",
+  expandableSection: "Add expandable ui section",
+  tabGroup: "Add tab group ui",
 };
 
 export const componentTemplates: Record<string, string> = {
@@ -232,6 +234,63 @@ export const propertyTemplates: Record<string, string> = {
       "type": "text",
       "default": "..."
     }
+  }
+}`,
+  expandableSection: `"expandable_section_key": {
+  "uiCustomization": {
+    "expandable": {
+      "sections": [
+        {
+          "description": "Section 1 description",
+          "displayName": "Section 1",
+          "properties": [
+            "textProp"
+          ]
+        },
+        {
+          "description": "Section 2 description",
+          "displayName": "Section 2",
+          "properties": [
+            "integerProp"
+          ],
+          "expanded": true
+        }
+      ]
+    }
+  },
+  "displayName": "Expandable sections",
+  "description": "Description",
+  "nullable": false,
+  "type": {
+    "$ref": "#/types/typeProp"
+  }
+}`,
+  tabGroup: `"tag_group_key": {
+  "uiCustomization": {
+    "tabs": {
+      "groups": [
+        {
+          "description": "Group 1 description",
+          "displayName": "Tabs group 1",
+          "properties": [
+            "textProp"
+          ]
+        },
+        {
+          "description": "Group 2 description",
+          "displayName": "Tabs group 2",
+          "properties": [
+            "integerProp"
+          ]
+        }
+      ]
+    }
+  },
+  "displayName": "Tab group",
+  "description": "Description",
+  "nullable": false,
+  "type": {
+    "$ref": "#/types/typeProp"
   }
 }`,
   hiVictor: "😎",
