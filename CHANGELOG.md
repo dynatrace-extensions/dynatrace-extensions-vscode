@@ -1,5 +1,13 @@
 # Change Log
 
+## Version 2.6.5 (10.10.2024)
+
+### 🪲 Fixed in this version:
+
+- [Visual Studio Code Marketplace broken link](https://github.com/dynatrace-extensions/dynatrace-extensions-vscode/issues/253)
+
+---
+
 ## Version 2.6.4 (09.07.2024)
 
 ### 🪲 Fixed in this version:
