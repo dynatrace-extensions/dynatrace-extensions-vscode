@@ -215,34 +215,6 @@ export const propertyTemplates: Record<string, string> = {
   "default": "12:00:00",
   "type": "local_time"
 }`,
-  zonedDate: `"field_name": {
-  "displayName": "Zoned Date Time",
-  "description": "Description",
-  "nullable": false,
-  "default": "2020-01-01T00:00:00+01:00",
-  "type": "zoned_date_time"
-  }`,
-  localDate: `"field_name": {
-  "displayName": "Local date",
-  "description": "Description",
-  "nullable": false,
-  "default": "1970-01-01",
-  "type": "local_date"
-  }`,
-  localDatetime: `"field_name": {
-  "displayName": "Local Date Time",
-  "description": "Description",
-  "nullable": false,
-  "default": "2020-01-01T00:00:00",
-  "type": "local_date_time"
-  }`,
-  localTime: `"field_name": {
-  "displayName": "Local Time",
-  "description": "Description",
-  "nullable": false,
-  "default": "12:00:00",
-  "type": "local_time"
-  }`,
   set: `"field_name": {
   "displayName": "Set",
   "description": "Description",

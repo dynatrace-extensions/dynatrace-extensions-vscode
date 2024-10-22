@@ -15,49 +15,57 @@
  */
 
 /********************************************************************************
- * UTILITIES FOR PARSING RAW YAML CONTENT
+ * UTILITIES FOR PARSING RAW JSON CONTENT
  ********************************************************************************/
 
 import * as vscode from "vscode";
-import * as logger from "../utils/logging";
 
-interface CountMap {
-  [key: string]: number[];
-}
-
-export function getPropertyValidLines(
+/**
+ * Reads the contents of the actiovationSchema.json file and
+ * provides a set of lists and maps that define the lines of the file
+ * where we can perform code actions.
+ * @param content full content of the activationSchema.json file as a string
+ * @returns Four lists and one map containing the valid lines for code the different code actions
+ */
+export function validLinesForCodeActions(
   content: string,
-): [number[], number[], number[], CountMap, number[]] {
-  const validLines: number[] = [];
-  const typeValidLines: number[] = [];
-  const enumValidLines: number[] = [];
-  const validLinesPerType: CountMap = {
+): [number[], number[], number[], Record<string, number[]>, number[]] {
+  const addPropertylines: number[] = [];
+  const addObjectOnlyLines: number[] = [];
+  const addEnumLines: number[] = [];
+  const addConstraintsLines: Record<string, number[]> = {
     number: [],
     string: [],
   };
   const fileLines = content.split(/\r?\n/);
-  let validPreconditionLines: number[] = [];
-  let currentCount: number[] = [];
+  let addPreconditionLines: number[] = [];
+  let currentLine = 0;
+  let linesInsideProperty: number[] = [];
   let typesFound = false;
-  let inProperties = false;
-  let inSpecificProperty = false;
-  let indentLevel = 0;
-  let currentPropertyIndex = 0;
-  let currentType = "";
-  let i = 0;
+  let insideTypeProperties = false;
+  let insidePropertyBody = false;
+  let currentObjectIndentLevel = 0;
+  let currentPropertyIndentLevel = 0;
+  let currentType = ""; // Keeps track of the type of the current property we are looking at
   let openBrackets = 0;
   let closedBrackets = 0;
   let inString = false;
 
   fileLines.forEach(element => {
     if (typesFound) {
-      if (inSpecificProperty) {
-        currentCount.push(i);
+      if (insidePropertyBody) {
+        linesInsideProperty.push(currentLine);
         if (element.includes('"type": "text"') || element.includes('"type": "secret"')) {
           currentType = "string";
         }
         if (element.includes('"type": "integer"') || element.includes('"type": "float"')) {
           currentType = "number";
+        }
+        if (element.includes('"type": "object"') || element.includes('"type": "list"')) {
+          currentType = "";
+          insidePropertyBody = false;
+          linesInsideProperty = [];
+          currentPropertyIndentLevel = 0;
         }
       }
       if (openBrackets - closedBrackets == 1) {
@@ -80,40 +88,58 @@ export function getPropertyValidLines(
           if (
             char == "}" &&
             !inString &&
-            inProperties &&
-            openBrackets - closedBrackets == indentLevel
+            insideTypeProperties &&
+            openBrackets - closedBrackets == currentObjectIndentLevel
           ) {
-            validLines.push(i);
-          }
-          if (inProperties && char == "{" && !inString) {
-            inSpecificProperty = true;
-            currentPropertyIndex = openBrackets - closedBrackets - 1;
+            addPropertylines.push(currentLine);
           }
           if (
-            inSpecificProperty &&
+            insideTypeProperties &&
+            char == "{" &&
+            !inString &&
+            !insidePropertyBody &&
+            !element.includes('"properties"')
+          ) {
+            insidePropertyBody = true;
+            currentPropertyIndentLevel = openBrackets - closedBrackets - 1;
+          }
+          if (
+            insidePropertyBody &&
             char == "}" &&
             !inString &&
-            openBrackets - closedBrackets == currentPropertyIndex
+            openBrackets - closedBrackets == currentPropertyIndentLevel
           ) {
             if (currentType !== "") {
-              validLinesPerType[currentType] = validLinesPerType[currentType].concat(currentCount);
+              addConstraintsLines[currentType] =
+                addConstraintsLines[currentType].concat(linesInsideProperty);
             }
-            validPreconditionLines = validPreconditionLines.concat(currentCount);
-            inSpecificProperty = false;
-            currentPropertyIndex = 0;
-            currentCount = [];
+            currentType = "";
+            linesInsideProperty.pop();
+            addPreconditionLines = addPreconditionLines.concat(linesInsideProperty);
+            insidePropertyBody = false;
+            currentPropertyIndentLevel = 0;
+            linesInsideProperty = [];
           }
-          if (inProperties && !inString && openBrackets - closedBrackets == indentLevel - 1) {
-            inProperties = false;
+          if (
+            insideTypeProperties &&
+            !inString &&
+            openBrackets - closedBrackets == currentObjectIndentLevel - 1
+          ) {
+            insideTypeProperties = false;
           }
-          if (char == "}" && !inString && openBrackets - closedBrackets == 2 && !inProperties) {
-            validLines.push(i);
+          if (
+            char == "}" &&
+            !inString &&
+            openBrackets - closedBrackets == 2 &&
+            !insideTypeProperties
+          ) {
+            addObjectOnlyLines.push(currentLine);
           }
         }
-        if (element.includes('"properties"')) {
-          inProperties = true;
-          indentLevel = openBrackets - closedBrackets;
-          validLines.push(i);
+        if (element.includes('"properties"') || element.includes('"items"')) {
+          insideTypeProperties = true;
+          currentObjectIndentLevel = openBrackets - closedBrackets;
+          addPropertylines.push(currentLine);
         }
       }
     } else {
@@ -132,77 +158,36 @@ export function getPropertyValidLines(
           closedBrackets++;
         }
         if (char == "}" && !inString && openBrackets - closedBrackets == 1) {
-          enumValidLines.push(i);
+          addEnumLines.push(currentLine);
         }
       }
     }
     if (element.includes('"types"')) {
       typesFound = true;
-      typeValidLines.push(i);
+      addObjectOnlyLines.push(currentLine);
     }
-    i = i + 1;
+    currentLine = currentLine + 1;
   });
 
-  return [validLines, typeValidLines, enumValidLines, validLinesPerType, validPreconditionLines];
+  return [
+    addPropertylines,
+    addObjectOnlyLines,
+    addEnumLines,
+    addConstraintsLines,
+    addPreconditionLines,
+  ];
 }
 
-/*
-export function getComponentValidLines(content: string): number[] {
-  const validLines: number[] = [];
-  const fileLines = content.split(/\r?\n/);
-  let inProperties = false;
-  let i = 0;
-  let openBrackets = 0;
-  let closedBrackets = 0;
-  let inString = false;
-
-  fileLines.forEach(element => {
-    if (inProperties) {
-      for (let j = 0; j < element.length; j++) {
-        const char: string = element[j];
-        if (char == '"' && !inString) {
-          inString = true;
-        }
-        if (char == '"' && inString) {
-          inString = false;
-        }
-        if (char == "{" && !inString) {
-          openBrackets++;
-        }
-        if (char == "}" && !inString) {
-          closedBrackets++;
-        }
-        if (char == "}" && !inString && inProperties && openBrackets - closedBrackets == 2) {
-          validLines.push(i);
-        }
-        if (inProperties && !inString && openBrackets - closedBrackets == 1) {
-          inProperties = false;
-        }
+export async function checkJSONFormat(content: string) {
+  await vscode.window
+    .showInformationMessage(
+      "Seems like your **activationSchema.json** file is not formatted correctly, which could lead to manfunctioning of the JSON parser. Would you like to automatically format the file?",
+      "Yes",
+      "No",
+    )
+    .then(async choice => {
+      if (choice === "Yes") {
+        await vscode.commands.executeCommand("dynatrace-extensions.uploadExtension");
       }
-    } else {
-      for (let j = 0; j < element.length; j++) {
-        const char: string = element[j];
-        if (char == '"' && !inString) {
-          inString = true;
-        }
-        if (char == '"' && inString) {
-          inString = false;
-        }
-        if (char == "{" && !inString) {
-          openBrackets++;
-        }
-        if (char == "}" && !inString) {
-          closedBrackets++;
-        }
-      }
-    }
-    if (element.includes('"properties"') && openBrackets - closedBrackets == 2) {
-      inProperties = true;
-      validLines.push(i);
-    }
-    i = i + 1;
-  });
-
-  return validLines;
+    });
 }
-*/
