@@ -15,8 +15,7 @@
  */
 
 import * as vscode from "vscode";
-import { getPropertyValidLines } from "../utils/jsonParsing";
-import * as logger from "../utils/logging";
+import { validLinesForCodeActions, checkJSONFormat } from "../utils/jsonParsing";
 
 import {
   humanReadableNames,
@@ -27,6 +26,8 @@ import {
   preconditionTemplates,
 } from "./utils/activationSchemaTemplates";
 import { indentSnippet } from "./utils/snippetBuildingUtils";
+
+let checkedFormat = false;
 
 /**
  * Provides singleton access to the activationSchemaActionProvider.
@@ -42,51 +43,160 @@ export const getActivationSchemaActionProvider = (() => {
 
 /**
  * Provider for Code Actions that work with scraped activationSchema data to automatically
- * insert it in the Extension yaml.
+ * insert fields and their properties in the Extension activation schema.
  */
 class activationSchemaActionProvider implements vscode.CodeActionProvider {
   /**
    * Provides the Code Actions that insert details based on activationSchema scraped data.
    * @param document document that activated the provider
    * @param range range that activated the provider
-   * @param context Code Action context
-   * @param token cancellation token
    * @returns list of Code Actions
    */
-  provideCodeActions(
+  async provideCodeActions(
     document: vscode.TextDocument,
     range: vscode.Range | vscode.Selection,
+  ): Promise<vscode.CodeAction[]> {
+    if (!checkedFormat) {
+      await checkJSONFormat(document.getText());
+      checkedFormat = true;
+    }
+
+    const codeActions: vscode.CodeAction[] = [];
+
+    const cursorLine = document.lineAt(range.start.line).lineNumber;
+    const [
+      addPropertyLines,
+      addObjectOnlyLines,
+      addEnumLines,
+      addConstraintLines,
+      addPreconditionLines,
+    ] = validLinesForCodeActions(document.getText());
+
+    if (addPropertyLines.includes(cursorLine)) {
+      codeActions.push(...this.createMetadataInsertions(document, range, "all_properties"));
+    }
+
+    if (addObjectOnlyLines.includes(cursorLine)) {
+      codeActions.push(...this.createMetadataInsertions(document, range, "only_objects"));
+    }
+
+    if (addEnumLines.includes(cursorLine)) {
+      codeActions.push(...this.createMetadataInsertions(document, range, "enumerations"));
+    }
+
+    if (addConstraintLines.number.includes(cursorLine)) {
+      codeActions.push(...this.createMetadataInsertions(document, range, "number_restrictions"));
+    }
+
+    if (addConstraintLines.string.includes(cursorLine)) {
+      codeActions.push(...this.createMetadataInsertions(document, range, "string_restrictions"));
+    }
+
+    if (addPreconditionLines.includes(cursorLine)) {
+      codeActions.push(...this.createMetadataInsertions(document, range, "preconditions"));
+    }
+
+    return codeActions;
+  }
+
+  /**
+   * Creates Code Actions for inserting JSON block based on scraped activationSchema data.
+   * @param document the document that triggered the action provider
+   * @param range the range that triggered the action
+   * @param insertionType string that representes what kind of insertion we can do
+   * @returns list of code actions
+   */
+  private createMetadataInsertions(
+    document: vscode.TextDocument,
+    range: vscode.Range,
+    insertionType: string,
   ): vscode.CodeAction[] {
     const codeActions: vscode.CodeAction[] = [];
 
-    const lineIndex = document.lineAt(range.start.line).lineNumber;
-    const [lineList, typeLineList, enumLineList, validLinesPerType, validPreconditionLines] =
-      getPropertyValidLines(document.getText());
-
-    if (lineList.includes(lineIndex)) {
-      codeActions.push(...this.createMetadataInsertions(document, range, true, false, ""));
+    switch (insertionType) {
+      case "all_properties": {
+        for (const mapKey in propertyTemplates) {
+          const action = this.createInsertAction(
+            humanReadableNames[mapKey],
+            propertyTemplates[mapKey],
+            document,
+            range,
+          );
+          if (action) {
+            codeActions.push(action);
+          }
+        }
+        break;
+      }
+      case "only_objects": {
+        const action = this.createInsertAction(
+          "Add object field",
+          propertyTemplates.object,
+          document,
+          range,
+        );
+        if (action) {
+          codeActions.push(action);
+        }
+        break;
+      }
+      case "enumerations": {
+        for (const mapKey in componentTemplates) {
+          const action = this.createInsertAction(
+            humanReadableNames[mapKey],
+            componentTemplates[mapKey],
+            document,
+            range,
+          );
+          if (action) {
+            codeActions.push(action);
+          }
+        }
+        break;
+      }
+      case "number_restrictions": {
+        for (const mapKey in numberConstraintTemplates) {
+          const action = this.createInsertAction(
+            humanReadableNames[mapKey],
+            numberConstraintTemplates[mapKey],
+            document,
+            range,
+          );
+          if (action) {
+            codeActions.push(action);
+          }
+        }
+        break;
+      }
+      case "string_restrictions": {
+        for (const mapKey in stringConstraintTemplates) {
+          const action = this.createInsertAction(
+            humanReadableNames[mapKey],
+            stringConstraintTemplates[mapKey],
+            document,
+            range,
+          );
+          if (action) {
+            codeActions.push(action);
+          }
+        }
+        break;
+      }
+      case "preconditions": {
+        for (const mapKey in preconditionTemplates) {
+          const action = this.createInsertAction(
+            humanReadableNames[mapKey],
+            preconditionTemplates[mapKey],
+            document,
+            range,
+          );
+          if (action) {
+            codeActions.push(action);
+          }
+        }
+        break;
+      }
     }
-
-    if (typeLineList.includes(lineIndex)) {
-      codeActions.push(...this.createMetadataInsertions(document, range, true, true, ""));
-    }
-
-    if (enumLineList.includes(lineIndex)) {
-      codeActions.push(...this.createMetadataInsertions(document, range, false, false, ""));
-    }
-
-    if (validLinesPerType.number.includes(lineIndex)) {
-      codeActions.push(...this.createMetadataInsertions(document, range, false, false, "number"));
-    }
-
-    if (validLinesPerType.string.includes(lineIndex)) {
-      codeActions.push(...this.createMetadataInsertions(document, range, false, false, "string"));
-    }
-
-    if (validPreconditionLines.includes(lineIndex)) {
-      codeActions.push(...this.createMetadataInsertions(document, range, false, false, "all"));
-    }
-
     return codeActions;
   }
 
@@ -112,122 +222,22 @@ class activationSchemaActionProvider implements vscode.CodeActionProvider {
         range.start.line,
         document.lineAt(range.start.line).text.length,
       );
-      const action = new vscode.CodeAction(actionName, vscode.CodeActionKind.QuickFix);
-      action.edit = new vscode.WorkspaceEdit();
       const indentedSnippet = indentSnippet(textToInsert, indent);
       const insertSnippet =
-        preComma +
-        indentSnippet(textToInsert, indent).substring(0, indentedSnippet.length - 1) +
-        postComma;
+        preComma + indentedSnippet.substring(0, indentedSnippet.length - 1) + postComma;
+      const action = new vscode.CodeAction(actionName, vscode.CodeActionKind.QuickFix);
+      action.edit = new vscode.WorkspaceEdit();
       action.edit.insert(document.uri, insertPosition, insertSnippet);
       return action;
     }
   }
 
   /**
-   * Creates Code Actions for inserting metric metadata based on scraped activationSchema data.
-   * Metrics are filtered to only match the ones added in the datasource (not all scraped) and also
-   * ones that don't already have metadata defined (so we don't duplicate).
+   * Checks if the block that needs to be added requires a comma before or after it.
    * @param document the document that triggered the action provider
    * @param range the range that triggered the action
-   * @param extension extension.yaml serialized as object
-   * @returns list of code actions
+   * @returns tuple comprised of the strings to attach before and after the block
    */
-  private createMetadataInsertions(
-    document: vscode.TextDocument,
-    range: vscode.Range,
-    property: boolean,
-    onlyObject: boolean,
-    propertyType: string,
-  ): vscode.CodeAction[] {
-    const codeActions: vscode.CodeAction[] = [];
-
-    if (propertyType !== "") {
-      if (propertyType == "all") {
-        for (const mapKey in preconditionTemplates) {
-          const action = this.createInsertAction(
-            humanReadableNames[mapKey],
-            preconditionTemplates[mapKey],
-            document,
-            range,
-          );
-          if (action) {
-            codeActions.push(action);
-          }
-        }
-      } else {
-        if (propertyType == "number") {
-          for (const mapKey in numberConstraintTemplates) {
-            const constraintTemplate = numberConstraintTemplates[mapKey];
-            const action = this.createInsertAction(
-              humanReadableNames[mapKey],
-              constraintTemplate,
-              document,
-              range,
-            );
-            if (action) {
-              codeActions.push(action);
-            }
-          }
-        } else if (propertyType == "string") {
-          for (const mapKey in stringConstraintTemplates) {
-            const constraintTemplate = stringConstraintTemplates[mapKey];
-            const action = this.createInsertAction(
-              humanReadableNames[mapKey],
-              constraintTemplate,
-              document,
-              range,
-            );
-            if (action) {
-              codeActions.push(action);
-            }
-          }
-        }
-      }
-    } else {
-      if (property) {
-        if (onlyObject) {
-          const action = this.createInsertAction(
-            "Add object field",
-            propertyTemplates.object,
-            document,
-            range,
-          );
-          if (action) {
-            codeActions.push(action);
-          }
-        } else {
-          for (const mapKey in propertyTemplates) {
-            const propertyTemplate = propertyTemplates[mapKey];
-            const action = this.createInsertAction(
-              humanReadableNames[mapKey],
-              propertyTemplate,
-              document,
-              range,
-            );
-            if (action) {
-              codeActions.push(action);
-            }
-          }
-        }
-      } else {
-        for (const mapKey in componentTemplates) {
-          const componentTemplate = componentTemplates[mapKey];
-          const action = this.createInsertAction(
-            humanReadableNames[mapKey],
-            componentTemplate,
-            document,
-            range,
-          );
-          if (action) {
-            codeActions.push(action);
-          }
-        }
-      }
-    }
-    return codeActions;
-  }
-
   private checkCommaPosition(document: vscode.TextDocument, range: vscode.Range): [string, string] {
     const precommaIndex = /[,{]/i.exec(document.lineAt(range.start.line).text);
     if (precommaIndex) {

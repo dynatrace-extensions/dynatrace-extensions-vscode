@@ -11,7 +11,6 @@ export const humanReadableNames: Record<string, string> = {
   list_reference: "Add reference list field",
   select: "Add dropdown field",
   radio_button: "Add radio button field",
-  hiVictor: "Get a picture of Victor",
   enums: "Add enumeration field",
   credentials: "Add credential vault integration",
   base_precondition: "Add precondition",
@@ -326,7 +325,6 @@ export const propertyTemplates: Record<string, string> = {
     "$ref": "#/types/typeProp"
   }
 }`,
-  hiVictor: "😎",
 };
 
 export const numberConstraintTemplates: Record<string, string> = {
