@@ -18,7 +18,10 @@
  * UTILITIES FOR PARSING RAW JSON CONTENT
  ********************************************************************************/
 
+import { writeFileSync } from "fs";
+import * as path from "path";
 import * as vscode from "vscode";
+import * as logger from "../utils/logging";
 
 /**
  * Reads the contents of the actiovationSchema.json file and
@@ -179,15 +182,33 @@ export function validLinesForCodeActions(
 }
 
 export async function checkJSONFormat(content: string) {
-  await vscode.window
-    .showInformationMessage(
-      "Seems like your **activationSchema.json** file is not formatted correctly, which could lead to manfunctioning of the JSON parser. Would you like to automatically format the file?",
-      "Yes",
-      "No",
-    )
-    .then(async choice => {
-      if (choice === "Yes") {
-        await vscode.commands.executeCommand("dynatrace-extensions.uploadExtension");
-      }
-    });
+  content = content.replace(/(?:\r\n|\r|\n)/g, "\n");
+  if (
+    JSON.stringify(JSON.parse(content), undefined, 2) !== content &&
+    JSON.stringify(JSON.parse(content), undefined, 4) !== content
+  ) {
+    await vscode.window
+      .showInformationMessage(
+        "This JSON document is not fully formatted. Completion suggestions may not work as expected.\nFormat before continuing?",
+        "Yes",
+        "No",
+      )
+      .then(async choice => {
+        if (choice === "Yes") {
+          await formatActivationSchema(JSON.stringify(JSON.parse(content), undefined, 2));
+        }
+      });
+  }
+}
+
+async function formatActivationSchema(formattedContent: string) {
+  if (vscode.workspace.workspaceFolders) {
+    const activationLocation = path.join(
+      vscode.workspace.workspaceFolders[0].uri.fsPath,
+      "/extension/activationSchema.json",
+    );
+    writeFileSync(activationLocation, formattedContent);
+    const document = await vscode.workspace.openTextDocument(activationLocation);
+    await vscode.window.showTextDocument(document);
+  }
 }

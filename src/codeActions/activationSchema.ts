@@ -27,6 +27,8 @@ import {
 } from "./utils/activationSchemaTemplates";
 import { indentSnippet } from "./utils/snippetBuildingUtils";
 
+let checkedFormat = false;
+
 /**
  * Provides singleton access to the activationSchemaActionProvider.
  */
@@ -50,10 +52,15 @@ class activationSchemaActionProvider implements vscode.CodeActionProvider {
    * @param range range that activated the provider
    * @returns list of Code Actions
    */
-  provideCodeActions(
+  async provideCodeActions(
     document: vscode.TextDocument,
     range: vscode.Range | vscode.Selection,
-  ): vscode.CodeAction[] {
+  ): Promise<vscode.CodeAction[]> {
+    if (!checkedFormat) {
+      await checkJSONFormat(document.getText());
+      checkedFormat = true;
+    }
+
     const codeActions: vscode.CodeAction[] = [];
 
     const cursorLine = document.lineAt(range.start.line).lineNumber;
