@@ -1,5 +1,13 @@
 # Change Log
 
+## Version 2.6.6 (10.02.2025)
+
+### 🪲 Fixed in this version:
+
+- [Diagnostics do not work for variables with - in name](https://github.com/dynatrace-extensions/dynatrace-extensions-vscode/pull/258)
+
+---
+
 ## Version 2.6.5 (10.10.2024)
 
 ### 🪲 Fixed in this version:
