@@ -283,7 +283,7 @@ const shouldIncrementVersion = async (
 };
 
 const getExtensionVersion = (manifestFileContent: string) => {
-  const versionMatch = /^version: "?([0-9.]+)"?/gm.exec(manifestFileContent);
+  const versionMatch = /^version: ['"]?([0-9.]+)['"]?/gm.exec(manifestFileContent);
   if (!versionMatch?.[1]) throw Error("Extension version missing from manifest.");
   return normalizeExtensionVersion(versionMatch[1]);
 };
@@ -413,7 +413,7 @@ async function assembleStandard(manifestFileContent: string, extensionVersion: s
 }
 
 const getExtensionName = (manifestFileContent: string) => {
-  const nameMatch = /^name: "?([:a-zA-Z0-9.\-_]+)"?/gm.exec(manifestFileContent);
+  const nameMatch = /^name: ['"]?([:a-zA-Z0-9.\-_]+)['"]?/gm.exec(manifestFileContent);
   if (!nameMatch?.[1]) throw Error("Extension name missing from manifest.");
   return nameMatch[1];
 };
