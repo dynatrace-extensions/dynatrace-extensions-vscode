@@ -38,7 +38,6 @@ const logoLinkFind = "<IMAGE_LINK>";
 
 interface Tile {
   type: string;
-  title: string;
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
   [key: string]: any;
 }
@@ -70,7 +69,7 @@ interface GrailDashboard {
 }
 
 const dashboardJsonTemplate = {
-  version: 17,
+  version: 18,
   importedWithCode: true,
   settings: {
     gridLayout: {
@@ -98,7 +97,7 @@ const dashboardJsonTemplate = {
   layouts: {
     "1": {
       x: 0,
-      y: 2,
+      y: 3,
       w: 40,
       h: 1,
     },
@@ -106,38 +105,32 @@ const dashboardJsonTemplate = {
       x: 2,
       y: 0,
       w: 38,
-      h: 2,
+      h: 3,
     },
     "3": {
       x: 0,
       y: 0,
       w: 2,
-      h: 2,
+      h: 3,
     },
     "4": {
       x: 0,
-      y: 12,
+      y: 7,
       w: 40,
       h: 3,
     },
-    "5": {
-      x: 0,
-      y: 6,
-      w: 9,
-      h: 6,
-    },
     // First Dynamic topology type
-    // "6": {
+    // "5": {
     //   x: 0,
-    //   y: 3,
+    //   y: 4,
     //   w: 6,
     //   h: 3,
     // },
     // For every extra type shift x by 6. eg.,
     // DT will auto handle the wrapping
-    // "7": {
+    // "6": {
     //   x: 6,
-    //   y: 3,
+    //   y: 4,
     //   w: 6,
     //   h: 3,
     // },
@@ -147,33 +140,23 @@ const dashboardJsonTemplate = {
 const tileTitle = {
   id: "2",
   type: "markdown",
-  title: "",
-  content: `### Overview of ${extNameFind} extension data\n\nStart here to navigate to the extension configuration and/or entity pages and view charts displaying data collected. If you don't see data: ⚙️ [Configure extension]($TenantUrl/ui/apps/dynatrace.extensions.manager/configurations/${extIdFind}/configs)\n\n-----`,
+  content: `## Overview of ${extNameFind} extension data\n\nStart here to navigate to the extension configuration and/or entity pages and view charts displaying data collected. **Additional Resources: [${extNameFind} Extension Documentation]($TenantUrl/ui/apps/dynatrace.extensions.manager/configurations/${extIdFind}/details)**\n\n-----\n#### If you don't see data: ⚙️ [Configure extension]($TenantUrl/ui/apps/dynatrace.extensions.manager/configurations/${extIdFind}/configs)`,
 };
 
 const tileLogo = {
   id: "3",
   type: "markdown",
-  title: "",
   content: `![](${logoLinkFind})`,
 };
 
-const tileLink = {
+const tileEntityLinks = {
   id: "4",
   type: "markdown",
-  title: "",
-  content: `### Additional Resources:\n#### [${extNameFind} Extension Documentation]($TenantUrl/ui/apps/dynatrace.extensions.manager/configurations/${extIdFind}/details)`,
-};
-
-const tileEntityLinks = {
-  id: "5",
-  type: "markdown",
-  title: "",
-  content: "#### 🔗 Navigate to entities:",
+  content: "#### 🔗 Navigate to entities: ",
 };
 
 const tileEntityCount = {
-  // Dynamic ID: 6 to X
+  // Dynamic ID: 5 to X
   type: "data",
   title: `${entityNameFind}`,
   query: `fetch \`dt.entity.${entityTypeFind}\`\n| summarize count()`,
@@ -323,10 +306,10 @@ const tileEntityCount = {
 function buildDashboard(extension: ExtensionStub, extDisplayName: string, logo: string): string {
   const newDashboard = { ...dashboardJsonTemplate } as GrailDashboard;
 
-  // title
+  // title, link, config
   const { id: titleId, ...newTitle } = tileTitle;
-  newTitle.content = newTitle.content.replace(extNameFind, extDisplayName);
-  newTitle.content = newTitle.content.replace(extIdFind, extension.name);
+  newTitle.content = newTitle.content.replace(new RegExp(extNameFind, "g"), extDisplayName);
+  newTitle.content = newTitle.content.replace(new RegExp(extIdFind, "g"), extension.name);
   newDashboard.tiles[titleId] = newTitle;
 
   // logo
@@ -334,25 +317,19 @@ function buildDashboard(extension: ExtensionStub, extDisplayName: string, logo: 
   newLogo.content = newLogo.content.replace(logoLinkFind, logo);
   newDashboard.tiles[logoId] = newLogo;
 
-  // Doc link
-  const { id: linkId, ...newLink } = tileLink;
-  newLink.content = newLink.content.replace(extNameFind, extDisplayName);
-  newLink.content = newLink.content.replace(extIdFind, extension.name);
-  newDashboard.tiles[linkId] = newLink;
-
   // Entity Links and Data tiles
   const entityCountTileWidth = 6;
   const firstEntityCountTilePosition: Layout = {
-    x: 0, // position of tile #6
-    y: 3,
+    x: 0, // position of tile #5
+    y: 4,
     w: 6,
     h: 3,
   };
   const { id: eLinkId, ...newEntityLinks } = tileEntityLinks;
-  const entityLinkString = `\n##### [${entityNameFind}]($TenantUrl/ui/apps/dynatrace.classic.technologies/ui/entity/list/${entityTypeFind})`;
+  const entityLinkString = `[${entityNameFind}]($TenantUrl/ui/apps/dynatrace.classic.technologies/ui/entity/list/${entityTypeFind})`;
   const topologyTypes = extension.topology?.types ?? [];
   const entityLinkStringList: string[] = [];
-  const tileCountStart = 6;
+  const tileCountStart = 5;
   let tileCountNow = tileCountStart;
   topologyTypes.forEach(eType => {
     // Entity Link Markdown Tile
@@ -372,7 +349,7 @@ function buildDashboard(extension: ExtensionStub, extDisplayName: string, logo: 
 
     tileCountNow++;
   });
-  newEntityLinks.content = newEntityLinks.content + entityLinkStringList.join("");
+  newEntityLinks.content = newEntityLinks.content + entityLinkStringList.join(" | ");
   newDashboard.tiles[eLinkId] = newEntityLinks;
 
   return JSON.stringify(newDashboard);
@@ -447,7 +424,7 @@ export async function createGen3OverviewDashboard() {
   // Create directories and json file for dashboard
   const documentsDirName = "documents";
   const extfilePrefix = extDisplayName.toLowerCase().replace(/ /g, "_");
-  const overviewDashboardName = `${extfilePrefix}.overview.dashboard.json`;
+  const overviewDashboardName = `${extfilePrefix}_overview.dashboard.json`;
   const extensionDir = path.resolve(extensionFile, "..");
   const documentsDir = path.resolve(extensionDir, documentsDirName);
   if (!existsSync(documentsDir)) {
