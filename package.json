@@ -84,6 +84,11 @@
         "category": "Dynatrace extensions"
       },
       {
+        "command": "dynatrace-extensions.createGen3Dashboard",
+        "title": "Create Gen3 dashboard",
+        "category": "Dynatrace extensions"
+      },
+      {
         "command": "dynatrace-extensions.createAlert",
         "title": "Create alert",
         "category": "Dynatrace extensions"

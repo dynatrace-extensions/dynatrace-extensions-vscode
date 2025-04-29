@@ -42,6 +42,7 @@ import { createAlertWorkflow } from "./commandPalette/createAlert";
 import { createMonitoringConfigurationWorkflow } from "./commandPalette/createConfiguration";
 import { createDashboardWorkflow } from "./commandPalette/createDashboard";
 import { createDocumentationWorkflow } from "./commandPalette/createDocumentation";
+import { createGen3DashboardWorkflow } from "./commandPalette/createGen3Dashboard";
 import { distributeCertificateWorkflow } from "./commandPalette/distributeCertificate";
 import { downloadSupportArchiveWorkflow } from "./commandPalette/downloadSupportArchive";
 import { generateCertificatesWorkflow } from "./commandPalette/generateCertificates";
@@ -164,6 +165,7 @@ const registerCommandPaletteWorkflows = (): vscode.Disposable[] => [
   registerWorkflowCommand("activateExtension", () => activateExtensionWorkflow()),
   registerWorkflowCommand("createDocumentation", () => createDocumentationWorkflow()),
   registerWorkflowCommand("createDashboard", () => createDashboardWorkflow()),
+  registerWorkflowCommand("createGen3Dashboard", () => createGen3DashboardWorkflow()),
   registerWorkflowCommand("createAlert", () => createAlertWorkflow()),
   registerWorkflowCommand("convertJmxExtension", () => convertJmxExtensionWorkflow()),
   registerWorkflowCommand("convertPythonExtension", () => convertPythonExtensionWorkflow()),
