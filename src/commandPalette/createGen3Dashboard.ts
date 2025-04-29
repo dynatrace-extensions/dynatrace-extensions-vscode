@@ -23,7 +23,6 @@ import { getCachedParsedExtension } from "../utils/caching";
 import { checkWorkspaceOpen, isExtensionsWorkspace } from "../utils/conditionCheckers";
 import { getExtensionFilePath } from "../utils/fileSystem";
 import * as logger from "../utils/logging";
-import { EXTENSION_TEMPLATE } from "./extension_template";
 
 export const createGen3DashboardWorkflow = async () => {
   if ((await checkWorkspaceOpen()) && (await isExtensionsWorkspace())) {
@@ -31,20 +30,352 @@ export const createGen3DashboardWorkflow = async () => {
   }
 };
 
+const extNameFind = "<EXTENSION_NAME>";
+const extIdFind = "<EXTENSION_ID>";
+const entityNameFind = "<ENTITY_NAME>";
+const entityTypeFind = "<ENTITY_TYPE>";
+const logoLinkFind = "<IMAGE_LINK>";
+
+interface Tile {
+  type: string;
+  title: string;
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  [key: string]: any;
+}
+
+interface Variable {
+  key: string;
+  type: string;
+  visible: boolean;
+  input: string;
+  multiple: boolean;
+}
+
+interface Layout {
+  x: number;
+  y: number;
+  w: number;
+  h: number;
+}
+
+interface GrailDashboard {
+  version: number;
+  variables: Variable[];
+  tiles: {
+    [key: string]: Tile;
+  };
+  layouts: {
+    [key: string]: Layout;
+  };
+}
+
+const dashboardJsonTemplate = {
+  version: 17,
+  importedWithCode: true,
+  settings: {
+    gridLayout: {
+      mode: "responsive",
+      columnsCount: 40,
+    },
+  },
+  variables: [
+    {
+      key: "TenantUrl",
+      type: "code",
+      visible: false,
+      input:
+        'import { getEnvironmentUrl } from "@dynatrace-sdk/app-environment"\n\nexport default function () {\n  return [getEnvironmentUrl()];\n}',
+      multiple: false,
+    },
+  ],
+  tiles: {
+    "1": {
+      type: "markdown",
+      title: "",
+      content: "### Currently Monitoring\n",
+    },
+  },
+  layouts: {
+    "1": {
+      x: 0,
+      y: 2,
+      w: 40,
+      h: 1,
+    },
+    "2": {
+      x: 2,
+      y: 0,
+      w: 38,
+      h: 2,
+    },
+    "3": {
+      x: 0,
+      y: 0,
+      w: 2,
+      h: 2,
+    },
+    "4": {
+      x: 0,
+      y: 12,
+      w: 40,
+      h: 3,
+    },
+    "5": {
+      x: 0,
+      y: 6,
+      w: 9,
+      h: 6,
+    },
+    // First Dynamic topology type
+    // "6": {
+    //   x: 0,
+    //   y: 3,
+    //   w: 6,
+    //   h: 3,
+    // },
+    // For every extra type shift x by 6. eg.,
+    // DT will auto handle the wrapping
+    // "7": {
+    //   x: 6,
+    //   y: 3,
+    //   w: 6,
+    //   h: 3,
+    // },
+  },
+};
+
+const tileTitle = {
+  id: "2",
+  type: "markdown",
+  title: "",
+  content: `### Overview of ${extNameFind} extension data\n\nStart here to navigate to the extension configuration and/or entity pages and view charts displaying data collected. If you don't see data: ⚙️ [Configure extension]($TenantUrl/ui/apps/dynatrace.extensions.manager/configurations/${extIdFind}/configs)\n\n-----`,
+};
+
+const tileLogo = {
+  id: "3",
+  type: "markdown",
+  title: "",
+  content: `![](${logoLinkFind})`,
+};
+
+const tileLink = {
+  id: "4",
+  type: "markdown",
+  title: "",
+  content: `### Additional Resources:\n#### [${extNameFind} Extension Documentation]($TenantUrl/ui/apps/dynatrace.extensions.manager/configurations/${extIdFind}/details)`,
+};
+
+const tileEntityLinks = {
+  id: "5",
+  type: "markdown",
+  title: "",
+  content: "#### 🔗 Navigate to entities:",
+};
+
+const tileEntityCount = {
+  // Dynamic ID: 6 to X
+  type: "data",
+  title: `${entityNameFind}`,
+  query: `fetch \`dt.entity.${entityTypeFind}\`\n| summarize count()`,
+  davis: {
+    enabled: false,
+    davisVisualization: {
+      isAvailable: true,
+    },
+  },
+  visualization: "singleValue",
+  visualizationSettings: {
+    thresholds: [
+      {
+        id: "0",
+        title: "",
+        field: "count()",
+        rules: [
+          {
+            id: 3,
+            color: {
+              Default: "var(--dt-colors-charts-categorical-color-01-default, #134fc9)",
+            },
+            comparator: ">",
+            label: "",
+            value: 0,
+          },
+        ],
+        isEnabled: true,
+      },
+    ],
+    chartSettings: {
+      xAxisScaling: "analyzedTimeframe",
+      gapPolicy: "connect",
+      circleChartSettings: {
+        groupingThresholdType: "relative",
+        groupingThresholdValue: 0,
+        valueType: "relative",
+      },
+      categoryOverrides: {},
+      hiddenLegendFields: [],
+      categoricalBarChartSettings: {
+        categoryAxis: ["count()"],
+        categoryAxisLabel: "count()",
+        valueAxis: ["count()"],
+        valueAxisLabel: "count()",
+        tooltipVariant: "single",
+      },
+      truncationMode: "middle",
+    },
+    singleValue: {
+      showLabel: false,
+      recordField: "count()",
+      autoscale: true,
+      sparklineSettings: {
+        showTicks: true,
+        variant: "area",
+        record: "host_info",
+        visible: false,
+        isVisible: false,
+      },
+      trend: {
+        relative: true,
+        visible: false,
+        isVisible: false,
+        trendType: "auto",
+      },
+      colorThresholdTarget: "background",
+      label: "count()",
+    },
+    table: {
+      rowDensity: "condensed",
+      enableSparklines: false,
+      hiddenColumns: [],
+      lineWrapIds: [],
+      columnWidths: {},
+      columnTypeOverrides: [],
+    },
+    honeycomb: {
+      shape: "hexagon",
+      legend: {
+        hidden: false,
+        position: "auto",
+      },
+      colorMode: "color-palette",
+      colorPalette: "blue",
+      dataMappings: {
+        value: "count()",
+      },
+      displayedFields: [null],
+    },
+    histogram: {
+      dataMappings: [
+        {
+          valueAxis: "count()",
+          rangeAxis: "",
+        },
+      ],
+      variant: "single",
+      displayedFields: [],
+    },
+    label: {
+      showLabel: false,
+      label: "count()",
+    },
+    icon: {
+      showIcon: false,
+      icon: "",
+    },
+    valueBoundaries: {
+      min: "auto",
+      max: "auto",
+    },
+    unitsOverrides: [
+      {
+        identifier: "host_info.single_value",
+        unitCategory: "unspecified",
+        baseUnit: "count",
+        displayUnit: "",
+        decimals: 0,
+        suffix: "",
+        delimiter: false,
+        added: 0,
+        id: "host_info.single_value",
+      },
+    ],
+    dataMapping: {
+      value: "count()",
+    },
+  },
+  querySettings: {
+    maxResultRecords: 1000,
+    defaultScanLimitGbytes: 500,
+    maxResultMegaBytes: 1,
+    defaultSamplingRatio: 10,
+    enableSampling: false,
+  },
+};
+
 /**
  * Parses the extension yaml, collects relevant data, and populates a series of JSON templates
  * that together form an overview dashboard.
  * @param extension extension.yaml serialized as object
- * @param title dashboard title
- * @param short optional prefix/technology for the extension/dashboard
+ * @param extDisplayName Extension Display name
+ * @param logo link to the CDN image to use
  * @returns JSON string representing the dashboard
  */
-function buildDashboard(
-  extension: ExtensionStub,
-  title: string,
-  _short: string = "Extension",
-): string {
-  return EXTENSION_TEMPLATE();
+function buildDashboard(extension: ExtensionStub, extDisplayName: string, logo: string): string {
+  const newDashboard = { ...dashboardJsonTemplate } as GrailDashboard;
+
+  // title
+  const { id: titleId, ...newTitle } = tileTitle;
+  newTitle.content = newTitle.content.replace(extNameFind, extDisplayName);
+  newTitle.content = newTitle.content.replace(extIdFind, extension.name);
+  newDashboard.tiles[titleId] = newTitle;
+
+  // logo
+  const { id: logoId, ...newLogo } = tileLogo;
+  newLogo.content = newLogo.content.replace(logoLinkFind, logo);
+  newDashboard.tiles[logoId] = newLogo;
+
+  // Doc link
+  const { id: linkId, ...newLink } = tileLink;
+  newLink.content = newLink.content.replace(extNameFind, extDisplayName);
+  newLink.content = newLink.content.replace(extIdFind, extension.name);
+  newDashboard.tiles[linkId] = newLink;
+
+  // Entity Links and Data tiles
+  const entityCountTileWidth = 6;
+  const firstEntityCountTilePosition: Layout = {
+    x: 0, // position of tile #6
+    y: 3,
+    w: 6,
+    h: 3,
+  };
+  const { id: eLinkId, ...newEntityLinks } = tileEntityLinks;
+  const entityLinkString = `\n##### [${entityNameFind}]($TenantUrl/ui/apps/dynatrace.classic.technologies/ui/entity/list/${entityTypeFind})`;
+  const topologyTypes = extension.topology?.types ?? [];
+  const entityLinkStringList: string[] = [];
+  const tileCountStart = 6;
+  let tileCountNow = tileCountStart;
+  topologyTypes.forEach(eType => {
+    // Entity Link Markdown Tile
+    let newEntityLink = entityLinkString.replace(entityNameFind, eType.displayName);
+    newEntityLink = newEntityLink.replace(entityTypeFind, eType.name);
+    entityLinkStringList.push(newEntityLink);
+
+    // New data tile for the Entity count
+    const newEntityCountData = { ...tileEntityCount };
+    newEntityCountData.title = newEntityCountData.title.replace(entityNameFind, eType.displayName);
+    newEntityCountData.query = newEntityCountData.query.replace(entityTypeFind, eType.name);
+    const newEcountId = String(tileCountNow);
+    newDashboard.tiles[newEcountId] = newEntityCountData;
+
+    const xPosition = (tileCountNow - tileCountStart) * entityCountTileWidth;
+    newDashboard.layouts[newEcountId] = { ...firstEntityCountTilePosition, x: xPosition };
+
+    tileCountNow++;
+  });
+  newEntityLinks.content = newEntityLinks.content + entityLinkStringList.join("");
+  newDashboard.tiles[eLinkId] = newEntityLinks;
+
+  return JSON.stringify(newDashboard);
 }
 
 function getUpdatedExtensionString(
@@ -95,19 +426,28 @@ export async function createGen3OverviewDashboard() {
     return;
   }
 
-  const defaultTitle = `Extension Overview (${extension.name}:${extension.version})`;
-  const userTitle = await vscode.window.showInputBox({
-    title: "Dashboard title",
-    value: defaultTitle,
+  const defaultExtName = "Extension";
+  const userExtName = await vscode.window.showInputBox({
+    title: "Extension Name",
+    value: defaultExtName,
     ignoreFocusOut: true,
   });
+  const extDisplayName = userExtName ?? defaultExtName;
 
-  const dashboardTitle = userTitle ?? defaultTitle;
-  const dashboardJson = buildDashboard(extension, dashboardTitle);
+  // example Oracle logo: https://dt-cdn.net/hub/oracle_gkmEyXV.png
+  const defaultLogo = "https://dt-cdn.net/hub/logos/extensions-health.png";
+  const userLogo = await vscode.window.showInputBox({
+    title: "Dashboard Logo Image",
+    value: defaultLogo,
+    ignoreFocusOut: true,
+  });
+  const dashboardLogo = userLogo ?? defaultLogo;
+  const dashboardJson = buildDashboard(extension, extDisplayName, dashboardLogo);
 
   // Create directories and json file for dashboard
   const documentsDirName = "documents";
-  const overviewDashboardName = "overview.dashboard.json";
+  const extfilePrefix = extDisplayName.toLowerCase().replace(/ /g, "_");
+  const overviewDashboardName = `${extfilePrefix}.overview.dashboard.json`;
   const extensionDir = path.resolve(extensionFile, "..");
   const documentsDir = path.resolve(extensionDir, documentsDirName);
   if (!existsSync(documentsDir)) {
@@ -120,7 +460,7 @@ export async function createGen3OverviewDashboard() {
   // Edit extension.yaml to include the new dashboard
   const dashboardPath = `${documentsDirName}/${overviewDashboardName}`;
   const newDashboardYaml: DocumentDashboard = {
-    displayName: dashboardTitle,
+    displayName: `${extDisplayName} Overview`,
     path: dashboardPath,
   };
 
