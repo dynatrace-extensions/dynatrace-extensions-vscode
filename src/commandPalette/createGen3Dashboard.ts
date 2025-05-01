@@ -318,12 +318,15 @@ function buildDashboard(extension: ExtensionStub, extDisplayName: string, logo: 
   newDashboard.tiles[logoId] = newLogo;
 
   // Entity Links and Data tiles
-  const entityCountTileWidth = 6;
+  const entityCountTileWidth = 5;
+  const entityCountTileHeight = 3;
+  const dashboardColumnWidth = 40;
+  let entityCountExtraRows = 0; // Wrapper
   const firstEntityCountTilePosition: Layout = {
     x: 0, // position of tile #5
     y: 4,
-    w: 6,
-    h: 3,
+    w: entityCountTileWidth,
+    h: entityCountTileHeight,
   };
   const { id: eLinkId, ...newEntityLinks } = tileEntityLinks;
   const entityLinkString = `[${entityNameFind}]($TenantUrl/ui/apps/dynatrace.classic.technologies/ui/entity/list/${entityTypeFind})`;
@@ -344,13 +347,29 @@ function buildDashboard(extension: ExtensionStub, extDisplayName: string, logo: 
     const newEcountId = String(tileCountNow);
     newDashboard.tiles[newEcountId] = newEntityCountData;
 
-    const xPosition = (tileCountNow - tileCountStart) * entityCountTileWidth;
-    newDashboard.layouts[newEcountId] = { ...firstEntityCountTilePosition, x: xPosition };
+    // Tiles should wrap around when xPos >= 40
+    let xPosition = (tileCountNow - tileCountStart) * entityCountTileWidth;
+    if (xPosition + entityCountTileWidth > dashboardColumnWidth) {
+      // Works for numbers that divide into 40 evenly
+      entityCountExtraRows = Math.floor(xPosition / dashboardColumnWidth);
+      xPosition = xPosition - dashboardColumnWidth * entityCountExtraRows;
+    }
+    const yPosition = firstEntityCountTilePosition.y + entityCountExtraRows * entityCountTileHeight;
+
+    newDashboard.layouts[newEcountId] = {
+      ...firstEntityCountTilePosition,
+      x: xPosition,
+      y: yPosition,
+    };
 
     tileCountNow++;
   });
   newEntityLinks.content = newEntityLinks.content + entityLinkStringList.join(" | ");
   newDashboard.tiles[eLinkId] = newEntityLinks;
+  newDashboard.layouts[eLinkId].y =
+    firstEntityCountTilePosition.y +
+    entityCountTileHeight +
+    entityCountExtraRows * entityCountTileHeight;
 
   return JSON.stringify(newDashboard);
 }
