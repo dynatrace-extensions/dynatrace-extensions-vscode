@@ -88,75 +88,49 @@ const dashboardJsonTemplate = {
     },
   ],
   tiles: {
-    "1": {
-      type: "markdown",
-      title: "",
-      content: "### Currently Monitoring\n",
-    },
+    // All tiles dynamically added
   },
   layouts: {
-    "1": {
-      x: 0,
-      y: 3,
-      w: 40,
-      h: 1,
-    },
-    "2": {
-      x: 2,
-      y: 0,
-      w: 38,
-      h: 3,
-    },
-    "3": {
-      x: 0,
-      y: 0,
-      w: 2,
-      h: 3,
-    },
-    "4": {
-      x: 0,
-      y: 7,
-      w: 40,
-      h: 3,
-    },
-    // First Dynamic topology type
-    // "5": {
-    //   x: 0,
-    //   y: 4,
-    //   w: 6,
-    //   h: 3,
-    // },
-    // For every extra type shift x by 6. eg.,
-    // DT will auto handle the wrapping
-    // "6": {
-    //   x: 6,
-    //   y: 4,
-    //   w: 6,
-    //   h: 3,
-    // },
+    // All layouts dynamically added
+  },
+};
+
+// Tiles ordered from top to bottom and left to right
+const tileLogo = {
+  type: "markdown",
+  content: `![](${logoLinkFind})`,
+  layout: {
+    x: 0,
+    y: 0,
+    w: 2,
+    h: 3,
   },
 };
 
 const tileTitle = {
-  id: "2",
   type: "markdown",
   content: `## Overview of ${extNameFind} extension data\n\nStart here to navigate to the extension configuration and/or entity pages and view charts displaying data collected. **Additional Resources: [${extNameFind} Extension Documentation]($TenantUrl/ui/apps/dynatrace.extensions.manager/configurations/${extIdFind}/details)**\n\n-----\n#### If you don't see data: ⚙️ [Configure extension]($TenantUrl/ui/apps/dynatrace.extensions.manager/configurations/${extIdFind}/configs)`,
+  layout: {
+    x: 2,
+    y: 0,
+    w: 38,
+    h: 3,
+  },
 };
 
-const tileLogo = {
-  id: "3",
+const tileCurrentlyMonitoring = {
   type: "markdown",
-  content: `![](${logoLinkFind})`,
-};
-
-const tileEntityLinks = {
-  id: "4",
-  type: "markdown",
-  content: "#### 🔗 Navigate to entities: ",
+  title: "",
+  content: "### Currently Monitoring\n",
+  layout: {
+    x: 0,
+    y: 3,
+    w: 40,
+    h: 1,
+  },
 };
 
 const tileEntityCount = {
-  // Dynamic ID: 5 to X
   type: "data",
   title: `${entityNameFind}`,
   query: `fetch \`dt.entity.${entityTypeFind}\`\n| summarize count()`,
@@ -295,6 +269,51 @@ const tileEntityCount = {
   },
 };
 
+const tileEntityLinks = {
+  type: "markdown",
+  content: "#### 🔗 Navigate to entities: ",
+  layout: {
+    x: 0,
+    y: -1, // calculated
+    w: 40,
+    h: 1,
+  },
+};
+
+const tileMetricsTitle = {
+  type: "markdown",
+  content: "## Metrics 📈\n",
+  layout: {
+    x: 0,
+    y: -1, // calculated
+    w: 40,
+    h: 1,
+  },
+};
+
+// If line space needed between tiles
+// const tileBlankSpace = {
+//   type: "markdown",
+//   content: "\n",
+//   layout: {
+//     x: 0,
+//     y: -1, // calculated
+//     w: 40,
+//     h: 1,
+//   },
+// };
+
+const tileEntityMetricsSection = {
+  type: "markdown",
+  content: `### ${entityNameFind}"`,
+  layout: {
+    x: 0,
+    y: -1, // calculated
+    w: 40,
+    h: 1,
+  },
+};
+
 /**
  * Parses the extension yaml, collects relevant data, and populates a series of JSON templates
  * that together form an overview dashboard.
@@ -303,37 +322,54 @@ const tileEntityCount = {
  * @param logo link to the CDN image to use
  * @returns JSON string representing the dashboard
  */
-function buildDashboard(extension: ExtensionStub, extDisplayName: string, logo: string): string {
+function buildDashboard(
+  extension: ExtensionStub,
+  extDisplayName: string,
+  logo: string,
+  includeMetrics: boolean = true,
+): string {
   const newDashboard = { ...dashboardJsonTemplate } as GrailDashboard;
 
-  // title, link, config
-  const { id: titleId, ...newTitle } = tileTitle;
+  let tileCountNow = 1;
+
+  // title, config link, doc link
+  const { layout: titleLayout, ...newTitle } = tileTitle;
   newTitle.content = newTitle.content.replace(new RegExp(extNameFind, "g"), extDisplayName);
   newTitle.content = newTitle.content.replace(new RegExp(extIdFind, "g"), extension.name);
-  newDashboard.tiles[titleId] = newTitle;
+  newDashboard.tiles[String(tileCountNow)] = newTitle;
+  newDashboard.layouts[String(tileCountNow)] = titleLayout;
+  tileCountNow += 1;
 
   // logo
-  const { id: logoId, ...newLogo } = tileLogo;
+  const { layout: logoLayout, ...newLogo } = tileLogo;
   newLogo.content = newLogo.content.replace(logoLinkFind, logo);
-  newDashboard.tiles[logoId] = newLogo;
+  newDashboard.tiles[String(tileCountNow)] = newLogo;
+  newDashboard.layouts[String(tileCountNow)] = logoLayout;
+  tileCountNow += 1;
+
+  // Current Monitoring Header
+  const { layout: cmLayout, ...cmTile } = tileCurrentlyMonitoring;
+  newDashboard.tiles[String(tileCountNow)] = cmTile;
+  newDashboard.layouts[String(tileCountNow)] = cmLayout;
+  tileCountNow += 1;
 
   // Entity Links and Data tiles
   const entityCountTileWidth = 5;
   const entityCountTileHeight = 3;
   const dashboardColumnWidth = 40;
   let entityCountExtraRows = 0; // Wrapper
-  const firstEntityCountTilePosition: Layout = {
+  const firstECountLayout: Layout = {
     x: 0, // position of tile #5
     y: 4,
     w: entityCountTileWidth,
     h: entityCountTileHeight,
   };
-  const { id: eLinkId, ...newEntityLinks } = tileEntityLinks;
+  const { layout: eLinkLayout, ...newEntityLinks } = tileEntityLinks;
+  // TODO gen3 link / app instead
   const entityLinkString = `[${entityNameFind}]($TenantUrl/ui/apps/dynatrace.classic.technologies/ui/entity/list/${entityTypeFind})`;
   const topologyTypes = extension.topology?.types ?? [];
   const entityLinkStringList: string[] = [];
-  const tileCountStart = 5;
-  let tileCountNow = tileCountStart;
+  const tileECountStart = tileCountNow;
   topologyTypes.forEach(eType => {
     // Entity Link Markdown Tile
     let newEntityLink = entityLinkString.replace(entityNameFind, eType.displayName);
@@ -344,33 +380,53 @@ function buildDashboard(extension: ExtensionStub, extDisplayName: string, logo: 
     const newEntityCountData = { ...tileEntityCount };
     newEntityCountData.title = newEntityCountData.title.replace(entityNameFind, eType.displayName);
     newEntityCountData.query = newEntityCountData.query.replace(entityTypeFind, eType.name);
-    const newEcountId = String(tileCountNow);
-    newDashboard.tiles[newEcountId] = newEntityCountData;
 
     // Tiles should wrap around when xPos >= 40
-    let xPosition = (tileCountNow - tileCountStart) * entityCountTileWidth;
+    let xPosition = (tileCountNow - tileECountStart) * entityCountTileWidth;
     if (xPosition + entityCountTileWidth > dashboardColumnWidth) {
       // Works for numbers that divide into 40 evenly
       entityCountExtraRows = Math.floor(xPosition / dashboardColumnWidth);
       xPosition = xPosition - dashboardColumnWidth * entityCountExtraRows;
     }
-    const yPosition = firstEntityCountTilePosition.y + entityCountExtraRows * entityCountTileHeight;
+    const yPosition = firstECountLayout.y + entityCountExtraRows * entityCountTileHeight;
 
-    newDashboard.layouts[newEcountId] = {
-      ...firstEntityCountTilePosition,
+    newDashboard.tiles[String(tileCountNow)] = newEntityCountData;
+    newDashboard.layouts[String(tileCountNow)] = {
+      ...firstECountLayout,
       x: xPosition,
       y: yPosition,
     };
 
     tileCountNow++;
   });
-  newEntityLinks.content = newEntityLinks.content + entityLinkStringList.join(" | ");
-  newDashboard.tiles[eLinkId] = newEntityLinks;
-  newDashboard.layouts[eLinkId].y =
-    firstEntityCountTilePosition.y +
-    entityCountTileHeight +
-    entityCountExtraRows * entityCountTileHeight;
 
+  newEntityLinks.content = newEntityLinks.content + entityLinkStringList.join(" | ");
+  const textLineWrapExtraRows = Math.floor(newEntityLinks.content.length / 200); // 200 h4 chars + link icon ~ 1 line
+  eLinkLayout.y =
+    firstECountLayout.y + entityCountTileHeight + entityCountExtraRows * entityCountTileHeight;
+
+  eLinkLayout.h += textLineWrapExtraRows;
+  newDashboard.tiles[String(tileCountNow)] = newEntityLinks;
+  newDashboard.layouts[String(tileCountNow)] = eLinkLayout;
+  tileCountNow++;
+
+  if (!includeMetrics) {
+    return JSON.stringify(newDashboard);
+  }
+
+  // Metrics Header
+  const metricStartY = eLinkLayout.y + eLinkLayout.h;
+  const { layout: metricTitleLayout, ...metricTitle } = tileMetricsTitle;
+  newDashboard.tiles[String(tileCountNow)] = metricTitle;
+  newDashboard.layouts[String(tileCountNow)] = {
+    ...metricTitleLayout,
+    y: metricStartY,
+  };
+  tileCountNow++;
+
+  // TODO compute metrics per topology type (source entity type)
+
+  // Dynamic metric generation
   return JSON.stringify(newDashboard);
 }
 
