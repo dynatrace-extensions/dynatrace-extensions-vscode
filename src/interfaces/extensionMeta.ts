@@ -183,6 +183,7 @@ export interface ScreenStub {
   listInjections?: ListScreenCard[];
   detailsSettings?: DetailsSettings;
   detailsInjections?: DetailsScreenCard[];
+  healthCards?: HealthCardStub[];
   entitiesListCards?: EntitiesListCardStub[];
   metricTableCards?: MetricTableCardStub[];
   chartsCards?: ChartsCardStub[];
@@ -284,6 +285,22 @@ export interface MetricTableCardStub {
   enableDetailsExpandability?: boolean;
 }
 
+export interface HealthCardStub {
+  key: string;
+  tiles: TileStub[];
+}
+
+export interface TileStub {
+  displayName?: string;
+  metricSelecor: string;
+  foldTransformation: string;
+  anchor?: AnchorStub;
+}
+
+export interface AnchorStub {
+  cardName?: string;
+  chartName?: string;
+}
 export interface ChartsCardStub {
   key: string;
   displayName?: string;
