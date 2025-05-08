@@ -103,8 +103,8 @@ const tileLogo = {
   layout: {
     x: 0,
     y: 0,
-    w: 2,
-    h: 3,
+    w: 3,
+    h: 4,
   },
 };
 
@@ -112,10 +112,10 @@ const tileTitle = {
   type: "markdown",
   content: `## Overview of ${extNameFind} extension data\n\nStart here to navigate to the extension configuration and/or entity pages and view charts displaying data collected. **Additional Resources: [${extNameFind} Extension Documentation]($TenantUrl/ui/apps/dynatrace.extensions.manager/configurations/${extIdFind}/details)**\n\n-----\n#### If you don't see data: ⚙️ [Configure extension]($TenantUrl/ui/apps/dynatrace.extensions.manager/configurations/${extIdFind}/configs)`,
   layout: {
-    x: 2,
+    x: 3,
     y: 0,
-    w: 38,
-    h: 3,
+    w: 37,
+    h: 4,
   },
 };
 
@@ -125,7 +125,7 @@ const tileCurrentlyMonitoring = {
   content: "### Currently Monitoring\n",
   layout: {
     x: 0,
-    y: 3,
+    y: 4,
     w: 40,
     h: 1,
   },
@@ -272,18 +272,18 @@ const tileEntityCount = {
 
 const tileEntityLinks = {
   type: "markdown",
-  content: "#### 🔗 Navigate to entities: ",
+  content: "#### 🔗 Navigate to entities:\n",
   layout: {
-    x: 0,
+    x: 30, // default
     y: -1, // calculated
-    w: 40,
-    h: 3,
+    w: 10, // default
+    h: 3, // default
   },
 };
 
 const tileMetricsTitle = {
   type: "markdown",
-  content: "## Metrics 📈\n",
+  content: "## Metric Summary 📈\n",
   layout: {
     x: 0,
     y: -1, // calculated
@@ -303,10 +303,118 @@ const tileEntityMetricsSection = {
   },
 };
 
+const metric1KeyFind = "<METRIC_KEY1>";
+const metric2KeyFind = "<METRIC_KEY2>";
+const metric1NameFind = "<METRIC_NAME1>";
+const metric2NameFind = "<METRIC_NAME2>";
+const fieldsLine = `fields entity, \`${metric1NameFind}\`, \`${metric2NameFind}\`\n`;
+const tileMetricsTable = {
+  type: "data",
+  title: "",
+  query: `timeseries {\n  metric1=avg(\`${metric1KeyFind}\`),\n  metric2=avg(\`${metric2KeyFind}\`)\n},\nby: {\`dt.entity.${entityTypeFind}\`}\n| fieldsAdd entity_name = entityName(\`dt.entity.${entityTypeFind}\`)\n| fieldsAdd entity_id = \`dt.entity.${entityTypeFind}\`\n| fieldsAdd entity_url = concat($TenantUrl, "/ui/apps/dynatrace.classic.technologies/ui/entity/", entity_id)\n| fieldsAdd entity = concat("[", entity_name, "]", "(", entity_url, ")")\n| fieldsAdd \`${metric1NameFind}\` = arrayLast(metric1)\n| fieldsAdd \`${metric2NameFind}\` = arrayLast(metric2)\n| sort entity_name asc\n| ${fieldsLine}| limit 20`,
+  davis: {
+    enabled: false,
+    davisVisualization: {
+      isAvailable: true,
+    },
+  },
+  visualizationSettings: {
+    autoSelectVisualization: false,
+    thresholds: [],
+    chartSettings: {
+      gapPolicy: "gap",
+      circleChartSettings: {
+        groupingThresholdType: "relative",
+        groupingThresholdValue: 0,
+        valueType: "relative",
+      },
+      categoryOverrides: {},
+      curve: "linear",
+      pointsDisplay: "auto",
+      categoricalBarChartSettings: {
+        layout: "horizontal",
+        categoryAxisTickLayout: "horizontal",
+        scale: "absolute",
+        groupMode: "stacked",
+        colorPaletteMode: "multi-color",
+        valueAxisScale: "linear",
+      },
+      colorPalette: "categorical",
+      valueRepresentation: "absolute",
+      truncationMode: "middle",
+    },
+    singleValue: {
+      showLabel: true,
+      label: "",
+      prefixIcon: "AnalyticsIcon",
+      isIconVisible: false,
+      autoscale: true,
+      alignment: "center",
+      colorThresholdTarget: "value",
+    },
+    table: {
+      rowDensity: "condensed",
+      enableSparklines: false,
+      hiddenColumns: [],
+      linewrapEnabled: false,
+      lineWrapIds: [],
+      monospacedFontEnabled: false,
+      monospacedFontColumns: [],
+      columnWidths: {},
+      columnTypeOverrides: [
+        {
+          id: 913702.4000000004,
+          fields: ["entity"],
+          value: "markdown",
+        },
+      ],
+    },
+    honeycomb: {
+      shape: "hexagon",
+      legend: {
+        hidden: false,
+        position: "auto",
+        ratio: "auto",
+      },
+      dataMappings: {},
+      displayedFields: [],
+      truncationMode: "middle",
+      colorMode: "color-palette",
+      colorPalette: "categorical",
+    },
+    histogram: {
+      legend: {
+        position: "auto",
+      },
+      yAxis: {
+        label: "Frequency",
+        isLabelVisible: true,
+        scale: "linear",
+      },
+      colorPalette: "categorical",
+      dataMappings: [],
+      variant: "single",
+      truncationMode: "middle",
+    },
+    valueBoundaries: {
+      min: "auto",
+      max: "auto",
+    },
+  },
+  visualization: "table",
+  querySettings: {
+    maxResultRecords: 1000,
+    defaultScanLimitGbytes: 500,
+    maxResultMegaBytes: 1,
+    defaultSamplingRatio: 10,
+    enableSampling: false,
+  },
+};
+
 const tileMetricsChart = {
   type: "data",
   title: "",
-  query: `timeseries average = avg(\`${metricKeyFind}\`), by: {\`dt.entity.${entityTypeFind}\`}\n| sort arrayAvg(average) desc\n| fieldsAdd entityName(\`dt.entity.${entityTypeFind}\`)\n| limit 20`,
+  query: `timeseries average = avg(\`${metricKeyFind}\`), by: {\`dt.entity.${entityTypeFind}\`}\n| sort arrayAvg(average) desc\n| fieldsAdd name=entityName(\`dt.entity.${entityTypeFind}\`)\n| fieldsAdd name = coalesce(name, "environment")\n| fieldsRemove \`dt.entity.${entityTypeFind}\`\n| limit 20`,
   davis: {
     enabled: false,
     davisVisualization: {
@@ -339,7 +447,7 @@ const tileMetricsChart = {
       xAxisScaling: "analyzedTimeframe",
       xAxisLabel: "timeframe",
       xAxisIsLabelVisible: false,
-      hiddenLegendFields: [`dt.entity.${entityTypeFind}`, "interval", "average"],
+      hiddenLegendFields: ["interval", "average"],
       fieldMapping: {
         timestamp: "timeframe",
         leftAxisValues: ["average"],
@@ -419,16 +527,16 @@ const tileMetricsChart = {
 };
 
 // If line space needed between tiles
-// const tileBlankSpace = {
-//   type: "markdown",
-//   content: "\n",
-//   layout: {
-//     x: 0,
-//     y: -1, // calculated
-//     w: 40,
-//     h: 1,
-//   },
-// };
+const tileBlankSpace = {
+  type: "markdown",
+  content: "\n",
+  layout: {
+    x: 0,
+    y: -1, // calculated
+    w: 40,
+    h: 1,
+  },
+};
 
 interface MetricMetadata {
   key: string;
@@ -481,14 +589,16 @@ function buildDashboard(
   tileCountNow += 1;
 
   // Entity Links and Data tiles
-  const eCountStartY = 4;
-  const eCountTileWidth = 5;
+  const eCountStartY = 5;
+  const eCountTileWidth = 6;
   const eCountTileHeight = 3;
-  const eCountTilesPerRow = Math.floor(dashboardRowWidth / eCountTileWidth);
+  const eCountTileTotalWidth = 30;
+  let firstRowlastTileXPos = 0;
+  const eCountTilesPerRow = Math.floor(eCountTileTotalWidth / eCountTileWidth);
   let entityCountExtraRows = 0; // Wrapper
   const { layout: eLinkLayout, ...newEntityLinks } = tileEntityLinks;
   // TODO gen3 link / app instead
-  const entityLinkString = `[${entityNameFind}]($TenantUrl/ui/apps/dynatrace.classic.technologies/ui/entity/list/${entityTypeFind})`;
+  const entityLinkString = `* [${entityNameFind}]($TenantUrl/ui/apps/dynatrace.classic.technologies/ui/entity/list/${entityTypeFind})`;
   const topologyTypes = extension.topology?.types ?? [];
   const entityLinkStringList: string[] = [];
   const tileECountStart = tileCountNow;
@@ -503,15 +613,19 @@ function buildDashboard(
     newEntityCountData.title = newEntityCountData.title.replace(entityNameFind, eType.displayName);
     newEntityCountData.query = newEntityCountData.query.replace(entityTypeFind, eType.name);
 
-    // Tiles should wrap around when xPos >= 40
+    // Tiles should wrap around when xPos >= 30 (space for navigate to entities)
     const tileDrawNumber = tileCountNow - tileECountStart; // 0, 1, 2, 3, 4, 5, 6
     const xTotalStart = tileDrawNumber * eCountTileWidth;
     const xTotalEnd = xTotalStart + eCountTileWidth;
     const xPosition = (tileDrawNumber % eCountTilesPerRow) * eCountTileWidth;
-    if (xTotalEnd > dashboardRowWidth) {
-      entityCountExtraRows = Math.floor(xTotalEnd / dashboardRowWidth);
+    if (xTotalEnd > eCountTileTotalWidth) {
+      entityCountExtraRows = Math.floor(xTotalEnd / eCountTileTotalWidth);
     }
     const yPosition = eCountStartY + entityCountExtraRows * eCountTileHeight;
+
+    if (entityCountExtraRows === 0) {
+      firstRowlastTileXPos = xPosition + eCountTileWidth;
+    }
 
     newDashboard.tiles[String(tileCountNow)] = newEntityCountData;
     newDashboard.layouts[String(tileCountNow)] = {
@@ -524,8 +638,15 @@ function buildDashboard(
     tileCountNow++;
   });
 
-  newEntityLinks.content = newEntityLinks.content + entityLinkStringList.join(" | ");
-  eLinkLayout.y = eCountStartY + eCountTileHeight + entityCountExtraRows * eCountTileHeight;
+  newEntityLinks.content = newEntityLinks.content + entityLinkStringList.join("\n");
+  eLinkLayout.y = eCountStartY;
+  eLinkLayout.h = eCountTileHeight + entityCountExtraRows * eCountTileHeight;
+  if (entityCountExtraRows === 0) {
+    eLinkLayout.w = dashboardRowWidth - firstRowlastTileXPos;
+  } else {
+    firstRowlastTileXPos = eCountTileTotalWidth;
+  }
+  eLinkLayout.x = firstRowlastTileXPos;
   newDashboard.tiles[String(tileCountNow)] = newEntityLinks;
   newDashboard.layouts[String(tileCountNow)] = eLinkLayout;
   tileCountNow++;
@@ -541,6 +662,10 @@ function buildDashboard(
   // Maintain order - assuming most generic useful metrics are at the top
   const entityMetricMap = new Map<string, MetricMetadata[]>();
   metrics.forEach(metric => {
+    if (metric.key.startsWith("func")) {
+      // Not applicable for gen3
+      return;
+    }
     const sourceEntity = metric.metadata.sourceEntityType ?? defaultEnvType; // General environment metrics such as 'api connectivity'.
     appendToListMap(entityMetricMap, sourceEntity, {
       key: metric.key,
@@ -553,8 +678,18 @@ function buildDashboard(
     return JSON.stringify(newDashboard);
   }
 
-  // Metrics Header
+  // Divider
   let metricStartY = eLinkLayout.y + eLinkLayout.h;
+  const { layout: blankSpaceLayout, ...blankTile } = tileBlankSpace;
+  newDashboard.tiles[String(tileCountNow)] = blankTile;
+  newDashboard.layouts[String(tileCountNow)] = {
+    ...blankSpaceLayout,
+    y: metricStartY,
+  };
+  metricStartY += blankSpaceLayout.h;
+  tileCountNow++;
+
+  // Metrics Header
   const { layout: metricTitleLayout, ...metricTitle } = tileMetricsTitle;
   newDashboard.tiles[String(tileCountNow)] = metricTitle;
   newDashboard.layouts[String(tileCountNow)] = {
@@ -572,8 +707,9 @@ function buildDashboard(
   });
 
   // Compute each metric section
-  // X metrics per type? or just everything.
-  const maxMetricsPerType = -1; // set -1 for all.
+  // 2 metrics per type.
+  // Charts - 1 overview table (2 metrics) + x basic line charts
+  const maxMetricsPerType = 2; // set -1 for all.
   const metricChartsPerRow = 3;
   const metricChartWidth = Math.floor(dashboardRowWidth / metricChartsPerRow);
   const metricChartHeight = 4;
@@ -594,6 +730,61 @@ function buildDashboard(
     let metricChartExtraRows = 0;
     const chartMetrics =
       maxMetricsPerType < 0 ? metricList : metricList.slice(0, maxMetricsPerType);
+
+    // Overview Table
+    if (chartMetrics.length > 0) {
+      const newMetricTable = { ...tileMetricsTable };
+      newMetricTable.title = "Summary - last value";
+      const metric1 = chartMetrics[0];
+      const metric2 = chartMetrics[1] ?? chartMetrics[0];
+      const dropMetric2 = chartMetrics[1] === undefined;
+
+      if (dropMetric2) {
+        const newFieldsLine = `fields entity, \`${metric1NameFind}\`\n`;
+        newMetricTable.query = newMetricTable.query.replace(fieldsLine, newFieldsLine);
+      }
+
+      // No dt.entity.environemnt link
+      if (eTypeKey == defaultEnvType) {
+        const entityField = "entity,";
+        newMetricTable.query = newMetricTable.query.replace(entityField, "");
+      }
+
+      newMetricTable.query = newMetricTable.query.replace(
+        new RegExp(entityTypeFind, "g"),
+        eTypeKey,
+      );
+
+      newMetricTable.query = newMetricTable.query.replace(
+        new RegExp(metric1KeyFind, "g"),
+        metric1.key,
+      );
+      newMetricTable.query = newMetricTable.query.replace(
+        new RegExp(metric1NameFind, "g"),
+        metric1.displayName,
+      );
+
+      if (!dropMetric2) {
+        newMetricTable.query = newMetricTable.query.replace(
+          new RegExp(metric2NameFind, "g"),
+          metric2.displayName,
+        );
+        newMetricTable.query = newMetricTable.query.replace(
+          new RegExp(metric2KeyFind, "g"),
+          metric2.key,
+        );
+      }
+
+      newDashboard.tiles[String(tileCountNow)] = newMetricTable;
+      newDashboard.layouts[String(tileCountNow)] = {
+        x: 0,
+        y: metricStartY,
+        w: metricChartWidth,
+        h: metricChartHeight,
+      };
+      tileCountNow++;
+    }
+
     chartMetrics.forEach(metricMeta => {
       const newMetricChart = { ...tileMetricsChart };
       newMetricChart.title = metricMeta.displayName;
@@ -606,13 +797,7 @@ function buildDashboard(
       newMetricChart.visualizationSettings.chartSettings.leftYAxisSettings.label =
         metricMeta.displayName;
 
-      // Hide the entity ID from charts
-      newMetricChart.visualizationSettings.chartSettings.hiddenLegendFields =
-        newMetricChart.visualizationSettings.chartSettings.hiddenLegendFields.map(str =>
-          str.replace(entityTypeFind, eTypeKey),
-        );
-
-      // Tiles should wrap around when xPos >= 40
+      // Tiles should wrap around when xPos >= dashboardRowWidth (40)
       const tileDrawNumber = tileCountNow - tileMetricStart;
       const xTotalStart = tileDrawNumber * metricChartWidth;
       const xTotalEnd = xTotalStart + metricChartWidth;
@@ -632,7 +817,17 @@ function buildDashboard(
 
       tileCountNow++;
     });
+
+    // Divider
     metricStartY = metricStartY + metricChartHeight + metricChartExtraRows * metricChartHeight;
+    const { layout: metricSpaceLayout, ...blankMetricTile } = tileBlankSpace;
+    newDashboard.tiles[String(tileCountNow)] = blankMetricTile;
+    newDashboard.layouts[String(tileCountNow)] = {
+      ...metricSpaceLayout,
+      y: metricStartY,
+    };
+    metricStartY += blankSpaceLayout.h;
+    tileCountNow++;
   });
 
   // Dynamic metric generation
