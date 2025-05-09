@@ -101,7 +101,7 @@ class WebviewPanelManager implements vscode.WebviewPanelSerializer {
   private _getWebviewContent(webview: vscode.Webview, data: PanelData) {
     const scriptUri = webview
       .asWebviewUri(
-        vscode.Uri.joinPath(this.extensionUri, "webview-ui", "build", "static", "js", "main.js"),
+        vscode.Uri.joinPath(this.extensionUri, "webview-ui", "build", "assets", "index.js"),
       )
       .toString();
     const nonce = getNonce();
