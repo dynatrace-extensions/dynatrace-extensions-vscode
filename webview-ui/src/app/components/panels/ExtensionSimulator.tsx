@@ -40,7 +40,6 @@ export const ExtensionSimulator = ({ data }: ExtensionSimulatorProps) => {
     <>
       <AppHeader>
         <AppHeader.NavItems>
-          <AppHeader.AppNavLink appName='' href='' />
           <AppHeader.NavItem onClick={handleExecutionsClick} isSelected={page === "executions"}>
             Simulator Executions
           </AppHeader.NavItem>

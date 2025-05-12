@@ -72,7 +72,7 @@ import {
   migrateFromLegacyExtension,
 } from "./utils/fileSystem";
 import * as logger from "./utils/logging";
-import { REGISTERED_PANELS, getWebviewPanelManager } from "./webviews/webviewPanel";
+import { REGISTERED_PANELS, getWebviewPanelManager } from "./webviews/webview-panel-manager";
 
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
 type WorkflowFunction<T extends any[] = []> = (...args: T) => PromiseLike<unknown>;

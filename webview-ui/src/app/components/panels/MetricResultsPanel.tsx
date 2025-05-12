@@ -20,10 +20,11 @@ import {
   TimeseriesChartConfig,
   CodeSnippet,
   InformationOverlay,
+  EmptyState,
 } from "@dynatrace/strato-components-preview";
 import { Heading, Flex, Text, Container, Divider, Code } from "@dynatrace/strato-components";
 import { WarningIcon } from "@dynatrace/strato-icons";
-import React from "react";
+import React, { useEffect } from "react";
 import { MetricSeriesCollection, MetricSeries } from "src/app/interfaces/metricResultsPanel";
 
 interface MetricResultsPanelProps {
@@ -60,7 +61,7 @@ export const MetricResultsPanel = ({ data }: MetricResultsPanelProps) => {
           <Text>{warnings}</Text>
         </Container>
       )}
-      {series.length > 0 && (
+      {series.length > 0 ? (
         <Flex flexDirection='column'>
           <Flex justifyContent='space-between' paddingTop={8}>
             <Text>Timeseries data:</Text>
@@ -89,6 +90,13 @@ export const MetricResultsPanel = ({ data }: MetricResultsPanelProps) => {
             </Flex>
           )}
         </Flex>
+      ) : (
+        <EmptyState size="small">
+          <EmptyState.Visual>
+            <EmptyState.VisualPreset type='no-result' context='chart' />
+          </EmptyState.Visual>
+          <EmptyState.Title>This query returned no results.</EmptyState.Title>
+        </EmptyState>
       )}
     </Flex>
   );
