@@ -14,18 +14,18 @@
   limitations under the License.
  */
 
+import React from "react";
 import {
   TimeseriesChart,
   Timeseries,
   TimeseriesChartConfig,
-  CodeSnippet,
-  InformationOverlay,
-  EmptyState,
-} from "@dynatrace/strato-components-preview";
-import { Heading, Flex, Text, Container, Divider, Code } from "@dynatrace/strato-components";
+} from "@dynatrace/strato-components-preview/charts";
+import { InformationOverlay } from "@dynatrace/strato-components-preview/overlays";
+import { CodeSnippet, EmptyState } from "@dynatrace/strato-components-preview/content";
+import { Heading, Text, Code } from "@dynatrace/strato-components/typography";
+import { Flex, Container, Divider } from "@dynatrace/strato-components/layouts";
 import { WarningIcon } from "@dynatrace/strato-icons";
-import React, { useEffect } from "react";
-import { MetricSeriesCollection, MetricSeries } from "src/app/interfaces/metricResultsPanel";
+import { MetricSeriesCollection, MetricSeries } from "../../interfaces/metricResultsPanel";
 
 interface MetricResultsPanelProps {
   data: MetricSeriesCollection[];
@@ -91,7 +91,7 @@ export const MetricResultsPanel = ({ data }: MetricResultsPanelProps) => {
           )}
         </Flex>
       ) : (
-        <EmptyState size="small">
+        <EmptyState size='small'>
           <EmptyState.Visual>
             <EmptyState.VisualPreset type='no-result' context='chart' />
           </EmptyState.Visual>

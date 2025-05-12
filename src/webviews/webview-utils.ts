@@ -70,7 +70,7 @@ export const getDtShellDefaults = async () => {
   return {
     appId: "my.extensions.webivew.ui",
     appName: "Extensions Webview UI",
-    appVersion: "0.0.0",
+    appVersion: "2.7.0",
     language: vscode.env.language.split("-")[0],
     regionalFormat: locale,
     timezone: timeZone,

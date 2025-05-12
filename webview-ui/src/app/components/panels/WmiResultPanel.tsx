@@ -14,9 +14,14 @@
   limitations under the License.
  */
 
-import { CodeSnippet, DataTable, TableColumn } from "@dynatrace/strato-components-preview";
-import { Text, Flex, Heading } from "@dynatrace/strato-components";
-import React from "react";
+import React, { useMemo } from "react";
+import { CodeSnippet } from "@dynatrace/strato-components-preview/content";
+import {
+  DataTableV2,
+  type DataTableV2ColumnDef,
+} from "@dynatrace/strato-components-preview/tables";
+import { Flex } from "@dynatrace/strato-components/layouts";
+import { Text, Heading } from "@dynatrace/strato-components/typography";
 import { format as sqlFormat } from "sql-formatter";
 import { WmiQueryResult } from "src/app/interfaces/wmiResultPanel";
 
@@ -24,17 +29,19 @@ interface WmiResultPanelProps {
   data: WmiQueryResult;
 }
 
-const resultsToColumns = (results: Record<string, string | number>[]): TableColumn[] => {
-  return Object.keys(results[0]).map(key => ({
-    header: key,
-    accessor: key,
-    autoWidth: true,
-    ratioWidth: 1,
-  }));
-};
-
 export const WmiResultPanel = ({ data }: WmiResultPanelProps) => {
   const { query, results, responseTime } = data;
+
+  const tableColumns = useMemo<DataTableV2ColumnDef<Record<string, string | number>>[]>(
+    () =>
+      Object.keys(results[0]).map(key => ({
+        id: key,
+        accessor: key,
+        header: key,
+        width: "1fr",
+      })),
+    [results],
+  );
 
   return (
     <Flex flexDirection='column' gap={16}>
@@ -53,9 +60,9 @@ export const WmiResultPanel = ({ data }: WmiResultPanelProps) => {
           <Text>{results.length}</Text>
         </Flex>
       </Flex>
-      <DataTable columns={resultsToColumns(results)} data={results}>
-        <DataTable.Pagination defaultPageSize={10} />
-      </DataTable>
+      <DataTableV2 sortable fullWidth columns={tableColumns} data={results}>
+        <DataTableV2.Pagination defaultPageSize={10} defaultPageIndex={1} />
+      </DataTableV2>
     </Flex>
   );
 };
