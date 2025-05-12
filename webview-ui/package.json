@@ -73,7 +73,7 @@
     "react-intl": "^6.6.8",
     "react-router-dom": "^6.24.1",
     "sql-formatter": "^15.3.2",
-    "styled-components": "^6.1.11",
+    "styled-components": "^6.1.18",
     "wicg-inert": "^3.1.2"
   }
 }

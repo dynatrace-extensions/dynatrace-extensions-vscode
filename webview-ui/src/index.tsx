@@ -14,12 +14,14 @@
   limitations under the License.
  */
 
-import { AppRoot, ToastContainer } from "@dynatrace/strato-components-preview";
 import React from "react";
 import ReactDOM from "react-dom/client";
+import styled, { createGlobalStyle } from "styled-components";
 import App from "./app/App";
 import { PanelData } from "./app/interfaces/general";
 import { mockDtRuntime } from "./mock-dt-runtime";
+import { AppRoot } from "@dynatrace/strato-components";
+import { ToastContainer } from "@dynatrace/strato-components-preview";
 
 declare global {
   interface Window {
@@ -27,12 +29,39 @@ declare global {
   }
 }
 
+// A map of Dynatrace theme variables to equivalent VSCode ones.
+const THEME_VARIABLES: { dtVar: string; vsVar: string }[] = [
+  {
+    dtVar: "--dt-colors-background-base-default",
+    vsVar: "--vscode-editor-background",
+  },
+  {
+    dtVar: "--dt-colors-background-container-neutral-subdued",
+    vsVar: "--vscode-editorWidget-background",
+  },
+];
+
+/**
+ * GlobalStyle points Dynatrace's CSS variables to VSCode ones to achieve a similar look and feel
+ * to the user's VS Code theme.
+ */
+const GlobalStyle = createGlobalStyle(
+  () => `
+  :root {
+    ${THEME_VARIABLES.map(({ dtVar, vsVar }) => `${dtVar}: var(${vsVar}) !important;`).join("\n")}
+  }
+`,
+);
+
 const vscode = window.acquireVsCodeApi<PanelData>();
 mockDtRuntime().then(() => {
   ReactDOM.createRoot(document.getElementById("root")!).render(
-    <AppRoot>
-      <App vscode={vscode} dataType={window.panelData.dataType} data={window.panelData.data} />
-      <ToastContainer />
-    </AppRoot>,
+    <>
+      <GlobalStyle />
+      <AppRoot>
+        <App vscode={vscode} dataType={window.panelData.dataType} data={window.panelData.data} />
+        <ToastContainer />
+      </AppRoot>
+    </>,
   );
 });
