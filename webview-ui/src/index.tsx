@@ -19,12 +19,12 @@ import ReactDOM from "react-dom/client";
 import styled, { createGlobalStyle } from "styled-components";
 import App from "./app/App";
 import { PanelData } from "./app/interfaces/general";
-import { mockDtRuntime } from "./mock-dt-runtime";
+import { DtRuntime, mockDtRuntime } from "./mock-dt-runtime";
 import { AppRoot } from "@dynatrace/strato-components";
 import { ToastContainer } from "@dynatrace/strato-components-preview";
 
 declare global {
-  interface Window {
+  interface Window extends DtRuntime {
     panelData: PanelData;
   }
 }

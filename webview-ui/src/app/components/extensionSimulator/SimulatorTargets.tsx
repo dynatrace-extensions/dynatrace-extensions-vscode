@@ -14,10 +14,18 @@
   limitations under the License.
  */
 
-import { Button, Container, Flex, Heading } from "@dynatrace/strato-components";
-import { DataTable, TableColumn, TitleBar } from "@dynatrace/strato-components-preview";
+import React, { useMemo, useState } from "react";
+import { Container, Flex } from "@dynatrace/strato-components/layouts";
+import { Heading } from "@dynatrace/strato-components/typography";
+import { Button } from "@dynatrace/strato-components/buttons";
+import { TitleBar } from "@dynatrace/strato-components-preview/layouts";
+import {
+  DataTableV2,
+  type DataTableV2ColumnDef,
+} from "@dynatrace/strato-components-preview/tables";
+import { Menu } from "@dynatrace/strato-components-preview/navigation";
+import { EmptyState } from "@dynatrace/strato-components-preview/content";
 import { PlusIcon, EditIcon, DeleteIcon, ConnectorIcon } from "@dynatrace/strato-icons";
-import React, { useState } from "react";
 import { SIMULATOR_ADD_TARGERT_CMD, SIMULATOR_DELETE_TARGERT_CMD } from "../../constants/constants";
 import { RemoteTarget } from "../../interfaces/simulator";
 import { triggerCommand } from "../../utils/app-utils";
@@ -26,6 +34,16 @@ import { TargetRegistrationForm } from "./TargetRegistrationForm";
 interface SimulatorTargetsProps {
   targets: RemoteTarget[];
 }
+
+/** Simple "+ Add" button shorthand */
+const AddButton = ({ onClick }: { onClick: () => void }) => (
+  <Button size='condensed' onClick={onClick} variant='accent' color='primary'>
+    <Button.Prefix>
+      <PlusIcon size='small' />
+    </Button.Prefix>
+    Add
+  </Button>
+);
 
 export const SimulatorTargets = ({ targets }: SimulatorTargetsProps) => {
   const [modalOpen, setModalOpen] = useState(false);
@@ -43,97 +61,94 @@ export const SimulatorTargets = ({ targets }: SimulatorTargetsProps) => {
   const addTarget = (target: RemoteTarget) => triggerCommand(SIMULATOR_ADD_TARGERT_CMD, target);
   const nameIsUnique = (name: string) => targets.findIndex(t => t.name === name) < 0;
 
-  const tableColumns: TableColumn[] = [
-    {
-      header: "Name",
-      accessor: "name",
-      autoWidth: true,
-      ratioWidth: 1,
-      columnType: "text",
-    },
-    {
-      header: "Username",
-      accessor: "username",
-      autoWidth: true,
-      ratioWidth: 1,
-      columnType: "text",
-    },
-    {
-      header: "Address",
-      accessor: "address",
-      autoWidth: true,
-      ratioWidth: 1,
-      columnType: "text",
-    },
-    {
-      header: "Operating System",
-      accessor: "osType",
-      autoWidth: true,
-      ratioWidth: 1,
-      columnType: "text",
-    },
-    {
-      header: "",
-      id: "actions",
-      autoWidth: true,
-      ratioWidth: 1,
-      cell: ({ row }: { row: { original: unknown } }) => {
-        return (
-          <Flex gap={4}>
-            <Button onClick={() => handleEditTarget(row.original as RemoteTarget)}>
-              <Button.Prefix>
-                <EditIcon />
-              </Button.Prefix>
-            </Button>
-            <Button onClick={() => triggerCommand(SIMULATOR_DELETE_TARGERT_CMD, row.original)}>
-              <Button.Prefix>
-                <DeleteIcon />
-              </Button.Prefix>
-            </Button>
-          </Flex>
-        );
+  const tableColumns = useMemo<DataTableV2ColumnDef<RemoteTarget>[]>(
+    () => [
+      {
+        id: "name",
+        header: "Name",
+        accessor: "name",
       },
-    },
-  ];
+      {
+        id: "username",
+        header: "Username",
+        accessor: "username",
+      },
+      {
+        id: "address",
+        header: "Address",
+        accessor: "address",
+      },
+      {
+        id: "osType",
+        header: "Operating System",
+        accessor: "osType",
+      },
+    ],
+    [],
+  );
+
+  const tableData = useMemo<Record<string, RemoteTarget[]>>(
+    () => ({
+      OneAgents: targets.filter(t => t.eecType === "ONEAGENT"),
+      ActiveGates: targets.filter(t => t.eecType === "ACTIVEGATE"),
+    }),
+    [targets],
+  );
 
   return (
     <>
-      <Flex flexDirection='column' padding={32} gap={16}>
+      <Flex flexDirection='column' width='100%' marginTop={16} padding={0}>
         <TitleBar>
           <TitleBar.Title>Simulator targets</TitleBar.Title>
           <TitleBar.Subtitle>Manage your target machines for remote simulations</TitleBar.Subtitle>
           <TitleBar.Prefix>
-            <Container as={Flex}>
+            <Container as={Flex} margin={0} padding={8}>
               <ConnectorIcon size='large' />
             </Container>
           </TitleBar.Prefix>
           <TitleBar.Suffix>
-            <Flex gap={4}>
-              <Button onClick={() => handleOpenModal()} variant='accent' color='primary'>
-                <Button.Prefix>{<PlusIcon />}</Button.Prefix>Add
-              </Button>
-            </Flex>
+            <AddButton onClick={handleOpenModal} />
           </TitleBar.Suffix>
         </TitleBar>
-        <Flex flexDirection='column'>
-          <Heading level={2}>Registered ActiveGates</Heading>
-          <DataTable columns={tableColumns} data={targets.filter(t => t.eecType === "ACTIVEGATE")}>
-            <DataTable.EmptyState>
-              {'Click "Add" to register a remote target.'}
-            </DataTable.EmptyState>
-            <DataTable.Pagination defaultPageSize={5} />
-          </DataTable>
-        </Flex>
-        <br />
-        <Flex flexDirection='column'>
-          <Heading level={2}>Registered OneAgents</Heading>
-          <DataTable columns={tableColumns} data={targets.filter(t => t.eecType === "ONEAGENT")}>
-            <DataTable.EmptyState>
-              {'Click "Add" to register a remote target.'}
-            </DataTable.EmptyState>
-            <DataTable.Pagination defaultPageSize={5} />
-          </DataTable>
-        </Flex>
+        {Object.entries(tableData).map(([name, data]) => (
+          <Flex key={name} flexDirection='column' marginTop={24}>
+            <Heading level={4}>Registered {name}</Heading>
+            <DataTableV2 sortable fullWidth columns={tableColumns} data={data}>
+              <DataTableV2.EmptyState>
+                <EmptyState style={{ marginTop: 8 }} size='small'>
+                  <EmptyState.Title>No {name} registered</EmptyState.Title>
+                  <EmptyState.Details>
+                    Click "Add" to register a your host for simulation.
+                  </EmptyState.Details>
+                  <EmptyState.Actions>
+                    <AddButton onClick={handleOpenModal} />
+                  </EmptyState.Actions>
+                </EmptyState>
+              </DataTableV2.EmptyState>
+              <DataTableV2.Pagination defaultPageSize={10} defaultPageIndex={1} />
+              <DataTableV2.RowActions>
+                {(row: RemoteTarget) => (
+                  <Menu>
+                    <Menu.Content>
+                      <Menu.Item onSelect={() => handleEditTarget(row)}>
+                        <Menu.ItemIcon>
+                          <EditIcon />
+                        </Menu.ItemIcon>
+                        Edit
+                      </Menu.Item>
+                      <Menu.Item onSelect={() => triggerCommand(SIMULATOR_DELETE_TARGERT_CMD, row)}>
+                        <Menu.ItemIcon>
+                          <DeleteIcon />
+                        </Menu.ItemIcon>
+                        Delete
+                      </Menu.Item>
+                    </Menu.Content>
+                  </Menu>
+                )}
+              </DataTableV2.RowActions>
+            </DataTableV2>
+          </Flex>
+        ))}
       </Flex>
       <TargetRegistrationForm
         modalOpen={modalOpen}

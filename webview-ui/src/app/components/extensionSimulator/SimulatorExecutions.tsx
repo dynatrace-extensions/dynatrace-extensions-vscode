@@ -14,97 +14,24 @@
   limitations under the License.
  */
 
-import { Button, Container, Flex, Heading, Link, ProgressBar } from "@dynatrace/strato-components";
-import { TableColumn, TitleBar, DataTable } from "@dynatrace/strato-components-preview";
-import { Colors } from "@dynatrace/strato-design-tokens";
+import React, { useCallback, useEffect, useMemo, useState } from "react";
+import { Container, Flex } from "@dynatrace/strato-components/layouts";
+import { Heading } from "@dynatrace/strato-components/typography";
+import { ProgressBar } from "@dynatrace/strato-components/content";
+import { Button } from "@dynatrace/strato-components/buttons";
+import { TitleBar } from "@dynatrace/strato-components-preview/layouts";
+import {
+  DataTableV2,
+  type DataTableV2ColumnDef,
+} from "@dynatrace/strato-components-preview/tables";
+import Colors from "@dynatrace/strato-design-tokens/colors";
 import { ActionIcon, DescriptionIcon, EpicIcon } from "@dynatrace/strato-icons";
-import React, { useEffect, useState } from "react";
 import { SIMULATOR_CHECK_READY_CMD, SIMULATOR_READ_LOG_CMD } from "../../constants/constants";
 import { ExecutionSummary, SimulationConfig, SimulatorData } from "../../interfaces/simulator";
 import { triggerCommand } from "../../utils/app-utils";
 import { MandatoryCheckModal } from "./MandatoryCheckModal";
 import { SettingsForm } from "./SettingsForm";
 import { StateButton, SettingsButton } from "./SimulatorButtons";
-
-const tableColumns: TableColumn[] = [
-  {
-    header: "Workspace",
-    accessor: "workspace",
-    autoWidth: true,
-    ratioWidth: 1,
-    columnType: "text",
-  },
-  {
-    header: "Location",
-    accessor: "location",
-    autoWidth: true,
-    ratioWidth: 1,
-    columnType: "text",
-  },
-  {
-    header: "Simulated on",
-    accessor: "target",
-    autoWidth: true,
-    ratioWidth: 1,
-    columnType: "text",
-  },
-  {
-    header: "Start time",
-    accessor: "startTime",
-    autoWidth: true,
-    ratioWidth: 1,
-    columnType: "date",
-  },
-  {
-    header: "Duration",
-    accessor: "duration",
-    autoWidth: true,
-    ratioWidth: 1,
-    columnType: "number",
-  },
-  {
-    header: "Success",
-    accessor: "success",
-    autoWidth: true,
-    ratioWidth: 1,
-    columnType: "text",
-    thresholds: [
-      {
-        value: "true",
-        comparator: "equal-to",
-        color: Colors.Charts.Apdex.Excellent.Default,
-      },
-      {
-        value: "false",
-        comparator: "equal-to",
-        color: Colors.Charts.Apdex.Unacceptable.Default,
-      },
-    ],
-  },
-  {
-    header: "",
-    id: "actions",
-    autoWidth: true,
-    ratioWidth: 1,
-    cell: ({ row }: { row: { original: unknown } }) => {
-      const fileUri = {
-        scheme: "file",
-        path: (row.original as ExecutionSummary).logPath,
-        authority: "",
-      };
-      const args = [JSON.stringify(fileUri)];
-      return (
-        <Button
-          as={Link}
-          style={{ textDecoration: "none" }}
-          href={`command:${SIMULATOR_READ_LOG_CMD}?${encodeURIComponent(JSON.stringify(args))}`}
-        >
-          <Button.Prefix>{<DescriptionIcon />}</Button.Prefix>
-        </Button>
-      );
-    },
-  },
-];
 
 export const SimulatorExecutions = ({
   summaries,
@@ -119,12 +46,95 @@ export const SimulatorExecutions = ({
   const [mandatoryChecks, showMandatoryChecksModal] = useState(false);
   const [currentConfig, setCurrentConfig] = useState<SimulationConfig>(currentConfiguration);
 
+  // Simple callback that sorts execution summaries by start time
+  const sortByTimestamp = useCallback((a: ExecutionSummary, b: ExecutionSummary) => {
+    if (typeof a.startTime === "string") {
+      return new Date(b.startTime).getTime() - new Date(a.startTime).getTime();
+    }
+    return b.startTime.getTime() - a.startTime.getTime();
+  }, []);
+
+  const tableColumns = useMemo<DataTableV2ColumnDef<ExecutionSummary>[]>(
+    () => [
+      {
+        id: "workspace",
+        header: "Workspace",
+        accessor: "workspace",
+        width: "3fr",
+      },
+      {
+        id: "location",
+        header: "Location",
+        accessor: "location",
+        width: "1fr",
+      },
+      {
+        id: "target",
+        header: "Simulated on",
+        accessor: "target",
+        width: "1fr",
+      },
+      {
+        id: "startTime",
+        header: "Start time",
+        accessor: "startTime",
+        columnType: "date",
+        width: "2fr",
+      },
+      {
+        id: "duration",
+        header: "Duration",
+        accessor: "duration",
+        columnType: "number",
+        width: "1fr",
+      },
+      {
+        id: "success",
+        header: "Success",
+        accessor: "success",
+        width: "1fr",
+        columnType: "text",
+        thresholds: [
+          {
+            accessor: cell => String(cell.success),
+            value: "true",
+            comparator: "equal-to",
+            color: Colors.Charts.Apdex.Excellent.Default,
+          },
+          {
+            accessor: cell => String(cell.success),
+            value: "false",
+            comparator: "equal-to",
+            color: Colors.Charts.Apdex.Unacceptable.Default,
+          },
+        ],
+      },
+    ],
+    [],
+  );
+
+  const tableData = useMemo<ExecutionSummary[]>(
+    () => summaries.sort(sortByTimestamp),
+    [summaries, sortByTimestamp],
+  );
+
+  const handleOpenLog = useCallback((logPath: string) => {
+    triggerCommand(SIMULATOR_READ_LOG_CMD, [
+      JSON.stringify({
+        scheme: "file",
+        path: logPath,
+        authority: "",
+      }),
+    ]);
+  }, []);
+
   const handleConfigSubmission = (config: SimulationConfig) => {
     setCurrentConfig(config);
     showSettingsModal(false);
     triggerCommand(SIMULATOR_CHECK_READY_CMD, true, config);
   };
 
+  /** Update state whenever the simulator status changes */
   useEffect(() => {
     if (status === "RUNNING") {
       showSettingsModal(false);
@@ -136,14 +146,14 @@ export const SimulatorExecutions = ({
 
   return (
     <>
-      <Flex flexDirection='column' gap={16} padding={32}>
+      <Flex flexDirection='column' gap={16} marginTop={16} padding={0}>
         <TitleBar>
           <TitleBar.Title>Simulator executions</TitleBar.Title>
           <TitleBar.Subtitle>
             Browse the results of your previous runs and start new simulations
           </TitleBar.Subtitle>
           <TitleBar.Prefix>
-            <Container as={Flex}>
+            <Container as={Flex} margin={0} padding={8}>
               <ActionIcon size='large' />
             </Container>
           </TitleBar.Prefix>
@@ -168,21 +178,22 @@ export const SimulatorExecutions = ({
           </ProgressBar>
         )}
         <Flex flexDirection='column'>
-          <Heading level={2}>Simulator execution history</Heading>
-          <DataTable
-            columns={tableColumns}
-            data={summaries.sort((a, b) => {
-              if (typeof a.startTime === "string") {
-                return new Date(b.startTime).getTime() - new Date(a.startTime).getTime();
-              }
-              return b.startTime.getTime() - a.startTime.getTime();
-            })}
-          >
-            <DataTable.EmptyState>
+          <Heading level={4}>Simulator execution history</Heading>
+          <DataTableV2 sortable fullWidth columns={tableColumns} data={tableData}>
+            <DataTableV2.EmptyState>
               {'Click "Start" to start your first simulation'}
-            </DataTable.EmptyState>
-            <DataTable.Pagination defaultPageSize={10} />
-          </DataTable>
+            </DataTableV2.EmptyState>
+            <DataTableV2.Pagination defaultPageSize={10} defaultPageIndex={1} />
+            <DataTableV2.RowActions>
+              {(row: ExecutionSummary) => (
+                <Button onClick={() => handleOpenLog(row.logPath)}>
+                  <Button.Prefix>
+                    <DescriptionIcon />
+                  </Button.Prefix>
+                </Button>
+              )}
+            </DataTableV2.RowActions>
+          </DataTableV2>
         </Flex>
       </Flex>
       <MandatoryCheckModal

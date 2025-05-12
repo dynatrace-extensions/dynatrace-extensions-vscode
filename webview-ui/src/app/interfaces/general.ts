@@ -18,3 +18,7 @@ export interface PanelData {
   dataType: string;
   data: unknown;
 }
+
+export interface LogData {
+  logContent: string;
+}

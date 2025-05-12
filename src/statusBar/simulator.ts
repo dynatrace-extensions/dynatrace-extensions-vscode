@@ -740,7 +740,7 @@ export class SimulatorManager {
 
     postMessageToPanel(REGISTERED_PANELS.SIMULATOR_UI, {
       messageType: "openLog",
-      data: logContent,
+      data: { logContent },
     });
   }
 }
