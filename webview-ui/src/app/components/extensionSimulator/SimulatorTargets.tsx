@@ -14,23 +14,13 @@
   limitations under the License.
  */
 
-import {
-  Button,
-  Container,
-  DataTable,
-  Flex,
-  Heading,
-  TableColumn,
-  TitleBar,
-} from "@dynatrace/strato-components-preview";
+import { Button, Container, Flex, Heading } from "@dynatrace/strato-components";
+import { DataTable, TableColumn, TitleBar } from "@dynatrace/strato-components-preview";
 import { PlusIcon, EditIcon, DeleteIcon, ConnectorIcon } from "@dynatrace/strato-icons";
 import React, { useState } from "react";
-import {
-  SIMULATOR_ADD_TARGERT_CMD,
-  SIMULATOR_DELETE_TARGERT_CMD,
-} from "src/app/constants/constants";
-import { RemoteTarget } from "src/app/interfaces/simulator";
-import { triggerCommand } from "src/app/utils/app-utils";
+import { SIMULATOR_ADD_TARGERT_CMD, SIMULATOR_DELETE_TARGERT_CMD } from "../../constants/constants";
+import { RemoteTarget } from "../../interfaces/simulator";
+import { triggerCommand } from "../../utils/app-utils";
 import { TargetRegistrationForm } from "./TargetRegistrationForm";
 
 interface SimulatorTargetsProps {

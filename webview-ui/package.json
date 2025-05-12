@@ -65,10 +65,8 @@
     "editorconfig": true
   },
   "dependencies": {
-    "@dynatrace-sdk/user-preferences": "^1.1.1",
-    "@dynatrace/strato-components-preview": "^0.114.12",
-    "@dynatrace/strato-design-tokens": "^0.20.10",
-    "@dynatrace/strato-icons": "^0.37.0",
+    "@dynatrace/strato-components": "^1.4.0",
+    "@dynatrace/strato-components-preview": "^1.4.2",
     "react": "^18.3.1",
     "react-dom": "^18.3.1",
     "react-hook-form": "^7.52.1",

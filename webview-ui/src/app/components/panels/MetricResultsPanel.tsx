@@ -15,18 +15,13 @@
  */
 
 import {
-  Heading,
-  Flex,
-  Text,
   TimeseriesChart,
   Timeseries,
   TimeseriesChartConfig,
   CodeSnippet,
-  Container,
-  Divider,
-  Code,
   InformationOverlay,
 } from "@dynatrace/strato-components-preview";
+import { Heading, Flex, Text, Container, Divider, Code } from "@dynatrace/strato-components";
 import { WarningIcon } from "@dynatrace/strato-icons";
 import React from "react";
 import { MetricSeriesCollection, MetricSeries } from "src/app/interfaces/metricResultsPanel";
@@ -79,7 +74,7 @@ export const MetricResultsPanel = ({ data }: MetricResultsPanelProps) => {
               </InformationOverlay>
             )}
           </Flex>
-          <TimeseriesChartConfig value={{ legend: { position: "bottom", resizable: false } }}>
+          <TimeseriesChartConfig value={{ legend: { position: "bottom" } }}>
             <TimeseriesChart data={toTimeseriesData(series, metricId)} />
           </TimeseriesChartConfig>
           {Object.entries(series[0].dimensionMap).length > 0 && (

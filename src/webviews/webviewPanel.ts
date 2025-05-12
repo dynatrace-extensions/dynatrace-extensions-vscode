@@ -104,8 +104,15 @@ class WebviewPanelManager implements vscode.WebviewPanelSerializer {
         vscode.Uri.joinPath(this.extensionUri, "webview-ui", "build", "assets", "index.js"),
       )
       .toString();
+    // const styleUri = webview
+    //   .asWebviewUri(
+    //     vscode.Uri.joinPath(this.extensionUri, "webview-ui", "build", "assets", "index.css"),
+    //   )
+    //   .toString();
     const nonce = getNonce();
-    const cspString = `"default-src ${webview.cspSource} https://dt-cdn.net; img-src ${webview.cspSource}; style-src 'unsafe-inline' https://dt-cdn.net; script-src 'nonce-${nonce}';"`;
+    const cspString = `"default-src ${webview.cspSource} https://dt-cdn.net; img-src ${webview.cspSource}; style-src 'unsafe-inline' ${webview.cspSource} https://dt-cdn.net; script-src 'nonce-${nonce}';"`;
+
+    // <link rel="stylesheet" type="text/css" href="${styleUri}">
 
     // es6-string-html extension is needed for HTML highlighting
     return /*html*/ `
@@ -116,6 +123,7 @@ class WebviewPanelManager implements vscode.WebviewPanelSerializer {
             <meta name="viewport" content="width=device-width,initial-scale=1,shrink-to-fit=no">
             <meta name="theme-color" content="#000000">
             <meta http-equiv="Content-Security-Policy" content=${cspString}>
+
             <title>Webview</title>
             <script nonce="${nonce}">
               window.acquireVsCodeApi = acquireVsCodeApi;
@@ -123,7 +131,6 @@ class WebviewPanelManager implements vscode.WebviewPanelSerializer {
             </script>
           </head>
           <body>
-            <noscript>You need to enable JavaScript to run this app.</noscript>
             <div id="root"></div>
             <script nonce="${nonce}" src="${scriptUri}"></script>
           </body>

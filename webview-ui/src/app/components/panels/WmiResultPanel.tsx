@@ -14,14 +14,8 @@
   limitations under the License.
  */
 
-import {
-  CodeSnippet,
-  DataTable,
-  Flex,
-  Heading,
-  TableColumn,
-  Text,
-} from "@dynatrace/strato-components-preview";
+import { CodeSnippet, DataTable, TableColumn } from "@dynatrace/strato-components-preview";
+import { Text, Flex, Heading } from "@dynatrace/strato-components";
 import React from "react";
 import { format as sqlFormat } from "sql-formatter";
 import { WmiQueryResult } from "src/app/interfaces/wmiResultPanel";

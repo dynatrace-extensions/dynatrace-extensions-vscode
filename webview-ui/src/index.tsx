@@ -14,13 +14,12 @@
   limitations under the License.
  */
 
-// import { ToastContainer } from "@dynatrace/strato-components-preview";
+import { AppRoot, ToastContainer } from "@dynatrace/strato-components-preview";
 import React from "react";
 import ReactDOM from "react-dom/client";
 import App from "./app/App";
-// import { AppRoot } from "./app/components/strato/AppRoot";
 import { PanelData } from "./app/interfaces/general";
-import { SimplePage } from "./app/SimplePage";
+import { mockDtRuntime } from "./mock-dt-runtime";
 
 declare global {
   interface Window {
@@ -28,12 +27,12 @@ declare global {
   }
 }
 
-// const vscode = window.acquireVsCodeApi<PanelData>();
-const root = ReactDOM.createRoot(document.getElementById("root")!);
-root.render(
-  <SimplePage />,
-  // <AppRoot>
-  //   <App vscode={vscode} dataType={window.panelData.dataType} data={window.panelData.data} />
-  //   <ToastContainer />
-  // </AppRoot>
-);
+const vscode = window.acquireVsCodeApi<PanelData>();
+mockDtRuntime().then(() => {
+  ReactDOM.createRoot(document.getElementById("root")!).render(
+    <AppRoot>
+      <App vscode={vscode} dataType={window.panelData.dataType} data={window.panelData.data} />
+      <ToastContainer />
+    </AppRoot>,
+  );
+});

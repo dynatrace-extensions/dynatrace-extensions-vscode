@@ -14,7 +14,7 @@
   limitations under the License.
  */
 
-import { Heading, Flex, Text } from "@dynatrace/strato-components-preview";
+import { Heading, Flex, Text } from "@dynatrace/strato-components";
 import React from "react";
 
 export const EmptyState = () => {

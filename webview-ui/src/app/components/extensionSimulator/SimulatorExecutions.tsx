@@ -14,23 +14,14 @@
   limitations under the License.
  */
 
-import {
-  Button,
-  Container,
-  DataTable,
-  Flex,
-  Heading,
-  Link,
-  ProgressBar,
-  TableColumn,
-  TitleBar,
-} from "@dynatrace/strato-components-preview";
+import { Button, Container, Flex, Heading, Link, ProgressBar } from "@dynatrace/strato-components";
+import { TableColumn, TitleBar, DataTable } from "@dynatrace/strato-components-preview";
 import { Colors } from "@dynatrace/strato-design-tokens";
 import { ActionIcon, DescriptionIcon, EpicIcon } from "@dynatrace/strato-icons";
 import React, { useEffect, useState } from "react";
-import { SIMULATOR_CHECK_READY_CMD, SIMULATOR_READ_LOG_CMD } from "src/app/constants/constants";
-import { ExecutionSummary, SimulationConfig, SimulatorData } from "src/app/interfaces/simulator";
-import { triggerCommand } from "src/app/utils/app-utils";
+import { SIMULATOR_CHECK_READY_CMD, SIMULATOR_READ_LOG_CMD } from "../../constants/constants";
+import { ExecutionSummary, SimulationConfig, SimulatorData } from "../../interfaces/simulator";
+import { triggerCommand } from "../../utils/app-utils";
 import { MandatoryCheckModal } from "./MandatoryCheckModal";
 import { SettingsForm } from "./SettingsForm";
 import { StateButton, SettingsButton } from "./SimulatorButtons";
