@@ -14,7 +14,7 @@
   limitations under the License.
  */
 
-import { existsSync, mkdirSync, writeFileSync } from "fs";
+import { existsSync, mkdirSync, writeFileSync, readFileSync } from "fs";
 import * as path from "path";
 import * as vscode from "vscode";
 import * as yaml from "yaml";
@@ -110,7 +110,7 @@ const tileLogo = {
 
 const tileTitle = {
   type: "markdown",
-  content: `## Overview of ${extNameFind} extension data\n\nStart here to navigate to the extension configuration and/or entity pages and view charts displaying data collected. **Additional Resources: [${extNameFind} Extension Documentation]($TenantUrl/ui/apps/dynatrace.extensions.manager/configurations/${extIdFind}/details)**\n\n-----\n#### If you don't see data: ⚙️ [Configure extension]($TenantUrl/ui/apps/dynatrace.extensions.manager/configurations/${extIdFind}/configs)`,
+  content: `## Overview of ${extNameFind} extension data\n\nStart here to navigate to the extension configuration and entity pages to view charts displaying data collected.\n\n-----\n#### [⚙️ Configure Extension]($TenantUrl/ui/apps/dynatrace.extensions.manager/configurations/${extIdFind}/configs)\n#### [📖 Documentation]($TenantUrl/ui/apps/dynatrace.extensions.manager/configurations/${extIdFind}/details)`,
   layout: {
     x: 3,
     y: 0,
@@ -834,7 +834,13 @@ function buildDashboard(
   return JSON.stringify(newDashboard);
 }
 
-function getUpdatedExtensionString(
+/**
+ * Build the extension yaml documents: block
+ * @param extension extension.yaml serialized as object
+ * @param newDashboard Object with the dashboard name and path
+ * @returns yaml string representing the documents: node
+ */
+function buildUpdatedDocumentYaml(
   extension: ExtensionStub,
   newDashboard: DocumentDashboard,
 ): string {
@@ -856,14 +862,42 @@ function getUpdatedExtensionString(
     dashboards.push(newDashboard);
   }
 
-  return yaml.stringify(extension);
+  // Returns just the updated documents yaml.
+  // Returning and rewriting all yaml reformats and reorders things
+  const newDocumentYaml = { documents: extension.documents };
+  return yaml.stringify(newDocumentYaml);
 }
 
 /**
- * Workflow for creating an overview dashboard based on the content of the extension.yaml.
- * The extension should have topology defined otherwise the dashboard doesn't have much
- * data to render and is pointless. The extension yaml is adapted to include the newly
- * created dashboard. At the end, the user is prompted to upload the dashboard to Dynatrace
+ * Update (or add) the extension yaml documents: block. Writes the updated extension.yaml file
+ * String replacement to preserve file order and formatting.
+ * @param filePath extension.yaml file path
+ * @param newDocumentsBlock yaml string containing the new documents: node
+ * @returns
+ */
+function updateYamlDocumentsBlock(filePath: string, newDocumentsBlock: string): void {
+  const yamlText = readFileSync(filePath, "utf8");
+
+  // Matches the full 'documents:' block
+  const documentsBlockRegex = /^documents:\n(?:^[ \t]+.*\n?)*/gm;
+
+  let updatedYaml: string;
+
+  if (documentsBlockRegex.test(yamlText)) {
+    // Replace the entire documents block
+    updatedYaml = yamlText.replace(documentsBlockRegex, newDocumentsBlock + "\n");
+  } else {
+    // Append to end of file
+    updatedYaml = yamlText.trimEnd() + "\n\n" + newDocumentsBlock + "\n";
+  }
+
+  writeFileSync(filePath, updatedYaml);
+}
+
+/**
+ * Workflow for creating an Gen3 overview dashboard based on the content of the extension.yaml.
+ * Requires min Dynatrace version of 1.309.0
+ * Based on the defined template
  * @returns
  */
 export async function createGen3OverviewDashboard() {
@@ -879,6 +913,20 @@ export async function createGen3OverviewDashboard() {
   const extension = getCachedParsedExtension();
   if (!extension) {
     logger.error("Parsed extension does not exist in cache. Command aborted.", ...fnLogTrace);
+    return;
+  }
+
+  // Gen3 Dashboard documents only supported from version: 1.309+
+  const [majorStr, minorStr] = extension.minDynatraceVersion.split(".");
+  const majorVersion = parseInt(majorStr, 10);
+  const minorVersion = parseInt(minorStr, 10);
+
+  if (majorVersion === 1 && minorVersion < 309) {
+    logger.notify(
+      "WARN",
+      "Extension version must be >= 1.309.0 for gen3 document dashboards",
+      ...fnLogTrace,
+    );
     return;
   }
 
@@ -919,10 +967,8 @@ export async function createGen3OverviewDashboard() {
     displayName: `${extDisplayName} Overview`,
     path: dashboardPath,
   };
-
-  // NOTE THIS WORKS, but updates and reformats all of the existing yaml. TODO clean this up
-  const updatedExtensionText = getUpdatedExtensionString(extension, newDashboardYaml);
-  writeFileSync(extensionFile, updatedExtensionText);
+  const updatedDocumentText = buildUpdatedDocumentYaml(extension, newDashboardYaml);
+  updateYamlDocumentsBlock(extensionFile, updatedDocumentText);
 
   logger.notify("INFO", "Dashboard created successfully", ...fnLogTrace);
 }
