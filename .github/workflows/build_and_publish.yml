@@ -11,10 +11,6 @@ jobs:
           platform: win32
           arch: x64
           npm_config_arch: x64
-        # - os: windows-latest
-        #   platform: win32
-        #   arch: arm64
-        #   npm_config_arch: arm
         - os: ubuntu-latest
           platform: linux
           arch: x64
@@ -73,6 +69,11 @@ jobs:
     if: success()
     steps:
       - uses: actions/download-artifact@v4
-      - run: npx vsce publish --packagePath $(find . -iname *.vsix)
+      - name: Publish to VSCode Marketplace
+        run: npx vsce publish --packagePath $(find . -iname *.vsix)
         env:
           VSCE_PAT: ${{ secrets.VSCE_PAT }}
+      - name: Publish to OpenVSX
+        run: npx ovsx publish --packagePath $(find . -iname *.vsix)
+        env:
+          OVSX_PAT: ${{ secrets.OVSX_PAT }}
