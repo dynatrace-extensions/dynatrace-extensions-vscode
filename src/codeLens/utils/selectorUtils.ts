@@ -24,7 +24,8 @@ import { getDynatraceClient } from "../../treeViews/tenantsTreeView";
 import { checkTenantConnected } from "../../utils/conditionCheckers";
 import * as logger from "../../utils/logging";
 import { getBlockItemIndexAtLine, getParentBlocks } from "../../utils/yamlParsing";
-import { REGISTERED_PANELS, renderPanel } from "../../webviews/webviewPanel";
+import { REGISTERED_PANELS } from "../../webviews/webview-panel-manager";
+import { renderPanel } from "../../webviews/webview-utils";
 import { updateSelectorValidationStatus } from "../selectorCodeLens";
 
 export interface ValidationStatus {

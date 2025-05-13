@@ -56,7 +56,8 @@ import {
   getDatasourcePath,
   loadDefaultSimulationConfig,
 } from "../utils/simulator";
-import { REGISTERED_PANELS, postMessageToPanel, renderPanel } from "../webviews/webviewPanel";
+import { REGISTERED_PANELS } from "../webviews/webview-panel-manager";
+import { postMessageToPanel, renderPanel } from "../webviews/webview-utils";
 
 const SIMULATOR_START_CMD = "dynatrace-extensions.simulator.start";
 const SIMULATOR_STOP_CMD = "dynatrace-extensions.simulator.stop";
@@ -739,7 +740,7 @@ export class SimulatorManager {
 
     postMessageToPanel(REGISTERED_PANELS.SIMULATOR_UI, {
       messageType: "openLog",
-      data: logContent,
+      data: { logContent },
     });
   }
 }

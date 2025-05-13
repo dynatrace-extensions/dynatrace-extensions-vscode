@@ -17,7 +17,8 @@
 import { exec } from "child_process";
 import { getCachedWmiQueryResult } from "../../utils/caching";
 import * as logger from "../../utils/logging";
-import { REGISTERED_PANELS, renderPanel } from "../../webviews/webviewPanel";
+import { REGISTERED_PANELS } from "../../webviews/webview-panel-manager";
+import { renderPanel } from "../../webviews/webview-utils";
 import { ValidationStatus } from "./selectorUtils";
 
 const logTrace = ["codeLens", "utils", "wmiUtils"];

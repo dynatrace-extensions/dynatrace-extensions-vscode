@@ -31,7 +31,8 @@ import * as extensionParsingUtils from "../../../../src/utils/extensionParsing";
 import * as fileSystemUtils from "../../../../src/utils/fileSystem";
 import * as otherExtensionsUtils from "../../../../src/utils/otherExtensions";
 import * as simulatorUtils from "../../../../src/utils/simulator";
-import * as webviewPanel from "../../../../src/webviews/webviewPanel";
+import * as webviewManager from "../../../../src/webviews/webview-panel-manager";
+import * as webviewUtils from "../../../../src/webviews/webview-utils";
 import { mockFileSystemItem } from "../../../shared/utils";
 import { MockExtensionContext, MockUri } from "../../mocks/vscode";
 
@@ -336,7 +337,7 @@ describe.only("Simulator Manager", () => {
     beforeEach(() => {
       jest.spyOn(fileSystemUtils, "getSimulatorTargets").mockReturnValue([]);
       jest.spyOn(fileSystemUtils, "getSimulatorSummaries").mockReturnValue([]);
-      renderSpy = jest.spyOn(webviewPanel, "renderPanel").mockImplementation(() => {});
+      renderSpy = jest.spyOn(webviewUtils, "renderPanel").mockImplementation(() => {});
     });
 
     it("first updates the panel with CHECKING status (render)", async () => {
@@ -348,7 +349,7 @@ describe.only("Simulator Manager", () => {
       expect(renderSpy).toHaveBeenCalledTimes(2);
       expect(renderSpy).toHaveBeenNthCalledWith(
         1,
-        webviewPanel.REGISTERED_PANELS.SIMULATOR_UI,
+        webviewManager.REGISTERED_PANELS.SIMULATOR_UI,
         "Extension Simulator",
         { dataType: "SIMULATOR_DATA", data: { ...mockPanelData, status: "CHECKING" } },
       );
@@ -357,14 +358,14 @@ describe.only("Simulator Manager", () => {
     it("first updates the panel with CHECKING status (postMessage)", async () => {
       jest.spyOn(simulatorManager, "checkMandatoryRequirements").mockReturnValue([true, []]);
       simulatorManager = new SimulatorManager();
-      postMessageSpy = jest.spyOn(webviewPanel, "postMessageToPanel").mockImplementation(() => {});
+      postMessageSpy = jest.spyOn(webviewUtils, "postMessageToPanel").mockImplementation(() => {});
 
       await simulatorManager.checkReady(false);
 
       expect(postMessageSpy).toHaveBeenCalledTimes(2);
       expect(postMessageSpy).toHaveBeenNthCalledWith(
         1,
-        webviewPanel.REGISTERED_PANELS.SIMULATOR_UI,
+        webviewManager.REGISTERED_PANELS.SIMULATOR_UI,
         {
           messageType: "updateData",
           data: { dataType: "SIMULATOR_DATA", data: { ...mockPanelData, status: "CHECKING" } },
@@ -379,7 +380,7 @@ describe.only("Simulator Manager", () => {
 
       expect(renderSpy).toHaveBeenNthCalledWith(
         2,
-        webviewPanel.REGISTERED_PANELS.SIMULATOR_UI,
+        webviewManager.REGISTERED_PANELS.SIMULATOR_UI,
         "Extension Simulator",
         { dataType: "SIMULATOR_DATA", data: { ...mockPanelData, status: "READY" } },
       );
@@ -396,7 +397,7 @@ describe.only("Simulator Manager", () => {
       expect(renderSpy).toHaveBeenCalledTimes(2);
       expect(renderSpy).toHaveBeenNthCalledWith(
         2,
-        webviewPanel.REGISTERED_PANELS.SIMULATOR_UI,
+        webviewManager.REGISTERED_PANELS.SIMULATOR_UI,
         "Extension Simulator",
         {
           dataType: "SIMULATOR_DATA",
@@ -416,7 +417,7 @@ describe.only("Simulator Manager", () => {
       expect(renderSpy).toHaveBeenCalledTimes(2);
       expect(renderSpy).toHaveBeenNthCalledWith(
         2,
-        webviewPanel.REGISTERED_PANELS.SIMULATOR_UI,
+        webviewManager.REGISTERED_PANELS.SIMULATOR_UI,
         "Extension Simulator",
         {
           dataType: "SIMULATOR_DATA",
