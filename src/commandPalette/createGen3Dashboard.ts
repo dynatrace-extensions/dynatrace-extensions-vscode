@@ -307,11 +307,12 @@ const metric1KeyFind = "<METRIC_KEY1>";
 const metric2KeyFind = "<METRIC_KEY2>";
 const metric1NameFind = "<METRIC_NAME1>";
 const metric2NameFind = "<METRIC_NAME2>";
-const fieldsLine = `fields entity, \`${metric1NameFind}\`, \`${metric2NameFind}\`\n`;
+const metricTableQuerySingle = `timeseries {\n  metric1=avg(\`${metric1KeyFind}\`)},\nby: {\`dt.entity.${entityTypeFind}\`}\n| fieldsAdd entity_name = entityName(\`dt.entity.${entityTypeFind}\`)\n| fieldsAdd entity_id = \`dt.entity.${entityTypeFind}\`\n| fieldsAdd entity_url = concat($TenantUrl, "/ui/apps/dynatrace.classic.technologies/ui/entity/", entity_id)\n| fieldsAdd entity = concat("[", entity_name, "]", "(", entity_url, ")")\n| fieldsAdd \`${metric1NameFind}\` = arrayLast(metric1)\n| sort entity_name asc\n| fields entity, \`${metric1NameFind}\`\n| limit 20`;
+const metricTableQueryDouble = `timeseries {\n  metric1=avg(\`${metric1KeyFind}\`),\n  metric2=avg(\`${metric2KeyFind}\`)\n},\nby: {\`dt.entity.${entityTypeFind}\`}\n| fieldsAdd entity_name = entityName(\`dt.entity.${entityTypeFind}\`)\n| fieldsAdd entity_id = \`dt.entity.${entityTypeFind}\`\n| fieldsAdd entity_url = concat($TenantUrl, "/ui/apps/dynatrace.classic.technologies/ui/entity/", entity_id)\n| fieldsAdd entity = concat("[", entity_name, "]", "(", entity_url, ")")\n| fieldsAdd \`${metric1NameFind}\` = arrayLast(metric1)\n| fieldsAdd \`${metric2NameFind}\` = arrayLast(metric2)\n| sort entity_name asc\n| fields entity, \`${metric1NameFind}\`, \`${metric2NameFind}\`\n| limit 20`;
 const tileMetricsTable = {
   type: "data",
   title: "",
-  query: `timeseries {\n  metric1=avg(\`${metric1KeyFind}\`),\n  metric2=avg(\`${metric2KeyFind}\`)\n},\nby: {\`dt.entity.${entityTypeFind}\`}\n| fieldsAdd entity_name = entityName(\`dt.entity.${entityTypeFind}\`)\n| fieldsAdd entity_id = \`dt.entity.${entityTypeFind}\`\n| fieldsAdd entity_url = concat($TenantUrl, "/ui/apps/dynatrace.classic.technologies/ui/entity/", entity_id)\n| fieldsAdd entity = concat("[", entity_name, "]", "(", entity_url, ")")\n| fieldsAdd \`${metric1NameFind}\` = arrayLast(metric1)\n| fieldsAdd \`${metric2NameFind}\` = arrayLast(metric2)\n| sort entity_name asc\n| ${fieldsLine}| limit 20`,
+  query: metricTableQueryDouble,
   davis: {
     enabled: false,
     davisVisualization: {
@@ -740,8 +741,7 @@ function buildDashboard(
       const dropMetric2 = chartMetrics[1] === undefined;
 
       if (dropMetric2) {
-        const newFieldsLine = `fields entity, \`${metric1NameFind}\`\n`;
-        newMetricTable.query = newMetricTable.query.replace(fieldsLine, newFieldsLine);
+        newMetricTable.query = metricTableQuerySingle;
       }
 
       // No dt.entity.environemnt link
