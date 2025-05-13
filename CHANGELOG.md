@@ -1,12 +1,16 @@
 # Change Log
 
-## Version 2.7.0 (13.05.2025)
+## Version 2.7.1 (13.05.2025)
 
 ### 🪲 Fixed in this version:
 
 - [#250 - Custom webview panels are not working](https://github.com/dynatrace-extensions/dynatrace-extensions-vscode/issues/250)
 - [#252 - Build command fails when using single quotes](https://github.com/dynatrace-extensions/dynatrace-extensions-vscode/issues/252)
 - [#258 - fix var diagnostic regex](https://github.com/dynatrace-extensions/dynatrace-extensions-vscode/pull/258)
+
+### ✨ New in this version:
+
+- From now on, the extension will also be published to [Open VSX](https://open-vsx.org/extension/DynatracePlatformExtensions/dynatrace-extensions)
 
 ---
 
