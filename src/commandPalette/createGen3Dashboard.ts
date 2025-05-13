@@ -871,27 +871,54 @@ function buildUpdatedDocumentYaml(
 /**
  * Update (or add) the extension yaml documents: block. Writes the updated extension.yaml file
  * String replacement to preserve file order and formatting.
+ * line by line parsing, instead of regex for match consistency
  * @param filePath extension.yaml file path
  * @param newDocumentsBlock yaml string containing the new documents: node
  * @returns
  */
 function updateYamlDocumentsBlock(filePath: string, newDocumentsBlock: string): void {
-  const yamlText = readFileSync(filePath, "utf8");
+  const lines = readFileSync(filePath, "utf8").split("\n");
+  const startIndex = lines.findIndex(line => line.trim() === "documents:");
 
-  // Matches the full 'documents:' block
-  const documentsBlockRegex = /^documents:\n(?:^[ \t]+.*\n?)*/gm;
-
-  let updatedYaml: string;
-
-  if (documentsBlockRegex.test(yamlText)) {
-    // Replace the entire documents block
-    updatedYaml = yamlText.replace(documentsBlockRegex, newDocumentsBlock + "\n");
-  } else {
-    // Append to end of file
-    updatedYaml = yamlText.trimEnd() + "\n\n" + newDocumentsBlock + "\n";
+  if (startIndex === -1) {
+    // No documents block found, append at the end
+    const updatedText = `${lines.join("\n")}\n\n${newDocumentsBlock.trim()}\n`;
+    writeFileSync(filePath, updatedText);
+    return;
   }
 
-  writeFileSync(filePath, updatedYaml);
+  // Find the end of the documents block
+  let endIndex = startIndex + 1;
+  while (
+    endIndex < lines.length &&
+    (/^\s/.test(lines[endIndex]) || lines[endIndex].trim() === "")
+  ) {
+    endIndex++;
+  }
+
+  // Count trailing blank lines after the block
+  let blankLineCount = 0;
+  while (
+    endIndex + blankLineCount < lines.length &&
+    lines[endIndex + blankLineCount].trim() === ""
+  ) {
+    blankLineCount++;
+  }
+
+  const preservedBlankLines = "\n".repeat(blankLineCount);
+  const updatedLines = [
+    ...lines.slice(0, startIndex),
+    ...newDocumentsBlock.trimEnd().split("\n"),
+    preservedBlankLines,
+    ...lines.slice(endIndex + blankLineCount),
+  ];
+
+  let updatedText = updatedLines.join("\n");
+  if (!updatedText.endsWith("\n")) {
+    updatedText += "\n";
+  }
+
+  writeFileSync(filePath, updatedText);
 }
 
 /**
