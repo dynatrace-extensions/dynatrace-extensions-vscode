@@ -18,10 +18,15 @@ import { existsSync, mkdirSync, readFileSync, writeFileSync } from "fs";
 import * as path from "path";
 import * as vscode from "vscode";
 import { Dashboard } from "../dynatrace-api/interfaces/dashboards";
-import { ExtensionStub } from "../interfaces/extensionMeta";
+import { ExtensionStub, DocumentDashboard } from "../interfaces/extensionMeta";
 import { getDynatraceClient } from "../treeViews/tenantsTreeView";
 import { getCachedParsedExtension } from "../utils/caching";
 import { checkWorkspaceOpen, isExtensionsWorkspace } from "../utils/conditionCheckers";
+import {
+  buildPlatformDashboard,
+  buildUpdatedDocumentYaml,
+  updateYamlNode,
+} from "../utils/dashboards";
 import { getEntityMetrics, getMetricDisplayName } from "../utils/extensionParsing";
 import { getExtensionFilePath } from "../utils/fileSystem";
 import * as logger from "../utils/logging";
@@ -31,6 +36,8 @@ export const createDashboardWorkflow = async () => {
     await createOverviewDashboard();
   }
 };
+
+const fnLogTrace = ["commandPalette", "createDashboard", "createOverviewDashboard"];
 
 /*======================================================*
  * TEMPLATES THAT CREATE VARIOUS PARTS OF THE DASHBOARD *
@@ -485,40 +492,19 @@ function buildDashboard(
 }
 
 /**
- * Workflow for creating an overview dashboard based on the content of the extension.yaml.
- * The extension should have topology defined otherwise the dashboard doesn't have much
- * data to render and is pointless. The extension yaml is adapted to include the newly
- * created dashboard. At the end, the user is prompted to upload the dashboard to Dynatrace
- * @returns
+ * Generates a class dashboard from the contents of extension.yaml
+ * Existing code from createOverviewDashboard - unchanged logic
+ * Edits the yaml file, creates document json and can upload to Dynatrace
+ * @param extensionFile path to extension.yaml
+ * @param extension extension.yaml serialized as object
  */
-export async function createOverviewDashboard() {
-  const fnLogTrace = ["commandPalette", "createDashboard", "createOverviewDashboard"];
-  logger.info("Executing Create Dashboard command", ...fnLogTrace);
+async function createClassicDashboard(extensionFile: string, extension: ExtensionStub) {
   const outputChannel = logger.getGenericChannel();
-  const DASHBOARD_PATH = "dashboards/overview_dashboard.json";
-  // Read extension.yaml
-  const extensionFile = getExtensionFilePath();
-  if (!extensionFile) {
-    return;
-  }
   const extensionText = readFileSync(extensionFile).toString();
-  const extension = getCachedParsedExtension();
-  if (!extension) {
-    logger.error("Parsed extension does not exist in cache. Command aborted.", ...fnLogTrace);
-    return;
-  }
-  // Check topology. No topology = pointless dashboard
-  if (!extension.topology) {
-    logger.notify(
-      "WARN",
-      "Please define your topology before running this command.",
-      ...fnLogTrace,
-    );
-    return;
-  }
+  const DASHBOARD_PATH = "dashboards/overview_dashboard.json";
 
   const dashboardTitle = await vscode.window.showInputBox({
-    title: "Dashboard title",
+    title: "Classic Dashboard title",
     value: `Extension Overview (${extension.name}:${extension.version})`,
     ignoreFocusOut: true,
   });
@@ -558,13 +544,17 @@ export async function createOverviewDashboard() {
 
   writeFileSync(extensionFile, updatedExtensionText);
 
-  logger.notify("INFO", "Dashboard created successfully", ...fnLogTrace);
+  logger.notify("INFO", "Classic dashboard created successfully", ...fnLogTrace);
 
   // If we're connected to the API, prompt for upload.
   await getDynatraceClient().then(async dt => {
     if (dt) {
       await vscode.window
-        .showInformationMessage("Would you like to upload it to Dynatrace?", "Yes", "No")
+        .showInformationMessage(
+          "Would you like to upload the classic dashboard to Dynatrace?",
+          "Yes",
+          "No",
+        )
         .then(choice => {
           if (choice === "Yes") {
             dt.dashboards
@@ -580,4 +570,117 @@ export async function createOverviewDashboard() {
         });
     }
   });
+}
+
+async function createPlatformDashboard(extensionFile: string, extension: ExtensionStub) {
+  const [majorStr, minorStr] = extension.minDynatraceVersion.split(".");
+  const majorVersion = parseInt(majorStr, 10);
+  const minorVersion = parseInt(minorStr, 10);
+
+  if (majorVersion === 1 && minorVersion < 309) {
+    logger.notify(
+      "WARN",
+      "Extension version must be >= 1.309.0 for gen3 document dashboards",
+      ...fnLogTrace,
+    );
+    return;
+  }
+
+  const defaultExtName = "Extension";
+  const userExtName = await vscode.window.showInputBox({
+    title: "Platform Dashboard - Extension Name",
+    value: defaultExtName,
+    ignoreFocusOut: true,
+  });
+  const extDisplayName = userExtName ?? defaultExtName;
+
+  // Use the log links from the Dynatrace HUB - example Oracle logo: https://dt-cdn.net/hub/oracle_gkmEyXV.png
+  const defaultLogo = "https://dt-cdn.net/hub/logos/extensions-health.png";
+  const userLogo = await vscode.window.showInputBox({
+    title: "Dashboard Logo Image",
+    value: defaultLogo,
+    ignoreFocusOut: true,
+  });
+  const dashboardLogo = userLogo ?? defaultLogo;
+  const dashboardJson = buildPlatformDashboard(extension, extDisplayName, dashboardLogo);
+
+  // Create directories and json file for dashboard
+  const documentsDirName = "documents";
+  const extfilePrefix = extDisplayName.toLowerCase().replace(/ /g, "_");
+  const overviewDashboardName = `${extfilePrefix}_overview.dashboard.json`;
+  const extensionDir = path.resolve(extensionFile, "..");
+  const documentsDir = path.resolve(extensionDir, documentsDirName);
+  if (!existsSync(documentsDir)) {
+    mkdirSync(documentsDir);
+  }
+
+  const dashboardFile = path.resolve(documentsDir, overviewDashboardName);
+  writeFileSync(dashboardFile, dashboardJson);
+
+  // Edit extension.yaml to include the new dashboard
+  const dashboardPath = `${documentsDirName}/${overviewDashboardName}`;
+  const newDashboardYaml: DocumentDashboard = {
+    displayName: `${extDisplayName} Overview`,
+    path: dashboardPath,
+  };
+  const updatedDocumentText = buildUpdatedDocumentYaml(extension, newDashboardYaml);
+  updateYamlNode(extensionFile, "documents:", updatedDocumentText);
+
+  logger.notify("INFO", "Platform Dashboard created successfully", ...fnLogTrace);
+}
+
+/**
+ * Workflow for creating an overview dashboard based on the content of the extension.yaml.
+ * The extension should have topology defined otherwise the dashboard doesn't have much
+ * data to render and is pointless. The extension yaml is adapted to include the newly
+ * created dashboard. At the end, the user is prompted to upload the dashboard to Dynatrace
+ * @returns
+ */
+export async function createOverviewDashboard() {
+  logger.info("Executing Create Dashboard command", ...fnLogTrace);
+
+  const extensionFile = getExtensionFilePath();
+  if (!extensionFile) {
+    logger.error("Couldn't get extension.yaml file");
+    return;
+  }
+
+  const extension = getCachedParsedExtension();
+  if (!extension) {
+    logger.error("Parsed extension does not exist in cache. Command aborted.", ...fnLogTrace);
+    return;
+  }
+
+  // Check topology. No topology = pointless dashboard
+  if (!extension.topology) {
+    logger.notify(
+      "WARN",
+      "Please define your topology before running this command.",
+      ...fnLogTrace,
+    );
+    return;
+  }
+
+  const dbSelections = await vscode.window.showQuickPick(
+    ["Classic Dashboard", "Platform Document"],
+    {
+      canPickMany: true,
+      placeHolder: "Select one or both",
+      title: "Select Dashboard Type(s)",
+      ignoreFocusOut: true,
+    },
+  );
+
+  if (!dbSelections || dbSelections.length === 0) {
+    logger.error("No dashboard option was selected.", ...fnLogTrace);
+    return;
+  }
+
+  if (dbSelections.includes("Classic Dashboard")) {
+    await createClassicDashboard(extensionFile, extension);
+  }
+
+  if (dbSelections.includes("Platform Document")) {
+    await createPlatformDashboard(extensionFile, extension);
+  }
 }

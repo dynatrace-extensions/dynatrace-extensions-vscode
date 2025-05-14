@@ -859,7 +859,7 @@ export function buildUpdatedDocumentYaml(
  */
 export function updateYamlNode(filePath: string, nodeName: string, newNode: string): void {
   const lines = readFileSync(filePath, "utf8").split("\n");
-  const startIndex = lines.findIndex(line => line.match(new RegExp(`^${nodeName}:\\s*$`)));
+  const startIndex = lines.findIndex(line => line.startsWith(nodeName));
 
   if (startIndex === -1) {
     // No existing yaml node found, append at the end
