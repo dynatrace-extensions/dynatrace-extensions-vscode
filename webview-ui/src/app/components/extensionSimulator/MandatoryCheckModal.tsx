@@ -14,7 +14,8 @@
   limitations under the License.
  */
 
-import { Container, Flex, Modal, Text } from "@dynatrace/strato-components-preview";
+import { Container, Flex, Text } from "@dynatrace/strato-components";
+import { Modal } from "@dynatrace/strato-components-preview";
 import { CheckmarkIcon, WarningIcon } from "@dynatrace/strato-icons";
 import React from "react";
 

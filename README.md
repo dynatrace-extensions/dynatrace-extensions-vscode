@@ -11,7 +11,7 @@ This is a VisualStudio Code Extension that aims to provide support for all aspec
 <h2 align="center">
   This project's documentation has moved to:
   <br/>
-  <a href="https://developer.dynatrace.com/extensions-v2/dynatrace-extensions-vscode/">
+  <a href="https://developer.dynatrace.com/develop/dynatrace-extensions-vscode/">
     Dynatrace Developer portal
   </a>
 </h2>

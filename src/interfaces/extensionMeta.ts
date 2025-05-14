@@ -350,6 +350,11 @@ interface SingleMetricConfig {
   metric: { metricSelector: string };
 }
 
+export interface DocumentDashboard {
+  displayName: string;
+  path: string;
+}
+
 export interface ExtensionStub {
   name: string;
   version: string;
@@ -359,6 +364,9 @@ export interface ExtensionStub {
   };
   alerts?: { path: string }[];
   dashboards?: { path: string }[];
+  documents?: {
+    dashboards?: DocumentDashboard[];
+  };
   snmp?: SnmpGroup[];
   wmi?: WmiGroup[];
   prometheus?: DatasourceGroup[];

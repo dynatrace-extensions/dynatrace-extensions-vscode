@@ -14,22 +14,18 @@
   limitations under the License.
  */
 
+import React from "react";
 import {
-  Heading,
-  Flex,
-  Text,
   TimeseriesChart,
   Timeseries,
   TimeseriesChartConfig,
-  CodeSnippet,
-  Container,
-  Divider,
-  Code,
-  InformationOverlay,
-} from "@dynatrace/strato-components-preview";
+} from "@dynatrace/strato-components-preview/charts";
+import { InformationOverlay } from "@dynatrace/strato-components-preview/overlays";
+import { CodeSnippet, EmptyState } from "@dynatrace/strato-components-preview/content";
+import { Heading, Text, Code } from "@dynatrace/strato-components/typography";
+import { Flex, Container, Divider } from "@dynatrace/strato-components/layouts";
 import { WarningIcon } from "@dynatrace/strato-icons";
-import React from "react";
-import { MetricSeriesCollection, MetricSeries } from "src/app/interfaces/metricResultsPanel";
+import { MetricSeriesCollection, MetricSeries } from "../../interfaces/metricResultsPanel";
 
 interface MetricResultsPanelProps {
   data: MetricSeriesCollection[];
@@ -65,7 +61,7 @@ export const MetricResultsPanel = ({ data }: MetricResultsPanelProps) => {
           <Text>{warnings}</Text>
         </Container>
       )}
-      {series.length > 0 && (
+      {series.length > 0 ? (
         <Flex flexDirection='column'>
           <Flex justifyContent='space-between' paddingTop={8}>
             <Text>Timeseries data:</Text>
@@ -79,7 +75,7 @@ export const MetricResultsPanel = ({ data }: MetricResultsPanelProps) => {
               </InformationOverlay>
             )}
           </Flex>
-          <TimeseriesChartConfig value={{ legend: { position: "bottom", resizable: false } }}>
+          <TimeseriesChartConfig value={{ legend: { position: "bottom" } }}>
             <TimeseriesChart data={toTimeseriesData(series, metricId)} />
           </TimeseriesChartConfig>
           {Object.entries(series[0].dimensionMap).length > 0 && (
@@ -94,6 +90,13 @@ export const MetricResultsPanel = ({ data }: MetricResultsPanelProps) => {
             </Flex>
           )}
         </Flex>
+      ) : (
+        <EmptyState size='small'>
+          <EmptyState.Visual>
+            <EmptyState.VisualPreset type='no-result' context='chart' />
+          </EmptyState.Visual>
+          <EmptyState.Title>This query returned no results.</EmptyState.Title>
+        </EmptyState>
       )}
     </Flex>
   );

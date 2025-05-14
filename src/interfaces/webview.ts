@@ -1,6 +1,10 @@
 export interface WebviewMessage {
   messageType: string;
-  data: PanelData | ToastOptions | string;
+  data: PanelData | ToastOptions | LogData;
+}
+
+export interface LogData {
+  logContent: string;
 }
 
 export interface PanelData {
