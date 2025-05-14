@@ -18,6 +18,7 @@ import * as vscode from "vscode";
 import { getActivationContext } from "../extension";
 import { PanelData, WebviewMessage } from "../interfaces/webview";
 import * as logger from "../utils/logging";
+import { getNonce, getColumn, getDtShellDefaults } from "./webview-utils";
 
 /**
  * Registered viewType (id) values for known webivew panels.
@@ -29,39 +30,8 @@ export enum REGISTERED_PANELS {
 }
 
 /**
- * A helper function that returns a unique alphanumeric identifier called a nonce.
- *
- * @remarks This function is primarily used to help enforce content security
- * policies for resources/scripts being executed in a webview context.
- *
- * @returns A nonce
+ * Provides singleton access to the WebviewPanelManager instance.
  */
-function getNonce() {
-  let text = "";
-  /* eslint-disable-next-line no-secrets/no-secrets */
-  const possible = "ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789";
-  for (let i = 0; i < 32; i++) {
-    text += possible.charAt(Math.floor(Math.random() * possible.length));
-  }
-  return text;
-}
-
-/**
- * Helper function that returns an appropriate column for the webview panel
- * @returns
- */
-function getColumn() {
-  return vscode.window.activeTextEditor ? vscode.ViewColumn.Beside : vscode.ViewColumn.One;
-}
-
-export const renderPanel = (viewType: REGISTERED_PANELS, title: string, data: PanelData) => {
-  getWebviewPanelManager().render(viewType, title, data);
-};
-
-export const postMessageToPanel = (viewType: REGISTERED_PANELS, message: WebviewMessage) => {
-  getWebviewPanelManager().postMessage(viewType, message);
-};
-
 export const getWebviewPanelManager = (() => {
   let instance: WebviewPanelManager | undefined;
 
@@ -98,14 +68,23 @@ class WebviewPanelManager implements vscode.WebviewPanelSerializer {
    * @returns A template string literal containing the HTML that should be rendered within the
    * webview panel
    */
-  private _getWebviewContent(webview: vscode.Webview, data: PanelData) {
+  private async _getWebviewContent(webview: vscode.Webview, data: PanelData) {
     const scriptUri = webview
       .asWebviewUri(
-        vscode.Uri.joinPath(this.extensionUri, "webview-ui", "build", "static", "js", "main.js"),
+        vscode.Uri.joinPath(this.extensionUri, "webview-ui", "build", "assets", "index.js"),
       )
       .toString();
     const nonce = getNonce();
-    const cspString = `"default-src ${webview.cspSource} https://dt-cdn.net; img-src ${webview.cspSource}; style-src 'unsafe-inline' https://dt-cdn.net; script-src 'nonce-${nonce}';"`;
+    const cspString =
+      '"' +
+      [
+        `default-src ${webview.cspSource} https://dt-cdn.net`,
+        `img-src ${webview.cspSource} https://dt-cdn.net`,
+        `style-src 'unsafe-inline' ${webview.cspSource} https://dt-cdn.net`,
+        `script-src 'nonce-${nonce}'`,
+      ].join("; ") +
+      ';"';
+    const shellDefaults = await getDtShellDefaults();
 
     // es6-string-html extension is needed for HTML highlighting
     return /*html*/ `
@@ -120,10 +99,10 @@ class WebviewPanelManager implements vscode.WebviewPanelSerializer {
             <script nonce="${nonce}">
               window.acquireVsCodeApi = acquireVsCodeApi;
               window.panelData = ${JSON.stringify(data)};
+              window.appShellDefaults = ${JSON.stringify(shellDefaults)};
             </script>
           </head>
           <body>
-            <noscript>You need to enable JavaScript to run this app.</noscript>
             <div id="root"></div>
             <script nonce="${nonce}" src="${scriptUri}"></script>
           </body>
@@ -174,10 +153,16 @@ class WebviewPanelManager implements vscode.WebviewPanelSerializer {
     );
 
     // Set the HTML content for the panel
-    panel.webview.html = this._getWebviewContent(panel.webview, data);
+    this._getWebviewContent(panel.webview, data)
+      .then(html => {
+        panel.webview.html = html;
 
-    // Keep track of panel reference
-    this.currentPanels.set(viewType, panel);
+        // Keep track of panel reference
+        this.currentPanels.set(viewType, panel);
+      })
+      .catch(err => {
+        logger.error(`Error setting webview content: ${err}`, ...this.logTrace);
+      });
   }
 
   /**

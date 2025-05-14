@@ -17,18 +17,15 @@
 import {
   Modal,
   showToast,
-  Flex,
   FieldSet,
   FormField,
   RadioGroup,
   Radio,
-  Container,
-  Text,
   Switch,
-  Button,
   SelectV2,
   Label,
 } from "@dynatrace/strato-components-preview";
+import { Flex, Container, Text, Button } from "@dynatrace/strato-components";
 import { WarningIcon } from "@dynatrace/strato-icons";
 import React, { useEffect, useState } from "react";
 import { UseFormRegister, useForm } from "react-hook-form";
@@ -39,7 +36,7 @@ import {
   SimulationLocation,
   SimulationSpecs,
   SimulatorStatus,
-} from "src/app/interfaces/simulator";
+} from "../../interfaces/simulator";
 
 interface RemoteTargetsFieldSetProps {
   targets: RemoteTarget[];

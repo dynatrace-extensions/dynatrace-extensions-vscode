@@ -14,7 +14,8 @@
   limitations under the License.
  */
 
-import { Button, ProgressCircle, Tooltip } from "@dynatrace/strato-components-preview";
+import { Button, ProgressCircle } from "@dynatrace/strato-components";
+import { Tooltip } from "@dynatrace/strato-components-preview";
 import {
   CriticalIcon,
   PlayIcon,
@@ -23,9 +24,9 @@ import {
   WarningIcon,
 } from "@dynatrace/strato-icons";
 import React from "react";
-import { SIMULATOR_START_CMD, SIMULATOR_STOP_CMD } from "src/app/constants/constants";
-import { SimulationConfig, SimulatorStatus } from "src/app/interfaces/simulator";
-import { triggerCommand } from "src/app/utils/app-utils";
+import { SIMULATOR_START_CMD, SIMULATOR_STOP_CMD } from "../../constants/constants";
+import { SimulationConfig, SimulatorStatus } from "../../interfaces/simulator";
+import { triggerCommand } from "../../utils/app-utils";
 
 interface StateButtonProps {
   currentConfig: SimulationConfig | undefined;

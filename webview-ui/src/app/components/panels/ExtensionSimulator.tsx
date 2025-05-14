@@ -14,8 +14,8 @@
   limitations under the License.
  */
 
-import { AppHeader } from "@dynatrace/strato-components-preview";
 import React, { useState } from "react";
+import { AppHeader } from "@dynatrace/strato-components-preview/layouts";
 import { SimulatorData } from "src/app/interfaces/simulator";
 import { SimulatorExecutions } from "../extensionSimulator/SimulatorExecutions";
 import { SimulatorTargets } from "../extensionSimulator/SimulatorTargets";
@@ -28,26 +28,24 @@ export const ExtensionSimulator = ({ data }: ExtensionSimulatorProps) => {
   const [page, setPage] = useState("executions");
   const { targets } = data;
 
-  const handleExecutionsClick = () => {
-    setPage("executions");
-  };
-
-  const handleTargetsClick = () => {
-    setPage("targets");
-  };
-
   return (
     <>
       <AppHeader>
-        <AppHeader.NavItems>
-          <AppHeader.AppNavLink appName='' href='' />
-          <AppHeader.NavItem onClick={handleExecutionsClick} isSelected={page === "executions"}>
+        <AppHeader.Navigation>
+          <AppHeader.Logo style={{ display: "none" }} />
+          <AppHeader.NavigationItem
+            onClick={() => setPage("executions")}
+            isSelected={page === "executions"}
+          >
             Simulator Executions
-          </AppHeader.NavItem>
-          <AppHeader.NavItem onClick={handleTargetsClick} isSelected={page === "targets"}>
+          </AppHeader.NavigationItem>
+          <AppHeader.NavigationItem
+            onClick={() => setPage("targets")}
+            isSelected={page === "targets"}
+          >
             Remote Targets
-          </AppHeader.NavItem>
-        </AppHeader.NavItems>
+          </AppHeader.NavigationItem>
+        </AppHeader.Navigation>
       </AppHeader>
       {page === "targets" && <SimulatorTargets targets={targets} />}
       {page === "executions" && <SimulatorExecutions {...data} />}

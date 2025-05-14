@@ -15,24 +15,20 @@
  */
 
 import {
-  Button,
-  Container,
   FieldSet,
-  Flex,
   FormField,
   Modal,
   Radio,
   RadioGroup,
   TextInput,
   showToast,
-  Text,
-  ExternalLink,
   Label,
 } from "@dynatrace/strato-components-preview";
+import { Button, Container, Flex, Text, ExternalLink } from "@dynatrace/strato-components";
 import { WarningIcon } from "@dynatrace/strato-icons";
 import React, { useEffect, useState } from "react";
 import { useForm } from "react-hook-form";
-import { EecType, OsType, RemoteTarget } from "src/app/interfaces/simulator";
+import { EecType, OsType, RemoteTarget } from "../../interfaces/simulator";
 
 interface TargetRegistrationFormProps {
   modalOpen: boolean;
