@@ -966,6 +966,7 @@ type CardMeta = {
     | "LOGS"
     | "EVENTS"
     | "METRIC_TABLE"
+    | "HEALTH_CARD"
     | "INJECTIONS";
 };
 
@@ -1026,6 +1027,7 @@ export function getDefinedCardsMeta(
   cardType?:
     | "entitiesListCards"
     | "chartsCards"
+    | "healthCards"
     | "eventsCards"
     | "logsCards"
     | "messageCards"
@@ -1089,6 +1091,16 @@ export function getDefinedCardsMeta(
       mtc.forEach(card => {
         if (cards.findIndex(c => c.key === card.key) === -1) {
           cards.push({ key: card.key, type: "METRIC_TABLE" });
+        }
+      });
+    }
+  }
+  if (!cardType || cardType === "healthCards") {
+    const mtc = extension.screens?.[screenIdx].healthCards;
+    if (mtc) {
+      mtc.forEach(card => {
+        if (cards.findIndex(c => c.key === card.key) === -1) {
+          cards.push({ key: card.key, type: "HEALTH_CARD" });
         }
       });
     }
