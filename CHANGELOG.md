@@ -1,5 +1,15 @@
 # Change Log
 
+## Version 2.8.0 (15.05.2025)
+
+### 🪲 Fixed in this version:
+  - [#263 - Health cards diagnostics stopping build](https://github.com/dynatrace-extensions/dynatrace-extensions-vscode/issues/263)
+
+### ✨ New in this version:
+  - [#267 - Dashboard generation - Platform documents](https://github.com/dynatrace-extensions/dynatrace-extensions-vscode/pull/267)
+
+---
+
 ## Version 2.7.1 (13.05.2025)
 
 ### 🪲 Fixed in this version:
