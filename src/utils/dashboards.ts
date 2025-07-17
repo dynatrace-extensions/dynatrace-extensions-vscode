@@ -58,16 +58,7 @@ const dashboardJsonTemplate: GrailDashboard = {
       columnsCount: 40,
     },
   },
-  variables: [
-    {
-      key: "TenantUrl",
-      type: "code",
-      visible: false,
-      input:
-        'import { getEnvironmentUrl } from "@dynatrace-sdk/app-environment"\n\nexport default function () {\n  return [getEnvironmentUrl()];\n}',
-      multiple: false,
-    },
-  ],
+  variables: [],
   tiles: {
     // All tiles dynamically added
   },
@@ -76,8 +67,8 @@ const dashboardJsonTemplate: GrailDashboard = {
   },
 };
 
-const metricTableQuerySingle = `timeseries {\n  metric1=avg(\`${TemplateText.metric1Key}\`)},\nby: {\`dt.entity.${TemplateText.entityType}\`}\n| fieldsAdd entity_name = entityName(\`dt.entity.${TemplateText.entityType}\`)\n| fieldsAdd entity_id = \`dt.entity.${TemplateText.entityType}\`\n| fieldsAdd entity_url = concat($TenantUrl, "/ui/apps/dynatrace.classic.technologies/ui/entity/", entity_id)\n| fieldsAdd entity = concat("[", entity_name, "]", "(", entity_url, ")")\n| fieldsAdd \`${TemplateText.metric1Name}\` = arrayLast(metric1)\n| sort entity_name asc\n| fields entity, \`${TemplateText.metric1Name}\`\n| limit 20`;
-const metricTableQueryDouble = `timeseries {\n  metric1=avg(\`${TemplateText.metric1Key}\`),\n  metric2=avg(\`${TemplateText.metric2Key}\`)\n},\nby: {\`dt.entity.${TemplateText.entityType}\`}\n| fieldsAdd entity_name = entityName(\`dt.entity.${TemplateText.entityType}\`)\n| fieldsAdd entity_id = \`dt.entity.${TemplateText.entityType}\`\n| fieldsAdd entity_url = concat($TenantUrl, "/ui/apps/dynatrace.classic.technologies/ui/entity/", entity_id)\n| fieldsAdd entity = concat("[", entity_name, "]", "(", entity_url, ")")\n| fieldsAdd \`${TemplateText.metric1Name}\` = arrayLast(metric1)\n| fieldsAdd \`${TemplateText.metric2Name}\` = arrayLast(metric2)\n| sort entity_name asc\n| fields entity, \`${TemplateText.metric1Name}\`, \`${TemplateText.metric2Name}\`\n| limit 20`;
+const metricTableQuerySingle = `timeseries {\n  metric1=avg(\`${TemplateText.metric1Key}\`)},\nby: {\`dt.entity.${TemplateText.entityType}\`}\n| fieldsAdd entity_name = entityName(\`dt.entity.${TemplateText.entityType}\`)\n| fieldsAdd entity_id = \`dt.entity.${TemplateText.entityType}\`\n| fieldsAdd entity_url = concat("/ui/apps/dynatrace.classic.technologies/ui/entity/", entity_id)\n| fieldsAdd entity = concat("[", entity_name, "]", "(", entity_url, ")")\n| fieldsAdd \`${TemplateText.metric1Name}\` = arrayLast(metric1)\n| sort entity_name asc\n| fields entity, \`${TemplateText.metric1Name}\`\n| limit 20`;
+const metricTableQueryDouble = `timeseries {\n  metric1=avg(\`${TemplateText.metric1Key}\`),\n  metric2=avg(\`${TemplateText.metric2Key}\`)\n},\nby: {\`dt.entity.${TemplateText.entityType}\`}\n| fieldsAdd entity_name = entityName(\`dt.entity.${TemplateText.entityType}\`)\n| fieldsAdd entity_id = \`dt.entity.${TemplateText.entityType}\`\n| fieldsAdd entity_url = concat("/ui/apps/dynatrace.classic.technologies/ui/entity/", entity_id)\n| fieldsAdd entity = concat("[", entity_name, "]", "(", entity_url, ")")\n| fieldsAdd \`${TemplateText.metric1Name}\` = arrayLast(metric1)\n| fieldsAdd \`${TemplateText.metric2Name}\` = arrayLast(metric2)\n| sort entity_name asc\n| fields entity, \`${TemplateText.metric1Name}\`, \`${TemplateText.metric2Name}\`\n| limit 20`;
 
 const TemplateTile = {
   logo: {
@@ -92,7 +83,7 @@ const TemplateTile = {
   },
   title: {
     type: "markdown",
-    content: `## Overview of ${TemplateText.extName} extension data\n\nStart here to navigate to the extension configuration and entity pages to view charts displaying data collected.\n\n-----\n#### [⚙️ Configure Extension]($TenantUrl/ui/apps/dynatrace.extensions.manager/configurations/${TemplateText.extId}/configs)\n#### [📖 Documentation]($TenantUrl/ui/apps/dynatrace.extensions.manager/configurations/${TemplateText.extId}/details)`,
+    content: `## Overview of ${TemplateText.extName} extension data\n\nStart here to navigate to the extension configuration and entity pages to view charts displaying data collected.\n\n-----\n#### [⚙️ Configure Extension](/ui/apps/dynatrace.extensions.manager/configurations/${TemplateText.extId}/configs)\n#### [📖 Documentation](/ui/apps/dynatrace.extensions.manager/configurations/${TemplateText.extId}/details)`,
     layout: {
       x: 3,
       y: 0,
@@ -570,7 +561,7 @@ export function buildPlatformDashboard(
   let entityCountExtraRows = 0; // Wrapper
   const { layout: eLinkLayout, ...newEntityLinks } = TemplateTile.entityLinks;
   // TODO gen3 link / app instead
-  const entityLinkString = `* [${TemplateText.entityName}]($TenantUrl/ui/apps/dynatrace.classic.technologies/ui/entity/list/${TemplateText.entityType})`;
+  const entityLinkString = `* [${TemplateText.entityName}](/ui/apps/dynatrace.classic.technologies/ui/entity/list/${TemplateText.entityType})`;
   const topologyTypes = extension.topology?.types ?? [];
   const entityLinkStringList: string[] = [];
   const tileECountStart = tileCountNow;
@@ -766,7 +757,7 @@ export function buildPlatformDashboard(
     }
 
     chartMetrics.forEach(metricMeta => {
-      const newMetricChart = { ...TemplateTile.metricsChart };
+      const newMetricChart = structuredClone(TemplateTile.metricsChart); // AxisLabels get updated and are deeply nested
       newMetricChart.title = metricMeta.displayName;
       newMetricChart.query = newMetricChart.query.replace(TemplateText.metricKey, metricMeta.key);
       newMetricChart.query = newMetricChart.query.replace(
