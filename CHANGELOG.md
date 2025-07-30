@@ -1,5 +1,14 @@
 # Change Log
 
+
+## Version 2.8.1 (30.07.2025)
+
+### 🪲 Fixed in this version:
+  - Platform dashboards no longer require coded variables
+  - Labels on chart axes for generated platform dashboards are relevant to the metric
+
+---
+
 ## Version 2.8.0 (15.05.2025)
 
 ### 🪲 Fixed in this version:
