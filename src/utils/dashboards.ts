@@ -767,7 +767,7 @@ export function buildPlatformDashboard(
         x: 0,
         y: metricStartY,
         w: metricChartWidth,
-        h: metricChartHeight,
+        h: PlatformDashboardSize.metricChartHeight,
       };
       tileCountNow++;
     }
