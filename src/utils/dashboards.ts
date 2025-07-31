@@ -15,6 +15,18 @@ export const TemplateText = {
   metric2Name: "<METRIC_NAME2>",
 } as const;
 
+export const PlatformDashboardSize = {
+  totalColumnsWidth: 24, // Recommended number of dashboard columns for responsive sizing
+  logoImageWidth: 2,
+  entityLinksTileWidth: 4,
+  entityCountTileWidth: 4,
+  entityCountTileHeight: 3,
+  logoOverviewHeight: 4,
+  dividerHeadingHeight: 1,
+  metricChartHeight: 4,
+  calculatedValue: -1,
+};
+
 interface Tile {
   type: string;
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
@@ -55,7 +67,7 @@ const dashboardJsonTemplate: GrailDashboard = {
   settings: {
     gridLayout: {
       mode: "responsive",
-      columnsCount: 40,
+      columnsCount: PlatformDashboardSize.totalColumnsWidth,
     },
   },
   variables: [],
@@ -77,18 +89,18 @@ const TemplateTile = {
     layout: {
       x: 0,
       y: 0,
-      w: 3,
-      h: 4,
+      w: PlatformDashboardSize.logoImageWidth,
+      h: PlatformDashboardSize.logoOverviewHeight,
     },
   },
   title: {
     type: "markdown",
     content: `## Overview of ${TemplateText.extName} extension data\n\nStart here to navigate to the extension configuration and entity pages to view charts displaying data collected.\n\n-----\n#### [⚙️ Configure Extension](/ui/apps/dynatrace.extensions.manager/configurations/${TemplateText.extId}/configs)\n#### [📖 Documentation](/ui/apps/dynatrace.extensions.manager/configurations/${TemplateText.extId}/details)`,
     layout: {
-      x: 3,
+      x: PlatformDashboardSize.logoImageWidth,
       y: 0,
-      w: 37,
-      h: 4,
+      w: PlatformDashboardSize.totalColumnsWidth - PlatformDashboardSize.logoImageWidth,
+      h: PlatformDashboardSize.logoOverviewHeight,
     },
   },
   currentlyMonitoring: {
@@ -97,9 +109,9 @@ const TemplateTile = {
     content: "### Currently Monitoring\n",
     layout: {
       x: 0,
-      y: 4,
-      w: 40,
-      h: 1,
+      y: PlatformDashboardSize.logoOverviewHeight,
+      w: PlatformDashboardSize.totalColumnsWidth,
+      h: PlatformDashboardSize.dividerHeadingHeight,
     },
   },
   entityCount: {
@@ -244,10 +256,10 @@ const TemplateTile = {
     type: "markdown",
     content: "#### 🔗 Navigate to entities:\n",
     layout: {
-      x: 30, // default
-      y: -1, // calculated
-      w: 10, // default
-      h: 3, // default
+      x: PlatformDashboardSize.totalColumnsWidth - PlatformDashboardSize.entityLinksTileWidth, // default 20
+      y: PlatformDashboardSize.calculatedValue,
+      w: PlatformDashboardSize.entityLinksTileWidth, // default 4
+      h: PlatformDashboardSize.calculatedValue,
     },
   },
   metricsTitle: {
@@ -255,9 +267,9 @@ const TemplateTile = {
     content: "## Metric Summary 📈\n",
     layout: {
       x: 0,
-      y: -1, // calculated
-      w: 40,
-      h: 1,
+      y: PlatformDashboardSize.calculatedValue,
+      w: PlatformDashboardSize.totalColumnsWidth,
+      h: PlatformDashboardSize.dividerHeadingHeight,
     },
   },
   metricsSection: {
@@ -265,9 +277,9 @@ const TemplateTile = {
     content: `### ${TemplateText.entityName}`,
     layout: {
       x: 0,
-      y: -1, // calculated
-      w: 40,
-      h: 1,
+      y: PlatformDashboardSize.calculatedValue,
+      w: PlatformDashboardSize.totalColumnsWidth,
+      h: PlatformDashboardSize.dividerHeadingHeight,
     },
   },
   metricsTable: {
@@ -491,9 +503,9 @@ const TemplateTile = {
     content: "\n",
     layout: {
       x: 0,
-      y: -1, // calculated
-      w: 40,
-      h: 1,
+      y: PlatformDashboardSize.calculatedValue,
+      w: PlatformDashboardSize.totalColumnsWidth,
+      h: PlatformDashboardSize.dividerHeadingHeight,
     },
   },
 };
@@ -524,7 +536,6 @@ export function buildPlatformDashboard(
   includeMetrics: boolean = true,
 ): string {
   const newDashboard = { ...dashboardJsonTemplate } as GrailDashboard;
-  const dashboardRowWidth = 40;
   let tileCountNow = 1;
 
   // title, config link, doc link
@@ -552,12 +563,14 @@ export function buildPlatformDashboard(
   tileCountNow += 1;
 
   // Entity Links and Data tiles
-  const eCountStartY = 5;
-  const eCountTileWidth = 6;
-  const eCountTileHeight = 3;
-  const eCountTileTotalWidth = 30;
+  const eCountStartY =
+    PlatformDashboardSize.logoOverviewHeight + PlatformDashboardSize.dividerHeadingHeight; // Default 5
+  const eCountTileTotalWidth =
+    PlatformDashboardSize.totalColumnsWidth - PlatformDashboardSize.entityLinksTileWidth; // Default 20
   let firstRowlastTileXPos = 0;
-  const eCountTilesPerRow = Math.floor(eCountTileTotalWidth / eCountTileWidth);
+  const eCountTilesPerRow = Math.floor(
+    eCountTileTotalWidth / PlatformDashboardSize.entityCountTileWidth,
+  );
   let entityCountExtraRows = 0; // Wrapper
   const { layout: eLinkLayout, ...newEntityLinks } = TemplateTile.entityLinks;
   // TODO gen3 link / app instead
@@ -582,26 +595,28 @@ export function buildPlatformDashboard(
       eType.name,
     );
 
-    // Tiles should wrap around when xPos >= 30 (space for navigate to entities)
+    // Tiles should wrap around when xPos >= eCountTileTotalWidth (space for navigate to entities)
     const tileDrawNumber = tileCountNow - tileECountStart; // 0, 1, 2, 3, 4, 5, 6
-    const xTotalStart = tileDrawNumber * eCountTileWidth;
-    const xTotalEnd = xTotalStart + eCountTileWidth;
-    const xPosition = (tileDrawNumber % eCountTilesPerRow) * eCountTileWidth;
+    const xTotalStart = tileDrawNumber * PlatformDashboardSize.entityCountTileWidth;
+    const xTotalEnd = xTotalStart + PlatformDashboardSize.entityCountTileWidth;
+    const xPosition =
+      (tileDrawNumber % eCountTilesPerRow) * PlatformDashboardSize.entityCountTileWidth;
     if (xTotalEnd > eCountTileTotalWidth) {
       entityCountExtraRows = Math.floor(xTotalEnd / eCountTileTotalWidth);
     }
-    const yPosition = eCountStartY + entityCountExtraRows * eCountTileHeight;
+    const yPosition =
+      eCountStartY + entityCountExtraRows * PlatformDashboardSize.entityCountTileHeight;
 
     if (entityCountExtraRows === 0) {
-      firstRowlastTileXPos = xPosition + eCountTileWidth;
+      firstRowlastTileXPos = xPosition + PlatformDashboardSize.entityCountTileWidth;
     }
 
     newDashboard.tiles[String(tileCountNow)] = newEntityCountData;
     newDashboard.layouts[String(tileCountNow)] = {
       x: xPosition,
       y: yPosition,
-      w: eCountTileWidth,
-      h: eCountTileHeight,
+      w: PlatformDashboardSize.entityCountTileWidth,
+      h: PlatformDashboardSize.entityCountTileHeight,
     };
 
     tileCountNow++;
@@ -609,9 +624,11 @@ export function buildPlatformDashboard(
 
   newEntityLinks.content = newEntityLinks.content + entityLinkStringList.join("\n");
   eLinkLayout.y = eCountStartY;
-  eLinkLayout.h = eCountTileHeight + entityCountExtraRows * eCountTileHeight;
+  eLinkLayout.h =
+    PlatformDashboardSize.entityCountTileHeight +
+    entityCountExtraRows * PlatformDashboardSize.entityCountTileHeight;
   if (entityCountExtraRows === 0) {
-    eLinkLayout.w = dashboardRowWidth - firstRowlastTileXPos;
+    eLinkLayout.w = PlatformDashboardSize.totalColumnsWidth - firstRowlastTileXPos;
   } else {
     firstRowlastTileXPos = eCountTileTotalWidth;
   }
@@ -680,8 +697,7 @@ export function buildPlatformDashboard(
   // Charts - 1 overview table (2 metrics) + x basic line charts
   const maxMetricsPerType = 2; // set -1 for all.
   const metricChartsPerRow = 3;
-  const metricChartWidth = Math.floor(dashboardRowWidth / metricChartsPerRow);
-  const metricChartHeight = 4;
+  const metricChartWidth = Math.floor(PlatformDashboardSize.totalColumnsWidth / metricChartsPerRow);
 
   entityMetricMap.forEach((metricList, eTypeKey) => {
     const entityDisplayName = topologyMap.get(eTypeKey) ?? eTypeKey;
@@ -751,7 +767,7 @@ export function buildPlatformDashboard(
         x: 0,
         y: metricStartY,
         w: metricChartWidth,
-        h: metricChartHeight,
+        h: PlatformDashboardSize.metricChartHeight,
       };
       tileCountNow++;
     }
@@ -768,29 +784,33 @@ export function buildPlatformDashboard(
       newMetricChart.visualizationSettings.chartSettings.leftYAxisSettings.label =
         metricMeta.displayName;
 
-      // Tiles should wrap around when xPos >= dashboardRowWidth (40)
+      // Tiles will automatically wrap around
       const tileDrawNumber = tileCountNow - tileMetricStart;
       const xTotalStart = tileDrawNumber * metricChartWidth;
       const xTotalEnd = xTotalStart + metricChartWidth;
       const xPosition = (tileDrawNumber % metricChartsPerRow) * metricChartWidth;
-      if (xTotalEnd > dashboardRowWidth) {
-        metricChartExtraRows = Math.floor(xTotalEnd / dashboardRowWidth);
+      if (xTotalEnd > PlatformDashboardSize.totalColumnsWidth) {
+        metricChartExtraRows = Math.floor(xTotalEnd / PlatformDashboardSize.totalColumnsWidth);
       }
-      const yPosition = metricStartY + metricChartExtraRows * metricChartHeight;
+      const yPosition =
+        metricStartY + metricChartExtraRows * PlatformDashboardSize.metricChartHeight;
 
       newDashboard.tiles[String(tileCountNow)] = newMetricChart;
       newDashboard.layouts[String(tileCountNow)] = {
         x: xPosition,
         y: yPosition,
         w: metricChartWidth,
-        h: metricChartHeight,
+        h: PlatformDashboardSize.metricChartHeight,
       };
 
       tileCountNow++;
     });
 
     // Divider
-    metricStartY = metricStartY + metricChartHeight + metricChartExtraRows * metricChartHeight;
+    metricStartY =
+      metricStartY +
+      PlatformDashboardSize.metricChartHeight +
+      metricChartExtraRows * PlatformDashboardSize.metricChartHeight;
     const { layout: metricSpaceLayout, ...blankMetricTile } = TemplateTile.blankDivider;
     newDashboard.tiles[String(tileCountNow)] = blankMetricTile;
     newDashboard.layouts[String(tileCountNow)] = {
