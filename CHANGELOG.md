@@ -4,8 +4,20 @@
 ## Version 2.8.1 (30.07.2025)
 
 ### 🪲 Fixed in this version:
-  - Platform dashboards no longer require coded variables
-  - Labels on chart axes for generated platform dashboards are relevant to the metric
+
+- [Platform dashboards no longer require coded variables](https://github.com/dynatrace-extensions/dynatrace-extensions-vscode/pull/268)
+- [Labels on chart axes for generated platform dashboards are relevant to the metric](https://github.com/dynatrace-extensions/dynatrace-extensions-vscode/pull/268)
+
+### 🚀 Improved in this version:
+
+- [Platform dashboards use the recommended 6 tile horizontal layout](https://github.com/dynatrace-extensions/dynatrace-extensions-vscode/pull/269)
+
+### 🔒 Security patches:
+
+- [form-data uses unsafe random function in form-data for choosing boundary](https://github.com/dynatrace-extensions/dynatrace-extensions-vscode/security/dependabot/49)
+- [tar-fs can extract outside the specified dir with a specific tarball](https://github.com/dynatrace-extensions/dynatrace-extensions-vscode/security/dependabot/46)
+- [brace-expansion Regular Expression Denial of Service vulnerability](https://github.com/dynatrace-extensions/dynatrace-extensions-vscode/security/dependabot/47)
+- [esbuild enables any website to send any requests to the development server and read the response](https://github.com/dynatrace-extensions/dynatrace-extensions-vscode/security/dependabot/41)
 
 ---
 
