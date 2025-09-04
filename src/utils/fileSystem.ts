@@ -862,7 +862,7 @@ export const bundleFolder = (zip: JSZip, folderPath: string, prev: string = ""):
 };
 
 /**
- * Extracts all contents of an archive int othe give folder path.
+ * Extracts all contents of an archive into the give folder path.
  * @param zip archive to extract
  * @param destPath destination path
  */

@@ -409,8 +409,8 @@ async function pythonExtensionSetup(
 }
 /**
  * Sets up the workspace for the example Python extension.
- * Checks if dt-sdk is available, installs dt-sdk if needed, and creates a python
- * extension.
+ * Downloads the extension files from the github Repo as a zip and unpacks them.
+ * Checks if dt-sdk is available, installs dt-sdk if needed.
  * @param rootPath path of the workspace (extension is created in its root)
  * @param tempPath the workspace storage (provided by vscode) for temporary work
  * @returns
