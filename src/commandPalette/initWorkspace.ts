@@ -73,6 +73,37 @@ const PROJECT_TYPES = {
     label: "Existing 2.0 Extension",
     detail: "Start by downloading an extension already deployed in your tenant.",
   },
+  exampleExtension: {
+    label: "Example 2.0 Extension",
+    detail: "Start by using example extension for any datasource.",
+  },
+};
+
+const EXAMPLE_SELECTION = {
+  python_example: {
+    label: "Example Python Extension",
+    detail: "Start with an example Python Extension to use as a reference.",
+  },
+  snmp_example: {
+    label: "Example SNMP Extension",
+    detail: "Start with an example SNMP Extension to use as a reference.",
+  },
+  jmx_example: {
+    label: "Example JMX Extension",
+    detail: "Start with an example JMX Extension to use as a reference.",
+  },
+  prometheus_example: {
+    label: "Example Prometheus Extension",
+    detail: "Start with an example Prometheus Extension to use as a reference.",
+  },
+  sql_example: {
+    label: "Example SQL Extension",
+    detail: "Start with an example SQL Extension to use as a reference.",
+  },
+  wmi_example: {
+    label: "Example WMI Extension",
+    detail: "Start with an example WMI extension to use as a reference.",
+  },
 };
 
 export const initWorkspaceWorkflow = async () => {
@@ -231,6 +262,7 @@ export async function initWorkspace(dt: Dynatrace, callback?: () => unknown) {
 
       // Determine type of extension project
       let projectType;
+      let exampleType;
       if (getExtensionFilePath()) {
         logger.debug(
           "Extension manifest detected. Choosing 'default extension' starter template.",
@@ -279,6 +311,20 @@ export async function initWorkspace(dt: Dynatrace, callback?: () => unknown) {
         }
         case PROJECT_TYPES.existingExtension:
           await existingExtensionSetup(dt, rootPath);
+          break;
+        case PROJECT_TYPES.exampleExtension:
+          logger.debug("Prompting user for example selection", ...fnLogTrace);
+          exampleType = await vscode.window.showQuickPick(Object.values(EXAMPLE_SELECTION), {
+            canPickMany: false,
+            title: "What type of example extension would you like to start with?",
+            placeHolder: "Example Python Extension",
+            ignoreFocusOut: true,
+          });
+          switch (exampleType) {
+            case EXAMPLE_SELECTION.python_example:
+              await pythonExampleExtensionSetup(rootPath, progress);
+              break;
+          }
           break;
         default:
           if (schemaVersion) {
@@ -360,6 +406,63 @@ async function pythonExtensionSetup(
     moveSync(path.resolve(tempPath, chosenName, p), path.resolve(rootPath, p)),
   );
   rmdirSync(path.resolve(tempPath, chosenName));
+}
+/**
+ * Sets up the workspace for the example Python extension.
+ * Checks if dt-sdk is available, installs dt-sdk if needed, and creates a python
+ * extension.
+ * @param rootPath path of the workspace (extension is created in its root)
+ * @param tempPath the workspace storage (provided by vscode) for temporary work
+ * @returns
+ */
+
+async function pythonExampleExtensionSetup(
+  rootPath: string,
+  progress: vscode.Progress<{
+    message?: string;
+    increment?: number;
+  }>,
+) {
+  const fnLogTrace = [...logTrace, "pythonExtensionSetup"];
+  logger.debug("Setting up the example python extension", ...fnLogTrace);
+  // Clone repo from github
+  const url =
+    "https://github.com/dynatrace-extensions/python-vscode-example/archive/refs/heads/main.zip";
+  // const url = "https://raw.githubusercontent.com/dynatrace-extensions/python-vscode-example/refs/heads/main/setup.py"
+  try {
+    const resp = await axios.get<ArrayBuffer>(url, { responseType: "arraybuffer" });
+    if (resp.status === 200) {
+    //   const setupPyContent = resp.data;
+    //   const setupPyPath = path.resolve(rootPath, "setup.py");
+    //   writeFileSync(setupPyPath, setupPyContent);
+      const exampleZip = resp.data;
+      logger.debug("Unzipping downloaded file.");
+      try {
+         // const testPath = path.resolve(rootPath, "test");
+        await extractZip(await new JSZip().loadAsync(exampleZip), rootPath);
+      } catch (err) {
+        logger.warn(
+          `Could not unzip file to ${rootPath}, it will have to be downloaded and unzipped manually.`,
+          ...fnLogTrace,
+        );
+        notify(
+          "ERROR",
+          `Could not unzip file from ${url}. It will have to be downloaded and unzipped manually.`,
+        );
+      }
+    }
+  } catch (err) {
+    logger.warn(
+      `Could not download repo, this will have to be manually downloaded from ${url}`,
+      ...fnLogTrace,
+    );
+    notify(
+      "ERROR",
+      `Could not download from ${url}. It will have to be downloaded and unzipped manually.`,
+    );
+  }
+  // Get correct python env
+  const envOptions = await getPythonVenvOpts();
 }
 
 /**
