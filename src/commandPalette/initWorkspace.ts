@@ -324,6 +324,46 @@ export async function initWorkspace(dt: Dynatrace, callback?: () => unknown) {
             case EXAMPLE_SELECTION.python_example:
               await pythonExampleExtensionSetup(rootPath, progress);
               break;
+            case EXAMPLE_SELECTION.sql_example:
+              await declarativeExampleExtensionSetup(
+                rootPath,
+                "sql",
+                "sql-vscode-example",
+                progress,
+              );
+              break;
+            case EXAMPLE_SELECTION.jmx_example:
+              await declarativeExampleExtensionSetup(
+                rootPath,
+                "jmx",
+                "jmx-vscode-example",
+                progress,
+              );
+              break;
+            case EXAMPLE_SELECTION.prometheus_example:
+              await declarativeExampleExtensionSetup(
+                rootPath,
+                "prometheus",
+                "prometheus-vscode-example",
+                progress,
+              );
+              break;
+            case EXAMPLE_SELECTION.snmp_example:
+              await declarativeExampleExtensionSetup(
+                rootPath,
+                "snmp",
+                "snmp-vscode-example",
+                progress,
+              );
+              break;
+            case EXAMPLE_SELECTION.wmi_example:
+              await declarativeExampleExtensionSetup(
+                rootPath,
+                "wmi",
+                "wmi-vscode-example",
+                progress,
+              );
+              break;
           }
           break;
         default:
@@ -422,7 +462,7 @@ async function pythonExampleExtensionSetup(
     increment?: number;
   }>,
 ) {
-  const fnLogTrace = [...logTrace, "pythonExtensionSetup"];
+  const fnLogTrace = [...logTrace, "pythonExampleExtensionSetup"];
   logger.debug("Setting up the example python extension", ...fnLogTrace);
   // 'Clone' repo from github
   const url =
@@ -501,6 +541,104 @@ async function pythonExampleExtensionSetup(
 
     notify("INFO", "Python example downloaded and unzipped successfully.", ...fnLogTrace);
   }
+}
+
+/**
+ * Sets up the workspace for the example declarative extension chosen.
+ * Downloads the extension files from the github repo as a zip and unpacks them.
+ * @param rootPath path of the workspace (extension is created in its root)
+ * @param dataSource dataSource of the declarative extension being used.
+ * @param extensionName name of the extension repository
+ * @returns
+ */
+async function declarativeExampleExtensionSetup(
+  rootPath: string,
+  dataSource: string,
+  extensionName: string,
+  progress: vscode.Progress<{
+    message?: string;
+    increment?: number;
+  }>,
+) {
+  const fnLogTrace = [...logTrace, "decalarativeExampleExtensionSetup"];
+  logger.debug(`Setting up the example ${dataSource} extension`, ...fnLogTrace);
+  // 'Clone' repo from github
+  const url =`https://github.com/dynatrace-extensions/${extensionName}/archive/refs/heads/main.zip`;
+  try {
+    const resp = await axios.get<ArrayBuffer>(url, { responseType: "arraybuffer" });
+    if (resp.status === 200) {
+      const exampleZip = resp.data;
+      logger.debug("Unzipping downloaded file.");
+      try {
+        const zip = await new JSZip().loadAsync(exampleZip);
+        logger.info(`Extracting zip into ${rootPath}`, ...logTrace, "extractZip");
+        const files = zip.files;
+        for (const relativePath in files) {
+          const file = files[relativePath];
+          // Unpack the directory to the rootPath directly.
+          const pathArr = relativePath.split(path.sep);
+          pathArr[0] = `.${path.sep}`;
+          const newPath = pathArr.join(path.sep);
+          if (file) {
+            const filePath = path.join(rootPath, newPath);
+            if (file.dir) {
+              if (!existsSync(filePath)) {
+                logger.info(`Creating dir: ${filePath}`);
+                mkdirSync(filePath, { recursive: true });
+              }
+            } else {
+              const fileContent = await file.async("nodebuffer");
+
+              if (relativePath.endsWith(".zip")) {
+                const innerZip = await JSZip.loadAsync(fileContent);
+                await extractZip(innerZip, rootPath);
+              } else {
+                const basePath = filePath.split(path.sep).slice(0, -1).join(path.sep);
+                if (!existsSync(basePath)) {
+                  mkdirSync(basePath, { recursive: true });
+                }
+                writeFileSync(filePath, fileContent);
+              }
+            }
+          }
+        }
+      } catch (err) {
+        logger.warn(
+          `Could not unzip file to ${rootPath}, it will have to be downloaded and unzipped manually.`,
+          ...fnLogTrace,
+        );
+        notify(
+          "ERROR",
+          `Could not unzip file. It will have to be downloaded and unzipped manually from: ${url}`,
+        );
+      }
+    }
+  } catch (err) {
+    logger.warn(
+      `Could not download repo, this will have to be manually downloaded from ${url}`,
+      ...fnLogTrace,
+    );
+    notify(
+      "ERROR",
+      `Could not download from ${url}. It will have to be downloaded and unzipped manually.`,
+    );
+  }
+  // // Get correct python env
+  // const envOptions = await getPythonVenvOpts();
+  // // Check: dt-sdk available?
+  // const dtSdkAvailable = await checkDtSdkPresent(undefined, undefined, envOptions);
+  // if (!dtSdkAvailable) {
+  //   progress.report({ message: "Installing dependencies. This may take a while." });
+  //   await runCommand(
+  //     "pip install --upgrade dt-extensions-sdk[cli]",
+  //     undefined,
+  //     undefined,
+  //     envOptions,
+  //   );
+
+  //   notify("INFO", "Python example downloaded and unzipped successfully.", ...fnLogTrace);
+  // }
+  notify("INFO", `${dataSource} example downloaded and unzipped successfully.`, ...fnLogTrace);
 }
 
 /**
