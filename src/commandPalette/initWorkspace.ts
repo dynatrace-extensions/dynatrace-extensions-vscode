@@ -541,6 +541,46 @@ async function pythonExampleExtensionSetup(
 
     notify("INFO", "Python example downloaded and unzipped successfully.", ...fnLogTrace);
   }
+  const context = getActivationContext();
+  const schemaVersion: string | undefined = context.workspaceState.get<string>("schemaVersion");
+  if (!schemaVersion) {
+    notify("ERROR", "Could not get schema");
+    return false;
+  }
+  const mainSchema = vscode.Uri.file(
+    path.join(path.join(context.globalStorageUri.fsPath, schemaVersion), "extension.schema.json"),
+  ).toString();
+  vscode.workspace
+    .getConfiguration()
+    .update("yaml.schemas", { [mainSchema]: "extension.yaml" })
+    .then(undefined, () => {
+      logger.error("Could not update configuration yaml.schemas", ...fnLogTrace);
+    });
+  try {
+    // If extension.yaml already exists, update the version there too
+    const extensionFile = getExtensionFilePath();
+    if (extensionFile) {
+      const extensionContent = readFileSync(extensionFile).toString();
+      writeFileSync(
+        extensionFile,
+        extensionContent.replace(
+          /^minDynatraceVersion: ("?[0-9.]+"?)/gm,
+          `minDynatraceVersion: ${schemaVersion}`,
+        ),
+      );
+    }
+  } catch (err) {
+    logger.notify(
+      "ERROR",
+      "Extension YAML was not updated. Schema loading only partially complete.",
+      ...logTrace,
+    );
+    logger.notify("ERROR", (err as Error).message, ...logTrace);
+    return false;
+  }
+
+  logger.notify("INFO", "Schema loading complete.", ...logTrace);
+  return true;
 }
 
 /**
@@ -563,7 +603,7 @@ async function declarativeExampleExtensionSetup(
   const fnLogTrace = [...logTrace, "decalarativeExampleExtensionSetup"];
   logger.debug(`Setting up the example ${dataSource} extension`, ...fnLogTrace);
   // 'Clone' repo from github
-  const url =`https://github.com/dynatrace-extensions/${extensionName}/archive/refs/heads/main.zip`;
+  const url = `https://github.com/dynatrace-extensions/${extensionName}/archive/refs/heads/main.zip`;
   try {
     const resp = await axios.get<ArrayBuffer>(url, { responseType: "arraybuffer" });
     if (resp.status === 200) {
@@ -623,22 +663,47 @@ async function declarativeExampleExtensionSetup(
       `Could not download from ${url}. It will have to be downloaded and unzipped manually.`,
     );
   }
-  // // Get correct python env
-  // const envOptions = await getPythonVenvOpts();
-  // // Check: dt-sdk available?
-  // const dtSdkAvailable = await checkDtSdkPresent(undefined, undefined, envOptions);
-  // if (!dtSdkAvailable) {
-  //   progress.report({ message: "Installing dependencies. This may take a while." });
-  //   await runCommand(
-  //     "pip install --upgrade dt-extensions-sdk[cli]",
-  //     undefined,
-  //     undefined,
-  //     envOptions,
-  //   );
-
-  //   notify("INFO", "Python example downloaded and unzipped successfully.", ...fnLogTrace);
-  // }
   notify("INFO", `${dataSource} example downloaded and unzipped successfully.`, ...fnLogTrace);
+  const context = getActivationContext();
+  const schemaVersion: string | undefined = context.workspaceState.get<string>("schemaVersion");
+  if (!schemaVersion) {
+    notify("ERROR", "Could not get schema");
+    return false;
+  }
+  const mainSchema = vscode.Uri.file(
+    path.join(path.join(context.globalStorageUri.fsPath, schemaVersion), "extension.schema.json"),
+  ).toString();
+  vscode.workspace
+    .getConfiguration()
+    .update("yaml.schemas", { [mainSchema]: "extension.yaml" })
+    .then(undefined, () => {
+      logger.error("Could not update configuration yaml.schemas", ...fnLogTrace);
+    });
+  try {
+    // If extension.yaml already exists, update the version there too
+    const extensionFile = getExtensionFilePath();
+    if (extensionFile) {
+      const extensionContent = readFileSync(extensionFile).toString();
+      writeFileSync(
+        extensionFile,
+        extensionContent.replace(
+          /^minDynatraceVersion: ("?[0-9.]+"?)/gm,
+          `minDynatraceVersion: ${schemaVersion}`,
+        ),
+      );
+    }
+  } catch (err) {
+    logger.notify(
+      "ERROR",
+      "Extension YAML was not updated. Schema loading only partially complete.",
+      ...logTrace,
+    );
+    logger.notify("ERROR", (err as Error).message, ...logTrace);
+    return false;
+  }
+
+  logger.notify("INFO", "Schema loading complete.", ...logTrace);
+  return true;
 }
 
 /**
