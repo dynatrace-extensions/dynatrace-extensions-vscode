@@ -541,46 +541,7 @@ async function pythonExampleExtensionSetup(
 
     notify("INFO", "Python example downloaded and unzipped successfully.", ...fnLogTrace);
   }
-  const context = getActivationContext();
-  const schemaVersion: string | undefined = context.workspaceState.get<string>("schemaVersion");
-  if (!schemaVersion) {
-    notify("ERROR", "Could not get schema");
-    return false;
-  }
-  const mainSchema = vscode.Uri.file(
-    path.join(path.join(context.globalStorageUri.fsPath, schemaVersion), "extension.schema.json"),
-  ).toString();
-  vscode.workspace
-    .getConfiguration()
-    .update("yaml.schemas", { [mainSchema]: "extension.yaml" })
-    .then(undefined, () => {
-      logger.error("Could not update configuration yaml.schemas", ...fnLogTrace);
-    });
-  try {
-    // If extension.yaml already exists, update the version there too
-    const extensionFile = getExtensionFilePath();
-    if (extensionFile) {
-      const extensionContent = readFileSync(extensionFile).toString();
-      writeFileSync(
-        extensionFile,
-        extensionContent.replace(
-          /^minDynatraceVersion: ("?[0-9.]+"?)/gm,
-          `minDynatraceVersion: ${schemaVersion}`,
-        ),
-      );
-    }
-  } catch (err) {
-    logger.notify(
-      "ERROR",
-      "Extension YAML was not updated. Schema loading only partially complete.",
-      ...logTrace,
-    );
-    logger.notify("ERROR", (err as Error).message, ...logTrace);
-    return false;
-  }
-
-  logger.notify("INFO", "Schema loading complete.", ...logTrace);
-  return true;
+  await changeSchemaExampleExtension(fnLogTrace);
 }
 
 /**
@@ -595,10 +556,10 @@ async function declarativeExampleExtensionSetup(
   rootPath: string,
   dataSource: string,
   extensionName: string,
-  progress: vscode.Progress<{
-    message?: string;
-    increment?: number;
-  }>,
+  // progress: vscode.Progress<{
+  //   message?: string;
+  //   increment?: number;
+  // }>,
 ) {
   const fnLogTrace = [...logTrace, "decalarativeExampleExtensionSetup"];
   logger.debug(`Setting up the example ${dataSource} extension`, ...fnLogTrace);
@@ -664,6 +625,10 @@ async function declarativeExampleExtensionSetup(
     );
   }
   notify("INFO", `${dataSource} example downloaded and unzipped successfully.`, ...fnLogTrace);
+  await changeSchemaExampleExtension(fnLogTrace);
+}
+
+async function changeSchemaExampleExtension(fnLogTrace: string[]) {
   const context = getActivationContext();
   const schemaVersion: string | undefined = context.workspaceState.get<string>("schemaVersion");
   if (!schemaVersion) {
