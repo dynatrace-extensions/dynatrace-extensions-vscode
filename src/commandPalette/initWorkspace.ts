@@ -325,44 +325,23 @@ export async function initWorkspace(dt: Dynatrace, callback?: () => unknown) {
               await pythonExampleExtensionSetup(rootPath, progress);
               break;
             case EXAMPLE_SELECTION.sql_example:
-              await declarativeExampleExtensionSetup(
-                rootPath,
-                "sql",
-                "sql-vscode-example",
-                progress,
-              );
+              await declarativeExampleExtensionSetup(rootPath, "sql", "sql-vscode-example");
               break;
             case EXAMPLE_SELECTION.jmx_example:
-              await declarativeExampleExtensionSetup(
-                rootPath,
-                "jmx",
-                "jmx-vscode-example",
-                progress,
-              );
+              await declarativeExampleExtensionSetup(rootPath, "jmx", "jmx-vscode-example");
               break;
             case EXAMPLE_SELECTION.prometheus_example:
               await declarativeExampleExtensionSetup(
                 rootPath,
                 "prometheus",
                 "prometheus-vscode-example",
-                progress,
               );
               break;
             case EXAMPLE_SELECTION.snmp_example:
-              await declarativeExampleExtensionSetup(
-                rootPath,
-                "snmp",
-                "snmp-vscode-example",
-                progress,
-              );
+              await declarativeExampleExtensionSetup(rootPath, "snmp", "snmp-vscode-example");
               break;
             case EXAMPLE_SELECTION.wmi_example:
-              await declarativeExampleExtensionSetup(
-                rootPath,
-                "wmi",
-                "wmi-vscode-example",
-                progress,
-              );
+              await declarativeExampleExtensionSetup(rootPath, "wmi", "wmi-vscode-example");
               break;
           }
           break;
@@ -462,70 +441,10 @@ async function pythonExampleExtensionSetup(
     increment?: number;
   }>,
 ) {
+  const extensionName = "python-vscode-example";
   const fnLogTrace = [...logTrace, "pythonExampleExtensionSetup"];
   logger.debug("Setting up the example python extension", ...fnLogTrace);
-  // 'Clone' repo from github
-  const url =
-    "https://github.com/dynatrace-extensions/python-vscode-example/archive/refs/heads/main.zip";
-  try {
-    const resp = await axios.get<ArrayBuffer>(url, { responseType: "arraybuffer" });
-    if (resp.status === 200) {
-      const exampleZip = resp.data;
-      logger.debug("Unzipping downloaded file.");
-      try {
-        const zip = await new JSZip().loadAsync(exampleZip);
-        logger.info(`Extracting zip into ${rootPath}`, ...logTrace, "extractZip");
-        const files = zip.files;
-        for (const relativePath in files) {
-          const file = files[relativePath];
-          // Unpack the directory to the rootPath directly.
-          const pathArr = relativePath.split(path.sep);
-          pathArr[0] = `.${path.sep}`;
-          const newPath = pathArr.join(path.sep);
-          if (file) {
-            const filePath = path.join(rootPath, newPath);
-            if (file.dir) {
-              if (!existsSync(filePath)) {
-                logger.info(`Creating dir: ${filePath}`);
-                mkdirSync(filePath, { recursive: true });
-              }
-            } else {
-              const fileContent = await file.async("nodebuffer");
-
-              if (relativePath.endsWith(".zip")) {
-                const innerZip = await JSZip.loadAsync(fileContent);
-                await extractZip(innerZip, rootPath);
-              } else {
-                const basePath = filePath.split(path.sep).slice(0, -1).join(path.sep);
-                if (!existsSync(basePath)) {
-                  mkdirSync(basePath, { recursive: true });
-                }
-                writeFileSync(filePath, fileContent);
-              }
-            }
-          }
-        }
-      } catch (err) {
-        logger.warn(
-          `Could not unzip file to ${rootPath}, it will have to be downloaded and unzipped manually.`,
-          ...fnLogTrace,
-        );
-        notify(
-          "ERROR",
-          `Could not unzip file. It will have to be downloaded and unzipped manually from: ${url}`,
-        );
-      }
-    }
-  } catch (err) {
-    logger.warn(
-      `Could not download repo, this will have to be manually downloaded from ${url}`,
-      ...fnLogTrace,
-    );
-    notify(
-      "ERROR",
-      `Could not download from ${url}. It will have to be downloaded and unzipped manually.`,
-    );
-  }
+  await unzipExampleExtension(fnLogTrace, rootPath, "python", extensionName);
   // Get correct python env
   const envOptions = await getPythonVenvOpts();
   // Check: dt-sdk available?
@@ -556,13 +475,27 @@ async function declarativeExampleExtensionSetup(
   rootPath: string,
   dataSource: string,
   extensionName: string,
-  // progress: vscode.Progress<{
-  //   message?: string;
-  //   increment?: number;
-  // }>,
 ) {
   const fnLogTrace = [...logTrace, "decalarativeExampleExtensionSetup"];
   logger.debug(`Setting up the example ${dataSource} extension`, ...fnLogTrace);
+  await unzipExampleExtension(fnLogTrace, rootPath, dataSource, extensionName);
+  await changeSchemaExampleExtension(fnLogTrace);
+}
+
+/**
+ * Downloads and unzips the example extensions from github into the rootpath
+ * @param fnLogTrace log trace
+ * @param rootPath path of the workspace (extension is created in its root)
+ * @param dataSource dataSource of the declarative extension being used.
+ * @param extensionName name of the extension repository
+ * @returns
+ */
+async function unzipExampleExtension(
+  fnLogTrace: string[],
+  rootPath: string,
+  dataSource: string,
+  extensionName: string,
+) {
   // 'Clone' repo from github
   const url = `https://github.com/dynatrace-extensions/${extensionName}/archive/refs/heads/main.zip`;
   try {
@@ -625,9 +558,15 @@ async function declarativeExampleExtensionSetup(
     );
   }
   notify("INFO", `${dataSource} example downloaded and unzipped successfully.`, ...fnLogTrace);
-  await changeSchemaExampleExtension(fnLogTrace);
 }
 
+/**
+ * Sets schema version to the one set in the initWorkspace flow.
+ * This function is necessary because the yaml asset pulled from github
+ * has its own version set and is pulled after loadScehma is initially handled.
+ * @param fnLogTrace
+ * @returns
+ */
 async function changeSchemaExampleExtension(fnLogTrace: string[]) {
   const context = getActivationContext();
   const schemaVersion: string | undefined = context.workspaceState.get<string>("schemaVersion");
