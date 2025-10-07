@@ -538,7 +538,7 @@ async function unzipExampleExtension(
         }
       } catch (err) {
         logger.warn(
-          `Could not unzip file to ${rootPath}, it will have to be downloaded and unzipped manually.`,
+          `Could not unzip file to ${rootPath}, it will have to be downloaded and unzipped manually from ${url}.`,
           ...fnLogTrace,
         );
         notify(
@@ -554,7 +554,7 @@ async function unzipExampleExtension(
     );
     notify(
       "ERROR",
-      `Could not download from ${url}. It will have to be downloaded and unzipped manually.`,
+      `Could not download files. They will have to be downloaded and unzipped manually from: ${url}`,
     );
   }
   notify("INFO", `${dataSource} example downloaded and unzipped successfully.`, ...fnLogTrace);
