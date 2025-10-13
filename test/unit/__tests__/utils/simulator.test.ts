@@ -16,9 +16,9 @@
 
 import * as fs from "fs";
 import * as path from "path";
+import { EecType, OsType, SimulationConfig } from "@common";
 import * as vscode from "vscode";
 import * as extension from "../../../../src/extension";
-import { EecType, OsType, SimulationConfig } from "../../../../src/interfaces/simulator";
 import {
   canSimulateDatasource,
   getDatasourceDir,

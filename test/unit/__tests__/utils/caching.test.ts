@@ -15,11 +15,11 @@
  */
 
 import * as path from "path";
+import { WmiQueryResult } from "@common";
 import axios from "axios";
 import * as yaml from "yaml";
 import { PromData } from "../../../../src/codeLens/prometheusScraper";
 import { ValidationStatus } from "../../../../src/codeLens/utils/selectorUtils";
-import { WmiQueryResult } from "../../../../src/codeLens/utils/wmiUtils";
 import * as extension from "../../../../src/extension";
 import { ExtensionStub } from "../../../../src/interfaces/extensionMeta";
 import * as tenantsTreeView from "../../../../src/treeViews/tenantsTreeView";

@@ -18,14 +18,8 @@
  * UTILITIES RELATED TO SIMULATING EXTENSIONS
  ********************************************************************************/
 
+import { EecType, OsType, RemoteTarget, SimulationConfig, SimulationLocation } from "@common";
 import * as vscode from "vscode";
-import {
-  EecType,
-  OsType,
-  RemoteTarget,
-  SimulationConfig,
-  SimulationLocation,
-} from "../interfaces/simulator";
 import { getSimulatorTargets } from "./fileSystem";
 import * as logger from "./logging";
 

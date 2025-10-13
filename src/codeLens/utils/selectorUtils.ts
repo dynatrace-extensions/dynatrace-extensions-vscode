@@ -14,17 +14,16 @@
   limitations under the License.
  */
 
+import { PanelDataType, ViewType, MetricSeriesCollection } from "@common";
 import * as vscode from "vscode";
 import { Dynatrace } from "../../dynatrace-api/dynatrace";
 import { DynatraceAPIError } from "../../dynatrace-api/errors";
-import { MetricSeriesCollection } from "../../dynatrace-api/interfaces/metrics";
 import { Entity } from "../../dynatrace-api/interfaces/monitoredEntities";
 import { ExtensionStub } from "../../interfaces/extensionMeta";
 import { getDynatraceClient } from "../../treeViews/tenantsTreeView";
 import { checkTenantConnected } from "../../utils/conditionCheckers";
 import * as logger from "../../utils/logging";
 import { getBlockItemIndexAtLine, getParentBlocks } from "../../utils/yamlParsing";
-import { REGISTERED_PANELS } from "../../webviews/webview-panel-manager";
 import { renderPanel } from "../../webviews/webview-utils";
 import { updateSelectorValidationStatus } from "../selectorCodeLens";
 
@@ -137,8 +136,8 @@ export async function runSelector(
     if (selectorType === "metric") {
       await dt.metrics.query(selector, "5m").then((res: MetricSeriesCollection[]) => {
         statusCallback(selector, { status: "valid" });
-        renderPanel(REGISTERED_PANELS.METRIC_RESULTS, "Metric selector results", {
-          dataType: "METRIC_RESULTS",
+        renderPanel(ViewType.METRIC_RESULTS, "Metric selector results", {
+          dataType: PanelDataType.METRIC_RESULTS_DATA_TYPE,
           data: res,
         });
       });

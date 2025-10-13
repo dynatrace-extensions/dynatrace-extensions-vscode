@@ -15,9 +15,9 @@
  */
 
 import { exec } from "child_process";
+import { PanelDataType, ViewType, WmiQueryResult } from "@common";
 import { getCachedWmiQueryResult } from "../../utils/caching";
 import * as logger from "../../utils/logging";
-import { REGISTERED_PANELS } from "../../webviews/webview-panel-manager";
 import { renderPanel } from "../../webviews/webview-utils";
 import { ValidationStatus } from "./selectorUtils";
 
@@ -27,14 +27,6 @@ const ignoreProperties =
   '"SystemProperties", "ClassPath", "Qualifiers", "Site", "Container", "PSComputerName", ' +
   '"__GENUS", "__CLASS", "__SUPERCLASS", "__DYNASTY", "__RELPATH", "__PROPERTY_COUNT", ' +
   '"__DERIVATION", "__SERVER", "__NAMESPACE", "__PATH")';
-
-export interface WmiQueryResult {
-  query: string;
-  responseTime: string;
-  error: boolean;
-  errorMessage?: string;
-  results: Array<Record<string, string | number>>;
-}
 
 /**
  * Runs a WMI query using PowerShell and returns the JSON format of the results
@@ -61,8 +53,8 @@ export async function runWMIQuery(
       oc.show();
     } else {
       updateCallback(query, { status: "valid" });
-      renderPanel(REGISTERED_PANELS.WMI_RESULTS, "WMI query results", {
-        dataType: "WMI_RESULT",
+      renderPanel(ViewType.WMI_RESULTS, "WMI query results", {
+        dataType: PanelDataType.WMI_RESULT_DATA_TYPE,
         data: cachedWmiQueryResult,
       });
     }
@@ -128,8 +120,8 @@ export async function runWMIQuery(
           results: jsonResponse,
           responseTime,
         };
-        renderPanel(REGISTERED_PANELS.WMI_RESULTS, "WMI query results", {
-          dataType: "WMI_RESULT",
+        renderPanel(ViewType.WMI_RESULTS, "WMI query results", {
+          dataType: PanelDataType.WMI_RESULT_DATA_TYPE,
           data: queryResult,
         });
         updateCallback(query, { status: "valid" }, queryResult);

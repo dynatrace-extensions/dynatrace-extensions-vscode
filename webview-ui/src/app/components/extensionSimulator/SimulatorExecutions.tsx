@@ -26,12 +26,12 @@ import {
 } from "@dynatrace/strato-components-preview/tables";
 import Colors from "@dynatrace/strato-design-tokens/colors";
 import { ActionIcon, DescriptionIcon, EpicIcon } from "@dynatrace/strato-icons";
-import { SIMULATOR_CHECK_READY_CMD, SIMULATOR_READ_LOG_CMD } from "../../constants/constants";
-import { ExecutionSummary, SimulationConfig, SimulatorData } from "../../interfaces/simulator";
+import { SimulationConfig, SimulatorData } from "@common";
 import { triggerCommand } from "../../utils/app-utils";
 import { MandatoryCheckModal } from "./MandatoryCheckModal";
 import { SettingsForm } from "./SettingsForm";
 import { StateButton, SettingsButton } from "./SimulatorButtons";
+import { SimulatorCommand, ExecutionSummary } from "@common";
 
 export const SimulatorExecutions = ({
   summaries,
@@ -119,7 +119,7 @@ export const SimulatorExecutions = ({
   );
 
   const handleOpenLog = useCallback((logPath: string) => {
-    triggerCommand(SIMULATOR_READ_LOG_CMD, [
+    triggerCommand(SimulatorCommand.SIMULATOR_READ_LOG_CMD, [
       JSON.stringify({
         scheme: "file",
         path: logPath,
@@ -131,7 +131,7 @@ export const SimulatorExecutions = ({
   const handleConfigSubmission = (config: SimulationConfig) => {
     setCurrentConfig(config);
     showSettingsModal(false);
-    triggerCommand(SIMULATOR_CHECK_READY_CMD, true, config);
+    triggerCommand(SimulatorCommand.SIMULATOR_CHECK_READY_CMD, true, config);
   };
 
   /** Update state whenever the simulator status changes */

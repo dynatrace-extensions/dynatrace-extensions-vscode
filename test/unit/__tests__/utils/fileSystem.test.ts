@@ -17,14 +17,10 @@
 import * as fs from "fs";
 import * as os from "os";
 import * as path from "path";
+import { LocalExecutionSummary, RemoteExecutionSummary, RemoteTarget } from "@common";
 import { glob } from "glob";
 import * as vscode from "vscode";
 import * as extension from "../../../../src/extension";
-import {
-  LocalExecutionSummary,
-  RemoteExecutionSummary,
-  RemoteTarget,
-} from "../../../../src/interfaces/simulator";
 import { DynatraceTenantDto, ExtensionWorkspaceDto } from "../../../../src/interfaces/treeViews";
 import {
   cleanUpSimulatorLogs,

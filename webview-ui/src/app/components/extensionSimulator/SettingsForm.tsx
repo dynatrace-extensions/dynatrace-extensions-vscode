@@ -36,7 +36,7 @@ import {
   SimulationLocation,
   SimulationSpecs,
   SimulatorStatus,
-} from "../../interfaces/simulator";
+} from "@common";
 
 interface RemoteTargetsFieldSetProps {
   targets: RemoteTarget[];

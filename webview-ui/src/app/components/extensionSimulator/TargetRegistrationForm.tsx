@@ -28,7 +28,7 @@ import { Button, Container, Flex, Text, ExternalLink } from "@dynatrace/strato-c
 import { WarningIcon } from "@dynatrace/strato-icons";
 import React, { useEffect, useState } from "react";
 import { useForm } from "react-hook-form";
-import { EecType, OsType, RemoteTarget } from "../../interfaces/simulator";
+import { EecType, OsType, RemoteTarget } from "@common";
 
 interface TargetRegistrationFormProps {
   modalOpen: boolean;

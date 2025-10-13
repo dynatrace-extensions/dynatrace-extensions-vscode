@@ -17,10 +17,10 @@
 import { ChildProcess, ExecOptions, SpawnOptions, spawn } from "child_process";
 import { existsSync, mkdirSync, readFileSync, writeFileSync } from "fs";
 import * as path from "path";
-import pidtree = require("pidtree");
-import * as vscode from "vscode";
-import { getActivationContext } from "../extension";
 import {
+  PanelDataType,
+  ViewType,
+  SimulatorCommand,
   EecType,
   LocalExecutionSummary,
   OsType,
@@ -31,8 +31,11 @@ import {
   SimulationSpecs,
   SimulatorPanelData,
   SimulatorStatus,
-} from "../interfaces/simulator";
-import { ToastOptions } from "../interfaces/webview";
+  WebviewEventType,
+} from "@common";
+import pidtree = require("pidtree");
+import * as vscode from "vscode";
+import { getActivationContext } from "../extension";
 import { getCachedParsedExtension } from "../utils/caching";
 import { checkDtSdkPresent } from "../utils/conditionCheckers";
 import { getDatasourceName } from "../utils/extensionParsing";
@@ -56,17 +59,7 @@ import {
   getDatasourcePath,
   loadDefaultSimulationConfig,
 } from "../utils/simulator";
-import { REGISTERED_PANELS } from "../webviews/webview-panel-manager";
 import { postMessageToPanel, renderPanel } from "../webviews/webview-utils";
-
-const SIMULATOR_START_CMD = "dynatrace-extensions.simulator.start";
-const SIMULATOR_STOP_CMD = "dynatrace-extensions.simulator.stop";
-const SIMULATOR_CHECK_READY_CMD = "dynatrace-extensions.simulator.checkReady";
-const SIMULATOR_OPEN_UI_CMD = "dynatrace-extensions.simulator.refreshUI";
-const SIMULATOR_READ_LOG_CMD = "dynatrace-extensions.simulator.readLog";
-const SIMULATOR_ADD_TARGERT_CMD = "dynatrace-extensions.simulator.addTarget";
-const SIMULATOR_DELETE_TARGERT_CMD = "dynatrace-extensions.simulator.deleteTarget";
-const SIMULATOR_PANEL_DATA_TYPE = "SIMULATOR_DATA";
 
 /**
  * Helper class for managing the Extension Simulator, its UI, and data.
@@ -122,7 +115,7 @@ export class SimulatorManager {
 
     // Register commands
     vscode.commands.registerCommand(
-      SIMULATOR_START_CMD,
+      SimulatorCommand.SIMULATOR_START_CMD,
       async (config?: SimulationConfig, showUI: boolean = true) => {
         if (config) {
           this.currentConfiguration = config;
@@ -130,25 +123,29 @@ export class SimulatorManager {
         await this.start(config ?? this.currentConfiguration, showUI);
       },
     );
-    vscode.commands.registerCommand(SIMULATOR_STOP_CMD, () => this.stop());
+    vscode.commands.registerCommand(SimulatorCommand.SIMULATOR_STOP_CMD, () => this.stop());
     vscode.commands.registerCommand(
-      SIMULATOR_CHECK_READY_CMD,
+      SimulatorCommand.SIMULATOR_CHECK_READY_CMD,
       (showUI: boolean = true, config?: SimulationConfig) => this.checkReady(showUI, config),
     );
-    vscode.commands.registerCommand(SIMULATOR_OPEN_UI_CMD, () => this.refreshUI(true));
-    vscode.commands.registerCommand(SIMULATOR_READ_LOG_CMD, (logPath: string) =>
+    vscode.commands.registerCommand(SimulatorCommand.SIMULATOR_OPEN_UI_CMD, () =>
+      this.refreshUI(true),
+    );
+    vscode.commands.registerCommand(SimulatorCommand.SIMULATOR_READ_LOG_CMD, (logPath: string) =>
       this.readLog(logPath),
     );
-    vscode.commands.registerCommand(SIMULATOR_ADD_TARGERT_CMD, (target: RemoteTarget) =>
-      this.addTarget(target),
+    vscode.commands.registerCommand(
+      SimulatorCommand.SIMULATOR_ADD_TARGERT_CMD,
+      (target: RemoteTarget) => this.addTarget(target),
     );
-    vscode.commands.registerCommand(SIMULATOR_DELETE_TARGERT_CMD, (target: RemoteTarget) =>
-      this.deleteTarget(target),
+    vscode.commands.registerCommand(
+      SimulatorCommand.SIMULATOR_DELETE_TARGERT_CMD,
+      (target: RemoteTarget) => this.deleteTarget(target),
     );
 
     // Create the status bar and show it
     this.statusBar = vscode.window.createStatusBarItem(vscode.StatusBarAlignment.Left, 0);
-    this.statusBar.command = SIMULATOR_OPEN_UI_CMD;
+    this.statusBar.command = SimulatorCommand.SIMULATOR_OPEN_UI_CMD;
     this.statusBar.text = "Extension simulator";
     this.statusBar.tooltip = "Click to open";
     this.statusBar.show();
@@ -169,14 +166,14 @@ export class SimulatorManager {
     logger.info(`Deleting target ${target.name}`, ...this.logTrace, "deleteTarget");
     // This will always succeed
     deleteSimulatorTarget(target);
-    postMessageToPanel(REGISTERED_PANELS.SIMULATOR_UI, {
-      messageType: "showToast",
+    postMessageToPanel(ViewType.SIMULATOR_UI, {
+      messageType: WebviewEventType.showToast,
       data: {
         title: "Target deleted",
         type: "success",
         role: "status",
         lifespan: 800,
-      } as ToastOptions,
+      },
     });
     this.refreshUI(true);
   }
@@ -188,14 +185,14 @@ export class SimulatorManager {
   private addTarget(target: RemoteTarget) {
     logger.info(`Adding target ${target.name}`, ...this.logTrace, "addTarget");
     registerSimulatorTarget(target);
-    postMessageToPanel(REGISTERED_PANELS.SIMULATOR_UI, {
-      messageType: "showToast",
+    postMessageToPanel(ViewType.SIMULATOR_UI, {
+      messageType: WebviewEventType.showToast,
       data: {
         title: "Target registered",
         type: "success",
         role: "status",
         lifespan: 800,
-      } as ToastOptions,
+      },
     });
     this.refreshUI(true);
   }
@@ -703,7 +700,7 @@ export class SimulatorManager {
     failedChecks?: string[],
   ) {
     const panelData: SimulatorPanelData = {
-      dataType: SIMULATOR_PANEL_DATA_TYPE,
+      dataType: PanelDataType.SIMULATOR_DATA_TYPE,
       data: {
         targets: getSimulatorTargets(),
         summaries: getSimulatorSummaries(),
@@ -722,10 +719,10 @@ export class SimulatorManager {
     );
 
     if (show) {
-      renderPanel(REGISTERED_PANELS.SIMULATOR_UI, "Extension Simulator", panelData);
+      renderPanel(ViewType.SIMULATOR_UI, "Extension Simulator", panelData);
     } else {
-      postMessageToPanel(REGISTERED_PANELS.SIMULATOR_UI, {
-        messageType: "updateData",
+      postMessageToPanel(ViewType.SIMULATOR_UI, {
+        messageType: WebviewEventType.updateData,
         data: panelData,
       });
     }
@@ -738,8 +735,8 @@ export class SimulatorManager {
 
     const logContent = readFileSync(logFilePath.fsPath).toString();
 
-    postMessageToPanel(REGISTERED_PANELS.SIMULATOR_UI, {
-      messageType: "openLog",
+    postMessageToPanel(ViewType.SIMULATOR_UI, {
+      messageType: WebviewEventType.openLog,
       data: { logContent },
     });
   }

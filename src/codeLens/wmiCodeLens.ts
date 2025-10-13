@@ -14,12 +14,13 @@
   limitations under the License.
  */
 
+import { WmiQueryResult } from "@common";
 import * as vscode from "vscode";
 import { getCachedWmiStatus, setCachedWmiStatus, setCachedWmiQueryResult } from "../utils/caching";
 import * as logger from "../utils/logging";
 import { getBlockRange } from "../utils/yamlParsing";
 import { ValidationStatus } from "./utils/selectorUtils";
-import { WmiQueryResult, runWMIQuery } from "./utils/wmiUtils";
+import { runWMIQuery } from "./utils/wmiUtils";
 
 /**
  * Provides singleton access to the WmiCodeLensProvider

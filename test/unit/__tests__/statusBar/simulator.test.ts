@@ -16,14 +16,17 @@
 
 import * as fs from "fs";
 import * as path from "path";
-import * as vscode from "vscode";
-import * as extension from "../../../../src/extension";
-import { DatasourceName, ExtensionStub } from "../../../../src/interfaces/extensionMeta";
 import {
+  PanelDataType,
+  ViewType,
   RemoteTarget,
   SimulationConfig,
   SimulatorData,
-} from "../../../../src/interfaces/simulator";
+  WebviewEventType,
+} from "@common";
+import * as vscode from "vscode";
+import * as extension from "../../../../src/extension";
+import { DatasourceName, ExtensionStub } from "../../../../src/interfaces/extensionMeta";
 import { SimulatorManager } from "../../../../src/statusBar/simulator";
 import * as cachingUtils from "../../../../src/utils/caching";
 import * as conditionCheckers from "../../../../src/utils/conditionCheckers";
@@ -31,7 +34,6 @@ import * as extensionParsingUtils from "../../../../src/utils/extensionParsing";
 import * as fileSystemUtils from "../../../../src/utils/fileSystem";
 import * as otherExtensionsUtils from "../../../../src/utils/otherExtensions";
 import * as simulatorUtils from "../../../../src/utils/simulator";
-import * as webviewManager from "../../../../src/webviews/webview-panel-manager";
 import * as webviewUtils from "../../../../src/webviews/webview-utils";
 import { mockFileSystemItem } from "../../../shared/utils";
 import { MockExtensionContext, MockUri } from "../../mocks/vscode";
@@ -347,12 +349,10 @@ describe.only("Simulator Manager", () => {
       await simulatorManager.checkReady(true);
 
       expect(renderSpy).toHaveBeenCalledTimes(2);
-      expect(renderSpy).toHaveBeenNthCalledWith(
-        1,
-        webviewManager.REGISTERED_PANELS.SIMULATOR_UI,
-        "Extension Simulator",
-        { dataType: "SIMULATOR_DATA", data: { ...mockPanelData, status: "CHECKING" } },
-      );
+      expect(renderSpy).toHaveBeenNthCalledWith(1, ViewType.SIMULATOR_UI, "Extension Simulator", {
+        dataType: PanelDataType.SIMULATOR_DATA_TYPE,
+        data: { ...mockPanelData, status: "CHECKING" },
+      });
     });
 
     it("first updates the panel with CHECKING status (postMessage)", async () => {
@@ -363,14 +363,13 @@ describe.only("Simulator Manager", () => {
       await simulatorManager.checkReady(false);
 
       expect(postMessageSpy).toHaveBeenCalledTimes(2);
-      expect(postMessageSpy).toHaveBeenNthCalledWith(
-        1,
-        webviewManager.REGISTERED_PANELS.SIMULATOR_UI,
-        {
-          messageType: "updateData",
-          data: { dataType: "SIMULATOR_DATA", data: { ...mockPanelData, status: "CHECKING" } },
+      expect(postMessageSpy).toHaveBeenNthCalledWith(1, ViewType.SIMULATOR_UI, {
+        messageType: WebviewEventType.updateData,
+        data: {
+          dataType: PanelDataType.SIMULATOR_DATA_TYPE,
+          data: { ...mockPanelData, status: "CHECKING" },
         },
-      );
+      });
     });
 
     it("then updates the panel with READY state and panel data", async () => {
@@ -378,12 +377,10 @@ describe.only("Simulator Manager", () => {
 
       await simulatorManager.checkReady(true);
 
-      expect(renderSpy).toHaveBeenNthCalledWith(
-        2,
-        webviewManager.REGISTERED_PANELS.SIMULATOR_UI,
-        "Extension Simulator",
-        { dataType: "SIMULATOR_DATA", data: { ...mockPanelData, status: "READY" } },
-      );
+      expect(renderSpy).toHaveBeenNthCalledWith(2, ViewType.SIMULATOR_UI, "Extension Simulator", {
+        dataType: PanelDataType.SIMULATOR_DATA_TYPE,
+        data: { ...mockPanelData, status: "READY" },
+      });
     });
 
     it("updates the panel with UNSUPPORTED for mandatory check failures", async () => {
@@ -395,15 +392,10 @@ describe.only("Simulator Manager", () => {
       await simulatorManager.checkReady(true);
 
       expect(renderSpy).toHaveBeenCalledTimes(2);
-      expect(renderSpy).toHaveBeenNthCalledWith(
-        2,
-        webviewManager.REGISTERED_PANELS.SIMULATOR_UI,
-        "Extension Simulator",
-        {
-          dataType: "SIMULATOR_DATA",
-          data: { ...mockPanelData, status: "UNSUPPORTED", failedChecks: mockFailedChecks },
-        },
-      );
+      expect(renderSpy).toHaveBeenNthCalledWith(2, ViewType.SIMULATOR_UI, "Extension Simulator", {
+        dataType: PanelDataType.SIMULATOR_DATA_TYPE,
+        data: { ...mockPanelData, status: "UNSUPPORTED", failedChecks: mockFailedChecks },
+      });
     });
 
     it("updates the panel with NOTREADY for simulation config check failures", async () => {
@@ -415,15 +407,10 @@ describe.only("Simulator Manager", () => {
       await simulatorManager.checkReady(true, fallbackConfigValue);
 
       expect(renderSpy).toHaveBeenCalledTimes(2);
-      expect(renderSpy).toHaveBeenNthCalledWith(
-        2,
-        webviewManager.REGISTERED_PANELS.SIMULATOR_UI,
-        "Extension Simulator",
-        {
-          dataType: "SIMULATOR_DATA",
-          data: { ...mockPanelData, status: "NOTREADY", statusMessage: "mockMessage" },
-        },
-      );
+      expect(renderSpy).toHaveBeenNthCalledWith(2, ViewType.SIMULATOR_UI, "Extension Simulator", {
+        dataType: PanelDataType.SIMULATOR_DATA_TYPE,
+        data: { ...mockPanelData, status: "NOTREADY", statusMessage: "mockMessage" },
+      });
     });
   });
 });

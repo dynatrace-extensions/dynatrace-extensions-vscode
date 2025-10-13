@@ -14,6 +14,7 @@
   limitations under the  License.
  */
 
+import { ViewType } from "@common";
 import * as vscode from "vscode";
 import { getActivationSchemaActionProvider } from "./codeActions/activationSchema";
 import { getDiagnosticFixProvider } from "./codeActions/diagnosticFixProvider";
@@ -72,7 +73,7 @@ import {
   migrateFromLegacyExtension,
 } from "./utils/fileSystem";
 import * as logger from "./utils/logging";
-import { REGISTERED_PANELS, getWebviewPanelManager } from "./webviews/webview-panel-manager";
+import { getWebviewPanelManager } from "./webviews/webview-panel-manager";
 
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
 type WorkflowFunction<T extends any[] = []> = (...args: T) => PromiseLike<unknown>;
@@ -116,10 +117,7 @@ export async function activate(context: vscode.ExtensionContext) {
     ...registerSelectorCommands(),
     ...registerCodeLensProviders(),
     ...registerDiagnosticsEventListeners(),
-    ...registerSerializersForPanels([
-      REGISTERED_PANELS.METRIC_RESULTS,
-      REGISTERED_PANELS.WMI_RESULTS,
-    ]),
+    ...registerSerializersForPanels([ViewType.METRIC_RESULTS, ViewType.WMI_RESULTS]),
     getFastModeStatusBar(),
     getConnectionStatusBar(),
     vscode.languages.registerHoverProvider(MANIFEST_DOC_SELECTOR, getSnmpHoverProvider()),

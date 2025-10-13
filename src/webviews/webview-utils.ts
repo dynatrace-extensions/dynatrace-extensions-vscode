@@ -18,10 +18,10 @@
  * UTILITY FUNCTIONS FOR WORKING WITH WEBVIEW PANELS
  ******************************************************/
 
+import { ViewType, PanelData, WebviewEvent } from "@common";
 import * as vscode from "vscode";
-import { PanelData, WebviewMessage } from "../interfaces/webview";
 import { getConnectedTenant } from "../treeViews/tenantsTreeView";
-import { REGISTERED_PANELS, getWebviewPanelManager } from "./webview-panel-manager";
+import { getWebviewPanelManager } from "./webview-panel-manager";
 
 /**
  * A helper function that returns a unique alphanumeric identifier called a nonce.
@@ -49,14 +49,14 @@ export function getColumn() {
 /**
  * Renders a specific type of webview panel.
  */
-export const renderPanel = (viewType: REGISTERED_PANELS, title: string, data: PanelData) => {
+export const renderPanel = (viewType: ViewType, title: string, data: PanelData) => {
   getWebviewPanelManager().render(viewType, title, data);
 };
 
 /**
  * Posts a message to the given type of webview panel.
  */
-export const postMessageToPanel = (viewType: REGISTERED_PANELS, message: WebviewMessage) => {
+export const postMessageToPanel = (viewType: ViewType, message: WebviewEvent) => {
   getWebviewPanelManager().postMessage(viewType, message);
 };
 

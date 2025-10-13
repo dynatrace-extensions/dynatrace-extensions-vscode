@@ -14,7 +14,7 @@
   limitations under the License.
  */
 
-import { PanelData } from "./webview";
+import { PanelDataBase, PanelDataType } from ".";
 
 export type EecType = "ONEAGENT" | "ACTIVEGATE";
 export type OsType = "LINUX" | "WINDOWS";
@@ -46,8 +46,8 @@ export interface SimulationSpecs {
   dsSupportsActiveGateEec: boolean;
 }
 
-export interface SimulatorPanelData extends PanelData {
-  dataType: "SIMULATOR_DATA";
+export interface SimulatorPanelData extends PanelDataBase {
+  dataType: typeof PanelDataType.SIMULATOR_DATA_TYPE;
   data: SimulatorData;
 }
 

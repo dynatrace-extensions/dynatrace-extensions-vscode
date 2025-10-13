@@ -16,7 +16,7 @@
 
 import React, { useState } from "react";
 import { AppHeader } from "@dynatrace/strato-components-preview/layouts";
-import { SimulatorData } from "src/app/interfaces/simulator";
+import { SimulatorData } from "@common";
 import { SimulatorExecutions } from "../extensionSimulator/SimulatorExecutions";
 import { SimulatorTargets } from "../extensionSimulator/SimulatorTargets";
 

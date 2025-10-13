@@ -24,8 +24,7 @@ import {
   WarningIcon,
 } from "@dynatrace/strato-icons";
 import React from "react";
-import { SIMULATOR_START_CMD, SIMULATOR_STOP_CMD } from "../../constants/constants";
-import { SimulationConfig, SimulatorStatus } from "../../interfaces/simulator";
+import { SimulationConfig, SimulatorStatus, SimulatorCommand } from "@common";
 import { triggerCommand } from "../../utils/app-utils";
 
 interface StateButtonProps {
@@ -46,7 +45,7 @@ export const StateButton = ({
       return (
         <Tooltip text='Stop the simulation'>
           <Button
-            onClick={() => triggerCommand(SIMULATOR_STOP_CMD)}
+            onClick={() => triggerCommand(SimulatorCommand.SIMULATOR_STOP_CMD)}
             variant='accent'
             color='primary'
           >
@@ -60,7 +59,7 @@ export const StateButton = ({
       return (
         <Tooltip text='Start the simulation'>
           <Button
-            onClick={() => triggerCommand(SIMULATOR_START_CMD, currentConfig)}
+            onClick={() => triggerCommand(SimulatorCommand.SIMULATOR_START_CMD, currentConfig)}
             variant='accent'
             color='primary'
           >

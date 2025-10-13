@@ -23,7 +23,7 @@ import {
 import { Flex } from "@dynatrace/strato-components/layouts";
 import { Text, Heading } from "@dynatrace/strato-components/typography";
 import { format as sqlFormat } from "sql-formatter";
-import { WmiQueryResult } from "src/app/interfaces/wmiResultPanel";
+import { WmiQueryResult } from "@common";
 
 interface WmiResultPanelProps {
   data: WmiQueryResult;
