@@ -43,31 +43,34 @@ type TenantsTreeContextValue =
   | "currentDynatraceEnvironment"
   | "monitoringConfiguration"
   | "deployedExtension";
-export type TenantsTreeItem = vscode.TreeItem & {
+
+export interface TenantsTreeItemBase extends vscode.TreeItem {
   label: string;
   id: string;
   contextValue: TenantsTreeContextValue;
   dt: Dynatrace;
-};
+}
 
-export type DynatraceTenant = TenantsTreeItem & {
+export interface DynatraceTenant extends TenantsTreeItemBase {
   url: string;
   apiUrl: string;
   token: string;
   current: boolean;
   contextValue: "currentDynatraceEnvironment" | "dynatraceEnvironment";
-};
+}
 
-export type MonitoringConfiguration = TenantsTreeItem & {
+export interface MonitoringConfiguration extends TenantsTreeItemBase {
   extensionName: string;
   contextValue: "monitoringConfiguration";
-};
+}
 
-export type DeployedExtension = TenantsTreeItem & {
+export interface DeployedExtension extends TenantsTreeItemBase {
   tenantUrl: string;
   extensionVersion: string;
   contextValue: "deployedExtension";
-};
+}
+
+export type TenantsTreeItem = DynatraceTenant | MonitoringConfiguration | DeployedExtension;
 
 export interface TenantsTreeDataProvider extends vscode.TreeDataProvider<TenantsTreeItem> {
   refresh: () => void;
