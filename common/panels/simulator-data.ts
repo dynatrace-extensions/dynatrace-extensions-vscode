@@ -48,6 +48,7 @@ export const SimulationLocation = {
 } as const;
 // eslint-disable-next-line @typescript-eslint/no-redeclare
 export type SimulationLocation = ObjectValues<typeof SimulationLocation>;
+export const SimulationLocations = Object.values(SimulationLocation);
 
 export interface SimulationConfig {
   location: SimulationLocation;

@@ -16,7 +16,7 @@
 
 import { readFileSync, readdirSync, writeFileSync } from "fs";
 import path from "path";
-import { SimulationLocation } from "@common";
+import { SimulationLocation, SimulationLocations } from "@common";
 import vscode from "vscode";
 import { Dynatrace } from "../dynatrace-api/dynatrace";
 import {
@@ -97,7 +97,7 @@ export async function createMonitoringConfiguration(dt: Dynatrace) {
 
     // For datasources that support both local and remote activation
     if (["wmi", "prometheus", "python"].includes(datasourceName)) {
-      activationContext = await showQuickPick(Object.values(SimulationLocation), {
+      activationContext = await showQuickPick(SimulationLocations, {
         ignoreFocusOut: true,
         title: "Where will this configuration run?",
       });

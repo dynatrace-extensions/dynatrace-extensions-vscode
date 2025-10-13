@@ -55,7 +55,7 @@ import { loadSchemas } from "./loadSchemas";
 
 const logTrace = ["commandPalette", "initWorkspace"];
 
-const PROJECT_TYPES = {
+const PROJECT_TYPE = {
   defaultExtension: {
     label: "Extension 2.0",
     detail: "Default choice for existing projects and most new ones. If unsure, choose this.",
@@ -74,6 +74,7 @@ const PROJECT_TYPES = {
     detail: "Start by downloading an extension already deployed in your tenant.",
   },
 } satisfies Record<string, vscode.QuickPickItem>;
+const PROJECT_TYPES = Object.values(PROJECT_TYPE);
 
 export const initWorkspaceWorkflow = async () => {
   const context = getActivationContext();
@@ -229,7 +230,7 @@ export async function initWorkspace(dt: Dynatrace, callback?: () => unknown) {
       progress.report({ message: "Generating content for your project" });
 
       // Determine type of extension project
-      let projectType: vscode.QuickPickItem | undefined = PROJECT_TYPES.defaultExtension;
+      let projectType: vscode.QuickPickItem | undefined = PROJECT_TYPE.defaultExtension;
 
       if (getExtensionFilePath()) {
         logger.debug(
@@ -238,7 +239,7 @@ export async function initWorkspace(dt: Dynatrace, callback?: () => unknown) {
         );
       } else {
         logger.debug("Prompting user for template selection", ...fnLogTrace);
-        projectType = await showQuickPick(Object.values(PROJECT_TYPES), {
+        projectType = await showQuickPick(PROJECT_TYPES, {
           title: "What type of project are you starting?",
           placeHolder: "Extension 2.0",
           ignoreFocusOut: true,
@@ -260,10 +261,10 @@ export async function initWorkspace(dt: Dynatrace, callback?: () => unknown) {
 
       // Setup based on type of project
       switch (projectType) {
-        case PROJECT_TYPES.pythonExtension:
+        case PROJECT_TYPE.pythonExtension:
           await pythonExtensionSetup(rootPath, storagePath, progress);
           break;
-        case PROJECT_TYPES.jmxConversion: {
+        case PROJECT_TYPE.jmxConversion: {
           logger.debug("JMX Conversion template selected. Triggering subflow", ...fnLogTrace);
           const extensionDir = path.resolve(rootPath, "extension");
           if (!existsSync(extensionDir)) {
@@ -275,7 +276,7 @@ export async function initWorkspace(dt: Dynatrace, callback?: () => unknown) {
           );
           break;
         }
-        case PROJECT_TYPES.existingExtension:
+        case PROJECT_TYPE.existingExtension:
           await existingExtensionSetup(dt, rootPath);
           break;
         default:
@@ -289,7 +290,7 @@ export async function initWorkspace(dt: Dynatrace, callback?: () => unknown) {
       pushManifestTextForParsing();
 
       // Create or update the .gitignore
-      await writeGititnore(projectType === PROJECT_TYPES.pythonExtension);
+      await writeGititnore(projectType === PROJECT_TYPE.pythonExtension);
     },
   );
 
