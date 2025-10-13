@@ -20,6 +20,7 @@ import yaml from "yaml";
 import { ExtensionStub } from "../../../../src/interfaces/extensionMeta";
 import * as cachingUtils from "../../../../src/utils/caching";
 import { updateDiagnosticsCollection, getDiagnostics } from "../../../../src/utils/diagnostics";
+import { parseYAML } from "../../../../src/utils/yamlParsing";
 import { readTestDataFile } from "../../../shared/utils";
 import { MockDiagnosticCollection } from "../../mocks/vscode";
 
@@ -69,9 +70,7 @@ describe("Extension YAML Diagnostics", () => {
     it("should run against sample extension", async () => {
       // Diagnostics uses parsed extension from cache, so we must mock the cache
       getCachedParsedExtensionSpy.mockReturnValue(
-        yaml.parse(
-          readTestDataFile(path.join("manifests", "diagnostics-extension.yaml")),
-        ) as ExtensionStub,
+        parseYAML(readTestDataFile(path.join("manifests", "diagnostics-extension.yaml"))),
       );
 
       const textDocument = await vscode.workspace.openTextDocument(

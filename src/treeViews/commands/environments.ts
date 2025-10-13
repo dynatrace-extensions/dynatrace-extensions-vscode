@@ -604,13 +604,13 @@ async function addMonitoringConfiguration(extension: DeployedExtension) {
       "once you save and close this tab.";
 
     // Allow the user to make changes
-    configObject = JSON.parse(
+    configObject = parseJSON(
       await getConfigurationDetailsViaFile(
         headerContent,
         JSON.stringify(configTemplate, undefined, 4),
         false,
       ),
-    ) as MinimalConfiguration;
+    );
   }
 
   // Finally, create the configuration
