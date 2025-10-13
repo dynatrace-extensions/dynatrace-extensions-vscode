@@ -47,7 +47,7 @@ import { pushManifestTextForParsing } from "../utils/caching";
 import { getExtensionWorkspaceDir } from "../utils/fileSystem";
 import { parseJSON } from "../utils/jsonParsing";
 import logger from "../utils/logging";
-import { showQuickPick, showQuickPickConfirm } from "../utils/vscode";
+import { ConfirmOption, showQuickPick, showQuickPickConfirm } from "../utils/vscode";
 
 const logTrace = ["commandPalette", "convertJMXExtension"];
 const OPTION_LOCAL_FILE: vscode.QuickPickItem = {
@@ -594,7 +594,7 @@ async function convertV1UiToScreens(
     placeHolder: "Show this JMX data on the Host details page?",
   });
 
-  if (createHostInjection === "Yes") {
+  if (createHostInjection === ConfirmOption.Yes) {
     // Create a unique card key
     const cardKey = `metrictable-jmx-${extensionName
       .replace(/[^a-zA-Z0-9_-]/g, "_")

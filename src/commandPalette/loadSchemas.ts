@@ -24,7 +24,7 @@ import { getDynatraceClient } from "../treeViews/tenantsTreeView";
 import { checkTenantConnected } from "../utils/conditionCheckers";
 import { getExtensionFilePath } from "../utils/fileSystem";
 import logger from "../utils/logging";
-import { showQuickPick, showQuickPickConfirm } from "../utils/vscode";
+import { ConfirmOption, showQuickPick, showQuickPickConfirm } from "../utils/vscode";
 
 const logTrace = ["commandPalette", "loadSchemas"];
 
@@ -81,7 +81,7 @@ export async function loadSchemas(dt: Dynatrace): Promise<boolean> {
       placeHolder: "Schema version already available. Do you wish to download again?",
     });
 
-    if (download === "Yes") {
+    if (download === ConfirmOption.Yes) {
       cancelled = await downloadSchemaFiles(location, version, dt);
     }
   }

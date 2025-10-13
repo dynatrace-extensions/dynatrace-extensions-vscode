@@ -38,7 +38,7 @@ import {
 import { parseJSON } from "../../utils/jsonParsing";
 import logger from "../../utils/logging";
 import { createObjectFromSchema } from "../../utils/schemaParsing";
-import { showQuickPick, showQuickPickConfirm } from "../../utils/vscode";
+import { ConfirmOption, showQuickPick, showQuickPickConfirm } from "../../utils/vscode";
 import { refreshTenantsTreeView } from "../tenantsTreeView";
 
 const logTrace = ["treeViews", "commands", "environments"];
@@ -300,7 +300,7 @@ async function addEnvironment() {
     ignoreFocusOut: true,
   });
 
-  await registerTenant(url, apiUrl, encryptToken(token), name, current === "Yes");
+  await registerTenant(url, apiUrl, encryptToken(token), name, current === ConfirmOption.Yes);
 }
 
 /**
@@ -367,7 +367,7 @@ async function editEnvironment(environment: DynatraceTenant) {
     ignoreFocusOut: true,
   });
 
-  await registerTenant(url, apiUrl, encryptToken(token), name, current === "Yes");
+  await registerTenant(url, apiUrl, encryptToken(token), name, current === ConfirmOption.Yes);
 }
 
 /**
@@ -382,7 +382,7 @@ async function deleteEnvironment(environment: DynatraceTenant) {
     ignoreFocusOut: true,
   });
 
-  if (confirm !== "Yes") {
+  if (confirm !== ConfirmOption.Yes) {
     logger.notify("INFO", "Operation cancelled.", ...logTrace, "deleteEnvironment");
     return;
   }
@@ -499,7 +499,7 @@ async function deleteMonitoringConfiguration(config: MonitoringConfiguration): P
     ignoreFocusOut: true,
   });
 
-  if (confirm !== "Yes") {
+  if (confirm !== ConfirmOption.Yes) {
     logger.notify("INFO", "Operation cancelled.", ...fnLogTrace);
     return false;
   }

@@ -30,7 +30,7 @@ import {
 } from "../utils/conditionCheckers";
 import { loopSafeWait } from "../utils/general";
 import logger from "../utils/logging";
-import { showQuickPick } from "../utils/vscode";
+import { ConfirmOption, showQuickPick } from "../utils/vscode";
 import { parseYAML } from "../utils/yamlParsing";
 import { activateExtension } from "./activateExtension";
 
@@ -99,10 +99,10 @@ export async function uploadExtension(dt: Dynatrace, tenantUrl: string) {
     logger.debug("10 extensions already on tenant. Must delete one", ...fnLogTrace);
     const choice = await vscode.window.showWarningMessage(
       "Maximum number of extensions detected. Would you like to remove the last one?",
-      "Yes",
-      "No",
+      ConfirmOption.Yes,
+      ConfirmOption.No,
     );
-    if (choice !== "Yes") {
+    if (choice !== ConfirmOption.Yes) {
       logger.notify("ERROR", "Operation cancelled.", ...fnLogTrace);
       return;
     }
@@ -181,10 +181,10 @@ export async function uploadExtension(dt: Dynatrace, tenantUrl: string) {
   if (status === "success") {
     const choice = await vscode.window.showInformationMessage(
       "Extension uploaded successfully. Do you want to activate this version?",
-      "Yes",
-      "No",
+      ConfirmOption.Yes,
+      ConfirmOption.No,
     );
-    if (choice !== "Yes") {
+    if (choice !== ConfirmOption.Yes) {
       const open = await vscode.window.showInformationMessage("Operation completed.", "Open");
       if (open === "Open") {
         const baseUrl = tenantUrl.includes(".apps")

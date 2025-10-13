@@ -22,6 +22,7 @@ import { getActivationContext } from "../extension";
 import { checkOverwriteCertificates, checkWorkspaceOpen } from "../utils/conditionCheckers";
 import { initWorkspaceStorage } from "../utils/fileSystem";
 import logger from "../utils/logging";
+import { ConfirmOption } from "../utils/vscode";
 
 const logTrace = ["commandPalette", "generateCertificates"];
 
@@ -264,15 +265,15 @@ export async function generateCerts(): Promise<boolean> {
     // Write the credential settings at either global or workspace level
     const useGlobal = await vscode.window.showInformationMessage(
       "Certificates generated. Do you want to use these for all workspaces by default?",
-      "Yes",
-      "No",
+      ConfirmOption.Yes,
+      ConfirmOption.No,
     );
     vscode.workspace
       .getConfiguration("dynatraceExtensions", null)
       .update(
         "developerCertkeyLocation",
         path.join(certsDir, "developer.pem"),
-        useGlobal === "Yes" ? true : undefined,
+        useGlobal === ConfirmOption.Yes ? true : undefined,
       )
       .then(undefined, () => {
         logger.error("Could not update setting developerCertkeyLocation", ...fnLogTrace);
@@ -282,7 +283,7 @@ export async function generateCerts(): Promise<boolean> {
       .update(
         "rootOrCaCertificateLocation",
         path.join(certsDir, "ca.pem"),
-        useGlobal === "Yes" ? true : undefined,
+        useGlobal === ConfirmOption.Yes ? true : undefined,
       )
       .then(undefined, () => {
         logger.error("Could not update setting rootOrCaCertificateLocation", ...fnLogTrace);
@@ -291,10 +292,10 @@ export async function generateCerts(): Promise<boolean> {
     // Link command - Upload Certificates
     const choice = await vscode.window.showInformationMessage(
       "Settings updated. Would you like to upload the CA certificate to Dynatrace?",
-      "Yes",
-      "No",
+      ConfirmOption.Yes,
+      ConfirmOption.No,
     );
-    if (choice === "Yes") {
+    if (choice === ConfirmOption.Yes) {
       logger.debug("User chose to upload certificates. Triggering separate flow.", ...fnLogTrace);
       await vscode.commands.executeCommand("dynatrace-extensions.distributeCertificate");
     }

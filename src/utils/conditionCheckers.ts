@@ -30,7 +30,7 @@ import { getExtensionFilePath, resolveRealPath } from "./fileSystem";
 import { setHttpsAgent } from "./general";
 import logger from "./logging";
 import { runCommand } from "./subprocesses";
-import { showQuickPickConfirm } from "./vscode";
+import { ConfirmOption, showQuickPickConfirm } from "./vscode";
 
 const logTrace = ["utils", "conditionCheckers"];
 
@@ -162,7 +162,7 @@ export async function checkOverwriteCertificates(): Promise<boolean> {
         placeHolder: "Would you like to generate new ones?",
         ignoreFocusOut: true,
       });
-      if (!choice || choice === "No") {
+      if (choice !== ConfirmOption.Yes) {
         status = false;
       }
     }

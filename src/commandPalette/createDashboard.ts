@@ -30,7 +30,7 @@ import { getEntityMetrics, getMetricDisplayName } from "../utils/extensionParsin
 import { getExtensionFilePath } from "../utils/fileSystem";
 import { parseJSON } from "../utils/jsonParsing";
 import logger from "../utils/logging";
-import { showQuickPick } from "../utils/vscode";
+import { ConfirmOption, showQuickPick } from "../utils/vscode";
 
 export const createDashboardWorkflow = async () => {
   if ((await checkWorkspaceOpen()) && (await isExtensionsWorkspace())) {
@@ -553,11 +553,11 @@ async function createClassicDashboard(extensionFile: string, extension: Extensio
       await vscode.window
         .showInformationMessage(
           "Would you like to upload the classic dashboard to Dynatrace?",
-          "Yes",
-          "No",
+          ConfirmOption.Yes,
+          ConfirmOption.No,
         )
         .then(choice => {
-          if (choice === "Yes") {
+          if (choice === ConfirmOption.Yes) {
             dt.dashboards
               .post(parseJSON(dashboardJson))
               .then(() => {

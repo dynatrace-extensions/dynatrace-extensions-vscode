@@ -29,7 +29,7 @@ import {
 } from "../utils/conditionCheckers";
 import { initWorkspaceStorage, resolveRealPath, uploadComponentCert } from "../utils/fileSystem";
 import logger from "../utils/logging";
-import { showQuickPickConfirm } from "../utils/vscode";
+import { ConfirmOption, showQuickPickConfirm } from "../utils/vscode";
 
 export const distributeCertificateWorkflow = async () => {
   if ((await checkWorkspaceOpen()) && (await checkTenantConnected())) {
@@ -75,7 +75,7 @@ export async function distributeCertificate(dt: Dynatrace) {
         ignoreFocusOut: true,
         title: "Certificate already exists in Dynatrace",
         placeHolder: "Would you like to overwrite it?",
-      })) === "Yes";
+      })) === ConfirmOption.Yes;
   }
 
   // Update existing certificate by replacing the content
@@ -141,10 +141,10 @@ export async function distributeCertificate(dt: Dynatrace) {
   if (agPresent || oaPresent) {
     const choice = await vscode.window.showInformationMessage(
       "Do you want to also distribute this certificate to locally installed OneAgents/ActiveGates?",
-      "Yes",
-      "No",
+      ConfirmOption.Yes,
+      ConfirmOption.No,
     );
-    if (choice === "Yes") {
+    if (choice === ConfirmOption.Yes) {
       try {
         if (oaPresent) {
           uploadComponentCert(certPath, "OneAgent");
