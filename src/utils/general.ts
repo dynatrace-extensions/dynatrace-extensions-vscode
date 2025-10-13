@@ -20,8 +20,8 @@
 
 import { readFileSync } from "fs";
 import { globalAgent } from "https";
-import * as vscode from "vscode";
-import * as logger from "./logging";
+import vscode from "vscode";
+import logger from "./logging";
 
 /**
  * Loop-safe function to make use of setTimeout
@@ -109,7 +109,8 @@ export const setHttpsAgent = (baseUrl: string) => {
 
   // The defaultValue in vscode's .get method is buggy. Returns undefined if not found.
   // eslint-disable-next-line
-  configList = configList === undefined ? [] : configList.filter(cfg => baseUrl.startsWith(cfg.tenantUrl));
+  configList =
+    configList === undefined ? [] : configList.filter(cfg => baseUrl.startsWith(cfg.tenantUrl));
 
   if (configList.length > 0) {
     caFile = configList[0].certificatePath ?? "";

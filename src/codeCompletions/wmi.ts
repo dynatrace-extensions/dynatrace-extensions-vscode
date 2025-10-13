@@ -14,7 +14,7 @@
   limitations under the License.
  */
 
-import * as vscode from "vscode";
+import vscode from "vscode";
 import { getCachedParsedExtension, getCachedWmiQueryResult } from "../utils/caching";
 
 /**

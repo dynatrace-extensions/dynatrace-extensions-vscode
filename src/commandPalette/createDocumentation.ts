@@ -15,8 +15,8 @@
  */
 
 import { readFileSync, writeFileSync } from "fs";
-import * as path from "path";
-import * as vscode from "vscode";
+import path from "path";
+import vscode from "vscode";
 import {
   AlertDefinition,
   AlertDoc,
@@ -31,7 +31,7 @@ import { getCachedParsedExtension } from "../utils/caching";
 import { checkWorkspaceOpen, isExtensionsWorkspace } from "../utils/conditionCheckers";
 import { getAllMetricsByFeatureSet } from "../utils/extensionParsing";
 import { getExtensionFilePath } from "../utils/fileSystem";
-import * as logger from "../utils/logging";
+import logger from "../utils/logging";
 
 const logTrace = ["commandPalette", "createDocumentation"];
 

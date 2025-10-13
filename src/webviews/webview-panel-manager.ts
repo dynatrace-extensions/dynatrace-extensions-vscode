@@ -15,9 +15,9 @@
  */
 
 import { ViewType, PanelData, WebviewEvent, WebviewEventType, PanelDataType } from "@common";
-import * as vscode from "vscode";
+import vscode from "vscode";
 import { getActivationContext } from "../extension";
-import * as logger from "../utils/logging";
+import logger from "../utils/logging";
 import { getNonce, getColumn, getDtShellDefaults } from "./webview-utils";
 
 /**

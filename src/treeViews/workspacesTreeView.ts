@@ -15,10 +15,10 @@
  */
 
 import { readFileSync } from "fs";
-import * as path from "path";
-import * as glob from "glob";
-import * as vscode from "vscode";
-import * as yaml from "yaml";
+import path from "path";
+import { glob } from "glob";
+import vscode from "vscode";
+import yaml from "yaml";
 import { ExtensionStub } from "../interfaces/extensionMeta";
 import {
   WorkspaceTreeItem,

@@ -15,9 +15,9 @@
  */
 
 import { readFileSync, readdirSync, writeFileSync } from "fs";
-import path = require("path");
+import path from "path";
 import { SimulationLocation } from "@common";
-import * as vscode from "vscode";
+import vscode from "vscode";
 import { Dynatrace } from "../dynatrace-api/dynatrace";
 import {
   MinimalConfiguration,
@@ -32,7 +32,7 @@ import {
 } from "../utils/conditionCheckers";
 import { getDatasourceName } from "../utils/extensionParsing";
 import { createUniqueFileName, getExtensionFilePath } from "../utils/fileSystem";
-import * as logger from "../utils/logging";
+import logger from "../utils/logging";
 import { createGenericConfigObject, createObjectFromSchema } from "../utils/schemaParsing";
 
 export const createMonitoringConfigurationWorkflow = async () => {

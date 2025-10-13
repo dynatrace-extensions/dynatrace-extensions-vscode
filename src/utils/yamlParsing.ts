@@ -18,7 +18,7 @@
  * UTILITIES FOR PARSING RAW YAML CONTENT
  ********************************************************************************/
 
-import * as vscode from "vscode";
+import vscode from "vscode";
 
 /**
  * Gets the indent of a text line.

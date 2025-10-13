@@ -14,9 +14,9 @@
   limitations under the License.
  */
 
-import * as path from "path";
-import * as vscode from "vscode";
-import * as yaml from "yaml";
+import path from "path";
+import vscode from "vscode";
+import yaml from "yaml";
 import { ExtensionStub } from "../../../../src/interfaces/extensionMeta";
 import * as cachingUtils from "../../../../src/utils/caching";
 import { updateDiagnosticsCollection, getDiagnostics } from "../../../../src/utils/diagnostics";

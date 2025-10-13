@@ -14,7 +14,7 @@
   limitations under the License.
  */
 
-import * as vscode from "vscode";
+import vscode from "vscode";
 import { ExtensionStub } from "../interfaces/extensionMeta";
 import { getCachedParsedExtension } from "../utils/caching";
 import { getReferencedCardsMeta, getDefinedCardsMeta } from "../utils/extensionParsing";

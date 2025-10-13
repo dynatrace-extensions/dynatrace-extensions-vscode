@@ -17,7 +17,7 @@
 import { exec } from "child_process";
 import { PanelDataType, ViewType, WmiQueryResult } from "@common";
 import { getCachedWmiQueryResult } from "../../utils/caching";
-import * as logger from "../../utils/logging";
+import logger from "../../utils/logging";
 import { renderPanel } from "../../webviews/webview-utils";
 import { ValidationStatus } from "./selectorUtils";
 

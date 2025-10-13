@@ -1,9 +1,9 @@
 import { writeFileSync } from "fs";
 import JSZip from "jszip";
-import * as vscode from "vscode";
+import vscode from "vscode";
 import { getActivationContext } from "../extension";
 import { bundleFolder } from "../utils/fileSystem";
-import * as logger from "../utils/logging";
+import logger from "../utils/logging";
 
 export const downloadSupportArchiveWorkflow = async () => {
   const context = getActivationContext();

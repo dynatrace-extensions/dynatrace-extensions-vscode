@@ -15,11 +15,11 @@
  */
 
 import { readFileSync, writeFileSync } from "fs";
-import * as path from "path";
+import path from "path";
 import { EecType } from "@common";
-import * as jszip from "jszip";
-import * as vscode from "vscode";
-import * as yaml from "yaml";
+import jszip from "jszip";
+import vscode from "vscode";
+import yaml from "yaml";
 import { slugify } from "../codeActions/utils/snippetBuildingUtils";
 import { Dynatrace } from "../dynatrace-api/dynatrace";
 import {
@@ -45,7 +45,7 @@ import {
 import { getDynatraceClient } from "../treeViews/tenantsTreeView";
 import { pushManifestTextForParsing } from "../utils/caching";
 import { getExtensionWorkspaceDir } from "../utils/fileSystem";
-import * as logger from "../utils/logging";
+import logger from "../utils/logging";
 
 const logTrace = ["commandPalette", "convertJMXExtension"];
 const OPTION_LOCAL_FILE: vscode.QuickPickItem = {

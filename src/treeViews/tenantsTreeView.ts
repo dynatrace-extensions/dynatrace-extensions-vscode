@@ -14,8 +14,8 @@
   limitations under the License.
  */
 
-import path = require("path");
-import * as vscode from "vscode";
+import path from "path";
+import vscode from "vscode";
 import { Dynatrace } from "../dynatrace-api/dynatrace";
 import {
   DeployedExtension,
@@ -27,7 +27,7 @@ import {
 import { showConnectedStatusBar } from "../statusBar/connection";
 import { decryptToken } from "../utils/cryptography";
 import { getAllTenants } from "../utils/fileSystem";
-import * as logger from "../utils/logging";
+import logger from "../utils/logging";
 
 const ICONS_PATH = path.join(__filename, "..", "..", "src", "assets", "icons");
 const ICONS = {

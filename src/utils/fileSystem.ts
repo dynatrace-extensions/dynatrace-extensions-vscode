@@ -27,17 +27,16 @@ import {
   statSync,
   writeFileSync,
 } from "fs";
-import * as os from "os";
-import * as path from "path";
+import os from "os";
+import path from "path";
 import { ExecutionSummary, RemoteTarget } from "@common";
 import { copySync } from "fs-extra";
 import { glob } from "glob";
 import JSZip from "jszip";
-import * as vscode from "vscode";
+import vscode from "vscode";
 import { getActivationContext } from "../extension";
 import { DynatraceTenantDto, ExtensionWorkspaceDto } from "../interfaces/treeViews";
-import { notify } from "./logging";
-import * as logger from "./logging";
+import logger, { notify } from "./logging";
 
 const logTrace = ["utils", "fileSystem"];
 

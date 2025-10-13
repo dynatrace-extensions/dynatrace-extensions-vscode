@@ -15,7 +15,7 @@
  */
 
 import { ViewType } from "@common";
-import * as vscode from "vscode";
+import vscode from "vscode";
 import { getActivationSchemaActionProvider } from "./codeActions/activationSchema";
 import { getDiagnosticFixProvider } from "./codeActions/diagnosticFixProvider";
 import { getPrometheusActionProvider } from "./codeActions/prometheus";
@@ -72,7 +72,7 @@ import {
   initializeGlobalStorage,
   migrateFromLegacyExtension,
 } from "./utils/fileSystem";
-import * as logger from "./utils/logging";
+import logger from "./utils/logging";
 import { getWebviewPanelManager } from "./webviews/webview-panel-manager";
 
 // eslint-disable-next-line @typescript-eslint/no-explicit-any

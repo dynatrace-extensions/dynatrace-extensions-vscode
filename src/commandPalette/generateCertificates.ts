@@ -15,13 +15,13 @@
  */
 
 import { existsSync, mkdirSync, writeFileSync } from "fs";
-import path = require("path");
+import path from "path";
 import { md, pki, random, util } from "node-forge";
-import * as vscode from "vscode";
+import vscode from "vscode";
 import { getActivationContext } from "../extension";
 import { checkOverwriteCertificates, checkWorkspaceOpen } from "../utils/conditionCheckers";
 import { initWorkspaceStorage } from "../utils/fileSystem";
-import * as logger from "../utils/logging";
+import logger from "../utils/logging";
 
 const logTrace = ["commandPalette", "generateCertificates"];
 

@@ -19,9 +19,9 @@
  ********************************************************************************/
 
 import { EecType, OsType, RemoteTarget, SimulationConfig, SimulationLocation } from "@common";
-import * as vscode from "vscode";
+import vscode from "vscode";
 import { getSimulatorTargets } from "./fileSystem";
-import * as logger from "./logging";
+import logger from "./logging";
 
 const logTrace = ["utils", "simulator"];
 

@@ -14,8 +14,8 @@
   limitations under the License.
  */
 
-import * as path from "path";
-import * as yaml from "yaml";
+import path from "path";
+import yaml from "yaml";
 import { ExtensionStub } from "../../../../src/interfaces/extensionMeta";
 import {
   getAllMetricKeys,

@@ -14,10 +14,10 @@
   limitations under the License.
  */
 
-import * as fs from "fs";
-import * as path from "path";
+import fs from "fs";
+import path from "path";
 import { EecType, OsType, SimulationConfig, SimulationLocation } from "@common";
-import * as vscode from "vscode";
+import vscode from "vscode";
 import * as extension from "../../../../src/extension";
 import {
   canSimulateDatasource,

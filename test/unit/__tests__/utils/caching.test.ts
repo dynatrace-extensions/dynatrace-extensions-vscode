@@ -14,10 +14,10 @@
   limitations under the License.
  */
 
-import * as path from "path";
+import path from "path";
 import { WmiQueryResult } from "@common";
 import axios from "axios";
-import * as yaml from "yaml";
+import yaml from "yaml";
 import { PromData } from "../../../../src/codeLens/prometheusScraper";
 import { ValidationStatus } from "../../../../src/codeLens/utils/selectorUtils";
 import * as extension from "../../../../src/extension";

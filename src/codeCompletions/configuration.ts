@@ -15,7 +15,7 @@
  */
 
 import { SimulationLocation } from "@common";
-import * as vscode from "vscode";
+import vscode from "vscode";
 import { MinimalConfiguration } from "../treeViews/commands/environments";
 import { getCachedEntityInstances, updateEntityInstances } from "../utils/caching";
 import { getExtensionFilePath } from "../utils/fileSystem";

@@ -14,7 +14,7 @@
   limitations under the License.
  */
 
-import * as vscode from "vscode";
+import vscode from "vscode";
 import { getCachedBaristaIcons } from "../utils/caching";
 import { getParentBlocks } from "../utils/yamlParsing";
 

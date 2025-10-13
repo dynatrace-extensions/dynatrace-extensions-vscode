@@ -15,15 +15,15 @@
  */
 
 import { existsSync, mkdirSync, readFileSync, writeFile, writeFileSync } from "fs";
-import * as path from "path";
+import path from "path";
 import axios from "axios";
-import * as vscode from "vscode";
+import vscode from "vscode";
 import { Dynatrace } from "../dynatrace-api/dynatrace";
 import { getActivationContext } from "../extension";
 import { getDynatraceClient } from "../treeViews/tenantsTreeView";
 import { checkTenantConnected } from "../utils/conditionCheckers";
 import { getExtensionFilePath } from "../utils/fileSystem";
-import * as logger from "../utils/logging";
+import logger from "../utils/logging";
 
 const logTrace = ["commandPalette", "loadSchemas"];
 

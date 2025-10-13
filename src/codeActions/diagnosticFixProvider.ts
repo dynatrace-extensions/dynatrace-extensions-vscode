@@ -14,7 +14,7 @@
   limitations under the License.
  */
 
-import * as vscode from "vscode";
+import vscode from "vscode";
 import { COUNT_METRIC_KEY_SUFFIX, GAUGE_METRIC_KEY_SUFFIX } from "../constants";
 import { getDiagnostics } from "../utils/diagnostics";
 

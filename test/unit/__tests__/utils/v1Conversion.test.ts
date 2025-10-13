@@ -15,7 +15,7 @@
  */
 
 import { readFileSync, readdirSync } from "fs";
-import * as path from "path";
+import path from "path";
 import { describe, expect, test } from "@jest/globals";
 import { convertPluginJsonToActivationSchema } from "../../../../src/commandPalette/python/pythonConversion";
 import { ExtensionV1 } from "../../../../src/interfaces/extensionMeta";

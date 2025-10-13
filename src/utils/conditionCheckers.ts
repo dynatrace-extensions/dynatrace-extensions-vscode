@@ -20,15 +20,15 @@
 
 import { ExecOptions } from "child_process";
 import { existsSync, readdirSync, readFileSync } from "fs";
-import * as path from "path";
+import path from "path";
 import axios from "axios";
-import * as vscode from "vscode";
+import vscode from "vscode";
 import { getActivationContext } from "../extension";
 import { getConnectedTenant } from "../treeViews/tenantsTreeView";
 import { getDiagnostics } from "./diagnostics";
 import { getExtensionFilePath, resolveRealPath } from "./fileSystem";
 import { setHttpsAgent } from "./general";
-import * as logger from "./logging";
+import logger from "./logging";
 import { runCommand } from "./subprocesses";
 
 const logTrace = ["utils", "conditionCheckers"];

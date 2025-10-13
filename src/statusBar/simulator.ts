@@ -16,7 +16,7 @@
 
 import { ChildProcess, ExecOptions, SpawnOptions, spawn } from "child_process";
 import { existsSync, mkdirSync, readFileSync, writeFileSync } from "fs";
-import * as path from "path";
+import path from "path";
 import {
   PanelDataType,
   ViewType,
@@ -32,8 +32,8 @@ import {
   WebviewEventType,
   ExecutionSummary,
 } from "@common";
-import pidtree = require("pidtree");
-import * as vscode from "vscode";
+import pidtree from "pidtree";
+import vscode from "vscode";
 import { getActivationContext } from "../extension";
 import { getCachedParsedExtension } from "../utils/caching";
 import { checkDtSdkPresent } from "../utils/conditionCheckers";
@@ -49,7 +49,7 @@ import {
   registerSimulatorTarget,
 } from "../utils/fileSystem";
 import { loopSafeWait } from "../utils/general";
-import * as logger from "../utils/logging";
+import logger from "../utils/logging";
 import { getPythonVenvOpts } from "../utils/otherExtensions";
 import {
   canSimulateDatasource,

@@ -15,8 +15,8 @@
  */
 
 import { copyFileSync, existsSync, mkdirSync } from "fs";
-import * as path from "path";
-import * as vscode from "vscode";
+import path from "path";
+import vscode from "vscode";
 import { getLoadedMibFiles, loadUserMibFiles } from "../utils/caching";
 import { getSnmpDirPath } from "../utils/fileSystem";
 import { notify } from "../utils/logging";

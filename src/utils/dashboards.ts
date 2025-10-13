@@ -1,5 +1,5 @@
 import { writeFileSync, readFileSync } from "fs";
-import * as yaml from "yaml";
+import yaml from "yaml";
 import { ExtensionStub, DocumentDashboard } from "../interfaces/extensionMeta";
 
 export const TemplateText = {

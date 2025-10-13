@@ -19,8 +19,8 @@
  ********************************************************************************/
 
 import { writeFileSync } from "fs";
-import * as path from "path";
-import * as vscode from "vscode";
+import path from "path";
+import vscode from "vscode";
 
 /**
  * Reads the contents of the actiovationSchema.json file and

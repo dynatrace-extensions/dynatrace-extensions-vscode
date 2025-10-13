@@ -15,9 +15,9 @@
  */
 
 import { readFileSync, readdirSync, rmSync, writeFileSync } from "fs";
-import * as path from "path";
+import path from "path";
 import { SimulationLocation } from "@common";
-import * as vscode from "vscode";
+import vscode from "vscode";
 import { DynatraceAPIError } from "../../dynatrace-api/errors";
 import { getActivationContext } from "../../extension";
 import {
@@ -35,7 +35,7 @@ import {
   registerTenant,
   removeTenant,
 } from "../../utils/fileSystem";
-import * as logger from "../../utils/logging";
+import logger from "../../utils/logging";
 import { createObjectFromSchema } from "../../utils/schemaParsing";
 import { refreshTenantsTreeView } from "../tenantsTreeView";
 

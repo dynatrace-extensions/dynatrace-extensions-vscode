@@ -14,7 +14,7 @@
   limitations under the License.
  */
 
-import * as vscode from "vscode";
+import vscode from "vscode";
 import { Dynatrace } from "../dynatrace-api/dynatrace";
 import { DynatraceAPIError } from "../dynatrace-api/errors";
 import { getConnectedTenant, getDynatraceClient } from "../treeViews/tenantsTreeView";
@@ -25,7 +25,7 @@ import {
   isExtensionsWorkspace,
 } from "../utils/conditionCheckers";
 import { getExtensionFilePath } from "../utils/fileSystem";
-import * as logger from "../utils/logging";
+import logger from "../utils/logging";
 
 export const activateExtensionWorkflow = async (version?: string) => {
   if (

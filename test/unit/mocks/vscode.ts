@@ -14,8 +14,8 @@
   limitations under the License.
  */
 
-import * as path from "path";
-import * as vscode from "vscode";
+import path from "path";
+import vscode from "vscode";
 
 export class MockCancellationToken implements vscode.CancellationToken {
   isCancellationRequested = false;

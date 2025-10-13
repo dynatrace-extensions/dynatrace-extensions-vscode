@@ -15,10 +15,10 @@
  */
 
 import { lstatSync, readdirSync, readFileSync } from "fs";
-import * as path from "path";
+import path from "path";
 import JSZip from "jszip";
-import * as vscode from "vscode";
-import * as yaml from "yaml";
+import vscode from "vscode";
+import yaml from "yaml";
 import { Dynatrace } from "../dynatrace-api/dynatrace";
 import { DynatraceAPIError } from "../dynatrace-api/errors";
 import { ExtensionStub } from "../interfaces/extensionMeta";
@@ -30,7 +30,7 @@ import {
   isExtensionsWorkspace,
 } from "../utils/conditionCheckers";
 import { loopSafeWait } from "../utils/general";
-import * as logger from "../utils/logging";
+import logger from "../utils/logging";
 import { activateExtension } from "./activateExtension";
 
 export const uploadExtensionWorkflow = async () => {

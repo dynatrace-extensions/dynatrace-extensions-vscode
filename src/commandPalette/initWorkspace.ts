@@ -23,12 +23,12 @@ import {
   rmdirSync,
   writeFileSync,
 } from "fs";
-import * as path from "path";
+import path from "path";
 import { TextEncoder } from "util";
 import axios from "axios";
 import { moveSync } from "fs-extra";
 import JSZip from "jszip";
-import * as vscode from "vscode";
+import vscode from "vscode";
 import { Dynatrace } from "../dynatrace-api/dynatrace";
 import { getActivationContext } from "../extension";
 import { getDynatraceClient } from "../treeViews/tenantsTreeView";
@@ -47,8 +47,7 @@ import {
   registerWorkspace,
   writeGititnore,
 } from "../utils/fileSystem";
-import { notify } from "../utils/logging";
-import * as logger from "../utils/logging";
+import logger, { notify } from "../utils/logging";
 import { getPythonVenvOpts } from "../utils/otherExtensions";
 import { runCommand } from "../utils/subprocesses";
 import { loadSchemas } from "./loadSchemas";

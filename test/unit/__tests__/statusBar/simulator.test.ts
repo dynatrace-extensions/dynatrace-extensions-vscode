@@ -14,8 +14,8 @@
   limitations under the License.
  */
 
-import * as fs from "fs";
-import * as path from "path";
+import fs from "fs";
+import path from "path";
 import {
   PanelDataType,
   ViewType,
@@ -28,7 +28,7 @@ import {
   OsType,
   EecType,
 } from "@common";
-import * as vscode from "vscode";
+import vscode from "vscode";
 import * as extension from "../../../../src/extension";
 import { DatasourceName, ExtensionStub } from "../../../../src/interfaces/extensionMeta";
 import { SimulatorManager } from "../../../../src/statusBar/simulator";

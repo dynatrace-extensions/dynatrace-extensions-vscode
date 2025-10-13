@@ -23,10 +23,10 @@ import {
   unlinkSync,
   writeFileSync,
 } from "fs";
-import * as path from "path";
+import path from "path";
 import { glob } from "glob";
 import JSZip from "jszip";
-import * as vscode from "vscode";
+import vscode from "vscode";
 import { Dynatrace } from "../dynatrace-api/dynatrace";
 import { DynatraceAPIError } from "../dynatrace-api/errors";
 import { getActivationContext } from "../extension";
@@ -50,7 +50,7 @@ import {
   resolveRealPath,
 } from "../utils/fileSystem";
 import { loopSafeWait } from "../utils/general";
-import * as logger from "../utils/logging";
+import logger from "../utils/logging";
 import { getPythonVenvOpts } from "../utils/otherExtensions";
 import { runCommand } from "../utils/subprocesses";
 

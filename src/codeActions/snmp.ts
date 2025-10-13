@@ -14,7 +14,7 @@
   limitations under the License.
  */
 
-import * as vscode from "vscode";
+import vscode from "vscode";
 import { ExtensionStub } from "../interfaces/extensionMeta";
 import { getCachedOid, getCachedParsedExtension, updateCachedSnmpOids } from "../utils/caching";
 import { getMetricsFromDataSource } from "../utils/extensionParsing";

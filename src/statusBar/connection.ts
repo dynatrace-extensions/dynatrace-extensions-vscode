@@ -14,7 +14,7 @@
   limitations under the License.
  */
 
-import * as vscode from "vscode";
+import vscode from "vscode";
 import { DynatraceTenantDto } from "../interfaces/treeViews";
 import { checkUrlReachable } from "../utils/conditionCheckers";
 

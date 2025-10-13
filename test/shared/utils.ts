@@ -14,12 +14,13 @@
   limitations under the License.
  */
 
-import { readFileSync } from "fs";
-import * as fs from "fs";
-import * as path from "path";
+import fs from "fs";
+import path from "path";
 
 export const readTestDataFile = (relativePath: string) => {
-  return readFileSync(path.resolve(__dirname, "..", "unit", "test_data", relativePath)).toString();
+  return fs
+    .readFileSync(path.resolve(__dirname, "..", "unit", "test_data", relativePath))
+    .toString();
 };
 
 interface FileSystemItem {

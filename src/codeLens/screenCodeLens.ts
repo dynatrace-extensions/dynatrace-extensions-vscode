@@ -14,10 +14,10 @@
   limitations under the License.
  */
 
-import * as vscode from "vscode";
+import vscode from "vscode";
 import { getConnectedTenant } from "../treeViews/tenantsTreeView";
 import { getCachedParsedExtension } from "../utils/caching";
-import * as logger from "../utils/logging";
+import logger from "../utils/logging";
 import { getBlockItemIndexAtLine, getParentBlocks } from "../utils/yamlParsing";
 
 /**

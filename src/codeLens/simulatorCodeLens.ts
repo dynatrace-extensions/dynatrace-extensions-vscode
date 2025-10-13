@@ -15,9 +15,9 @@
  */
 
 import { SimulatorStatus } from "@common";
-import * as vscode from "vscode";
+import vscode from "vscode";
 import { SimulatorManager } from "../statusBar/simulator";
-import * as logger from "../utils/logging";
+import logger from "../utils/logging";
 
 const START_COMMAND = "dynatraceExtensions.simulator.codelens.start";
 const STOP_COMMAND = "dynatraceExtensions.simulator.codelens.stop";

@@ -14,18 +14,18 @@
   limitations under the License.
  */
 
-import * as path from "path";
+import path from "path";
 import { WmiQueryResult } from "@common";
 import axios from "axios";
 import { BehaviorSubject, Observable, Subscriber, delay, map, of, switchMap } from "rxjs";
-import * as vscode from "vscode";
-import * as yaml from "yaml";
+import vscode from "vscode";
+import yaml from "yaml";
 import { PromData } from "../codeLens/prometheusScraper";
 import { ValidationStatus } from "../codeLens/utils/selectorUtils";
 import { Entity, EntityType } from "../dynatrace-api/interfaces/monitoredEntities";
 import { ExtensionStub } from "../interfaces/extensionMeta";
 import { getDynatraceClient } from "../treeViews/tenantsTreeView";
-import * as logger from "../utils/logging";
+import logger from "../utils/logging";
 import { getExtensionFilePath, getSnmpMibFiles, readExtensionManifest } from "./fileSystem";
 import { setHttpsAgent, waitForCondition } from "./general";
 import {

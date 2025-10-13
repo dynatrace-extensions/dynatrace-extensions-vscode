@@ -19,7 +19,7 @@
  ******************************************************/
 
 import { ViewType, PanelData, WebviewEvent } from "@common";
-import * as vscode from "vscode";
+import vscode from "vscode";
 import { getConnectedTenant } from "../treeViews/tenantsTreeView";
 import { getWebviewPanelManager } from "./webview-panel-manager";
 

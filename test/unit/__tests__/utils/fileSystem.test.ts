@@ -14,12 +14,12 @@
   limitations under the License.
  */
 
-import * as fs from "fs";
-import * as os from "os";
-import * as path from "path";
+import fs from "fs";
+import os from "os";
+import path from "path";
 import { EecType, ExecutionSummary, OsType, RemoteTarget, SimulationLocation } from "@common";
 import { glob } from "glob";
-import * as vscode from "vscode";
+import vscode from "vscode";
 import * as extension from "../../../../src/extension";
 import { DynatraceTenantDto, ExtensionWorkspaceDto } from "../../../../src/interfaces/treeViews";
 import {

@@ -20,7 +20,7 @@
 
 import { FeatureSetDoc } from "../interfaces/extensionDocs";
 import { DatasourceGroup, DatasourceName, ExtensionStub } from "../interfaces/extensionMeta";
-import * as logger from "./logging";
+import logger from "./logging";
 
 const logTrace = ["utils", "extensionParsing"];
 

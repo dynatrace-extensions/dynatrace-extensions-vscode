@@ -19,9 +19,9 @@
  ********************************************************************************/
 
 import { existsSync, readFileSync } from "fs";
-import path = require("path");
+import path from "path";
 import { DatasourceName } from "../interfaces/extensionMeta";
-import * as logger from "./logging";
+import logger from "./logging";
 
 const logTrace = ["utils", "schemaParsing"];
 

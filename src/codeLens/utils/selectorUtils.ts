@@ -15,14 +15,14 @@
  */
 
 import { PanelDataType, ViewType, MetricSeriesCollection } from "@common";
-import * as vscode from "vscode";
+import vscode from "vscode";
 import { Dynatrace } from "../../dynatrace-api/dynatrace";
 import { DynatraceAPIError } from "../../dynatrace-api/errors";
 import { Entity } from "../../dynatrace-api/interfaces/monitoredEntities";
 import { ExtensionStub } from "../../interfaces/extensionMeta";
 import { getDynatraceClient } from "../../treeViews/tenantsTreeView";
 import { checkTenantConnected } from "../../utils/conditionCheckers";
-import * as logger from "../../utils/logging";
+import logger from "../../utils/logging";
 import { getBlockItemIndexAtLine, getParentBlocks } from "../../utils/yamlParsing";
 import { renderPanel } from "../../webviews/webview-utils";
 import { updateSelectorValidationStatus } from "../selectorCodeLens";

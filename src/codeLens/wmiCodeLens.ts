@@ -15,9 +15,9 @@
  */
 
 import { WmiQueryResult } from "@common";
-import * as vscode from "vscode";
+import vscode from "vscode";
 import { getCachedWmiStatus, setCachedWmiStatus, setCachedWmiQueryResult } from "../utils/caching";
-import * as logger from "../utils/logging";
+import logger from "../utils/logging";
 import { getBlockRange } from "../utils/yamlParsing";
 import { ValidationStatus } from "./utils/selectorUtils";
 import { runWMIQuery } from "./utils/wmiUtils";

@@ -14,12 +14,11 @@
   limitations under the License.
  */
 
-import * as vscode from "vscode";
+import vscode from "vscode";
 import { getActivationContext } from "../../extension";
 import { WorkspaceTreeItem } from "../../interfaces/treeViews";
 import { removeWorkspace } from "../../utils/fileSystem";
-import { notify } from "../../utils/logging";
-import * as logger from "../../utils/logging";
+import logger, { notify } from "../../utils/logging";
 import { refreshWorkspacesTreeView } from "../workspacesTreeView";
 
 /**
