@@ -11,3 +11,14 @@ export function showQuickPick<
 ): Thenable<(U["canPickMany"] extends true ? T[] : T) | undefined> {
   return vscode.window.showQuickPick(items as never, options, token) as never;
 }
+
+const ConfirmOption = ["Yes", "No"] as const;
+// eslint-disable-next-line @typescript-eslint/no-redeclare
+type ConfirmOption = (typeof ConfirmOption)[number];
+
+export function showQuickPickConfirm(
+  options: Omit<vscode.QuickPickOptions, "canPickMany">,
+  token?: vscode.CancellationToken,
+): Thenable<ConfirmOption | undefined> {
+  return showQuickPick(ConfirmOption, options, token);
+}

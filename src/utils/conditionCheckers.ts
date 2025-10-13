@@ -30,7 +30,7 @@ import { getExtensionFilePath, resolveRealPath } from "./fileSystem";
 import { setHttpsAgent } from "./general";
 import logger from "./logging";
 import { runCommand } from "./subprocesses";
-import { showQuickPick } from "./vscode";
+import { showQuickPickConfirm } from "./vscode";
 
 const logTrace = ["utils", "conditionCheckers"];
 
@@ -157,7 +157,7 @@ export async function checkOverwriteCertificates(): Promise<boolean> {
   const certsDir = path.join(storageUri, "certificates");
   if (existsSync(certsDir)) {
     if (existsSync(path.join(certsDir, "dev.pem")) || existsSync(path.join(certsDir, "ca.pem"))) {
-      const choice = await showQuickPick(["Yes", "No"], {
+      const choice = await showQuickPickConfirm({
         title: "Workspace already has certificates.",
         placeHolder: "Would you like to generate new ones?",
         ignoreFocusOut: true,

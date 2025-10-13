@@ -47,7 +47,7 @@ import { pushManifestTextForParsing } from "../utils/caching";
 import { getExtensionWorkspaceDir } from "../utils/fileSystem";
 import { parseJSON } from "../utils/jsonParsing";
 import logger from "../utils/logging";
-import { showQuickPick } from "../utils/vscode";
+import { showQuickPick, showQuickPickConfirm } from "../utils/vscode";
 
 const logTrace = ["commandPalette", "convertJMXExtension"];
 const OPTION_LOCAL_FILE: vscode.QuickPickItem = {
@@ -588,7 +588,7 @@ async function convertV1UiToScreens(
     });
   }
 
-  const createHostInjection = await showQuickPick(["Yes", "No"], {
+  const createHostInjection = await showQuickPickConfirm({
     ignoreFocusOut: true,
     title: "Visualize your data",
     placeHolder: "Show this JMX data on the Host details page?",

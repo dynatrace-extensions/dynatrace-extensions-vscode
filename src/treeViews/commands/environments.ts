@@ -38,7 +38,7 @@ import {
 import { parseJSON } from "../../utils/jsonParsing";
 import logger from "../../utils/logging";
 import { createObjectFromSchema } from "../../utils/schemaParsing";
-import { showQuickPick } from "../../utils/vscode";
+import { showQuickPick, showQuickPickConfirm } from "../../utils/vscode";
 import { refreshTenantsTreeView } from "../tenantsTreeView";
 
 const logTrace = ["treeViews", "commands", "environments"];
@@ -295,7 +295,7 @@ async function addEnvironment() {
     ignoreFocusOut: true,
   });
 
-  const current = await showQuickPick(["Yes", "No"], {
+  const current = await showQuickPickConfirm({
     title: "Set this as your currrent environment?",
     ignoreFocusOut: true,
   });
@@ -362,7 +362,7 @@ async function editEnvironment(environment: DynatraceTenant) {
     ignoreFocusOut: true,
   });
 
-  const current = await showQuickPick(["Yes", "No"], {
+  const current = await showQuickPickConfirm({
     title: "Set this as your currrent environment?",
     ignoreFocusOut: true,
   });
@@ -377,7 +377,7 @@ async function editEnvironment(environment: DynatraceTenant) {
  * @returns
  */
 async function deleteEnvironment(environment: DynatraceTenant) {
-  const confirm = await showQuickPick(["Yes", "No"], {
+  const confirm = await showQuickPickConfirm({
     title: `Delete environment ${environment.label}?`,
     ignoreFocusOut: true,
   });
@@ -494,7 +494,7 @@ async function editMonitoringConfiguration(config: MonitoringConfiguration): Pro
  */
 async function deleteMonitoringConfiguration(config: MonitoringConfiguration): Promise<boolean> {
   const fnLogTrace = [...logTrace, "deleteMonitoringConfiguration"];
-  const confirm = await showQuickPick(["Yes", "No"], {
+  const confirm = await showQuickPickConfirm({
     title: `Delete configuration ${config.label}?`,
     ignoreFocusOut: true,
   });

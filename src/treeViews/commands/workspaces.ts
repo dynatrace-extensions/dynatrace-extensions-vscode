@@ -19,7 +19,7 @@ import { getActivationContext } from "../../extension";
 import { WorkspaceTreeItem } from "../../interfaces/treeViews";
 import { removeWorkspace } from "../../utils/fileSystem";
 import logger, { notify } from "../../utils/logging";
-import { showQuickPick } from "../../utils/vscode";
+import { showQuickPickConfirm } from "../../utils/vscode";
 import { refreshWorkspacesTreeView } from "../workspacesTreeView";
 
 /**
@@ -81,7 +81,7 @@ export const registerWorkspaceViewCommands = (): vscode.Disposable[] => {
  */
 async function deleteWorkspace(workspace: WorkspaceTreeItem) {
   const fnLogTrace = ["treeViews", "commands", "workspaces", "deleteWorkspace"];
-  const confirm = await showQuickPick(["Yes", "No"], {
+  const confirm = await showQuickPickConfirm({
     title: `Delete workspace ${workspace.label?.toString() ?? workspace.id}?`,
     ignoreFocusOut: true,
   });
