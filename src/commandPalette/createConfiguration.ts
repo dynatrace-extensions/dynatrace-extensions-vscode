@@ -35,6 +35,7 @@ import { createUniqueFileName, getExtensionFilePath } from "../utils/fileSystem"
 import { parseJSON } from "../utils/jsonParsing";
 import logger from "../utils/logging";
 import { createGenericConfigObject, createObjectFromSchema } from "../utils/schemaParsing";
+import { showQuickPick } from "../utils/vscode";
 
 export const createMonitoringConfigurationWorkflow = async () => {
   if (
@@ -92,12 +93,11 @@ export async function createMonitoringConfiguration(dt: Dynatrace) {
   } else {
     logger.debug("Extension is not deployed. Need to build schema from scratch", ...fnLogTrace);
     const datasourceName = getDatasourceName(extension);
-    let activationContext;
-    activationContext = SimulationLocation.Remote;
+    let activationContext: SimulationLocation | undefined = SimulationLocation.Remote;
+
     // For datasources that support both local and remote activation
     if (["wmi", "prometheus", "python"].includes(datasourceName)) {
-      activationContext = await vscode.window.showQuickPick(Object.values(SimulationLocation), {
-        canPickMany: false,
+      activationContext = await showQuickPick(Object.values(SimulationLocation), {
         ignoreFocusOut: true,
         title: "Where will this configuration run?",
       });

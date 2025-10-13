@@ -26,6 +26,7 @@ import {
 } from "../utils/conditionCheckers";
 import { getExtensionFilePath } from "../utils/fileSystem";
 import logger from "../utils/logging";
+import { showQuickPick } from "../utils/vscode";
 
 export const activateExtensionWorkflow = async (version?: string) => {
   if (
@@ -65,10 +66,9 @@ export async function activateExtension(dt: Dynatrace, tenantUrl: string, versio
   // If version was not provided, prompt user for selection
   if (!version) {
     logger.debug("Prompting user for version selection.", ...fnLogTrace);
-    version = await vscode.window.showQuickPick(
+    version = await showQuickPick(
       dt.extensionsV2.listVersions(extension.name).then(res => res.map(me => me.version)),
       {
-        canPickMany: false,
         ignoreFocusOut: true,
         title: "Activate extension",
         placeHolder: "Choose a version to activate",

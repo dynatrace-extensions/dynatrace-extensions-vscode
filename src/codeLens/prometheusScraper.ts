@@ -15,11 +15,13 @@
  */
 
 import { readFileSync } from "fs";
+import { utilTypes } from "@common";
 import axios from "axios";
 import vscode from "vscode";
 import { getCachedPrometheusData, setCachedPrometheusData } from "../utils/caching";
 import { setHttpsAgent } from "../utils/general";
 import logger from "../utils/logging";
+import { showQuickPick } from "../utils/vscode";
 
 export type PromData = Record<string, PromDetails>;
 type PromDetails = {
@@ -27,8 +29,22 @@ type PromDetails = {
   dimensions?: string[];
   description?: string;
 };
-type PromAuth = "No authentication" | "Bearer token" | "Username & password" | "AWS key";
-type ScrapingMethod = "Endpoint" | "File";
+
+const PromAuth = {
+  NoAuth: "No authentication",
+  Token: "Bearer token",
+  Credentials: "Username & password",
+  AWS: "AWS key",
+} as const;
+// eslint-disable-next-line @typescript-eslint/no-redeclare
+type PromAuth = utilTypes.ObjectValues<typeof PromAuth>;
+
+const ScrapingMethod = {
+  Endpoint: "Endpoint",
+  File: "File",
+} as const;
+// eslint-disable-next-line @typescript-eslint/no-redeclare
+type ScrapingMethod = utilTypes.ObjectValues<typeof ScrapingMethod>;
 
 /**
  * Provides singleton access to the PrometheusCodeLensProvider
@@ -170,14 +186,13 @@ class PrometheusCodeLensProvider implements vscode.CodeLensProvider {
    */
   private async collectScrapingDetails(): Promise<boolean> {
     // Endpoint URL
-    this.method = (await vscode.window.showQuickPick(["Endpoint", "File"], {
+    this.method = await showQuickPick(Object.values(ScrapingMethod), {
       title: "Scrape data - method selection",
       placeHolder: "Select your scraping method",
-      canPickMany: false,
       ignoreFocusOut: true,
-    })) as ScrapingMethod;
+    });
     switch (this.method) {
-      case "Endpoint":
+      case ScrapingMethod.Endpoint:
         this.promUrl = await vscode.window.showInputBox({
           title: "Scrape data - endpoint URL",
           placeHolder: "Enter your full metrics endpoint URL",
@@ -188,15 +203,11 @@ class PrometheusCodeLensProvider implements vscode.CodeLensProvider {
           return false;
         }
         // Endpoint connectivity scheme
-        this.promAuth = (await vscode.window.showQuickPick(
-          ["No authentication", "Bearer token", "Username & password", "AWS key"],
-          {
-            title: "Scrape data - endpoint authentication",
-            placeHolder: "Select your endpoint's authentication scheme",
-            canPickMany: false,
-            ignoreFocusOut: true,
-          },
-        )) as PromAuth;
+        this.promAuth = await showQuickPick(Object.values(PromAuth), {
+          title: "Scrape data - endpoint authentication",
+          placeHolder: "Select your endpoint's authentication scheme",
+          ignoreFocusOut: true,
+        });
         // Endpoint authentication details
         switch (this.promAuth) {
           case "No authentication":
@@ -253,7 +264,7 @@ class PrometheusCodeLensProvider implements vscode.CodeLensProvider {
           default:
             return false;
         }
-      case "File":
+      case ScrapingMethod.File:
         this.promFile = await vscode.window.showInputBox({
           title: "Scrape data - file location",
           placeHolder: "Enter the full, physical location of the file",

@@ -47,6 +47,7 @@ import { pushManifestTextForParsing } from "../utils/caching";
 import { getExtensionWorkspaceDir } from "../utils/fileSystem";
 import { parseJSON } from "../utils/jsonParsing";
 import logger from "../utils/logging";
+import { showQuickPick } from "../utils/vscode";
 
 const logTrace = ["commandPalette", "convertJMXExtension"];
 const OPTION_LOCAL_FILE: vscode.QuickPickItem = {
@@ -587,8 +588,7 @@ async function convertV1UiToScreens(
     });
   }
 
-  const createHostInjection = await vscode.window.showQuickPick(["Yes", "No"], {
-    canPickMany: false,
+  const createHostInjection = await showQuickPick(["Yes", "No"], {
     ignoreFocusOut: true,
     title: "Visualize your data",
     placeHolder: "Show this JMX data on the Host details page?",
@@ -683,8 +683,7 @@ async function convertJMXExtensionToV2(jmxV1Extension: ExtensionV1): Promise<Ext
   if (jmxV1Extension.technologies) {
     technology = jmxV1Extension.technologies[0];
   } else {
-    const techChoice = await vscode.window.showQuickPick(TECH_OPTIONS, {
-      canPickMany: false,
+    const techChoice = await showQuickPick(TECH_OPTIONS, {
       ignoreFocusOut: true,
       title: "Select a process technology",
       placeHolder: "Select a Java-based technology/framework or 'All other' if none match",
@@ -774,7 +773,7 @@ export async function extractV1FromRemote(
     }
   });
 
-  const extensionChoice = await vscode.window.showQuickPick(
+  const extensionChoice = await showQuickPick(
     filterdExtensions.map(e => ({
       label: e.name,
       description: e.id,
@@ -807,10 +806,9 @@ export async function convertJMXExtension(dt?: Dynatrace, outputPath?: string) {
   logger.info("Executing Covert JMX command", ...fnLogTrace);
   // User chooses if they want to use a local file or browse from the Dynatrace environment
   const pluginJSONOrigins = [OPTION_LOCAL_FILE, OPTION_DYNATRACE_ENVIRONMENT];
-  const pluginJSONOrigin = await vscode.window.showQuickPick(pluginJSONOrigins, {
+  const pluginJSONOrigin = await showQuickPick(pluginJSONOrigins, {
     placeHolder: "How would you like to import the JMX V1 extension?",
     title: "Convert JMX extension",
-    canPickMany: false,
     ignoreFocusOut: true,
   });
 

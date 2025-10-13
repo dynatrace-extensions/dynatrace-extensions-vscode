@@ -30,6 +30,7 @@ import {
 } from "../utils/conditionCheckers";
 import { loopSafeWait } from "../utils/general";
 import logger from "../utils/logging";
+import { showQuickPick } from "../utils/vscode";
 import { parseYAML } from "../utils/yamlParsing";
 import { activateExtension } from "./activateExtension";
 
@@ -116,18 +117,16 @@ export async function uploadExtension(dt: Dynatrace, tenantUrl: string) {
       .catch(async () => {
         logger.warn("Could not delete oldest version", ...fnLogTrace);
         // Could not delete oldest version, prompt user to select another one
-        await vscode.window
-          .showQuickPick(
-            dt.extensionsV2
-              .listVersions(extensionName)
-              .then(versions => versions.slice(1).map(version => version.version)),
-            {
-              canPickMany: false,
-              ignoreFocusOut: true,
-              title: "Could not delete latest version",
-              placeHolder: "Please choose an alternative",
-            },
-          )
+        await showQuickPick(
+          dt.extensionsV2
+            .listVersions(extensionName)
+            .then(versions => versions.slice(1).map(version => version.version)),
+          {
+            ignoreFocusOut: true,
+            title: "Could not delete latest version",
+            placeHolder: "Please choose an alternative",
+          },
+        )
           // Remove the user's chosen version
           .then(version => {
             if (version) {

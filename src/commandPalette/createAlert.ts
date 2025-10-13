@@ -24,6 +24,7 @@ import { checkWorkspaceOpen, isExtensionsWorkspace } from "../utils/conditionChe
 import { getAllMetricKeys, getEntityForMetric } from "../utils/extensionParsing";
 import { createUniqueFileName, getExtensionFilePath } from "../utils/fileSystem";
 import logger from "../utils/logging";
+import { showQuickPick } from "../utils/vscode";
 
 const logTrace = ["commandPalette", "createAlert"];
 
@@ -64,7 +65,7 @@ export async function createAlert() {
     return;
   }
 
-  const metricToUse = await vscode.window.showQuickPick(metricKeys, {
+  const metricToUse = await showQuickPick(metricKeys, {
     placeHolder: "Choose a metric",
     title: "Extension workspace: Create Alert",
     ignoreFocusOut: true,
@@ -86,7 +87,7 @@ export async function createAlert() {
   }
 
   // Ask the user if the condition is ABOVE or BELOW
-  const alertCondition = await vscode.window.showQuickPick(["ABOVE", "BELOW"], {
+  const alertCondition = await showQuickPick(["ABOVE", "BELOW"], {
     placeHolder: `Alert condition for ${metricToUse}`,
     title: "Extension workspace: Create Alert",
     ignoreFocusOut: true,

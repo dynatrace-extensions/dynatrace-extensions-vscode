@@ -29,6 +29,7 @@ import {
 } from "../utils/conditionCheckers";
 import { initWorkspaceStorage, resolveRealPath, uploadComponentCert } from "../utils/fileSystem";
 import logger from "../utils/logging";
+import { showQuickPick } from "../utils/vscode";
 
 export const distributeCertificateWorkflow = async () => {
   if ((await checkWorkspaceOpen()) && (await checkTenantConnected())) {
@@ -69,13 +70,12 @@ export async function distributeCertificate(dt: Dynatrace) {
   let update = false;
   if (caCertId) {
     logger.debug(`Detected existng certificate under ID ${caCertId}`, ...fnLogTrace);
-    const choice = await vscode.window.showQuickPick(["Yes", "No"], {
-      canPickMany: false,
-      ignoreFocusOut: true,
-      title: "Certificate already exists in Dynatrace",
-      placeHolder: "Would you like to overwrite it?",
-    });
-    update = choice === "Yes";
+    update =
+      (await showQuickPick(["Yes", "No"], {
+        ignoreFocusOut: true,
+        title: "Certificate already exists in Dynatrace",
+        placeHolder: "Would you like to overwrite it?",
+      })) === "Yes";
   }
 
   // Update existing certificate by replacing the content

@@ -30,6 +30,7 @@ import { getEntityMetrics, getMetricDisplayName } from "../utils/extensionParsin
 import { getExtensionFilePath } from "../utils/fileSystem";
 import { parseJSON } from "../utils/jsonParsing";
 import logger from "../utils/logging";
+import { showQuickPick } from "../utils/vscode";
 
 export const createDashboardWorkflow = async () => {
   if ((await checkWorkspaceOpen()) && (await isExtensionsWorkspace())) {
@@ -661,15 +662,12 @@ export async function createOverviewDashboard() {
     return;
   }
 
-  const dbSelections = await vscode.window.showQuickPick(
-    ["Classic Dashboard", "Platform Document"],
-    {
-      canPickMany: true,
-      placeHolder: "Select one or both",
-      title: "Select Dashboard Type(s)",
-      ignoreFocusOut: true,
-    },
-  );
+  const dbSelections = await showQuickPick(["Classic Dashboard", "Platform Document"], {
+    canPickMany: true,
+    placeHolder: "Select one or both",
+    title: "Select Dashboard Type(s)",
+    ignoreFocusOut: true,
+  });
 
   if (!dbSelections || dbSelections.length === 0) {
     logger.error("No dashboard option was selected.", ...fnLogTrace);

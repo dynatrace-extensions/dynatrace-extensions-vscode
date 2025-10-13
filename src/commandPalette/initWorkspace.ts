@@ -50,6 +50,7 @@ import {
 import logger, { notify } from "../utils/logging";
 import { getPythonVenvOpts } from "../utils/otherExtensions";
 import { runCommand } from "../utils/subprocesses";
+import { showQuickPick } from "../utils/vscode";
 import { loadSchemas } from "./loadSchemas";
 
 const logTrace = ["commandPalette", "initWorkspace"];
@@ -72,7 +73,7 @@ const PROJECT_TYPES = {
     label: "Existing 2.0 Extension",
     detail: "Start by downloading an extension already deployed in your tenant.",
   },
-};
+} satisfies Record<string, vscode.QuickPickItem>;
 
 export const initWorkspaceWorkflow = async () => {
   const context = getActivationContext();
@@ -153,8 +154,7 @@ export async function initWorkspace(dt: Dynatrace, callback?: () => unknown) {
 
       // Which certificates to use?
       progress.report({ message: "Setting up workspace certificates" });
-      const certChoice = await vscode.window.showQuickPick(["Use existing", "Generate new ones"], {
-        canPickMany: false,
+      const certChoice = await showQuickPick(["Use existing", "Generate new ones"], {
         ignoreFocusOut: true,
         title: "Initialize Workspace: Certificates",
         placeHolder:
@@ -229,17 +229,16 @@ export async function initWorkspace(dt: Dynatrace, callback?: () => unknown) {
       progress.report({ message: "Generating content for your project" });
 
       // Determine type of extension project
-      let projectType;
+      let projectType: vscode.QuickPickItem | undefined = PROJECT_TYPES.defaultExtension;
+
       if (getExtensionFilePath()) {
         logger.debug(
           "Extension manifest detected. Choosing 'default extension' starter template.",
           ...fnLogTrace,
         );
-        projectType = PROJECT_TYPES.defaultExtension;
       } else {
         logger.debug("Prompting user for template selection", ...fnLogTrace);
-        projectType = await vscode.window.showQuickPick(Object.values(PROJECT_TYPES), {
-          canPickMany: false,
+        projectType = await showQuickPick(Object.values(PROJECT_TYPES), {
           title: "What type of project are you starting?",
           placeHolder: "Extension 2.0",
           ignoreFocusOut: true,
@@ -373,14 +372,13 @@ async function existingExtensionSetup(dt: Dynatrace, rootPath: string) {
   const fnLogTrace = [...logTrace, "existingExtensionSetup"];
   logger.debug("Setting up workspace with an existing extension", ...fnLogTrace);
 
-  const download = await vscode.window.showQuickPick(
+  const download = await showQuickPick(
     (await dt.extensionsV2.list()).map(ext => ({
       label: `${ext.extensionName} (${ext.version})`,
       extension: ext,
     })),
     {
       title: "Choose an extension to download",
-      canPickMany: false,
       ignoreFocusOut: true,
     },
   );

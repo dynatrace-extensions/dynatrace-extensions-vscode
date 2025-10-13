@@ -38,6 +38,7 @@ import {
 import { parseJSON } from "../../utils/jsonParsing";
 import logger from "../../utils/logging";
 import { createObjectFromSchema } from "../../utils/schemaParsing";
+import { showQuickPick } from "../../utils/vscode";
 import { refreshTenantsTreeView } from "../tenantsTreeView";
 
 const logTrace = ["treeViews", "commands", "environments"];
@@ -294,9 +295,8 @@ async function addEnvironment() {
     ignoreFocusOut: true,
   });
 
-  const current = await vscode.window.showQuickPick(["Yes", "No"], {
+  const current = await showQuickPick(["Yes", "No"], {
     title: "Set this as your currrent environment?",
-    canPickMany: false,
     ignoreFocusOut: true,
   });
 
@@ -362,9 +362,8 @@ async function editEnvironment(environment: DynatraceTenant) {
     ignoreFocusOut: true,
   });
 
-  const current = await vscode.window.showQuickPick(["Yes", "No"], {
+  const current = await showQuickPick(["Yes", "No"], {
     title: "Set this as your currrent environment?",
-    canPickMany: false,
     ignoreFocusOut: true,
   });
 
@@ -378,9 +377,8 @@ async function editEnvironment(environment: DynatraceTenant) {
  * @returns
  */
 async function deleteEnvironment(environment: DynatraceTenant) {
-  const confirm = await vscode.window.showQuickPick(["Yes", "No"], {
+  const confirm = await showQuickPick(["Yes", "No"], {
     title: `Delete environment ${environment.label}?`,
-    canPickMany: false,
     ignoreFocusOut: true,
   });
 
@@ -410,10 +408,9 @@ async function changeConnection() {
     return;
   }
   const currentEnv = environments.find(e => e.current);
-  const choice = await vscode.window.showQuickPick(
+  const choice = await showQuickPick(
     environments.map(e => (e.current ? `⭐ ${e.label}` : e.label)),
     {
-      canPickMany: false,
       ignoreFocusOut: true,
       title: "Connect to a different environment",
       placeHolder: "Select an environment from the list",
@@ -497,9 +494,8 @@ async function editMonitoringConfiguration(config: MonitoringConfiguration): Pro
  */
 async function deleteMonitoringConfiguration(config: MonitoringConfiguration): Promise<boolean> {
   const fnLogTrace = [...logTrace, "deleteMonitoringConfiguration"];
-  const confirm = await vscode.window.showQuickPick(["Yes", "No"], {
+  const confirm = await showQuickPick(["Yes", "No"], {
     title: `Delete configuration ${config.label}?`,
-    canPickMany: false,
     ignoreFocusOut: true,
   });
 
@@ -554,7 +550,7 @@ async function addMonitoringConfiguration(extension: DeployedExtension) {
       // If there are config files
       if (configFiles.length > 0) {
         // Choose whether configuration comes from file or new content
-        const choice = await vscode.window.showQuickPick([
+        const choice = await showQuickPick([
           ...configFiles.map(file => {
             const filePath = path.join(configDir, file);
             const config: MinimalConfiguration =
