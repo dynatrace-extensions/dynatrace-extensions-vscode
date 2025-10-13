@@ -14,6 +14,7 @@
   limitations under the License.
  */
 
+import { SimulationLocation } from "@common";
 import * as vscode from "vscode";
 import { MinimalConfiguration } from "../treeViews/commands/environments";
 import { getCachedEntityInstances, updateEntityInstances } from "../utils/caching";
@@ -51,10 +52,10 @@ class ConfigurationCompletionProvider implements vscode.CompletionItemProvider {
 
     if (line.endsWith('"scope": "')) {
       switch (configObject.value.activationContext) {
-        case "LOCAL":
+        case SimulationLocation.Local:
           completionItems.push(...(await this.createLocalScopeCompletions()));
           break;
-        case "REMOTE":
+        case SimulationLocation.Remote:
           completionItems.push(...this.createRemoteScopeCompletions());
           break;
       }

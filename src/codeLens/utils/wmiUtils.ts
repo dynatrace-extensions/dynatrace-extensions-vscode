@@ -53,8 +53,8 @@ export async function runWMIQuery(
       oc.show();
     } else {
       updateCallback(query, { status: "valid" });
-      renderPanel(ViewType.WMI_RESULTS, "WMI query results", {
-        dataType: PanelDataType.WMI_RESULT_DATA_TYPE,
+      renderPanel(ViewType.WmiQueryResults, "WMI query results", {
+        dataType: PanelDataType.WmiQueryResults,
         data: cachedWmiQueryResult,
       });
     }
@@ -120,8 +120,8 @@ export async function runWMIQuery(
           results: jsonResponse,
           responseTime,
         };
-        renderPanel(ViewType.WMI_RESULTS, "WMI query results", {
-          dataType: PanelDataType.WMI_RESULT_DATA_TYPE,
+        renderPanel(ViewType.WmiQueryResults, "WMI query results", {
+          dataType: PanelDataType.WmiQueryResults,
           data: queryResult,
         });
         updateCallback(query, { status: "valid" }, queryResult);

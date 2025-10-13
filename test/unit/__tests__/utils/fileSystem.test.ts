@@ -17,7 +17,7 @@
 import * as fs from "fs";
 import * as os from "os";
 import * as path from "path";
-import { LocalExecutionSummary, RemoteExecutionSummary, RemoteTarget } from "@common";
+import { EecType, ExecutionSummary, OsType, RemoteTarget, SimulationLocation } from "@common";
 import { glob } from "glob";
 import * as vscode from "vscode";
 import * as extension from "../../../../src/extension";
@@ -91,9 +91,9 @@ const mockDynatraceEnvironmentsEntries: DynatraceTenantDto[] = [
     label: "Mock-2",
   },
 ];
-const mockSummariesEntries: (LocalExecutionSummary | RemoteExecutionSummary)[] = [
+const mockSummariesEntries: ExecutionSummary[] = [
   {
-    location: "LOCAL",
+    location: SimulationLocation.Local,
     duration: 1,
     logPath: "mock/logs/1234.log",
     startTime: new Date(1),
@@ -101,7 +101,7 @@ const mockSummariesEntries: (LocalExecutionSummary | RemoteExecutionSummary)[] =
     workspace: "mock",
   },
   {
-    location: "REMOTE",
+    location: SimulationLocation.Remote,
     duration: 2,
     logPath: "123.log",
     startTime: new Date(2),
@@ -114,16 +114,16 @@ const mockSimulatorTargetEntries: RemoteTarget[] = [
   {
     address: "A",
     name: "B",
-    eecType: "ACTIVEGATE",
-    osType: "LINUX",
+    eecType: EecType.ActiveGate,
+    osType: OsType.Linux,
     username: "C",
     privateKey: "D",
   },
   {
     address: "X",
     name: "Y",
-    eecType: "ONEAGENT",
-    osType: "WINDOWS",
+    eecType: EecType.OneAgent,
+    osType: OsType.Windows,
     username: "Z",
     privateKey: "A",
   },

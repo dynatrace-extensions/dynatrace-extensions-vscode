@@ -49,8 +49,8 @@ export const TargetRegistrationForm = ({
   const [address, setAddress] = useState("");
   const [username, setUsername] = useState("");
   const [privateKey, setPrivateKey] = useState("");
-  const [eecType, setEecType] = useState<EecType>("ACTIVEGATE");
-  const [osType, setOsType] = useState<OsType>("LINUX");
+  const [eecType, setEecType] = useState<EecType>(EecType.ActiveGate);
+  const [osType, setOsType] = useState<OsType>(OsType.Linux);
 
   useEffect(() => {
     if (editingTarget) {
@@ -102,8 +102,8 @@ export const TargetRegistrationForm = ({
   const clearForm = () => {
     setTargetName("");
     setAddress("");
-    setOsType("LINUX");
-    setEecType("ACTIVEGATE");
+    setOsType(OsType.Linux);
+    setEecType(EecType.ActiveGate);
     setUsername("");
     setPrivateKey("");
   };
@@ -186,8 +186,8 @@ export const TargetRegistrationForm = ({
                     setValue("eecType", value as EecType, { shouldValidate: false });
                   }}
                 >
-                  <Radio value='ONEAGENT'>OneAgent</Radio>
-                  <Radio value='ACTIVEGATE'>ActiveGate</Radio>
+                  <Radio value={EecType.OneAgent}>OneAgent</Radio>
+                  <Radio value={EecType.ActiveGate}>ActiveGate</Radio>
                 </RadioGroup>
               </FormField>
               <FormField required>
@@ -199,8 +199,8 @@ export const TargetRegistrationForm = ({
                     setValue("osType", value as OsType, { shouldValidate: false });
                   }}
                 >
-                  <Radio value='LINUX'>Linux</Radio>
-                  <Radio value='WINDOWS'>Windows</Radio>
+                  <Radio value={OsType.Linux}>Linux</Radio>
+                  <Radio value={OsType.Windows}>Windows</Radio>
                 </RadioGroup>
               </FormField>
             </Flex>
@@ -239,7 +239,7 @@ export const TargetRegistrationForm = ({
               />
             </FormField>
           </FieldSet>
-          {osType === "WINDOWS" && (
+          {osType === OsType.Windows && (
             <Container variant='default' color='warning'>
               <Flex gap={12} alignItems='center'>
                 <WarningIcon size={40} />

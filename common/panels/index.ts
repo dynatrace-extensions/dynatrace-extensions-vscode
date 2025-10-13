@@ -13,10 +13,10 @@ export * from "./empty-state-data";
  * Registered data types for panels
  */
 export const PanelDataType = {
-  EMPTY_STATE_DATA_TYPE: "EMPTY_STATE",
-  METRIC_RESULTS_DATA_TYPE: "METRIC_RESULTS",
-  WMI_RESULT_DATA_TYPE: "WMI_RESULT",
-  SIMULATOR_DATA_TYPE: "SIMULATOR_DATA",
+  Empty: "EMPTY_STATE",
+  MetricResults: "METRIC_RESULTS",
+  WmiQueryResults: "WMI_RESULT",
+  ExtensionSimulator: "SIMULATOR_DATA",
 } as const;
 // eslint-disable-next-line @typescript-eslint/no-redeclare
 export type PanelDataType = ObjectValues<typeof PanelDataType>;
@@ -25,9 +25,9 @@ export type PanelDataType = ObjectValues<typeof PanelDataType>;
  * Registered viewType (id) values for known webivew panels.
  */
 export const ViewType = {
-  METRIC_RESULTS: "dynatrace-extensions.MetricResults",
-  WMI_RESULTS: "dynatrace-extensions.WmiResults",
-  SIMULATOR_UI: "dynatrace-extensions.SimulatorUI",
+  MetricResults: "dynatrace-extensions.MetricResults",
+  WmiQueryResults: "dynatrace-extensions.WmiResults",
+  ExtensionSimulator: "dynatrace-extensions.SimulatorUI",
 } as const;
 // eslint-disable-next-line @typescript-eslint/no-redeclare
 export type ViewType = ObjectValues<typeof ViewType>;

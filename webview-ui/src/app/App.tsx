@@ -27,8 +27,8 @@ import { PanelData, PanelDataType, WebviewEvent, WebviewEventType } from "@commo
 
 interface AppProps {
   vscode: WebviewApi<PanelData>;
-  dataType: string;
-  data: unknown;
+  dataType: PanelDataType;
+  data: PanelData["data"];
 }
 
 /**
@@ -38,13 +38,13 @@ const WebviewPanel = ({ panelData }: { panelData: PanelData }) => {
   const { dataType, data } = panelData;
 
   switch (dataType) {
-    case PanelDataType.EMPTY_STATE_DATA_TYPE:
+    case PanelDataType.Empty:
       return <NotFound />;
-    case PanelDataType.METRIC_RESULTS_DATA_TYPE:
+    case PanelDataType.MetricResults:
       return <MetricResultsPanel data={data} />;
-    case PanelDataType.WMI_RESULT_DATA_TYPE:
+    case PanelDataType.WmiQueryResults:
       return <WmiResultPanel data={data} />;
-    case PanelDataType.SIMULATOR_DATA_TYPE:
+    case PanelDataType.ExtensionSimulator:
       return <ExtensionSimulator data={data} />;
     default:
       return <NotFound />;
@@ -66,13 +66,13 @@ export const App = ({ vscode, dataType, data }: AppProps) => {
     const { messageType, data: messageData } = event.data;
 
     switch (messageType) {
-      case WebviewEventType.updateData:
+      case WebviewEventType.UpdateData:
         setPanelData(messageData);
         break;
-      case WebviewEventType.showToast:
+      case WebviewEventType.ShowToast:
         showToast(messageData);
         break;
-      case WebviewEventType.openLog:
+      case WebviewEventType.OpenLog:
         setModalContent(messageData.logContent);
         setModalOpen(true);
         break;

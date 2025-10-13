@@ -22,9 +22,7 @@ import {
   ViewType,
   SimulatorCommand,
   EecType,
-  LocalExecutionSummary,
   OsType,
-  RemoteExecutionSummary,
   RemoteTarget,
   SimulationConfig,
   SimulationLocation,
@@ -32,6 +30,7 @@ import {
   SimulatorPanelData,
   SimulatorStatus,
   WebviewEventType,
+  ExecutionSummary,
 } from "@common";
 import pidtree = require("pidtree");
 import * as vscode from "vscode";
@@ -88,7 +87,7 @@ export class SimulatorManager {
    */
   constructor() {
     this.datasourceName = "unsupported";
-    this.simulatorStatus = "UNSUPPORTED";
+    this.simulatorStatus = SimulatorStatus.Unsupported;
     this.failedChecks = [];
     this.extensionFile = "";
     this.activationFile = "";
@@ -97,7 +96,7 @@ export class SimulatorManager {
     this.pyEnvOptions = {};
     this.url = "file://CONSOLE";
     this.idToken = path.join(getActivationContext().globalStorageUri.fsPath, "idToken.txt");
-    this.localOs = process.platform === "win32" ? "WINDOWS" : "LINUX";
+    this.localOs = process.platform === "win32" ? OsType.Windows : OsType.Linux;
     this.simulationSpecs = {
       isPython: false,
       dsSupportsActiveGateEec: false,
@@ -115,7 +114,7 @@ export class SimulatorManager {
 
     // Register commands
     vscode.commands.registerCommand(
-      SimulatorCommand.SIMULATOR_START_CMD,
+      SimulatorCommand.Start,
       async (config?: SimulationConfig, showUI: boolean = true) => {
         if (config) {
           this.currentConfiguration = config;
@@ -123,29 +122,25 @@ export class SimulatorManager {
         await this.start(config ?? this.currentConfiguration, showUI);
       },
     );
-    vscode.commands.registerCommand(SimulatorCommand.SIMULATOR_STOP_CMD, () => this.stop());
+    vscode.commands.registerCommand(SimulatorCommand.Stop, () => this.stop());
     vscode.commands.registerCommand(
-      SimulatorCommand.SIMULATOR_CHECK_READY_CMD,
+      SimulatorCommand.CheckReady,
       (showUI: boolean = true, config?: SimulationConfig) => this.checkReady(showUI, config),
     );
-    vscode.commands.registerCommand(SimulatorCommand.SIMULATOR_OPEN_UI_CMD, () =>
-      this.refreshUI(true),
-    );
-    vscode.commands.registerCommand(SimulatorCommand.SIMULATOR_READ_LOG_CMD, (logPath: string) =>
+    vscode.commands.registerCommand(SimulatorCommand.OpenUI, () => this.refreshUI(true));
+    vscode.commands.registerCommand(SimulatorCommand.ReadLog, (logPath: string) =>
       this.readLog(logPath),
     );
-    vscode.commands.registerCommand(
-      SimulatorCommand.SIMULATOR_ADD_TARGERT_CMD,
-      (target: RemoteTarget) => this.addTarget(target),
+    vscode.commands.registerCommand(SimulatorCommand.AddTarget, (target: RemoteTarget) =>
+      this.addTarget(target),
     );
-    vscode.commands.registerCommand(
-      SimulatorCommand.SIMULATOR_DELETE_TARGERT_CMD,
-      (target: RemoteTarget) => this.deleteTarget(target),
+    vscode.commands.registerCommand(SimulatorCommand.DeleteTarget, (target: RemoteTarget) =>
+      this.deleteTarget(target),
     );
 
     // Create the status bar and show it
     this.statusBar = vscode.window.createStatusBarItem(vscode.StatusBarAlignment.Left, 0);
-    this.statusBar.command = SimulatorCommand.SIMULATOR_OPEN_UI_CMD;
+    this.statusBar.command = SimulatorCommand.OpenUI;
     this.statusBar.text = "Extension simulator";
     this.statusBar.tooltip = "Click to open";
     this.statusBar.show();
@@ -166,8 +161,8 @@ export class SimulatorManager {
     logger.info(`Deleting target ${target.name}`, ...this.logTrace, "deleteTarget");
     // This will always succeed
     deleteSimulatorTarget(target);
-    postMessageToPanel(ViewType.SIMULATOR_UI, {
-      messageType: WebviewEventType.showToast,
+    postMessageToPanel(ViewType.ExtensionSimulator, {
+      messageType: WebviewEventType.ShowToast,
       data: {
         title: "Target deleted",
         type: "success",
@@ -185,8 +180,8 @@ export class SimulatorManager {
   private addTarget(target: RemoteTarget) {
     logger.info(`Adding target ${target.name}`, ...this.logTrace, "addTarget");
     registerSimulatorTarget(target);
-    postMessageToPanel(ViewType.SIMULATOR_UI, {
-      messageType: WebviewEventType.showToast,
+    postMessageToPanel(ViewType.ExtensionSimulator, {
+      messageType: WebviewEventType.ShowToast,
       data: {
         title: "Target registered",
         type: "success",
@@ -207,12 +202,12 @@ export class SimulatorManager {
     const fnLogTrace = [...this.logTrace, "checkReady"];
     logger.info("Checking simulator readiness", ...fnLogTrace);
     // Let the panel know check is in progress
-    this.refreshUI(showUI, "CHECKING");
+    this.refreshUI(showUI, SimulatorStatus.Checking);
 
     // First check mandatory requirements
     const [result, failedChecks] = this.checkMandatoryRequirements();
     if (!result) {
-      this.refreshUI(showUI, "UNSUPPORTED", undefined, failedChecks);
+      this.refreshUI(showUI, SimulatorStatus.Unsupported, undefined, failedChecks);
       logger.warn(`Mandatory checks failed: ${failedChecks.join(", ")}`, ...fnLogTrace);
       return;
     }
@@ -233,13 +228,13 @@ export class SimulatorManager {
         logger.error(`Error checking simulation config: ${(err as Error).message}`, ...fnLogTrace);
         this.refreshUI(
           showUI,
-          "NOTREADY",
+          SimulatorStatus.NotReady,
           `Error checking configuration: ${(err as Error).message}`,
         );
       }
     }
 
-    this.refreshUI(showUI, "READY");
+    this.refreshUI(showUI, SimulatorStatus.Ready);
   }
 
   /**
@@ -306,7 +301,8 @@ export class SimulatorManager {
     }
 
     this.failedChecks = failedChecks;
-    this.simulatorStatus = failedChecks.length === 0 ? "READY" : "UNSUPPORTED";
+    this.simulatorStatus =
+      failedChecks.length === 0 ? SimulatorStatus.Ready : SimulatorStatus.Unsupported;
     return [failedChecks.length === 0, this.failedChecks];
   }
 
@@ -323,7 +319,7 @@ export class SimulatorManager {
     target?: RemoteTarget,
   ): Promise<[SimulatorStatus, string]> {
     // LOCAL Simulation checks
-    if (location === "LOCAL") {
+    if (location === SimulationLocation.Local) {
       // For python, we only need to check the SDK is available
       if (this.datasourceName === "python") {
         const [pyStat, pyMsg] = await getPythonVenvOpts().then(
@@ -332,28 +328,40 @@ export class SimulatorManager {
             return checkDtSdkPresent(undefined, undefined, envOptions).then(
               sdkAvailable => {
                 if (!sdkAvailable) {
-                  return ["NOTREADY", "Python SDK not found"];
+                  return [SimulatorStatus.NotReady, "Python SDK not found"];
                 } else {
-                  return ["READY", ""];
+                  return [SimulatorStatus.Ready, ""];
                 }
               },
-              err => ["NOTREADY", `Error checking for Python SDK: ${(err as Error).message}`],
+              err => [
+                SimulatorStatus.NotReady,
+                `Error checking for Python SDK: ${(err as Error).message}`,
+              ],
             );
           },
-          err => ["NOTREADY", `Error checking for Python SDK: ${(err as Error).message}`],
+          err => [
+            SimulatorStatus.NotReady,
+            `Error checking for Python SDK: ${(err as Error).message}`,
+          ],
         );
-        if (pyStat === "NOTREADY") {
+        if (pyStat === SimulatorStatus.NotReady) {
           return [pyStat, pyMsg];
         }
       } else {
         // Check we can simulate this DS on local OS
         if (!canSimulateDatasource(this.localOs, eecType, this.datasourceName)) {
-          return ["NOTREADY", `Datasource ${this.datasourceName} cannot be simulated on this OS`];
+          return [
+            SimulatorStatus.NotReady,
+            `Datasource ${this.datasourceName} cannot be simulated on this OS`,
+          ];
         }
         // Check binary exists
         const datasourcePath = getDatasourcePath(this.localOs, eecType, this.datasourceName);
         if (!existsSync(datasourcePath)) {
-          return ["NOTREADY", `Could not find datasource executable at ${datasourcePath}`];
+          return [
+            SimulatorStatus.NotReady,
+            `Could not find datasource executable at ${datasourcePath}`,
+          ];
         } else {
           this.datasourceDir = getDatasourceDir(this.localOs, eecType, this.datasourceName);
           this.datasourceExe = getDatasourceExe(this.localOs, eecType, this.datasourceName);
@@ -362,15 +370,18 @@ export class SimulatorManager {
     }
 
     // REMOTE Simulation checks
-    if (location === "REMOTE") {
+    if (location === SimulationLocation.Remote) {
       if (this.datasourceName === "python") {
-        return ["NOTREADY", "Python datasource can only be simulated on local machine"];
+        return [
+          SimulatorStatus.NotReady,
+          "Python datasource can only be simulated on local machine",
+        ];
       }
-      if (!target) return ["NOTREADY", "No target given for remote simulation"];
+      if (!target) return [SimulatorStatus.NotReady, "No target given for remote simulation"];
       // Check we can simulate this DS on remote OS
       if (!canSimulateDatasource(target.osType, target.eecType, this.datasourceName)) {
         return [
-          "NOTREADY",
+          SimulatorStatus.NotReady,
           `Datasource ${this.datasourceName} cannot be simulated on ${target.osType}`,
         ];
       } else {
@@ -380,7 +391,7 @@ export class SimulatorManager {
     }
 
     // At this point, simulator is ready
-    return ["READY", ""];
+    return [SimulatorStatus.Ready, ""];
   }
 
   private getSimulationSpecs(): SimulationSpecs {
@@ -391,7 +402,7 @@ export class SimulatorManager {
     } else {
       try {
         localOneAgentDsExists = existsSync(
-          getDatasourcePath(this.localOs, "ONEAGENT", this.datasourceName),
+          getDatasourcePath(this.localOs, EecType.OneAgent, this.datasourceName),
         );
       } catch {
         localOneAgentDsExists = false;
@@ -403,18 +414,18 @@ export class SimulatorManager {
     } else {
       try {
         localActiveGateDsExists = existsSync(
-          getDatasourcePath(this.localOs, "ACTIVEGATE", this.datasourceName),
+          getDatasourcePath(this.localOs, EecType.ActiveGate, this.datasourceName),
         );
       } catch {
         localActiveGateDsExists = false;
       }
     }
     const dsSupportsActiveGateEec =
-      canSimulateDatasource("LINUX", "ACTIVEGATE", this.datasourceName) ||
-      canSimulateDatasource("WINDOWS", "ACTIVEGATE", this.datasourceName);
+      canSimulateDatasource(OsType.Linux, EecType.ActiveGate, this.datasourceName) ||
+      canSimulateDatasource(OsType.Windows, EecType.ActiveGate, this.datasourceName);
     const dsSupportsOneAgentEec =
-      canSimulateDatasource("LINUX", "ONEAGENT", this.datasourceName) ||
-      canSimulateDatasource("WINDOWS", "ONEAGENT", this.datasourceName);
+      canSimulateDatasource(OsType.Linux, EecType.OneAgent, this.datasourceName) ||
+      canSimulateDatasource(OsType.Windows, EecType.OneAgent, this.datasourceName);
 
     const specs = {
       isPython,
@@ -440,7 +451,7 @@ export class SimulatorManager {
    * @param options - spawn options
    */
   private createProcess(
-    staticDetails: Partial<LocalExecutionSummary | RemoteExecutionSummary>,
+    staticDetails: Partial<ExecutionSummary>,
     command: string,
     options: SpawnOptions,
   ) {
@@ -505,7 +516,7 @@ export class SimulatorManager {
         success,
         logPath: logFilePath,
         workspace,
-      } as LocalExecutionSummary | RemoteExecutionSummary);
+      } as ExecutionSummary);
       this.refreshUI(true);
       this.outputChannel.appendLine(
         `Simulator process closed with code ${String(code ?? signal?.toString())}`,
@@ -545,7 +556,7 @@ export class SimulatorManager {
       this.datasourceName === "python" ? { cwd, shell, ...this.pyEnvOptions } : { shell, cwd };
 
     // Create the process
-    this.createProcess({ location: "LOCAL" }, command, execOptions);
+    this.createProcess({ location: SimulationLocation.Local }, command, execOptions);
   }
 
   /**
@@ -600,7 +611,7 @@ export class SimulatorManager {
     this.outputChannel.appendLine(`Running command: ${command}`);
 
     // Start the simulation
-    this.createProcess({ location: "REMOTE", target: target.name }, command, {
+    this.createProcess({ location: SimulationLocation.Remote, target: target.name }, command, {
       shell: process.platform === "win32" ? "powershell.exe" : "/bin/sh",
     });
   }
@@ -628,10 +639,10 @@ export class SimulatorManager {
     // Start the simulation
     try {
       switch (location) {
-        case "LOCAL":
+        case SimulationLocation.Local:
           this.startLocally();
           break;
-        case "REMOTE":
+        case SimulationLocation.Remote:
           if (!target) {
             logger.notify("ERROR", "No target given for remote simulation", ...fnLogTrace);
             return;
@@ -639,7 +650,7 @@ export class SimulatorManager {
           await this.startRemotely(target);
           break;
       }
-      this.refreshUI(showUI, "RUNNING");
+      this.refreshUI(showUI, SimulatorStatus.Running);
     } catch (err) {
       logger.notify(
         "ERROR",
@@ -689,7 +700,7 @@ export class SimulatorManager {
         ...fnLogTrace,
       );
     } finally {
-      this.refreshUI(showUI, "READY");
+      this.refreshUI(showUI, SimulatorStatus.Ready);
     }
   }
 
@@ -700,7 +711,7 @@ export class SimulatorManager {
     failedChecks?: string[],
   ) {
     const panelData: SimulatorPanelData = {
-      dataType: PanelDataType.SIMULATOR_DATA_TYPE,
+      dataType: PanelDataType.ExtensionSimulator,
       data: {
         targets: getSimulatorTargets(),
         summaries: getSimulatorSummaries(),
@@ -719,10 +730,10 @@ export class SimulatorManager {
     );
 
     if (show) {
-      renderPanel(ViewType.SIMULATOR_UI, "Extension Simulator", panelData);
+      renderPanel(ViewType.ExtensionSimulator, "Extension Simulator", panelData);
     } else {
-      postMessageToPanel(ViewType.SIMULATOR_UI, {
-        messageType: WebviewEventType.updateData,
+      postMessageToPanel(ViewType.ExtensionSimulator, {
+        messageType: WebviewEventType.UpdateData,
         data: panelData,
       });
     }
@@ -735,8 +746,8 @@ export class SimulatorManager {
 
     const logContent = readFileSync(logFilePath.fsPath).toString();
 
-    postMessageToPanel(ViewType.SIMULATOR_UI, {
-      messageType: WebviewEventType.openLog,
+    postMessageToPanel(ViewType.ExtensionSimulator, {
+      messageType: WebviewEventType.OpenLog,
       data: { logContent },
     });
   }

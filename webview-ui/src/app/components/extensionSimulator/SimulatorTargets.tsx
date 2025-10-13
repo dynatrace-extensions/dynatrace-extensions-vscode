@@ -28,7 +28,7 @@ import { EmptyState } from "@dynatrace/strato-components-preview/content";
 import { PlusIcon, EditIcon, DeleteIcon, ConnectorIcon } from "@dynatrace/strato-icons";
 import { triggerCommand } from "../../utils/app-utils";
 import { TargetRegistrationForm } from "./TargetRegistrationForm";
-import { SimulatorCommand, RemoteTarget } from "@common";
+import { SimulatorCommand, RemoteTarget, EecType } from "@common";
 
 interface SimulatorTargetsProps {
   targets: RemoteTarget[];
@@ -57,8 +57,7 @@ export const SimulatorTargets = ({ targets }: SimulatorTargetsProps) => {
     setEditingTarget(target);
     handleOpenModal();
   };
-  const addTarget = (target: RemoteTarget) =>
-    triggerCommand(SimulatorCommand.SIMULATOR_ADD_TARGERT_CMD, target);
+  const addTarget = (target: RemoteTarget) => triggerCommand(SimulatorCommand.AddTarget, target);
   const nameIsUnique = (name: string) => targets.findIndex(t => t.name === name) < 0;
 
   const tableColumns = useMemo<DataTableV2ColumnDef<RemoteTarget>[]>(
@@ -89,8 +88,8 @@ export const SimulatorTargets = ({ targets }: SimulatorTargetsProps) => {
 
   const tableData = useMemo<Record<string, RemoteTarget[]>>(
     () => ({
-      OneAgents: targets.filter(t => t.eecType === "ONEAGENT"),
-      ActiveGates: targets.filter(t => t.eecType === "ACTIVEGATE"),
+      OneAgents: targets.filter(t => t.eecType === EecType.OneAgent),
+      ActiveGates: targets.filter(t => t.eecType === EecType.ActiveGate),
     }),
     [targets],
   );
@@ -137,9 +136,7 @@ export const SimulatorTargets = ({ targets }: SimulatorTargetsProps) => {
                         Edit
                       </Menu.Item>
                       <Menu.Item
-                        onSelect={() =>
-                          triggerCommand(SimulatorCommand.SIMULATOR_DELETE_TARGERT_CMD, row)
-                        }
+                        onSelect={() => triggerCommand(SimulatorCommand.DeleteTarget, row)}
                       >
                         <Menu.ItemIcon>
                           <DeleteIcon />

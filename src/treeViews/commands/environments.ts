@@ -16,6 +16,7 @@
 
 import { readFileSync, readdirSync, rmSync, writeFileSync } from "fs";
 import * as path from "path";
+import { SimulationLocation } from "@common";
 import * as vscode from "vscode";
 import { DynatraceAPIError } from "../../dynatrace-api/errors";
 import { getActivationContext } from "../../extension";
@@ -43,7 +44,7 @@ const logTrace = ["treeViews", "commands", "environments"];
 export interface MinimalConfiguration {
   scope: string;
   value: {
-    activationContext: "LOCAL" | "REMOTE";
+    activationContext: SimulationLocation;
     description: string;
     version: string;
     featureSets?: string[];

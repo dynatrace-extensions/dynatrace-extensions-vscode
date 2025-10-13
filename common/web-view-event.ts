@@ -2,9 +2,9 @@ import { PanelData } from "./panels";
 import { ObjectValues } from "./util-types";
 
 export const WebviewEventType = {
-  updateData: "updateData",
-  showToast: "showToast",
-  openLog: "openLog",
+  UpdateData: "updateData",
+  ShowToast: "showToast",
+  OpenLog: "openLog",
 } as const;
 // eslint-disable-next-line @typescript-eslint/no-redeclare
 export type WebviewEventType = ObjectValues<typeof WebviewEventType>;
@@ -17,17 +17,17 @@ interface WebviewEventBase {
 }
 
 export interface WebviewUpdateEvent extends WebviewEventBase {
-  messageType: typeof WebviewEventType.updateData;
+  messageType: typeof WebviewEventType.UpdateData;
   data: PanelData;
 }
 
 export interface WebviewToastEvent extends WebviewEventBase {
-  messageType: typeof WebviewEventType.showToast;
+  messageType: typeof WebviewEventType.ShowToast;
   data: ToastOptions;
 }
 
 export interface WebviewLogEvent extends WebviewEventBase {
-  messageType: typeof WebviewEventType.openLog;
+  messageType: typeof WebviewEventType.OpenLog;
   data: LogData;
 }
 

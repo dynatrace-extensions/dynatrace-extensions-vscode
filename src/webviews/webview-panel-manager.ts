@@ -14,20 +14,11 @@
   limitations under the License.
  */
 
-import { ViewType, PanelData, WebviewEvent, WebviewEventType } from "@common";
+import { ViewType, PanelData, WebviewEvent, WebviewEventType, PanelDataType } from "@common";
 import * as vscode from "vscode";
 import { getActivationContext } from "../extension";
 import * as logger from "../utils/logging";
 import { getNonce, getColumn, getDtShellDefaults } from "./webview-utils";
-
-/**
- * Registered viewType (id) values for known webivew panels.
- */
-export enum REGISTERED_PANELS {
-  METRIC_RESULTS = "dynatrace-extensions.MetricResults",
-  WMI_RESULTS = "dynatrace-extensions.WmiResults",
-  SIMULATOR_UI = "dynatrace-extensions.SimulatorUI",
-}
 
 /**
  * Provides singleton access to the WebviewPanelManager instance.
@@ -177,7 +168,7 @@ class WebviewPanelManager implements vscode.WebviewPanelSerializer {
     if (this.currentPanels.has(viewType)) {
       // If a webview panel of this view type exists, send it the new data
       const existingPanel = this.currentPanels.get(viewType);
-      existingPanel?.webview.postMessage({ messageType: WebviewEventType.updateData, data }).then(
+      existingPanel?.webview.postMessage({ messageType: WebviewEventType.UpdateData, data }).then(
         () => {},
         err => {
           logger.error(err, ...fnLogTrace);
@@ -236,7 +227,7 @@ class WebviewPanelManager implements vscode.WebviewPanelSerializer {
       panel.viewType as ViewType,
       panel,
       state ?? {
-        dataType: "EMPTY_STATE",
+        dataType: PanelDataType.Empty,
         data: undefined,
       },
     );

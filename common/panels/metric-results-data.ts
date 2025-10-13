@@ -76,6 +76,6 @@ export interface MetricSeriesCollection {
 }
 
 export interface MetricResultsPanelData extends PanelDataBase {
-  dataType: typeof PanelDataType.METRIC_RESULTS_DATA_TYPE;
+  dataType: typeof PanelDataType.MetricResults;
   data: MetricSeriesCollection[];
 }

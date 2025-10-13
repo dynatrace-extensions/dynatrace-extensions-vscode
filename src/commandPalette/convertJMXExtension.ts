@@ -16,6 +16,7 @@
 
 import { readFileSync, writeFileSync } from "fs";
 import * as path from "path";
+import { EecType } from "@common";
 import * as jszip from "jszip";
 import * as vscode from "vscode";
 import * as yaml from "yaml";
@@ -766,8 +767,8 @@ export async function extractV1FromRemote(
       return extension.type === "JMX" && !extension.id.startsWith("dynatrace.");
     } else {
       return (
-        extension.type === "ACTIVEGATE" ||
-        (extension.type === "ONEAGENT" && !extension.id.startsWith("dynatrace."))
+        extension.type === EecType.ActiveGate ||
+        (extension.type === EecType.OneAgent && !extension.id.startsWith("dynatrace."))
       );
     }
   });

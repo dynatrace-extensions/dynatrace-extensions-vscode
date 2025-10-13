@@ -15,11 +15,39 @@
  */
 
 import { PanelDataBase, PanelDataType } from ".";
+import { ObjectValues } from "../util-types";
 
-export type EecType = "ONEAGENT" | "ACTIVEGATE";
-export type OsType = "LINUX" | "WINDOWS";
-export type SimulationLocation = "LOCAL" | "REMOTE";
-export type SimulatorStatus = "READY" | "RUNNING" | "NOTREADY" | "UNSUPPORTED" | "CHECKING";
+export const EecType = {
+  OneAgent: "ONEAGENT",
+  ActiveGate: "ACTIVEGATE",
+} as const;
+// eslint-disable-next-line @typescript-eslint/no-redeclare
+export type EecType = ObjectValues<typeof EecType>;
+
+export const OsType = {
+  Linux: "LINUX",
+  Windows: "WINDOWS",
+} as const;
+// eslint-disable-next-line @typescript-eslint/no-redeclare
+export type OsType = ObjectValues<typeof OsType>;
+
+export const SimulatorStatus = {
+  Ready: "READY",
+  Running: "RUNNING",
+  NotReady: "NOTREADY",
+  Unsupported: "UNSUPPORTED",
+  Checking: "CHECKING",
+  Unknown: "UNKNOWN",
+} as const;
+// eslint-disable-next-line @typescript-eslint/no-redeclare
+export type SimulatorStatus = ObjectValues<typeof SimulatorStatus>;
+
+export const SimulationLocation = {
+  Local: "LOCAL",
+  Remote: "REMOTE",
+} as const;
+// eslint-disable-next-line @typescript-eslint/no-redeclare
+export type SimulationLocation = ObjectValues<typeof SimulationLocation>;
 
 export interface SimulationConfig {
   location: SimulationLocation;
@@ -30,7 +58,7 @@ export interface SimulationConfig {
 
 export interface SimulatorData {
   targets: RemoteTarget[];
-  summaries: (LocalExecutionSummary | RemoteExecutionSummary)[];
+  summaries: ExecutionSummary[];
   currentConfiguration: SimulationConfig;
   status: SimulatorStatus;
   statusMessage: string;
@@ -47,7 +75,7 @@ export interface SimulationSpecs {
 }
 
 export interface SimulatorPanelData extends PanelDataBase {
-  dataType: typeof PanelDataType.SIMULATOR_DATA_TYPE;
+  dataType: typeof PanelDataType.ExtensionSimulator;
   data: SimulatorData;
 }
 
@@ -60,8 +88,8 @@ export interface RemoteTarget {
   osType: OsType;
 }
 
-export interface ExecutionSummary {
-  location: SimulationLocation;
+interface ExecutionSummaryBase {
+  location: string;
   startTime: Date;
   duration: number;
   success: boolean;
@@ -69,11 +97,13 @@ export interface ExecutionSummary {
   logPath: string;
 }
 
-export interface LocalExecutionSummary extends ExecutionSummary {
-  location: "LOCAL";
+export interface LocalExecutionSummary extends ExecutionSummaryBase {
+  location: typeof SimulationLocation.Local;
 }
 
-export interface RemoteExecutionSummary extends ExecutionSummary {
-  location: "REMOTE";
+export interface RemoteExecutionSummary extends ExecutionSummaryBase {
+  location: typeof SimulationLocation.Remote;
   target: string;
 }
+
+export type ExecutionSummary = LocalExecutionSummary | RemoteExecutionSummary;

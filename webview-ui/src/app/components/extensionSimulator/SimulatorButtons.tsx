@@ -41,11 +41,11 @@ export const StateButton = ({
   showMandatoryChecks,
 }: StateButtonProps) => {
   switch (simulatorStatus) {
-    case "RUNNING":
+    case SimulatorStatus.Running:
       return (
         <Tooltip text='Stop the simulation'>
           <Button
-            onClick={() => triggerCommand(SimulatorCommand.SIMULATOR_STOP_CMD)}
+            onClick={() => triggerCommand(SimulatorCommand.Stop)}
             variant='accent'
             color='primary'
           >
@@ -55,11 +55,11 @@ export const StateButton = ({
           </Button>
         </Tooltip>
       );
-    case "READY":
+    case SimulatorStatus.Ready:
       return (
         <Tooltip text='Start the simulation'>
           <Button
-            onClick={() => triggerCommand(SimulatorCommand.SIMULATOR_START_CMD, currentConfig)}
+            onClick={() => triggerCommand(SimulatorCommand.Start, currentConfig)}
             variant='accent'
             color='primary'
           >
@@ -69,7 +69,7 @@ export const StateButton = ({
           </Button>
         </Tooltip>
       );
-    case "NOTREADY":
+    case SimulatorStatus.NotReady:
       return (
         <Tooltip text='There are issues with your simulator configuration. Check your settings.'>
           <Button onClick={() => showSettings(true)} variant='accent' color='warning'>
@@ -79,7 +79,7 @@ export const StateButton = ({
           </Button>
         </Tooltip>
       );
-    case "CHECKING":
+    case SimulatorStatus.Checking:
       return (
         <Tooltip text='Checking your configuration'>
           <Button variant='emphasized' color='primary' disabled>
@@ -87,7 +87,7 @@ export const StateButton = ({
           </Button>
         </Tooltip>
       );
-    case "UNSUPPORTED":
+    case SimulatorStatus.Unsupported:
       return (
         <Tooltip text="One or more mandatory settings are not defined. Click to see what's wrong.">
           <Button onClick={() => showMandatoryChecks(true)} variant='accent' color='critical'>

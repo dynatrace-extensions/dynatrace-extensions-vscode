@@ -14,6 +14,8 @@
   limitations under the License.
  */
 
+import { EecType } from "@common";
+
 export interface SchemaList {
   versions: string[];
 }
@@ -36,7 +38,7 @@ export interface ExtensionV1ListDto {
 export interface ExtensionV1DTO {
   id: string;
   name: string;
-  type: "ACTIVEGATE" | "CODEMODULE" | "JMX" | "ONEAGENT" | "PMI" | "UNKNOWN";
+  type: EecType | "CODEMODULE" | "JMX" | "PMI" | "UNKNOWN";
 }
 
 export interface ExtensionMonitoringConfiguration {

@@ -25,6 +25,6 @@ export interface WmiQueryResult {
 }
 
 export interface WmiQueryResultPanelData extends PanelDataBase {
-  dataType: typeof PanelDataType.WMI_RESULT_DATA_TYPE;
+  dataType: typeof PanelDataType.WmiQueryResults;
   data: WmiQueryResult;
 }

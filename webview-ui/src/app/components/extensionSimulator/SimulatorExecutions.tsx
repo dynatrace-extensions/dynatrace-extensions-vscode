@@ -26,7 +26,7 @@ import {
 } from "@dynatrace/strato-components-preview/tables";
 import Colors from "@dynatrace/strato-design-tokens/colors";
 import { ActionIcon, DescriptionIcon, EpicIcon } from "@dynatrace/strato-icons";
-import { SimulationConfig, SimulatorData } from "@common";
+import { SimulationConfig, SimulatorData, SimulatorStatus } from "@common";
 import { triggerCommand } from "../../utils/app-utils";
 import { MandatoryCheckModal } from "./MandatoryCheckModal";
 import { SettingsForm } from "./SettingsForm";
@@ -119,7 +119,7 @@ export const SimulatorExecutions = ({
   );
 
   const handleOpenLog = useCallback((logPath: string) => {
-    triggerCommand(SimulatorCommand.SIMULATOR_READ_LOG_CMD, [
+    triggerCommand(SimulatorCommand.ReadLog, [
       JSON.stringify({
         scheme: "file",
         path: logPath,
@@ -131,15 +131,15 @@ export const SimulatorExecutions = ({
   const handleConfigSubmission = (config: SimulationConfig) => {
     setCurrentConfig(config);
     showSettingsModal(false);
-    triggerCommand(SimulatorCommand.SIMULATOR_CHECK_READY_CMD, true, config);
+    triggerCommand(SimulatorCommand.CheckReady, true, config);
   };
 
   /** Update state whenever the simulator status changes */
   useEffect(() => {
-    if (status === "RUNNING") {
+    if (status === SimulatorStatus.Running) {
       showSettingsModal(false);
       showMandatoryChecksModal(false);
-    } else if (status === "READY") {
+    } else if (status === SimulatorStatus.Ready) {
       showMandatoryChecksModal(false);
     }
   }, [status]);
@@ -169,7 +169,7 @@ export const SimulatorExecutions = ({
             </Flex>
           </TitleBar.Suffix>
         </TitleBar>
-        {status === "RUNNING" && (
+        {status === SimulatorStatus.Running && (
           <ProgressBar>
             <ProgressBar.Label>Simulating extension...</ProgressBar.Label>
             <ProgressBar.Icon>

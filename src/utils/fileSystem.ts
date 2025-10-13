@@ -29,12 +29,7 @@ import {
 } from "fs";
 import * as os from "os";
 import * as path from "path";
-import {
-  ExecutionSummary,
-  LocalExecutionSummary,
-  RemoteExecutionSummary,
-  RemoteTarget,
-} from "@common";
+import { ExecutionSummary, RemoteTarget } from "@common";
 import { copySync } from "fs-extra";
 import { glob } from "glob";
 import JSZip from "jszip";
@@ -302,7 +297,7 @@ export async function removeWorkspace(workspaceId: string) {
 /**
  * Writes an extension simulator summary to the global storage.
  */
-export function registerSimulatorSummary(summary: LocalExecutionSummary | RemoteExecutionSummary) {
+export function registerSimulatorSummary(summary: ExecutionSummary) {
   const summaries = getSimulatorSummaries();
   summaries.push(summary);
   writeFileSync(getSummariesJsonPath(), JSON.stringify(summaries));
@@ -311,18 +306,13 @@ export function registerSimulatorSummary(summary: LocalExecutionSummary | Remote
 /**
  * Gets all extension simulator summaries from the global storage.
  */
-export function getSimulatorSummaries(): (LocalExecutionSummary | RemoteExecutionSummary)[] {
+export function getSimulatorSummaries(): ExecutionSummary[] {
   const context = getActivationContext();
   const summariesJson = path.join(context.globalStorageUri.fsPath, "summaries.json");
-  return (
-    JSON.parse(readFileSync(summariesJson).toString()) as (
-      | LocalExecutionSummary
-      | RemoteExecutionSummary
-    )[]
-  ).map(s => ({
+  return (JSON.parse(readFileSync(summariesJson).toString()) as ExecutionSummary[]).map(s => ({
     ...s,
     startTime: new Date(s.startTime),
-  })) as (LocalExecutionSummary | RemoteExecutionSummary)[];
+  })) as ExecutionSummary[];
 }
 
 /**

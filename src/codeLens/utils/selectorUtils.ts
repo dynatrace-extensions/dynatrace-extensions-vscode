@@ -136,8 +136,8 @@ export async function runSelector(
     if (selectorType === "metric") {
       await dt.metrics.query(selector, "5m").then((res: MetricSeriesCollection[]) => {
         statusCallback(selector, { status: "valid" });
-        renderPanel(ViewType.METRIC_RESULTS, "Metric selector results", {
-          dataType: PanelDataType.METRIC_RESULTS_DATA_TYPE,
+        renderPanel(ViewType.MetricResults, "Metric selector results", {
+          dataType: PanelDataType.MetricResults,
           data: res,
         });
       });

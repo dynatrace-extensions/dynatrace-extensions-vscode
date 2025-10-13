@@ -16,7 +16,7 @@
 
 import * as fs from "fs";
 import * as path from "path";
-import { EecType, OsType, SimulationConfig } from "@common";
+import { EecType, OsType, SimulationConfig, SimulationLocation } from "@common";
 import * as vscode from "vscode";
 import * as extension from "../../../../src/extension";
 import {
@@ -66,10 +66,10 @@ describe("Simulator Utils", () => {
     ],
   };
   const PARAMS: Record<string, [OsType, EecType, string]> = {
-    WINDOWS_ONEAGENT: ["WINDOWS", "ONEAGENT", "MOCK_DS"],
-    WINDOWS_ACTIVEGATE: ["WINDOWS", "ACTIVEGATE", "MOCK_DS"],
-    LINUX_ONEAGENT: ["LINUX", "ONEAGENT", "MOCK_DS"],
-    LINUX_ACTIVEGATE: ["LINUX", "ACTIVEGATE", "MOCK_DS"],
+    WINDOWS_ONEAGENT: [OsType.Windows, EecType.OneAgent, "MOCK_DS"],
+    WINDOWS_ACTIVEGATE: [OsType.Windows, EecType.ActiveGate, "MOCK_DS"],
+    LINUX_ONEAGENT: [OsType.Linux, EecType.OneAgent, "MOCK_DS"],
+    LINUX_ACTIVEGATE: [OsType.Linux, EecType.ActiveGate, "MOCK_DS"],
   };
   const EXPECTED = {
     WINDOWS_ONEAGENT: {
@@ -168,8 +168,8 @@ describe("Simulator Utils", () => {
       address: "mockHost",
       username: "mockUser",
       privateKey: "mockKey",
-      eecType: "ACTIVEGATE" as EecType,
-      osType: "LINUX" as OsType,
+      eecType: EecType.ActiveGate,
+      osType: OsType.Linux,
     };
 
     beforeAll(() => {
@@ -205,7 +205,12 @@ describe("Simulator Utils", () => {
     });
 
     it("should add target details for remote location", () => {
-      setupWorkspaceWithConfiguration("REMOTE", "ACTIVEGATE", false, "mockTarget");
+      setupWorkspaceWithConfiguration(
+        SimulationLocation.Remote,
+        EecType.ActiveGate,
+        false,
+        "mockTarget",
+      );
       mockFileSystemItem(mockFs, [
         {
           pathParts: targetsJsonPathParts,
@@ -216,8 +221,8 @@ describe("Simulator Utils", () => {
       const actual = loadDefaultSimulationConfig();
 
       expect(actual).toBeDefined();
-      expect(actual.eecType).toBe("ACTIVEGATE");
-      expect(actual.location).toBe("REMOTE");
+      expect(actual.eecType).toBe(EecType.ActiveGate);
+      expect(actual.location).toBe(SimulationLocation.Remote);
       expect(actual.sendMetrics).toBe(false);
       expect(actual.target).toBeDefined();
       expect(actual.target).toEqual(remoteTarget);
@@ -238,11 +243,23 @@ describe("Simulator Utils", () => {
       },
       {
         condition: "remote target eec doesn't match settings value",
-        setup: () => setupWorkspaceWithConfiguration("REMOTE", "ONEAGENT", false, "mockTarget"),
+        setup: () =>
+          setupWorkspaceWithConfiguration(
+            SimulationLocation.Remote,
+            EecType.OneAgent,
+            false,
+            "mockTarget",
+          ),
       },
       {
         condition: "remote target not found",
-        setup: () => setupWorkspaceWithConfiguration("REMOTE", "ACTIVEGATE", false, "mockTarget2"),
+        setup: () =>
+          setupWorkspaceWithConfiguration(
+            SimulationLocation.Remote,
+            EecType.ActiveGate,
+            false,
+            "mockTarget2",
+          ),
       },
     ])("should return fallback value if $condition", ({ setup }) => {
       setup();
@@ -250,8 +267,8 @@ describe("Simulator Utils", () => {
         { pathParts: targetsJsonPathParts, content: JSON.stringify([remoteTarget]) },
       ]);
       const expected: SimulationConfig = {
-        eecType: "ONEAGENT",
-        location: "LOCAL",
+        eecType: EecType.OneAgent,
+        location: SimulationLocation.Local,
         sendMetrics: false,
       };
 
