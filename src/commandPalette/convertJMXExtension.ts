@@ -45,6 +45,7 @@ import {
 import { getDynatraceClient } from "../treeViews/tenantsTreeView";
 import { pushManifestTextForParsing } from "../utils/caching";
 import { getExtensionWorkspaceDir } from "../utils/fileSystem";
+import { parseJSON } from "../utils/jsonParsing";
 import logger from "../utils/logging";
 
 const logTrace = ["commandPalette", "convertJMXExtension"];
@@ -159,7 +160,7 @@ async function extractPluginJSONFromZip(
   const pluginJsonFileContent = await zip.file(pluginJSONFile)?.async("string");
   if (!pluginJsonFileContent) return [undefined, "Could not extract the plugin.json file."];
 
-  const v1Extension = JSON.parse(pluginJsonFileContent) as ExtensionV1;
+  const v1Extension: ExtensionV1 = parseJSON(pluginJsonFileContent);
   return [v1Extension, ""];
 }
 
@@ -560,12 +561,12 @@ async function convertV1UiToScreens(
       entityType: "PROCESS_GROUP_INSTANCE",
       detailsInjections: [
         ...chartsCards.map(card => ({
-          type: "CHART_GROUP" as DetailInjectionCardType,
+          type: DetailInjectionCardType.CHART_GROUP,
           key: card.key,
           conditions: [...injectionConditions],
         })),
         ...metricTableCards.map(card => ({
-          type: "METRIC_TABLE" as DetailInjectionCardType,
+          type: DetailInjectionCardType.METRIC_TABLE,
           key: card.key,
           conditions: [...injectionConditions],
         })),
@@ -617,7 +618,7 @@ async function convertV1UiToScreens(
       entityType: "HOST",
       detailsInjections: [
         {
-          type: "METRIC_TABLE" as DetailInjectionCardType,
+          type: DetailInjectionCardType.METRIC_TABLE,
           key: cardKey,
           conditions: [
             `metricAvailable|metric=dsfm:extension.status:filter(and(eq("dt.extension.name","custom:${extensionName}"),in("dt.entity.host", entitySelector("entityId($(entityId))"))))|lastWrittenWithinDays=5`,
@@ -739,7 +740,7 @@ export async function extractv1ExtensionFromLocal(): Promise<[ExtensionV1 | unde
   const [v1Extension, errorMessage] = pluginJSONFile[0].fsPath.endsWith(".zip")
     ? await extractPluginJSONFromZip(readFileSync(pluginJSONFile[0].fsPath))
     : // If this is a json file, just read it
-      [JSON.parse(readFileSync(pluginJSONFile[0].fsPath).toString()) as ExtensionV1, ""];
+      [parseJSON<ExtensionV1>(readFileSync(pluginJSONFile[0].fsPath).toString()), ""];
 
   return [v1Extension, errorMessage];
 }

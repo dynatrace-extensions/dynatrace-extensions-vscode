@@ -49,6 +49,7 @@ import {
   registerSimulatorTarget,
 } from "../utils/fileSystem";
 import { loopSafeWait } from "../utils/general";
+import { parseJSON } from "../utils/jsonParsing";
 import logger from "../utils/logging";
 import { getPythonVenvOpts } from "../utils/otherExtensions";
 import {
@@ -740,10 +741,7 @@ export class SimulatorManager {
   }
 
   private readLog(logPath: string) {
-    const logFilePath = vscode.Uri.from(
-      JSON.parse(logPath) as { scheme: string; path: string; authority: string },
-    );
-
+    const logFilePath = vscode.Uri.from(parseJSON(logPath));
     const logContent = readFileSync(logFilePath.fsPath).toString();
 
     postMessageToPanel(ViewType.ExtensionSimulator, {

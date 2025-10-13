@@ -15,7 +15,6 @@
  */
 
 import path from "path";
-import yaml from "yaml";
 import { ExtensionStub } from "../../../../src/interfaces/extensionMeta";
 import {
   getAllMetricKeys,
@@ -38,6 +37,7 @@ import {
   incrementExtensionVersion,
   normalizeExtensionVersion,
 } from "../../../../src/utils/extensionParsing";
+import { parseYAML } from "../../../../src/utils/yamlParsing";
 import { readTestDataFile } from "../../../shared/utils";
 
 jest.mock("../../../../src/utils/logging");
@@ -58,12 +58,12 @@ const mockMetricKeys = [
 ];
 
 describe("Extension Parsing Utils", () => {
-  const mockExtension = yaml.parse(
+  const mockExtension: ExtensionStub = parseYAML(
     readTestDataFile(path.join("manifests", "full_extension.yaml")),
-  ) as ExtensionStub;
-  const mockPrometheusExtension = yaml.parse(
+  );
+  const mockPrometheusExtension: ExtensionStub = parseYAML(
     readTestDataFile(path.join("manifests", "prometheus_extension.yaml")),
-  ) as ExtensionStub;
+  );
 
   describe("normalizeExtensionVersion", () => {
     test.each([
@@ -377,17 +377,14 @@ describe("Extension Parsing Utils", () => {
   });
 });
 
-const getParsedExtensionWithDatasource = (datasource: string) => {
-  const baseExtension: Record<string, unknown> = {
+const getParsedExtensionWithDatasource = (datasource: string): ExtensionStub => {
+  return {
     name: "custom:mock_test",
     version: "0",
     minDynatraceVersion: "0",
     author: {
       name: "Mock",
     },
+    [datasource]: ["mockEntry"],
   };
-
-  baseExtension[datasource] = ["mockEntry"];
-
-  return baseExtension as unknown as ExtensionStub;
 };

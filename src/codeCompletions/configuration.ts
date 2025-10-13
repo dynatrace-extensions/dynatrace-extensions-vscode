@@ -19,6 +19,7 @@ import vscode from "vscode";
 import { MinimalConfiguration } from "../treeViews/commands/environments";
 import { getCachedEntityInstances, updateEntityInstances } from "../utils/caching";
 import { getExtensionFilePath } from "../utils/fileSystem";
+import { parseJSON } from "../utils/jsonParsing";
 
 /**
  * Singleton access to ConfigurationCompletionProvider
@@ -46,9 +47,9 @@ class ConfigurationCompletionProvider implements vscode.CompletionItemProvider {
     if (!extensionFilePath) {
       return [];
     }
-    const configObject = JSON.parse(
+    const configObject: MinimalConfiguration = parseJSON(
       document.getText().replace(/^\/\/.*?$/gm, ""),
-    ) as MinimalConfiguration;
+    );
 
     if (line.endsWith('"scope": "')) {
       switch (configObject.value.activationContext) {

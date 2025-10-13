@@ -277,7 +277,7 @@ const shouldIncrementVersion = async (
   const deployedVersions = await dt.extensionsV2
     .listVersions(extensionName, signal)
     .then(ext => ext.map(e => e.version))
-    .catch(() => [] as string[]);
+    .catch((): string[] => []);
 
   return deployedVersions.includes(extensionVersion);
 };
@@ -533,10 +533,11 @@ const uploadExtension = async (fileName: string, dt: Dynatrace, signal: AbortSig
   do {
     [uploadStatus, lastError] = await dt.extensionsV2
       .upload(file, false, signal)
-      .then(() => ["success", undefined] as [string, undefined])
-      .catch(
-        (err: DynatraceAPIError) => [err.errorParams.message, err] as [string, DynatraceAPIError],
-      );
+      .then((): [string, undefined] => ["success", undefined])
+      .catch((err: DynatraceAPIError): [string, DynatraceAPIError] => [
+        err.errorParams.message,
+        err,
+      ]);
     // Previous version deletion may not be complete yet, loop until done.
     if (uploadStatus.startsWith("Extension versions quantity limit")) {
       await loopSafeWait(1000);

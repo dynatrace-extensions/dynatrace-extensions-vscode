@@ -49,6 +49,7 @@ import * as fileSystemUtils from "../../../../src/utils/fileSystem";
 import { waitForCondition } from "../../../../src/utils/general";
 import * as snmpUtils from "../../../../src/utils/snmp";
 import { OidInformation } from "../../../../src/utils/snmp";
+import { parseYAML } from "../../../../src/utils/yamlParsing";
 import { readTestDataFile } from "../../../shared/utils";
 import { MockDynatrace, mockEntities } from "../../mocks/dynatrace";
 import { MockExtensionContext } from "../../mocks/vscode";
@@ -347,7 +348,7 @@ describe("Caching Utils", () => {
     it("parses the extension manifest", async () => {
       const manifestText = readTestDataFile(path.join("manifests", "basic_extension.yaml"));
       jest.spyOn(fileSystemUtils, "readExtensionManifest").mockReturnValue(manifestText);
-      const expected = yaml.parse(manifestText) as ExtensionStub;
+      const expected: ExtensionStub = parseYAML(manifestText);
 
       await initializeCache();
 
@@ -364,7 +365,7 @@ describe("Caching Utils", () => {
 
   describe("pushManifestTextForParsing", () => {
     const initialManifestText = readTestDataFile(path.join("manifests", "basic_extension.yaml"));
-    const initialParsedExtension = yaml.parse(initialManifestText) as ExtensionStub;
+    const initialParsedExtension: ExtensionStub = parseYAML(initialManifestText);
     let readExtensionManifestSpy: jest.SpyInstance;
 
     beforeEach(async () => {
@@ -385,7 +386,7 @@ describe("Caching Utils", () => {
     it("updates the parsed extension value", async () => {
       const updatedManifest = readTestDataFile(path.join("manifests", "snmp_extension.yaml"));
       readExtensionManifestSpy.mockReturnValue(updatedManifest);
-      const expected = yaml.parse(updatedManifest) as ExtensionStub;
+      const expected: ExtensionStub = parseYAML(updatedManifest);
 
       pushManifestTextForParsing();
 

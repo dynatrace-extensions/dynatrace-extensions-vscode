@@ -162,8 +162,8 @@ function downloadSchemaFiles(location: string, version: string, dt: Dynatrace) {
                   return "cancelled";
                 }
                 let fileName = "unknownSchema";
-                if (Object.prototype.hasOwnProperty.call(resp, "$id")) {
-                  const parts = (resp.$id as string).split("/");
+                if (typeof resp.$id === "string") {
+                  const parts = resp.$id.split("/");
                   fileName = parts[parts.length - 1];
                 }
                 writeFile(`${location}/${fileName}`, JSON.stringify(resp), err => {

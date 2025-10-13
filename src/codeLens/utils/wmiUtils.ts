@@ -17,6 +17,7 @@
 import { exec } from "child_process";
 import { PanelDataType, ViewType, WmiQueryResult } from "@common";
 import { getCachedWmiQueryResult } from "../../utils/caching";
+import { parseJSON } from "../../utils/jsonParsing";
 import logger from "../../utils/logging";
 import { renderPanel } from "../../webviews/webview-utils";
 import { ValidationStatus } from "./selectorUtils";
@@ -108,10 +109,9 @@ export async function runWMIQuery(
         }
 
         // Wrap single objects in an array for type safety
-        const jsonResponse = JSON.parse(stdout.startsWith("[") ? stdout : `[${stdout}]`) as Record<
-          string,
-          string | number
-        >[];
+        const jsonResponse: Record<string, string | number>[] = parseJSON(
+          stdout.startsWith("[") ? stdout : `[${stdout}]`,
+        );
 
         const responseTime = ((new Date().getTime() - startTime.getTime()) / 1000).toString();
         const queryResult = {

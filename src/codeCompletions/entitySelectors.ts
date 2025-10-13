@@ -204,7 +204,7 @@ class EntitySelectorCompletionProvider implements vscode.CompletionItemProvider 
       .filter(e => !usedTypes.includes(e));
     const builtinTypes = getCachedBuiltinEntityTypes()
       .map(type => type.type?.toLowerCase())
-      .filter(e => e !== undefined && !usedTypes.includes(e)) as string[];
+      .filter((e): e is string => e !== undefined && !usedTypes.includes(e));
 
     if (customTypes.length > 0) {
       const customTypeCompletion = new vscode.CompletionItem(

@@ -22,6 +22,10 @@ import { writeFileSync } from "fs";
 import path from "path";
 import vscode from "vscode";
 
+export function parseJSON<T>(data: string): T {
+  return JSON.parse(data) as T;
+}
+
 /**
  * Reads the contents of the actiovationSchema.json file and
  * provides a set of lists and maps that define the lines of the file

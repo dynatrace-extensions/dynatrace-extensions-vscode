@@ -32,6 +32,7 @@ import {
 } from "../utils/conditionCheckers";
 import { getDatasourceName } from "../utils/extensionParsing";
 import { createUniqueFileName, getExtensionFilePath } from "../utils/fileSystem";
+import { parseJSON } from "../utils/jsonParsing";
 import logger from "../utils/logging";
 import { createGenericConfigObject, createObjectFromSchema } from "../utils/schemaParsing";
 
@@ -113,7 +114,7 @@ export async function createMonitoringConfiguration(dt: Dynatrace) {
         ...fnLogTrace,
       );
       const activationSchemaFile = path.join(extensionFilePath, "..", "activationSchema.json");
-      const activationSchema = JSON.parse(readFileSync(activationSchemaFile).toString()) as unknown;
+      const activationSchema = parseJSON(readFileSync(activationSchemaFile).toString());
       initialConfig = {
         value: createObjectFromSchema(activationSchema, { activationContext: activationContext }),
         scope: "",
@@ -137,13 +138,13 @@ export async function createMonitoringConfiguration(dt: Dynatrace) {
 // This a simple monitoring configuration template. Make any changes as needed below.
 // Lines starting with '//' will be ignored. This will be saved as a separate file ` +
     "once you save and close this tab.";
-  const configObject = JSON.parse(
+  const configObject: MinimalConfiguration = parseJSON(
     await getConfigurationDetailsViaFile(
       headerContent,
       JSON.stringify(initialConfig, undefined, 4),
       false,
     ),
-  ) as MinimalConfiguration;
+  );
 
   // Name and save the file
   const fileName = await vscode.window.showInputBox({

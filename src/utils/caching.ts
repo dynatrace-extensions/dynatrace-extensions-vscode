@@ -19,7 +19,6 @@ import { WmiQueryResult } from "@common";
 import axios from "axios";
 import { BehaviorSubject, Observable, Subscriber, delay, map, of, switchMap } from "rxjs";
 import vscode from "vscode";
-import yaml from "yaml";
 import { PromData } from "../codeLens/prometheusScraper";
 import { ValidationStatus } from "../codeLens/utils/selectorUtils";
 import { Entity, EntityType } from "../dynatrace-api/interfaces/monitoredEntities";
@@ -35,6 +34,7 @@ import {
   fetchOID,
   parseMibFile,
 } from "./snmp";
+import { parseYAML } from "./yamlParsing";
 
 type LoadedMibFile = { name: string; filePath: string };
 interface BaristaResponse {
@@ -116,7 +116,7 @@ const createManifestProcessingPipeline = (initialContent: string) => {
       switchMap<string, Observable<string>>(value => of(value).pipe(delay(200))),
       map<string, ExtensionStub | undefined | null>(manifestText => {
         try {
-          return yaml.parse(manifestText) as ExtensionStub;
+          return parseYAML(manifestText);
         } catch {
           return parsedExtension.getValue();
         }

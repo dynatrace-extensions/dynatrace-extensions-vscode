@@ -715,10 +715,10 @@ export function getMetricsFromDataSource<
  * @param extension
  * @param includeValues
  */
-export function getDimensionsFromDataSource(
-  extension: ExtensionStub,
-  includeValues: boolean = false,
-) {
+export function getDimensionsFromDataSource<
+  T extends boolean = false,
+  U = (T extends true ? { key: string; value: string } : { key: string })[],
+>(extension: ExtensionStub, includeValues: T = false as T): U {
   const dimensions: { key: string; value?: string }[] = [];
   const datasource = getExtensionDatasource(extension);
   datasource.forEach(group => {
@@ -748,7 +748,7 @@ export function getDimensionsFromDataSource(
     }
   });
 
-  return dimensions;
+  return dimensions as U;
 }
 
 /**

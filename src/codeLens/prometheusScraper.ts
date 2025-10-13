@@ -284,8 +284,8 @@ class PrometheusCodeLensProvider implements vscode.CodeLensProvider {
           setHttpsAgent(this.promUrl);
           switch (this.promAuth) {
             case "No authentication":
-              await axios.get(this.promUrl).then(res => {
-                this.processPrometheusData(res.data as string);
+              await axios.get<string>(this.promUrl).then(res => {
+                this.processPrometheusData(res.data);
               });
               return true;
             case "Username & password":
@@ -293,11 +293,11 @@ class PrometheusCodeLensProvider implements vscode.CodeLensProvider {
                 return false;
               }
               await axios
-                .get(this.promUrl, {
+                .get<string>(this.promUrl, {
                   auth: { username: this.promUsername, password: this.promPassword },
                 })
                 .then(res => {
-                  this.processPrometheusData(res.data as string);
+                  this.processPrometheusData(res.data);
                 });
               return true;
             case "Bearer token":
@@ -305,9 +305,11 @@ class PrometheusCodeLensProvider implements vscode.CodeLensProvider {
                 return false;
               }
               await axios
-                .get(this.promUrl, { headers: { Authorization: `Bearer ${this.promToken}` } })
+                .get<string>(this.promUrl, {
+                  headers: { Authorization: `Bearer ${this.promToken}` },
+                })
                 .then(res => {
-                  this.processPrometheusData(res.data as string);
+                  this.processPrometheusData(res.data);
                 });
               return true;
             default:
@@ -349,7 +351,7 @@ class PrometheusCodeLensProvider implements vscode.CodeLensProvider {
           const key = line.split("# HELP ")[1].split(" ")[0];
           const description = line.split(`${key} `)[1];
           if (!(key in scrapedMetrics)) {
-            scrapedMetrics[key] = {} as PromDetails;
+            scrapedMetrics[key] = {};
           }
           scrapedMetrics[key].description = description;
           // # TYPE defines type of a metric
@@ -360,14 +362,14 @@ class PrometheusCodeLensProvider implements vscode.CodeLensProvider {
             type = "count";
           }
           if (!(key in scrapedMetrics)) {
-            scrapedMetrics[key] = {} as PromDetails;
+            scrapedMetrics[key] = {};
           }
           scrapedMetrics[key].type = type;
           // Any other line contains dimensions and the value
         } else {
           const [key, dimensionsStr] = line.split(line.includes("{") ? "{" : " ");
           if (!(key in scrapedMetrics)) {
-            scrapedMetrics[key] = {} as PromDetails;
+            scrapedMetrics[key] = {};
           }
           // make sure lines without dimensions have the correct keys
           // if line includes dimensions, find them

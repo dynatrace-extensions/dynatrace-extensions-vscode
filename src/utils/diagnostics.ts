@@ -130,7 +130,7 @@ const diagnoseExtensionName = async (
   if (
     !vscode.workspace
       .getConfiguration("dynatraceExtensions", null)
-      .get("diagnostics.extensionName", false) as boolean
+      .get<boolean>("diagnostics.extensionName", false)
   ) {
     return [];
   }
@@ -187,7 +187,7 @@ const diagnoseMetricKeys = async (
   if (
     !vscode.workspace
       .getConfiguration("dynatraceExtensions", null)
-      .get("diagnostics.metricKeys", false) as boolean
+      .get<boolean>("diagnostics.metricKeys", false)
   ) {
     return [];
   }
@@ -232,9 +232,9 @@ const diagnoseCardKeys = async (
 
   // Honor the user's settings and bail early if no screens
   if (
-    (!vscode.workspace
+    !vscode.workspace
       .getConfiguration("dynatraceExtensions", null)
-      .get("diagnostics.cardKeys", false) as boolean) ||
+      .get<boolean>("diagnostics.cardKeys", false) ||
     !extension.screens
   ) {
     return [];
@@ -292,7 +292,7 @@ const diagnoseVariables = async (
   if (
     !vscode.workspace
       .getConfiguration("dynatraceExtensions", null)
-      .get("diagnostics.variables", false) as boolean
+      .get<boolean>("diagnostics.variables", false)
   ) {
     return [];
   }
@@ -348,9 +348,9 @@ const diagnoseMetricOids = async (
 
   // Honor the user's settings and bail early if no screens
   if (
-    (!vscode.workspace
+    !vscode.workspace
       .getConfiguration("dynatraceExtensions", null)
-      .get("diagnostics.snmp", false) as boolean) ||
+      .get<boolean>("diagnostics.snmp", false) ||
     !extension.snmp
   ) {
     return [];
@@ -457,18 +457,16 @@ const diagnoseDimensionOids = async (
 
   // Honor the user's settings and bail early if no screens
   if (
-    (!vscode.workspace
+    !vscode.workspace
       .getConfiguration("dynatraceExtensions", null)
-      .get("diagnostics.snmp", false) as boolean) ||
+      .get<boolean>("diagnostics.snmp", false) ||
     !extension.snmp
   ) {
     return [];
   }
 
   // Get dimensions and tidy up OIDs (.0 ending is not valid for lookups)
-  const dimensions = (
-    getDimensionsFromDataSource(extension, true) as { key: string; value: string }[]
-  )
+  const dimensions = getDimensionsFromDataSource(extension, true)
     .filter(d => d.value.startsWith("oid:"))
     .map(d => ({
       key: d.key,
@@ -555,9 +553,9 @@ const createTableOidDiagnostics = async (
 
   // Honor the user's settings and bail early if diagnostics disabled.
   if (
-    (!vscode.workspace
+    !vscode.workspace
       .getConfiguration("dynatraceExtensions", null)
-      .get("diagnostics.snmp", false) as boolean) ||
+      .get<boolean>("diagnostics.snmp", false) ||
     !extension.snmp
   ) {
     return [];

@@ -73,7 +73,7 @@ export class HttpClient {
     );
 
     return axios
-      .request({
+      .request<T>({
         url,
         headers,
         params,
@@ -92,7 +92,7 @@ export class HttpClient {
           logger.error(errorData, ...fnLogTrace);
           throw new DynatraceAPIError(message, errorData.error);
         }
-        return res.data as T;
+        return res.data;
       })
       .catch((err: unknown) => {
         if (Object.keys(err ?? {}).includes("response")) {
@@ -126,7 +126,7 @@ export class HttpClient {
    * Makes a paginated GET API call, going over all pages and returning the full list of items.
    * @returns list of items
    */
-  async paginatedCall<T = never, R = T[]>(config: DynatracePaginatedRequestConfig): Promise<R> {
+  async paginatedCall<T = never>(config: DynatracePaginatedRequestConfig): Promise<T[]> {
     const items: T[] = [];
     let nextPageKey: string | undefined = "firstCall";
     let params = config.params;
@@ -143,6 +143,6 @@ export class HttpClient {
       }
     }
 
-    return items as R;
+    return items;
   }
 }

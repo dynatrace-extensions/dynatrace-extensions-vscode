@@ -535,7 +535,7 @@ export function buildPlatformDashboard(
   logo: string,
   includeMetrics: boolean = true,
 ): string {
-  const newDashboard = { ...dashboardJsonTemplate } as GrailDashboard;
+  const newDashboard: GrailDashboard = { ...dashboardJsonTemplate };
   let tileCountNow = 1;
 
   // title, config link, doc link
@@ -836,12 +836,14 @@ export function buildUpdatedDocumentYaml(
   newDashboard: DocumentDashboard,
 ): string {
   if (!extension.documents) {
-    extension.documents = { dashboards: [] };
-  } else if (!extension.documents.dashboards) {
+    extension.documents = {};
+  }
+
+  if (!extension.documents.dashboards) {
     extension.documents.dashboards = [];
   }
 
-  const dashboards = extension.documents.dashboards as DocumentDashboard[];
+  const dashboards = extension.documents.dashboards;
 
   const existingDashboard = dashboards.find(
     (dashboard: DocumentDashboard) => dashboard.path === newDashboard.path,

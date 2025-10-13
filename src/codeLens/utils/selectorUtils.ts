@@ -86,30 +86,28 @@ export async function validateSelector(
   if (selectorType === "metric") {
     return dt.metrics
       .query(selector)
-      .then(() => ({ status: "valid" }) as ValidationStatus)
+      .then((): ValidationStatus => ({ status: "valid" }))
       .catch(
-        (err: DynatraceAPIError) =>
-          ({
-            status: "invalid",
-            error: {
-              code: err.errorParams.code,
-              message: err.errorParams.message,
-            },
-          }) as ValidationStatus,
-      );
-  }
-  return dt.entitiesV2
-    .list(selector)
-    .then(() => ({ status: "valid" }) as ValidationStatus)
-    .catch(
-      (err: DynatraceAPIError) =>
-        ({
+        (err: DynatraceAPIError): ValidationStatus => ({
           status: "invalid",
           error: {
             code: err.errorParams.code,
             message: err.errorParams.message,
           },
-        }) as ValidationStatus,
+        }),
+      );
+  }
+  return dt.entitiesV2
+    .list(selector)
+    .then((): ValidationStatus => ({ status: "valid" }))
+    .catch(
+      (err: DynatraceAPIError): ValidationStatus => ({
+        status: "invalid",
+        error: {
+          code: err.errorParams.code,
+          message: err.errorParams.message,
+        },
+      }),
     );
 }
 

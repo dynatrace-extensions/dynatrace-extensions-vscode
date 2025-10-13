@@ -17,7 +17,6 @@
 import { existsSync, mkdirSync, readFileSync, writeFileSync } from "fs";
 import path from "path";
 import vscode from "vscode";
-import { Dashboard } from "../dynatrace-api/interfaces/dashboards";
 import { ExtensionStub, DocumentDashboard } from "../interfaces/extensionMeta";
 import { getDynatraceClient } from "../treeViews/tenantsTreeView";
 import { getCachedParsedExtension } from "../utils/caching";
@@ -29,6 +28,7 @@ import {
 } from "../utils/dashboards";
 import { getEntityMetrics, getMetricDisplayName } from "../utils/extensionParsing";
 import { getExtensionFilePath } from "../utils/fileSystem";
+import { parseJSON } from "../utils/jsonParsing";
 import logger from "../utils/logging";
 
 export const createDashboardWorkflow = async () => {
@@ -558,7 +558,7 @@ async function createClassicDashboard(extensionFile: string, extension: Extensio
         .then(choice => {
           if (choice === "Yes") {
             dt.dashboards
-              .post(JSON.parse(dashboardJson) as Dashboard)
+              .post(parseJSON(dashboardJson))
               .then(() => {
                 logger.notify("INFO", "Upload successful.", ...fnLogTrace);
               })

@@ -6,6 +6,7 @@ import {
   V1ConfigUIProperty,
   V1Property,
 } from "../../interfaces/extensionMeta";
+import { parseJSON } from "../../utils/jsonParsing";
 
 const activationSchemaTemplate: ActivationSchema = {
   types: {
@@ -142,7 +143,7 @@ export async function convertPluginJsonToActivationSchema(
   v1Extension: ExtensionV1,
 ): Promise<ActivationSchema> {
   // Copy the template
-  const activationSchema = JSON.parse(JSON.stringify(activationSchemaTemplate)) as ActivationSchema;
+  const activationSchema: ActivationSchema = parseJSON(JSON.stringify(activationSchemaTemplate));
 
   // loop through the properties of the v1Extension
   for (const property of v1Extension.properties ?? []) {

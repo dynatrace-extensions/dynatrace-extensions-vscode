@@ -36,6 +36,7 @@ import JSZip from "jszip";
 import vscode from "vscode";
 import { getActivationContext } from "../extension";
 import { DynatraceTenantDto, ExtensionWorkspaceDto } from "../interfaces/treeViews";
+import { parseJSON } from "./jsonParsing";
 import logger, { notify } from "./logging";
 
 const logTrace = ["utils", "fileSystem"];
@@ -179,7 +180,7 @@ export async function registerWorkspace() {
  * Gets metadata of all extension workspaces currently registered in the global storage.
  */
 export function getAllWorkspaces(): ExtensionWorkspaceDto[] {
-  return JSON.parse(readFileSync(getWorkspacesJsonPath()).toString()) as ExtensionWorkspaceDto[];
+  return parseJSON(readFileSync(getWorkspacesJsonPath()).toString());
 }
 
 /**
@@ -202,7 +203,7 @@ export function findWorkspace(
  * Gets metadata of all Dynatrace tenants currently registered in the global storage.
  */
 export function getAllTenants(): DynatraceTenantDto[] {
-  return JSON.parse(readFileSync(getTenantsJsonPath()).toString()) as DynatraceTenantDto[];
+  return parseJSON(readFileSync(getTenantsJsonPath()).toString());
 }
 
 /**
@@ -308,10 +309,10 @@ export function registerSimulatorSummary(summary: ExecutionSummary) {
 export function getSimulatorSummaries(): ExecutionSummary[] {
   const context = getActivationContext();
   const summariesJson = path.join(context.globalStorageUri.fsPath, "summaries.json");
-  return (JSON.parse(readFileSync(summariesJson).toString()) as ExecutionSummary[]).map(s => ({
+  return parseJSON<ExecutionSummary[]>(readFileSync(summariesJson).toString()).map(s => ({
     ...s,
     startTime: new Date(s.startTime),
-  })) as ExecutionSummary[];
+  }));
 }
 
 /**
@@ -406,7 +407,7 @@ export function deleteSimulatorTarget(target: RemoteTarget) {
  * Fetches all extension simulator summaries from the global storage.
  */
 export function getSimulatorTargets(): RemoteTarget[] {
-  return JSON.parse(readFileSync(getTargetsJsonPath()).toString()) as RemoteTarget[];
+  return parseJSON(readFileSync(getTargetsJsonPath()).toString());
 }
 
 /**

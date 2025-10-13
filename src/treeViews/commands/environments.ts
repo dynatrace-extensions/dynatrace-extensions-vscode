@@ -35,6 +35,7 @@ import {
   registerTenant,
   removeTenant,
 } from "../../utils/fileSystem";
+import { parseJSON } from "../../utils/jsonParsing";
 import logger from "../../utils/logging";
 import { createObjectFromSchema } from "../../utils/schemaParsing";
 import { refreshTenantsTreeView } from "../tenantsTreeView";
@@ -465,11 +466,7 @@ async function editMonitoringConfiguration(config: MonitoringConfiguration): Pro
     // Push the changes
     response =>
       config.dt.extensionsV2
-        .putMonitoringConfiguration(
-          config.extensionName,
-          config.id,
-          JSON.parse(response) as Record<string, unknown>,
-        )
+        .putMonitoringConfiguration(config.extensionName, config.id, parseJSON(response))
         .then(() => {
           logger.notify("INFO", "Configuration updated successfully.", ...fnLogTrace);
           return true;
@@ -560,11 +557,11 @@ async function addMonitoringConfiguration(extension: DeployedExtension) {
         const choice = await vscode.window.showQuickPick([
           ...configFiles.map(file => {
             const filePath = path.join(configDir, file);
-            const config =
+            const config: MinimalConfiguration =
               file === "simulator.json"
                 ? // Simulator JSON has a list of configs
-                  (JSON.parse(readFileSync(filePath).toString()) as MinimalConfiguration[])[0]
-                : (JSON.parse(readFileSync(filePath).toString()) as MinimalConfiguration);
+                  parseJSON<MinimalConfiguration[]>(readFileSync(filePath).toString())[0]
+                : parseJSON(readFileSync(filePath).toString());
             return {
               label: `From file ${file}`,
               detail: `Description: ${config.value.description}; ${
@@ -585,8 +582,8 @@ async function addMonitoringConfiguration(extension: DeployedExtension) {
         if ("filePath" in choice) {
           configObject = choice.filePath.endsWith("simulator.json")
             ? // Simulator JSON has a list of configs
-              (JSON.parse(readFileSync(choice.filePath).toString()) as MinimalConfiguration[])[0]
-            : (JSON.parse(readFileSync(choice.filePath).toString()) as MinimalConfiguration);
+              parseJSON<MinimalConfiguration[]>(readFileSync(choice.filePath).toString())[0]
+            : parseJSON(readFileSync(choice.filePath).toString());
         }
       }
     }

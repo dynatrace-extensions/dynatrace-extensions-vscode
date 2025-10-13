@@ -18,7 +18,6 @@ import { readFileSync } from "fs";
 import path from "path";
 import { glob } from "glob";
 import vscode from "vscode";
-import yaml from "yaml";
 import { ExtensionStub } from "../interfaces/extensionMeta";
 import {
   WorkspaceTreeItem,
@@ -26,6 +25,7 @@ import {
   WorkspacesTreeDataProvider,
 } from "../interfaces/treeViews";
 import { getAllWorkspaces } from "../utils/fileSystem";
+import { parseYAML } from "../utils/yamlParsing";
 
 const ICONS_PATH = path.join(__filename, "..", "..", "src", "assets", "icons");
 const ICONS: Record<string, { light: string; dark: string }> = {
@@ -139,7 +139,7 @@ class WorkspacesTreeDataProviderImpl implements WorkspacesTreeDataProvider {
       ];
       extensionFiles.forEach(filepath => {
         const extensionFilePath = path.join(workspacePath, filepath);
-        const extension = yaml.parse(readFileSync(extensionFilePath).toString()) as ExtensionStub;
+        const extension: ExtensionStub = parseYAML(readFileSync(extensionFilePath).toString());
         extensions.push(
           createWorkspacesTreeItem(
             extension.name,

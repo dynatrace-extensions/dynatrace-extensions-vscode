@@ -18,7 +18,6 @@ import { lstatSync, readdirSync, readFileSync } from "fs";
 import path from "path";
 import JSZip from "jszip";
 import vscode from "vscode";
-import yaml from "yaml";
 import { Dynatrace } from "../dynatrace-api/dynatrace";
 import { DynatraceAPIError } from "../dynatrace-api/errors";
 import { ExtensionStub } from "../interfaces/extensionMeta";
@@ -31,6 +30,7 @@ import {
 } from "../utils/conditionCheckers";
 import { loopSafeWait } from "../utils/general";
 import logger from "../utils/logging";
+import { parseYAML } from "../utils/yamlParsing";
 import { activateExtension } from "./activateExtension";
 
 export const uploadExtensionWorkflow = async () => {
@@ -86,7 +86,7 @@ export async function uploadExtension(dt: Dynatrace, tenantUrl: string) {
     logger.notify("ERROR", "Latest archive is invalid: no extension.yaml", ...fnLogTrace);
     return;
   }
-  const extension = yaml.parse(extensionYaml) as ExtensionStub;
+  const extension: ExtensionStub = parseYAML(extensionYaml);
   const extensionVersion = extension.version;
   const extensionName = extension.name;
 
