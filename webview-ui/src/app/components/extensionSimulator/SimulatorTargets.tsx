@@ -129,14 +129,18 @@ export const SimulatorTargets = ({ targets }: SimulatorTargetsProps) => {
                 {(row: RemoteTarget) => (
                   <Menu>
                     <Menu.Content>
-                      <Menu.Item onSelect={() => handleEditTarget(row)}>
+                      <Menu.Item onSelect={handleEditTarget.bind(undefined, row)}>
                         <Menu.ItemIcon>
                           <EditIcon />
                         </Menu.ItemIcon>
                         Edit
                       </Menu.Item>
                       <Menu.Item
-                        onSelect={() => triggerCommand(SimulatorCommand.DeleteTarget, row)}
+                        onSelect={triggerCommand.bind(
+                          undefined,
+                          SimulatorCommand.DeleteTarget,
+                          row,
+                        )}
                       >
                         <Menu.ItemIcon>
                           <DeleteIcon />

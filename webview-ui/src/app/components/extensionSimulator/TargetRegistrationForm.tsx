@@ -136,7 +136,7 @@ export const TargetRegistrationForm = ({
       }}
       size='small'
     >
-      <form onSubmit={handleSubmit(handleSubmitClick)} onReset={() => clearForm()} noValidate>
+      <form onSubmit={handleSubmit(handleSubmitClick)} onReset={clearForm} noValidate>
         <Flex flexDirection='column' gap={32}>
           <FieldSet legend='Target details' name='target-details'>
             <FormField>

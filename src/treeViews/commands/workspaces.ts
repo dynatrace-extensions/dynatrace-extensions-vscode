@@ -28,7 +28,7 @@ import { refreshWorkspacesTreeView } from "../workspacesTreeView";
 export const registerWorkspaceViewCommands = (): vscode.Disposable[] => {
   const commandPrefix = "dynatrace-extensions-workspaces";
   return [
-    vscode.commands.registerCommand(`${commandPrefix}.refresh`, () => refreshWorkspacesTreeView()),
+    vscode.commands.registerCommand(`${commandPrefix}.refresh`, refreshWorkspacesTreeView),
     vscode.commands.registerCommand(`${commandPrefix}.addWorkspace`, async () => {
       await getActivationContext().globalState.update("dynatrace-extensions.initPending", true);
       await vscode.commands.executeCommand("vscode.openFolder");
@@ -42,7 +42,7 @@ export const registerWorkspaceViewCommands = (): vscode.Disposable[] => {
     vscode.commands.registerCommand(
       `${commandPrefix}.deleteWorkspace`,
       async (workspace: WorkspaceTreeItem) => {
-        await deleteWorkspace(workspace).then(() => refreshWorkspacesTreeView());
+        await deleteWorkspace(workspace).then(refreshWorkspacesTreeView);
       },
     ),
     vscode.commands.registerCommand(

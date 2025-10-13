@@ -186,7 +186,7 @@ export const SimulatorExecutions = ({
             <DataTableV2.Pagination defaultPageSize={10} defaultPageIndex={1} />
             <DataTableV2.RowActions>
               {(row: ExecutionSummary) => (
-                <Button onClick={() => handleOpenLog(row.logPath)}>
+                <Button onClick={handleOpenLog.bind(undefined, row.logPath)}>
                   <Button.Prefix>
                     <DescriptionIcon />
                   </Button.Prefix>

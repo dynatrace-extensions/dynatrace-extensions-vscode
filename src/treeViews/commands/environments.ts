@@ -101,9 +101,9 @@ export function validateEnvironmentUrl(value: string): string | null {
 export const registerTenantsViewCommands = () => {
   const commandPrefix = "dynatrace-extensions-environments";
   return [
-    vscode.commands.registerCommand(`${commandPrefix}.refresh`, () => refreshTenantsTreeView()),
+    vscode.commands.registerCommand(`${commandPrefix}.refresh`, refreshTenantsTreeView),
     vscode.commands.registerCommand(`${commandPrefix}.addEnvironment`, () =>
-      addEnvironment().then(() => refreshTenantsTreeView()),
+      addEnvironment().then(refreshTenantsTreeView),
     ),
     vscode.commands.registerCommand(
       `${commandPrefix}.useEnvironment`,
@@ -117,17 +117,17 @@ export const registerTenantsViewCommands = () => {
     vscode.commands.registerCommand(
       `${commandPrefix}.editEnvironment`,
       async (tenant: DynatraceTenant) => {
-        await editEnvironment(tenant).then(() => refreshTenantsTreeView());
+        await editEnvironment(tenant).then(refreshTenantsTreeView);
       },
     ),
     vscode.commands.registerCommand(
       `${commandPrefix}.deleteEnvironment`,
       async (tenant: DynatraceTenant) => {
-        await deleteEnvironment(tenant).then(() => refreshTenantsTreeView());
+        await deleteEnvironment(tenant).then(refreshTenantsTreeView);
       },
     ),
     vscode.commands.registerCommand(`${commandPrefix}.changeConnection`, async () => {
-      await changeConnection().then(() => refreshTenantsTreeView());
+      await changeConnection().then(refreshTenantsTreeView);
     }),
     vscode.commands.registerCommand(
       `${commandPrefix}.addConfig`,

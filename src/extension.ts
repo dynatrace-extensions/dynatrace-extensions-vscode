@@ -153,22 +153,20 @@ const setContextProperty = (key: string, value: string | number | boolean) => {
  * Registers all commands that should appear as workflows in vscode's command palette.
  */
 const registerCommandPaletteWorkflows = (): vscode.Disposable[] => [
-  registerWorkflowCommand("loadSchemas", () => loadSchemasWorkflow()),
-  registerWorkflowCommand("initWorkspace", () => initWorkspaceWorkflow()),
-  registerWorkflowCommand("generateCertificates", () => generateCertificatesWorkflow()),
-  registerWorkflowCommand("distributeCertificate", () => distributeCertificateWorkflow()),
-  registerWorkflowCommand("buildExtension", () => buildExtensionWorkflow()),
-  registerWorkflowCommand("uploadExtension", () => uploadExtensionWorkflow()),
-  registerWorkflowCommand("activateExtension", () => activateExtensionWorkflow()),
-  registerWorkflowCommand("createDocumentation", () => createDocumentationWorkflow()),
-  registerWorkflowCommand("createDashboard", () => createDashboardWorkflow()),
-  registerWorkflowCommand("createAlert", () => createAlertWorkflow()),
-  registerWorkflowCommand("convertJmxExtension", () => convertJmxExtensionWorkflow()),
-  registerWorkflowCommand("convertPythonExtension", () => convertPythonExtensionWorkflow()),
-  registerWorkflowCommand("createMonitoringConfiguration", () =>
-    createMonitoringConfigurationWorkflow(),
-  ),
-  registerWorkflowCommand("downloadSupportArchive", () => downloadSupportArchiveWorkflow()),
+  registerWorkflowCommand("loadSchemas", loadSchemasWorkflow),
+  registerWorkflowCommand("initWorkspace", initWorkspaceWorkflow),
+  registerWorkflowCommand("generateCertificates", generateCertificatesWorkflow),
+  registerWorkflowCommand("distributeCertificate", distributeCertificateWorkflow),
+  registerWorkflowCommand("buildExtension", buildExtensionWorkflow),
+  registerWorkflowCommand("uploadExtension", uploadExtensionWorkflow),
+  registerWorkflowCommand("activateExtension", activateExtensionWorkflow),
+  registerWorkflowCommand("createDocumentation", createDocumentationWorkflow),
+  registerWorkflowCommand("createDashboard", createDashboardWorkflow),
+  registerWorkflowCommand("createAlert", createAlertWorkflow),
+  registerWorkflowCommand("convertJmxExtension", convertJmxExtensionWorkflow),
+  registerWorkflowCommand("convertPythonExtension", convertPythonExtensionWorkflow),
+  registerWorkflowCommand("createMonitoringConfiguration", createMonitoringConfigurationWorkflow),
+  registerWorkflowCommand("downloadSupportArchive", downloadSupportArchiveWorkflow),
 ];
 
 /**

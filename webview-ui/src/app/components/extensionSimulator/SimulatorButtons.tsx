@@ -45,7 +45,7 @@ export const StateButton = ({
       return (
         <Tooltip text='Stop the simulation'>
           <Button
-            onClick={() => triggerCommand(SimulatorCommand.Stop)}
+            onClick={triggerCommand.bind(undefined, SimulatorCommand.Stop)}
             variant='accent'
             color='primary'
           >
@@ -59,7 +59,7 @@ export const StateButton = ({
       return (
         <Tooltip text='Start the simulation'>
           <Button
-            onClick={() => triggerCommand(SimulatorCommand.Start, currentConfig)}
+            onClick={triggerCommand.bind(undefined, SimulatorCommand.Start, currentConfig)}
             variant='accent'
             color='primary'
           >
@@ -72,7 +72,7 @@ export const StateButton = ({
     case SimulatorStatus.NotReady:
       return (
         <Tooltip text='There are issues with your simulator configuration. Check your settings.'>
-          <Button onClick={() => showSettings(true)} variant='accent' color='warning'>
+          <Button onClick={showSettings.bind(undefined, true)} variant='accent' color='warning'>
             <Button.Prefix>
               <WarningIcon />
             </Button.Prefix>
@@ -90,7 +90,11 @@ export const StateButton = ({
     case SimulatorStatus.Unsupported:
       return (
         <Tooltip text="One or more mandatory settings are not defined. Click to see what's wrong.">
-          <Button onClick={() => showMandatoryChecks(true)} variant='accent' color='critical'>
+          <Button
+            onClick={showMandatoryChecks.bind(undefined, true)}
+            variant='accent'
+            color='critical'
+          >
             <Button.Prefix>
               <CriticalIcon />
             </Button.Prefix>
@@ -104,7 +108,7 @@ export const StateButton = ({
 
 export const SettingsButton = ({ showSettings }: { showSettings: (state: boolean) => void }) => (
   <Tooltip text='Settings'>
-    <Button onClick={() => showSettings(true)} variant='default' color='primary'>
+    <Button onClick={showSettings.bind(undefined, true)} variant='default' color='primary'>
       <Button.Prefix>
         <SettingIcon />
       </Button.Prefix>

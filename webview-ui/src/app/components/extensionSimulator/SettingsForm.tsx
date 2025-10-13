@@ -188,10 +188,10 @@ export const SettingsForm = ({
     <Modal
       title='Simulator settings'
       show={modalOpen}
-      onDismiss={() => setModalOpen(false)}
+      onDismiss={setModalOpen.bind(undefined, false)}
       size='small'
     >
-      <form onSubmit={handleSubmit(handleSubmitClick)} onReset={() => clearForm()} noValidate>
+      <form onSubmit={handleSubmit(handleSubmitClick)} onReset={clearForm} noValidate>
         <Flex flexDirection='column' gap={32}>
           <FieldSet legend='Simulation behavior' name='simulation-details'>
             <Switch value={sendMetrics} onChange={setSendMetrics}>

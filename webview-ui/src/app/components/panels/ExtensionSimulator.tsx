@@ -34,13 +34,13 @@ export const ExtensionSimulator = ({ data }: ExtensionSimulatorProps) => {
         <AppHeader.Navigation>
           <AppHeader.Logo style={{ display: "none" }} />
           <AppHeader.NavigationItem
-            onClick={() => setPage("executions")}
+            onClick={setPage.bind(undefined, "executions")}
             isSelected={page === "executions"}
           >
             Simulator Executions
           </AppHeader.NavigationItem>
           <AppHeader.NavigationItem
-            onClick={() => setPage("targets")}
+            onClick={setPage.bind(undefined, "targets")}
             isSelected={page === "targets"}
           >
             Remote Targets
