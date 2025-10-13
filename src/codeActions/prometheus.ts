@@ -245,11 +245,7 @@ class PrometheusActionProvider implements vscode.CodeActionProvider {
     extension: ExtensionStub,
   ): vscode.CodeAction[] {
     const codeActions: vscode.CodeAction[] = [];
-    const datasourceMetrics = getMetricsFromDataSource(extension, true) as {
-      key: string;
-      type: string;
-      value: string;
-    }[];
+    const datasourceMetrics = getMetricsFromDataSource(extension, true);
     const metadataMetrics = extension.metrics ? extension.metrics.map(m => m.key) : [];
 
     const metricsToInsert = datasourceMetrics

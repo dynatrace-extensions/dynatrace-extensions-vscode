@@ -108,9 +108,9 @@ class SnmpActionProvider implements vscode.CodeActionProvider {
     const codeActions: vscode.CodeAction[] = [];
 
     // Get metrics and keep the OID-based ones
-    const metrics = (
-      getMetricsFromDataSource(extension, true) as { key: string; type: string; value: string }[]
-    ).filter(m => m.value.startsWith("oid:"));
+    const metrics = getMetricsFromDataSource(extension, true).filter(m =>
+      m.value.startsWith("oid:"),
+    );
 
     // Reduce the time by bulk fetching all required OIDs
     await updateCachedSnmpOids(metrics.map(m => oidFromMetriValue(m.value)));

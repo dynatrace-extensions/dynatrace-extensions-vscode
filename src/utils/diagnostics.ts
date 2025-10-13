@@ -357,13 +357,7 @@ const diagnoseMetricOids = async (
   }
 
   // Get metrics and keep the OID-based ones
-  const metrics = (
-    getMetricsFromDataSource(extension, true) as {
-      type: string;
-      key: string;
-      value: string;
-    }[]
-  ).filter(m => m.value.startsWith("oid:"));
+  const metrics = getMetricsFromDataSource(extension, true).filter(m => m.value.startsWith("oid:"));
 
   // Reduce the time by bulk fetching all required OIDs
   await updateCachedSnmpOids(metrics.map(m => oidFromMetriValue(m.value)));
