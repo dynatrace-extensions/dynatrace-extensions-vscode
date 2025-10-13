@@ -38,6 +38,7 @@ const PromAuth = {
 } as const;
 // eslint-disable-next-line @typescript-eslint/no-redeclare
 type PromAuth = utilTypes.ObjectValues<typeof PromAuth>;
+const PromAuths = Object.values(PromAuth);
 
 const ScrapingMethod = {
   Endpoint: "Endpoint",
@@ -45,6 +46,7 @@ const ScrapingMethod = {
 } as const;
 // eslint-disable-next-line @typescript-eslint/no-redeclare
 type ScrapingMethod = utilTypes.ObjectValues<typeof ScrapingMethod>;
+const ScrapingMethods = Object.values(ScrapingMethod);
 
 /**
  * Provides singleton access to the PrometheusCodeLensProvider
@@ -186,7 +188,7 @@ class PrometheusCodeLensProvider implements vscode.CodeLensProvider {
    */
   private async collectScrapingDetails(): Promise<boolean> {
     // Endpoint URL
-    this.method = await showQuickPick(Object.values(ScrapingMethod), {
+    this.method = await showQuickPick(ScrapingMethods, {
       title: "Scrape data - method selection",
       placeHolder: "Select your scraping method",
       ignoreFocusOut: true,
@@ -203,7 +205,7 @@ class PrometheusCodeLensProvider implements vscode.CodeLensProvider {
           return false;
         }
         // Endpoint connectivity scheme
-        this.promAuth = await showQuickPick(Object.values(PromAuth), {
+        this.promAuth = await showQuickPick(PromAuths, {
           title: "Scrape data - endpoint authentication",
           placeHolder: "Select your endpoint's authentication scheme",
           ignoreFocusOut: true,
