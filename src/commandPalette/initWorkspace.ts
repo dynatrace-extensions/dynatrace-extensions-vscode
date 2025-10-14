@@ -47,7 +47,7 @@ import {
   registerWorkspace,
   writeGititnore,
 } from "../utils/fileSystem";
-import logger, { notify } from "../utils/logging";
+import logger from "../utils/logging";
 import { getPythonVenvOpts } from "../utils/otherExtensions";
 import { runCommand } from "../utils/subprocesses";
 import { showQuickPick } from "../utils/vscode";
@@ -122,20 +122,20 @@ export async function initWorkspace(dt: Dynatrace, callback?: () => unknown) {
         if (cmdSuccess) {
           schemaVersion = context.workspaceState.get<string>("schemaVersion");
           if (!schemaVersion) {
-            notify(
+            logger.notify(
               "ERROR",
               "Error loading schemas. Cannot continue initialization.",
               ...fnLogTrace,
             );
             return false;
           }
-          notify("INFO", `Loaded schemas version ${schemaVersion}`, ...fnLogTrace);
+          logger.notify("INFO", `Loaded schemas version ${schemaVersion}`, ...fnLogTrace);
         } else {
-          notify("ERROR", "Cannot initialize workspace without schemas.", ...fnLogTrace);
+          logger.notify("ERROR", "Cannot initialize workspace without schemas.", ...fnLogTrace);
           return false;
         }
       } else {
-        notify("INFO", `Using cached schema version ${schemaVersion}`, ...fnLogTrace);
+        logger.notify("INFO", `Using cached schema version ${schemaVersion}`, ...fnLogTrace);
         const mainSchema = vscode.Uri.file(
           path.join(
             path.join(context.globalStorageUri.fsPath, schemaVersion),
@@ -166,7 +166,7 @@ export async function initWorkspace(dt: Dynatrace, callback?: () => unknown) {
           logger.debug("Workspace will use existing certificates", ...fnLogTrace);
           const hasCertificates = await checkSettings("developerCertkeyLocation");
           if (!hasCertificates) {
-            notify(
+            logger.notify(
               "ERROR",
               "Personal certificates not found. Workspace not initialized.",
               ...fnLogTrace,
@@ -181,13 +181,21 @@ export async function initWorkspace(dt: Dynatrace, callback?: () => unknown) {
             "dynatrace-extensions.generateCertificates",
           );
           if (!cmdSuccess) {
-            notify("ERROR", "Cannot initialize workspace without certificates.", ...fnLogTrace);
+            logger.notify(
+              "ERROR",
+              "Cannot initialize workspace without certificates.",
+              ...fnLogTrace,
+            );
             return false;
           }
           break;
         }
         default:
-          notify("ERROR", "No certificate choice made. Workspace not initialized.", ...fnLogTrace);
+          logger.notify(
+            "ERROR",
+            "No certificate choice made. Workspace not initialized.",
+            ...fnLogTrace,
+          );
           return false;
       }
 
@@ -246,7 +254,7 @@ export async function initWorkspace(dt: Dynatrace, callback?: () => unknown) {
         });
       }
       if (!projectType) {
-        notify("ERROR", "No selection made. Operation cancelled.", ...fnLogTrace);
+        logger.notify("ERROR", "No selection made. Operation cancelled.", ...fnLogTrace);
         return;
       }
       // This was done earlier in the flow already.
@@ -294,7 +302,7 @@ export async function initWorkspace(dt: Dynatrace, callback?: () => unknown) {
     },
   );
 
-  notify("INFO", "Workspace initialization completed successfully.", ...fnLogTrace);
+  logger.notify("INFO", "Workspace initialization completed successfully.", ...fnLogTrace);
 }
 
 /**
@@ -384,7 +392,7 @@ async function existingExtensionSetup(dt: Dynatrace, rootPath: string) {
     },
   );
   if (!download) {
-    notify("ERROR", "No selection made. Operation aborted.", ...fnLogTrace);
+    logger.notify("ERROR", "No selection made. Operation aborted.", ...fnLogTrace);
     return;
   }
 
@@ -434,7 +442,7 @@ async function existingExtensionSetup(dt: Dynatrace, rootPath: string) {
     }
   } catch (err) {
     logger.error(err, ...fnLogTrace);
-    notify(
+    logger.notify(
       "WARN",
       "Not all files were extracted successfully. Manual edits are still needed.",
       ...fnLogTrace,

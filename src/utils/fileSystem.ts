@@ -37,7 +37,7 @@ import vscode from "vscode";
 import { getActivationContext } from "../extension";
 import { DynatraceTenantDto, ExtensionWorkspaceDto } from "../interfaces/treeViews";
 import { parseJSON } from "./jsonParsing";
-import logger, { notify } from "./logging";
+import logger from "./logging";
 
 const logTrace = ["utils", "fileSystem"];
 
@@ -799,7 +799,7 @@ export async function migrateFromLegacyExtension() {
         });
     },
   );
-  notify("INFO", "Migration from legacy version complete.");
+  logger.notify("INFO", "Migration from legacy version complete.");
 }
 
 /**

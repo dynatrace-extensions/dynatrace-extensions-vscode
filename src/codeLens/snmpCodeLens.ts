@@ -19,7 +19,7 @@ import path from "path";
 import vscode from "vscode";
 import { getLoadedMibFiles, loadUserMibFiles } from "../utils/caching";
 import { getSnmpDirPath } from "../utils/fileSystem";
-import { notify } from "../utils/logging";
+import logger from "../utils/logging";
 import { createSingletonProvider } from "../utils/singleton";
 
 /**
@@ -47,7 +47,7 @@ class SnmpCodeLensProvider implements vscode.CodeLensProvider {
       title: "Select MIB files",
     });
     if (!files) {
-      notify("ERROR", "No files selected. Operation cancelled.");
+      logger.notify("ERROR", "No files selected. Operation cancelled.");
       return;
     }
     const newFiles = files.filter(
@@ -70,7 +70,7 @@ class SnmpCodeLensProvider implements vscode.CodeLensProvider {
         });
       }
     } else {
-      notify("INFO", "Selected files have already been imported.");
+      logger.notify("INFO", "Selected files have already been imported.");
     }
   }
 

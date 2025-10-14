@@ -18,7 +18,7 @@ import vscode from "vscode";
 import { getActivationContext } from "../../extension";
 import { WorkspaceTreeItem } from "../../interfaces/treeViews";
 import { removeWorkspace } from "../../utils/fileSystem";
-import logger, { notify } from "../../utils/logging";
+import logger from "../../utils/logging";
 import { ConfirmOption, showQuickPickConfirm } from "../../utils/vscode";
 import { refreshWorkspacesTreeView } from "../workspacesTreeView";
 
@@ -87,7 +87,7 @@ async function deleteWorkspace(workspace: WorkspaceTreeItem) {
   });
 
   if (confirm !== ConfirmOption.Yes) {
-    notify("INFO", "Operation cancelled.", ...fnLogTrace);
+    logger.notify("INFO", "Operation cancelled.", ...fnLogTrace);
     return;
   }
 
