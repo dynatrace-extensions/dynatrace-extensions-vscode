@@ -201,9 +201,9 @@ class PrometheusCodeLensProvider implements vscode.CodeLensProvider {
         });
         // Endpoint authentication details
         switch (this.promAuth) {
-          case "No authentication":
+          case PromAuth.NoAuth:
             return true;
-          case "Bearer token":
+          case PromAuth.Token:
             this.promToken = await vscode.window.showInputBox({
               title: "Scrape data - endpoint authentication",
               placeHolder: "Enter the Bearer token to use for authentication",
@@ -214,7 +214,7 @@ class PrometheusCodeLensProvider implements vscode.CodeLensProvider {
               return false;
             }
             return true;
-          case "Username & password":
+          case PromAuth.Credentials:
             this.promUsername = await vscode.window.showInputBox({
               title: "Scrape data - endpoint authentication",
               placeHolder: "Enter the username to use for authentication",
@@ -232,7 +232,7 @@ class PrometheusCodeLensProvider implements vscode.CodeLensProvider {
               return false;
             }
             return true;
-          case "AWS key":
+          case PromAuth.AWS:
             // TODO: Figure out how to implement AWS authentication
             logger.notify("ERROR", "AWS authentication not support yet, sorry.");
             return false;
@@ -279,18 +279,18 @@ class PrometheusCodeLensProvider implements vscode.CodeLensProvider {
   private async scrape() {
     try {
       switch (this.method) {
-        case "Endpoint":
+        case ScrapingMethod.Endpoint:
           if (!this.promUrl) {
             return false;
           }
           setHttpsAgent(this.promUrl);
           switch (this.promAuth) {
-            case "No authentication":
+            case PromAuth.NoAuth:
               await axios.get<string>(this.promUrl).then(res => {
                 this.processPrometheusData(res.data);
               });
               return true;
-            case "Username & password":
+            case PromAuth.Credentials:
               if (!this.promUsername || !this.promPassword) {
                 return false;
               }
@@ -302,7 +302,7 @@ class PrometheusCodeLensProvider implements vscode.CodeLensProvider {
                   this.processPrometheusData(res.data);
                 });
               return true;
-            case "Bearer token":
+            case PromAuth.Token:
               if (!this.promToken) {
                 return false;
               }
@@ -317,7 +317,7 @@ class PrometheusCodeLensProvider implements vscode.CodeLensProvider {
             default:
               return false;
           }
-        case "File":
+        case ScrapingMethod.File:
           if (!this.promFile) {
             return false;
           }
