@@ -76,14 +76,12 @@ export const setHttpsAgent = (baseUrl: string) => {
   let caFile = "";
   let disableSSL = false;
 
-  let configList = vscode.workspace
-    .getConfiguration("dynatraceExtensions", null)
-    .get<TenantConnectivitySettings[]>("tenantConnectivitySettings", []);
-
-  // The defaultValue in vscode's .get method is buggy. Returns undefined if not found.
-  // eslint-disable-next-line
-  configList =
-    configList === undefined ? [] : configList.filter(cfg => baseUrl.startsWith(cfg.tenantUrl));
+  const configList = (
+    vscode.workspace
+      .getConfiguration("dynatraceExtensions", null)
+      // The defaultValue in vscode's .get method is buggy. Returns undefined if not found.
+      .get<TenantConnectivitySettings[]>("tenantConnectivitySettings", []) ?? []
+  ).filter(cfg => baseUrl.startsWith(cfg.tenantUrl));
 
   if (configList.length > 0) {
     caFile = configList[0].certificatePath ?? "";
