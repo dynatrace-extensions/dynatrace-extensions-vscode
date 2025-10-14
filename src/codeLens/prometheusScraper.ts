@@ -15,7 +15,7 @@
  */
 
 import { readFileSync } from "fs";
-import { utilTypes } from "@common";
+import { UtilTypes } from "@common";
 import axios from "axios";
 import vscode from "vscode";
 import { getCachedPrometheusData, setCachedPrometheusData } from "../utils/caching";
@@ -37,7 +37,7 @@ const PromAuth = {
   AWS: "AWS key",
 } as const;
 // eslint-disable-next-line @typescript-eslint/no-redeclare
-type PromAuth = utilTypes.ObjectValues<typeof PromAuth>;
+type PromAuth = UtilTypes.ObjectValues<typeof PromAuth>;
 const PromAuths = Object.values(PromAuth);
 
 const ScrapingMethod = {
@@ -45,7 +45,7 @@ const ScrapingMethod = {
   File: "File",
 } as const;
 // eslint-disable-next-line @typescript-eslint/no-redeclare
-type ScrapingMethod = utilTypes.ObjectValues<typeof ScrapingMethod>;
+type ScrapingMethod = UtilTypes.ObjectValues<typeof ScrapingMethod>;
 const ScrapingMethods = Object.values(ScrapingMethod);
 
 /**

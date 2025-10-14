@@ -1,4 +1,4 @@
-import { utilTypes } from "@common";
+import { UtilTypes } from "@common";
 import vscode from "vscode";
 
 /** Wraps vscode `showQuickPick` with string literal support. */
@@ -18,7 +18,7 @@ export const ConfirmOption = {
   No: "No",
 } as const;
 // eslint-disable-next-line @typescript-eslint/no-redeclare
-type ConfirmOption = utilTypes.ObjectValues<typeof ConfirmOption>;
+type ConfirmOption = UtilTypes.ObjectValues<typeof ConfirmOption>;
 const ConfirmOptions = Object.values(ConfirmOption);
 
 export function showQuickPickConfirm(

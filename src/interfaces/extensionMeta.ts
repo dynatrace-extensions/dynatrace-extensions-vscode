@@ -14,7 +14,7 @@
   limitations under the License.
  */
 
-import { utilTypes } from "@common";
+import { UtilTypes } from "@common";
 
 export type DatasourceName =
   | "snmp"
@@ -40,7 +40,7 @@ export const DetailInjectionCardType = {
   INJECTIONS: "INJECTIONS",
 } as const;
 // eslint-disable-next-line @typescript-eslint/no-redeclare
-export type DetailInjectionCardType = utilTypes.ObjectValues<typeof DetailInjectionCardType>;
+export type DetailInjectionCardType = UtilTypes.ObjectValues<typeof DetailInjectionCardType>;
 
 interface TopologyStub {
   types?: TopologyType[];
