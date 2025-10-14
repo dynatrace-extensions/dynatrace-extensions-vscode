@@ -23,20 +23,9 @@ import {
   getPrometheusLabelKeys,
   getPrometheusMetricKeys,
 } from "../utils/extensionParsing";
+import { createSingletonProvider } from "../utils/singleton";
 import { getBlockItemIndexAtLine, getParentBlocks } from "../utils/yamlParsing";
 import { buildMetricMetadataSnippet, indentSnippet } from "./utils/snippetBuildingUtils";
-
-/**
- * Provides singleton access to the PrometheusActionProvider.
- */
-export const getPrometheusActionProvider = (() => {
-  let instance: PrometheusActionProvider | undefined;
-
-  return () => {
-    instance = instance === undefined ? new PrometheusActionProvider() : instance;
-    return instance;
-  };
-})();
 
 /**
  * Provider for Code Actions that work with scraped Prometheus data to automatically
@@ -311,6 +300,11 @@ class PrometheusActionProvider implements vscode.CodeActionProvider {
     return codeActions;
   }
 }
+
+/**
+ * Provides singleton access to the PrometheusActionProvider.
+ */
+export const getPrometheusActionProvider = createSingletonProvider(PrometheusActionProvider);
 
 /**
  * Splits a metric key on underscore ("_") and puts together all parts with first

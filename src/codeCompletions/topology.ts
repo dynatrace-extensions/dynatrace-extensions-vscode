@@ -23,19 +23,8 @@ import {
   getEntityName,
   getRequiredDimensions,
 } from "../utils/extensionParsing";
+import { createSingletonProvider } from "../utils/singleton";
 import { getBlockItemIndexAtLine, getParentBlocks } from "../utils/yamlParsing";
-
-/**
- * Singleton access to TopologyCompletionProvider
- */
-export const getTopologyCompletionProvider = (() => {
-  let instance: TopologyCompletionProvider | undefined;
-
-  return () => {
-    instance = instance === undefined ? new TopologyCompletionProvider() : instance;
-    return instance;
-  };
-})();
 
 /**
  * Provider for code auto-completion related to entities and entity types.
@@ -333,3 +322,8 @@ class TopologyCompletionProvider implements vscode.CompletionItemProvider {
     return completions;
   }
 }
+
+/**
+ * Singleton access to TopologyCompletionProvider
+ */
+export const getTopologyCompletionProvider = createSingletonProvider(TopologyCompletionProvider);

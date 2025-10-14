@@ -23,24 +23,13 @@ import {
   getRelationships,
   getRelationshipTypes,
 } from "../utils/extensionParsing";
+import { createSingletonProvider } from "../utils/singleton";
 import { getBlockItemIndexAtLine, getParentBlocks } from "../utils/yamlParsing";
 
 const TRIGGER_SUGGEST_CMD: vscode.Command = {
   command: "editor.action.triggerSuggest",
   title: "Re-trigger suggestions...",
 };
-
-/**
- * Singleton access to EntitySelectorCompletionProvider
- */
-export const getEntitySelectorCompletionProvider = (() => {
-  let instance: EntitySelectorCompletionProvider | undefined;
-
-  return () => {
-    instance = instance === undefined ? new EntitySelectorCompletionProvider() : instance;
-    return instance;
-  };
-})();
 
 /**
  * Provider for code auto-completions within entity selectors.
@@ -481,3 +470,10 @@ class EntitySelectorCompletionProvider implements vscode.CompletionItemProvider 
     return selector;
   }
 }
+
+/**
+ * Singleton access to EntitySelectorCompletionProvider
+ */
+export const getEntitySelectorCompletionProvider = createSingletonProvider(
+  EntitySelectorCompletionProvider,
+);

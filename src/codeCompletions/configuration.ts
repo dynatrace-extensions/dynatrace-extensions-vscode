@@ -20,18 +20,7 @@ import { MinimalConfiguration } from "../treeViews/commands/environments";
 import { getCachedEntityInstances, updateEntityInstances } from "../utils/caching";
 import { getExtensionFilePath } from "../utils/fileSystem";
 import { parseJSON } from "../utils/jsonParsing";
-
-/**
- * Singleton access to ConfigurationCompletionProvider
- */
-export const getConfigurationCompletionProvider = (() => {
-  let instance: ConfigurationCompletionProvider | undefined;
-
-  return () => {
-    instance = instance === undefined ? new ConfigurationCompletionProvider() : instance;
-    return instance;
-  };
-})();
+import { createSingletonProvider } from "../utils/singleton";
 
 /**
  * Provider for code auto-completions related to monitoring configuration files.
@@ -97,3 +86,10 @@ class ConfigurationCompletionProvider implements vscode.CompletionItemProvider {
     return completions;
   }
 }
+
+/**
+ * Singleton access to ConfigurationCompletionProvider
+ */
+export const getConfigurationCompletionProvider = createSingletonProvider(
+  ConfigurationCompletionProvider,
+);

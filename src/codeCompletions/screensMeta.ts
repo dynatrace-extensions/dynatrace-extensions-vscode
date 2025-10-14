@@ -18,19 +18,8 @@ import vscode from "vscode";
 import { ExtensionStub } from "../interfaces/extensionMeta";
 import { getCachedParsedExtension } from "../utils/caching";
 import { getReferencedCardsMeta, getDefinedCardsMeta } from "../utils/extensionParsing";
+import { createSingletonProvider } from "../utils/singleton";
 import { getBlockItemIndexAtLine, getParentBlocks } from "../utils/yamlParsing";
-
-/**
- * Singleton access to ScreensCompletionProvider
- */
-export const getScreensCompletionProvider = (() => {
-  let instance: ScreensCompletionProvider | undefined;
-
-  return () => {
-    instance = instance === undefined ? new ScreensCompletionProvider() : instance;
-    return instance;
-  };
-})();
 
 class ScreensCompletionProvider implements vscode.CompletionItemProvider {
   provideCompletionItems(
@@ -142,3 +131,8 @@ class ScreensCompletionProvider implements vscode.CompletionItemProvider {
     return completions;
   }
 }
+
+/**
+ * Singleton access to ScreensCompletionProvider
+ */
+export const getScreensCompletionProvider = createSingletonProvider(ScreensCompletionProvider);

@@ -18,19 +18,8 @@ import { ViewType, PanelData, WebviewEvent, WebviewEventType, PanelDataType } fr
 import vscode from "vscode";
 import { getActivationContext } from "../extension";
 import logger from "../utils/logging";
+import { createSingletonProvider } from "../utils/singleton";
 import { getNonce, getColumn, getDtShellDefaults } from "./webview-utils";
-
-/**
- * Provides singleton access to the WebviewPanelManager instance.
- */
-export const getWebviewPanelManager = (() => {
-  let instance: WebviewPanelManager | undefined;
-
-  return () => {
-    instance = instance === undefined ? new WebviewPanelManager() : instance;
-    return instance;
-  };
-})();
 
 /**
  * This class manages the state and behavior of webview panels rendered as a React app.
@@ -233,3 +222,8 @@ class WebviewPanelManager implements vscode.WebviewPanelSerializer {
     );
   }
 }
+
+/**
+ * Provides singleton access to the WebviewPanelManager instance.
+ */
+export const getWebviewPanelManager = createSingletonProvider(WebviewPanelManager);

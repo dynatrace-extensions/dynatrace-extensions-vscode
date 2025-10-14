@@ -18,21 +18,10 @@ import { WmiQueryResult } from "@common";
 import vscode from "vscode";
 import { getCachedWmiStatus, setCachedWmiStatus, setCachedWmiQueryResult } from "../utils/caching";
 import logger from "../utils/logging";
+import { createSingletonProvider } from "../utils/singleton";
 import { getBlockRange } from "../utils/yamlParsing";
 import { ValidationStatus } from "./utils/selectorUtils";
 import { runWMIQuery } from "./utils/wmiUtils";
-
-/**
- * Provides singleton access to the WmiCodeLensProvider
- */
-export const getWmiCodeLensProvider = (() => {
-  let instance: WmiCodeLensProvider | undefined;
-
-  return () => {
-    instance = instance === undefined ? new WmiCodeLensProvider() : instance;
-    return instance;
-  };
-})();
 
 /**
  * Implementation of a Code Lens provider for WMI Queries. It creates two lenses, for executing a
@@ -183,6 +172,11 @@ class WmiQueryStatusLens extends vscode.CodeLens {
     }
   }
 }
+
+/**
+ * Provides singleton access to the WmiCodeLensProvider
+ */
+export const getWmiCodeLensProvider = createSingletonProvider(WmiCodeLensProvider);
 
 /**
  * Implements a Code Lens that can be used to execute a WMI Query

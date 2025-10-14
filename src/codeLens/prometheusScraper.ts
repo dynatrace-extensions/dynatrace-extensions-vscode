@@ -21,6 +21,7 @@ import vscode from "vscode";
 import { getCachedPrometheusData, setCachedPrometheusData } from "../utils/caching";
 import { setHttpsAgent } from "../utils/general";
 import logger from "../utils/logging";
+import { createSingletonProvider } from "../utils/singleton";
 import { showQuickPick } from "../utils/vscode";
 
 export type PromData = Record<string, PromDetails>;
@@ -47,18 +48,6 @@ const ScrapingMethod = {
 // eslint-disable-next-line @typescript-eslint/no-redeclare
 type ScrapingMethod = UtilTypes.ObjectValues<typeof ScrapingMethod>;
 const ScrapingMethods = Object.values(ScrapingMethod);
-
-/**
- * Provides singleton access to the PrometheusCodeLensProvider
- */
-export const getPrometheusCodeLensProvider = (() => {
-  let instance: PrometheusCodeLensProvider | undefined;
-
-  return () => {
-    instance = instance === undefined ? new PrometheusCodeLensProvider() : instance;
-    return instance;
-  };
-})();
 
 /**
  * Code Lens Provider implementation to facilitate loading Prometheus metrics and data
@@ -405,3 +394,8 @@ class PrometheusCodeLensProvider implements vscode.CodeLensProvider {
     setCachedPrometheusData(scrapedMetrics);
   }
 }
+
+/**
+ * Provides singleton access to the PrometheusCodeLensProvider
+ */
+export const getPrometheusCodeLensProvider = createSingletonProvider(PrometheusCodeLensProvider);

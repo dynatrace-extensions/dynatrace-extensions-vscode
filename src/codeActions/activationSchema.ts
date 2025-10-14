@@ -17,6 +17,7 @@
 import vscode from "vscode";
 import { validLinesForCodeActions, checkJSONFormat } from "../utils/jsonParsing";
 
+import { createSingletonProvider } from "../utils/singleton";
 import {
   humanReadableNames,
   componentTemplates,
@@ -27,25 +28,13 @@ import {
 } from "./utils/activationSchemaTemplates";
 import { indentSnippet } from "./utils/snippetBuildingUtils";
 
-let checkedFormat = false;
-
-/**
- * Provides singleton access to the activationSchemaActionProvider.
- */
-export const getActivationSchemaActionProvider = (() => {
-  let instance: activationSchemaActionProvider | undefined;
-
-  return () => {
-    instance = instance === undefined ? new activationSchemaActionProvider() : instance;
-    return instance;
-  };
-})();
-
 /**
  * Provider for Code Actions that work with scraped activationSchema data to automatically
  * insert fields and their properties in the Extension activation schema.
  */
-class activationSchemaActionProvider implements vscode.CodeActionProvider {
+class ActivationSchemaActionProvider implements vscode.CodeActionProvider {
+  private checkedFormat = false;
+
   /**
    * Provides the Code Actions that insert details based on activationSchema scraped data.
    * @param document document that activated the provider
@@ -56,9 +45,9 @@ class activationSchemaActionProvider implements vscode.CodeActionProvider {
     document: vscode.TextDocument,
     range: vscode.Range | vscode.Selection,
   ): Promise<vscode.CodeAction[]> {
-    if (!checkedFormat) {
+    if (!this.checkedFormat) {
       await checkJSONFormat(document.getText());
-      checkedFormat = true;
+      this.checkedFormat = true;
     }
 
     const codeActions: vscode.CodeAction[] = [];
@@ -247,3 +236,10 @@ class activationSchemaActionProvider implements vscode.CodeActionProvider {
     }
   }
 }
+
+/**
+ * Provides singleton access to the ActivationSchemaActionProvider.
+ */
+export const getActivationSchemaActionProvider = createSingletonProvider(
+  ActivationSchemaActionProvider,
+);

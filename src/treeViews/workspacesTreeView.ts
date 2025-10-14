@@ -25,6 +25,7 @@ import {
   WorkspacesTreeDataProvider,
 } from "../interfaces/treeViews";
 import { getAllWorkspaces } from "../utils/fileSystem";
+import { createSingletonProvider } from "../utils/singleton";
 import { parseYAML } from "../utils/yamlParsing";
 
 const ICONS_PATH = path.join(__filename, "..", "..", "src", "assets", "icons");
@@ -42,18 +43,6 @@ const ICONS: Record<string, { light: string; dark: string }> = {
     dark: path.join(ICONS_PATH, "manifest_dark.png"),
   },
 };
-
-/**
- * Returns a singleton instance of the WorkspacesTreeDataProvider.
- */
-export const getWorkspacesTreeDataProvider = (() => {
-  let instance: WorkspacesTreeDataProvider | undefined;
-
-  return () => {
-    instance = instance === undefined ? new WorkspacesTreeDataProviderImpl() : instance;
-    return instance;
-  };
-})();
 
 export const refreshWorkspacesTreeView = () => {
   getWorkspacesTreeDataProvider().refresh();
@@ -170,3 +159,10 @@ class WorkspacesTreeDataProviderImpl implements WorkspacesTreeDataProvider {
     );
   }
 }
+
+/**
+ * Returns a singleton instance of the WorkspacesTreeDataProvider.
+ */
+export const getWorkspacesTreeDataProvider = createSingletonProvider<WorkspacesTreeDataProvider>(
+  WorkspacesTreeDataProviderImpl,
+);

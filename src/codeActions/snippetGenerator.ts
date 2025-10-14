@@ -33,6 +33,7 @@ import {
   getMetricKeysFromEntitiesListCard,
   getRelationships,
 } from "../utils/extensionParsing";
+import { createSingletonProvider } from "../utils/singleton";
 import { getBlockItemIndexAtLine, getIndent, getParentBlocks } from "../utils/yamlParsing";
 import {
   buildAttributePropertySnippet,
@@ -49,18 +50,6 @@ import {
   getAllEntitiesListsSnippet,
   slugify,
 } from "./utils/snippetBuildingUtils";
-
-/**
- * Provides singleton access to the SnippetGenerator action provider.
- */
-export const getSnippetGenerator = (() => {
-  let instance: SnippetGenerator | undefined;
-
-  return () => {
-    instance = instance === undefined ? new SnippetGenerator() : instance;
-    return instance;
-  };
-})();
 
 /**
  * Provider for Code Actions that insert snippets of code into the existing extension yaml.
@@ -897,3 +886,8 @@ class SnippetGenerator implements vscode.CodeActionProvider {
     return insertions;
   }
 }
+
+/**
+ * Provides singleton access to the SnippetGenerator action provider.
+ */
+export const getSnippetGenerator = createSingletonProvider(SnippetGenerator);

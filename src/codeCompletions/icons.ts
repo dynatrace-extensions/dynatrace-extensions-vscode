@@ -16,19 +16,8 @@
 
 import vscode from "vscode";
 import { getCachedBaristaIcons } from "../utils/caching";
+import { createSingletonProvider } from "../utils/singleton";
 import { getParentBlocks } from "../utils/yamlParsing";
-
-/**
- * Singleton access to IconCompletionProvider
- */
-export const getIconCompletionProvider = (() => {
-  let instance: IconCompletionProvider | undefined;
-
-  return () => {
-    instance = instance === undefined ? new IconCompletionProvider() : instance;
-    return instance;
-  };
-})();
 
 /**
  * Provider for code auto-completion related to Barista icons
@@ -75,3 +64,8 @@ class IconCompletionProvider implements vscode.CompletionItemProvider {
     return iconCompletion;
   }
 }
+
+/**
+ * Singleton access to IconCompletionProvider
+ */
+export const getIconCompletionProvider = createSingletonProvider(IconCompletionProvider);

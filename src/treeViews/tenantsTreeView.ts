@@ -28,6 +28,7 @@ import { showConnectedStatusBar } from "../statusBar/connection";
 import { decryptToken } from "../utils/cryptography";
 import { getAllTenants } from "../utils/fileSystem";
 import logger from "../utils/logging";
+import { createSingletonProvider } from "../utils/singleton";
 
 const ICONS_PATH = path.join(__filename, "..", "..", "src", "assets", "icons");
 const ICONS = {
@@ -81,18 +82,6 @@ export const getConnectedTenant = async () => {
 export const refreshTenantsTreeView = () => {
   getTenantsTreeDataProvider().refresh();
 };
-
-/**
- * Returns a singleton instance of the EnvironmentsTreeDataProvider.
- */
-export const getTenantsTreeDataProvider = (() => {
-  let instance: TenantsTreeDataProvider | undefined;
-
-  return () => {
-    instance = instance === undefined ? new TenantsTreeDataProviderImpl() : instance;
-    return instance;
-  };
-})();
 
 /**
  * A tree data provider that renders all Dynatrace Environments that have been registered
@@ -215,6 +204,13 @@ class TenantsTreeDataProviderImpl implements TenantsTreeDataProvider {
     });
   }
 }
+
+/**
+ * Returns a singleton instance of the EnvironmentsTreeDataProvider.
+ */
+export const getTenantsTreeDataProvider = createSingletonProvider<TenantsTreeDataProvider>(
+  TenantsTreeDataProviderImpl,
+);
 
 /**
  * Creates a TreeItem object that represents a Dynatrace (SaaS, Managed, Platform) tenant registered

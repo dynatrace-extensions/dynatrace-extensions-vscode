@@ -18,22 +18,11 @@ import { SimulatorStatus } from "@common";
 import vscode from "vscode";
 import { SimulatorManager } from "../statusBar/simulator";
 import logger from "../utils/logging";
+import { createSingletonProvider } from "../utils/singleton";
 
 const START_COMMAND = "dynatraceExtensions.simulator.codelens.start";
 const STOP_COMMAND = "dynatraceExtensions.simulator.codelens.stop";
 const REFRESH = "dynatraceExtensions.simulator.codelens.refresh";
-
-/**
- * Provides singleton access to the SimulatorLensProvider
- */
-export const getSimulatorLensProvider = (() => {
-  let instance: SimulatorLensProvider | undefined;
-
-  return (simulator: SimulatorManager) => {
-    instance = instance === undefined ? new SimulatorLensProvider(simulator) : instance;
-    return instance;
-  };
-})();
 
 /**
  * Simple implementation of a Code Lens Provider to allow starting and stopping the simulator from the editor
@@ -137,3 +126,8 @@ class SimulatorLensProvider implements vscode.CodeLensProvider {
     return this.codeLenses;
   }
 }
+
+/**
+ * Provides singleton access to the SimulatorLensProvider
+ */
+export const getSimulatorLensProvider = createSingletonProvider(SimulatorLensProvider);

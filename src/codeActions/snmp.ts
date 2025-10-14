@@ -18,21 +18,10 @@ import vscode from "vscode";
 import { ExtensionStub } from "../interfaces/extensionMeta";
 import { getCachedOid, getCachedParsedExtension, updateCachedSnmpOids } from "../utils/caching";
 import { getMetricsFromDataSource } from "../utils/extensionParsing";
+import { createSingletonProvider } from "../utils/singleton";
 import { oidFromMetriValue } from "../utils/snmp";
 import { getIndent } from "../utils/yamlParsing";
 import { buildMetricMetadataSnippet, indentSnippet } from "./utils/snippetBuildingUtils";
-
-/**
- * Provides singleton access to the SnmpActionProvider
- */
-export const getSnmpActionProvider = (() => {
-  let instance: SnmpActionProvider | undefined;
-
-  return () => {
-    instance = instance === undefined ? new SnmpActionProvider() : instance;
-    return instance;
-  };
-})();
 
 /**
  * Provider for Code Actions for SNMP-based extensions, leveraging online OID information.
@@ -174,3 +163,8 @@ class SnmpActionProvider implements vscode.CodeActionProvider {
     return codeActions;
   }
 }
+
+/**
+ * Provides singleton access to the SnmpActionProvider
+ */
+export const getSnmpActionProvider = createSingletonProvider(SnmpActionProvider);

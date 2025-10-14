@@ -17,19 +17,8 @@
 import path from "path";
 import vscode from "vscode";
 import { getCachedOid, updateCachedOid } from "../utils/caching";
+import { createSingletonProvider } from "../utils/singleton";
 import { getMibStoragePath } from "../utils/snmp";
-
-/**
- * Provides singleton access to the SnmpHoverProvider
- */
-export const getSnmpHoverProvider = (() => {
-  let instance: SnmpHoverProvider | undefined;
-
-  return () => {
-    instance = instance === undefined ? new SnmpHoverProvider() : instance;
-    return instance;
-  };
-})();
 
 /**
  * Simple hover provider to bring out details behind SNMP OIDs
@@ -106,3 +95,8 @@ class SnmpHoverProvider implements vscode.HoverProvider {
     return undefined;
   }
 }
+
+/**
+ * Provides singleton access to the SnmpHoverProvider
+ */
+export const getSnmpHoverProvider = createSingletonProvider(SnmpHoverProvider);

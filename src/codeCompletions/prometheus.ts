@@ -23,19 +23,8 @@ import {
   getPrometheusLabelKeys,
   getPrometheusMetricKeys,
 } from "../utils/extensionParsing";
+import { createSingletonProvider } from "../utils/singleton";
 import { getBlockItemIndexAtLine, getParentBlocks } from "../utils/yamlParsing";
-
-/**
- * Singleton access to PrometheusCompletionProvider
- */
-export const getPrometheusCompletionProvider = (() => {
-  let instance: PrometheusCompletionProvider | undefined;
-
-  return () => {
-    instance = instance === undefined ? new PrometheusCompletionProvider() : instance;
-    return instance;
-  };
-})();
 
 /**
  * Provider for code auto-completions related to Prometheus data.
@@ -207,3 +196,10 @@ class PrometheusCompletionProvider implements vscode.CompletionItemProvider {
     return completions;
   }
 }
+
+/**
+ * Singleton access to PrometheusCompletionProvider
+ */
+export const getPrometheusCompletionProvider = createSingletonProvider(
+  PrometheusCompletionProvider,
+);

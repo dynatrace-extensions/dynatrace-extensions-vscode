@@ -18,19 +18,8 @@ import vscode from "vscode";
 import { getConnectedTenant } from "../treeViews/tenantsTreeView";
 import { getCachedParsedExtension } from "../utils/caching";
 import logger from "../utils/logging";
+import { createSingletonProvider } from "../utils/singleton";
 import { getBlockItemIndexAtLine, getParentBlocks } from "../utils/yamlParsing";
-
-/**
- * Provides singleton access to the ScreenLensProvider
- */
-export const getScreenLensProvider = (() => {
-  let instance: ScreenLensProvider | undefined;
-
-  return () => {
-    instance = instance === undefined ? new ScreenLensProvider() : instance;
-    return instance;
-  };
-})();
 
 /**
  * Implementation of a Code Lens Provider to allow opening Dynatrace screens in the browser.
@@ -148,3 +137,8 @@ class ScreenLensProvider implements vscode.CodeLensProvider {
     }
   }
 }
+
+/**
+ * Provides singleton access to the ScreenLensProvider
+ */
+export const getScreenLensProvider = createSingletonProvider(ScreenLensProvider);

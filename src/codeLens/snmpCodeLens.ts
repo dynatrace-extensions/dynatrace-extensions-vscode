@@ -20,18 +20,7 @@ import vscode from "vscode";
 import { getLoadedMibFiles, loadUserMibFiles } from "../utils/caching";
 import { getSnmpDirPath } from "../utils/fileSystem";
 import { notify } from "../utils/logging";
-
-/**
- * Provides singleton access to the SnmpCodeLensProvider
- */
-export const getSnmpCodeLensProvider = (() => {
-  let instance: SnmpCodeLensProvider | undefined;
-
-  return () => {
-    instance = instance === undefined ? new SnmpCodeLensProvider() : instance;
-    return instance;
-  };
-})();
+import { createSingletonProvider } from "../utils/singleton";
 
 /**
  * Implementation of a Code Lens Provider to facilitate importing custom MIBs and keeping track of
@@ -130,3 +119,8 @@ class SnmpCodeLensProvider implements vscode.CodeLensProvider {
     return this.codeLenses;
   }
 }
+
+/**
+ * Provides singleton access to the SnmpCodeLensProvider
+ */
+export const getSnmpCodeLensProvider = createSingletonProvider(SnmpCodeLensProvider);
