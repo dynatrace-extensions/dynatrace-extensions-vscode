@@ -16,16 +16,22 @@
 
 import React, { useState } from "react";
 import { AppHeader } from "@dynatrace/strato-components-preview/layouts";
-import { SimulatorData } from "@common";
+import { SimulatorData, UtilTypes } from "@common";
 import { SimulatorExecutions } from "../extensionSimulator/SimulatorExecutions";
 import { SimulatorTargets } from "../extensionSimulator/SimulatorTargets";
+
+const PageType = {
+  Executions: "executions",
+  Targets: "targets",
+} as const;
+type PageType = UtilTypes.ObjectValues<typeof PageType>;
 
 interface ExtensionSimulatorProps {
   data: SimulatorData;
 }
 
 export const ExtensionSimulator = ({ data }: ExtensionSimulatorProps) => {
-  const [page, setPage] = useState("executions");
+  const [page, setPage] = useState<PageType>(PageType.Executions);
   const { targets } = data;
 
   return (
@@ -34,21 +40,21 @@ export const ExtensionSimulator = ({ data }: ExtensionSimulatorProps) => {
         <AppHeader.Navigation>
           <AppHeader.Logo style={{ display: "none" }} />
           <AppHeader.NavigationItem
-            onClick={setPage.bind(undefined, "executions")}
-            isSelected={page === "executions"}
+            onClick={setPage.bind(undefined, PageType.Executions)}
+            isSelected={page === PageType.Executions}
           >
             Simulator Executions
           </AppHeader.NavigationItem>
           <AppHeader.NavigationItem
-            onClick={setPage.bind(undefined, "targets")}
-            isSelected={page === "targets"}
+            onClick={setPage.bind(undefined, PageType.Targets)}
+            isSelected={page === PageType.Targets}
           >
             Remote Targets
           </AppHeader.NavigationItem>
         </AppHeader.Navigation>
       </AppHeader>
-      {page === "targets" && <SimulatorTargets targets={targets} />}
-      {page === "executions" && <SimulatorExecutions {...data} />}
+      {page === PageType.Targets && <SimulatorTargets targets={targets} />}
+      {page === PageType.Executions && <SimulatorExecutions {...data} />}
     </>
   );
 };
