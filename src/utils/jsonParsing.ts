@@ -21,7 +21,7 @@
 import { writeFileSync } from "fs";
 import path from "path";
 import vscode from "vscode";
-import { ConfirmOption } from "./vscode";
+import { ConfirmOption, showConfirmationInformationMessage } from "./vscode";
 
 export function parseJSON<T>(data: string): T {
   return JSON.parse(data) as T;
@@ -191,17 +191,13 @@ export async function checkJSONFormat(content: string) {
     JSON.stringify(JSON.parse(content), undefined, 2) !== content &&
     JSON.stringify(JSON.parse(content), undefined, 4) !== content
   ) {
-    await vscode.window
-      .showInformationMessage(
-        "This JSON document is not fully formatted. Completion suggestions may not work as expected.\nFormat before continuing?",
-        ConfirmOption.Yes,
-        ConfirmOption.No,
-      )
-      .then(async choice => {
-        if (choice === ConfirmOption.Yes) {
-          await formatActivationSchema(JSON.stringify(JSON.parse(content), undefined, 2));
-        }
-      });
+    await showConfirmationInformationMessage(
+      "This JSON document is not fully formatted. Completion suggestions may not work as expected.\nFormat before continuing?",
+    ).then(async choice => {
+      if (choice === ConfirmOption.Yes) {
+        await formatActivationSchema(JSON.stringify(JSON.parse(content), undefined, 2));
+      }
+    });
   }
 }
 

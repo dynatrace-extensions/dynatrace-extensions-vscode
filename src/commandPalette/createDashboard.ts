@@ -30,7 +30,7 @@ import { getEntityMetrics, getMetricDisplayName } from "../utils/extensionParsin
 import { getExtensionFilePath } from "../utils/fileSystem";
 import { parseJSON } from "../utils/jsonParsing";
 import logger from "../utils/logging";
-import { ConfirmOption, showQuickPick } from "../utils/vscode";
+import { ConfirmOption, showConfirmationInformationMessage, showQuickPick } from "../utils/vscode";
 
 export const createDashboardWorkflow = async () => {
   if ((await checkWorkspaceOpen()) && (await isExtensionsWorkspace())) {
@@ -550,25 +550,21 @@ async function createClassicDashboard(extensionFile: string, extension: Extensio
   // If we're connected to the API, prompt for upload.
   await getDynatraceClient().then(async dt => {
     if (dt) {
-      await vscode.window
-        .showInformationMessage(
-          "Would you like to upload the classic dashboard to Dynatrace?",
-          ConfirmOption.Yes,
-          ConfirmOption.No,
-        )
-        .then(choice => {
-          if (choice === ConfirmOption.Yes) {
-            dt.dashboards
-              .post(parseJSON(dashboardJson))
-              .then(() => {
-                logger.notify("INFO", "Upload successful.", ...fnLogTrace);
-              })
-              .catch(err => {
-                outputChannel.replace(JSON.stringify(err, null, 2));
-                outputChannel.show();
-              });
-          }
-        });
+      await showConfirmationInformationMessage(
+        "Would you like to upload the classic dashboard to Dynatrace?",
+      ).then(choice => {
+        if (choice === ConfirmOption.Yes) {
+          dt.dashboards
+            .post(parseJSON(dashboardJson))
+            .then(() => {
+              logger.notify("INFO", "Upload successful.", ...fnLogTrace);
+            })
+            .catch(err => {
+              outputChannel.replace(JSON.stringify(err, null, 2));
+              outputChannel.show();
+            });
+        }
+      });
     }
   });
 }

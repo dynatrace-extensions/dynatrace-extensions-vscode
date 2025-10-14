@@ -53,7 +53,7 @@ import { loopSafeWait } from "../utils/general";
 import logger from "../utils/logging";
 import { getPythonVenvOpts } from "../utils/otherExtensions";
 import { runCommand } from "../utils/subprocesses";
-import { ConfirmOption } from "../utils/vscode";
+import { ConfirmOption, showConfirmationInformationMessage } from "../utils/vscode";
 
 const logTrace = ["commandPalette", "buildExtension"];
 
@@ -156,17 +156,13 @@ async function buildExtension(filePath?: string, fastMode: boolean = false) {
   // Follow-up is carried out separately to keep notification messages cleaner
   if (promptForUpload) {
     logger.debug("Follow-up flow available. Prompting for upload.", ...fnLogTrace);
-    await vscode.window
-      .showInformationMessage(
-        "Extension built successfully. Would you like to upload it to Dynatrace?",
-        ConfirmOption.Yes,
-        ConfirmOption.No,
-      )
-      .then(async choice => {
-        if (choice === ConfirmOption.Yes) {
-          await vscode.commands.executeCommand("dynatrace-extensions.uploadExtension");
-        }
-      });
+    await showConfirmationInformationMessage(
+      "Extension built successfully. Would you like to upload it to Dynatrace?",
+    ).then(async choice => {
+      if (choice === ConfirmOption.Yes) {
+        await vscode.commands.executeCommand("dynatrace-extensions.uploadExtension");
+      }
+    });
   }
 }
 
