@@ -22,7 +22,7 @@ import { getActivationContext } from "../extension";
 import { checkOverwriteCertificates, checkWorkspaceOpen } from "../utils/conditionCheckers";
 import { initWorkspaceStorage } from "../utils/fileSystem";
 import logger from "../utils/logging";
-import { ConfirmOption } from "../utils/vscode";
+import { ConfirmOption, showConfirmationInformationMessage } from "../utils/vscode";
 
 const logTrace = ["commandPalette", "generateCertificates"];
 
@@ -263,10 +263,8 @@ export async function generateCerts(): Promise<boolean> {
   if (success) {
     logger.info("Updating vscode settings", ...fnLogTrace);
     // Write the credential settings at either global or workspace level
-    const useGlobal = await vscode.window.showInformationMessage(
+    const useGlobal = await showConfirmationInformationMessage(
       "Certificates generated. Do you want to use these for all workspaces by default?",
-      ConfirmOption.Yes,
-      ConfirmOption.No,
     );
     vscode.workspace
       .getConfiguration("dynatraceExtensions", null)
@@ -290,10 +288,8 @@ export async function generateCerts(): Promise<boolean> {
       });
 
     // Link command - Upload Certificates
-    const choice = await vscode.window.showInformationMessage(
+    const choice = await showConfirmationInformationMessage(
       "Settings updated. Would you like to upload the CA certificate to Dynatrace?",
-      ConfirmOption.Yes,
-      ConfirmOption.No,
     );
     if (choice === ConfirmOption.Yes) {
       logger.debug("User chose to upload certificates. Triggering separate flow.", ...fnLogTrace);

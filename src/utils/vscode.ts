@@ -27,3 +27,9 @@ export function showQuickPickConfirm(
 ): Thenable<ConfirmOption | undefined> {
   return showQuickPick(ConfirmOptions, options, token);
 }
+
+export function showConfirmationInformationMessage(
+  message: string,
+): Thenable<ConfirmOption | undefined> {
+  return vscode.window.showInformationMessage(message, ConfirmOption.Yes, ConfirmOption.No);
+}

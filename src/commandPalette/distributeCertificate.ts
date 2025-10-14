@@ -29,7 +29,11 @@ import {
 } from "../utils/conditionCheckers";
 import { initWorkspaceStorage, resolveRealPath, uploadComponentCert } from "../utils/fileSystem";
 import logger from "../utils/logging";
-import { ConfirmOption, showQuickPickConfirm } from "../utils/vscode";
+import {
+  ConfirmOption,
+  showConfirmationInformationMessage,
+  showQuickPickConfirm,
+} from "../utils/vscode";
 
 export const distributeCertificateWorkflow = async () => {
   if ((await checkWorkspaceOpen()) && (await checkTenantConnected())) {
@@ -139,10 +143,8 @@ export async function distributeCertificate(dt: Dynatrace) {
   const oaPresent = checkOneAgentInstalled();
 
   if (agPresent || oaPresent) {
-    const choice = await vscode.window.showInformationMessage(
+    const choice = await showConfirmationInformationMessage(
       "Do you want to also distribute this certificate to locally installed OneAgents/ActiveGates?",
-      ConfirmOption.Yes,
-      ConfirmOption.No,
     );
     if (choice === ConfirmOption.Yes) {
       try {
