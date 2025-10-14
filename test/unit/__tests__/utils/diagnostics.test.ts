@@ -16,8 +16,6 @@
 
 import path from "path";
 import vscode from "vscode";
-import yaml from "yaml";
-import { ExtensionStub } from "../../../../src/interfaces/extensionMeta";
 import * as cachingUtils from "../../../../src/utils/caching";
 import { updateDiagnosticsCollection, getDiagnostics } from "../../../../src/utils/diagnostics";
 import { parseYAML } from "../../../../src/utils/yamlParsing";
