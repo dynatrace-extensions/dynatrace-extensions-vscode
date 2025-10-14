@@ -29,9 +29,7 @@ interface WmiResultPanelProps {
   data: WmiQueryResult;
 }
 
-export const WmiResultPanel = ({ data }: WmiResultPanelProps) => {
-  const { query, results, responseTime } = data;
-
+export const WmiResultPanel = ({ data: { query, results, responseTime } }: WmiResultPanelProps) => {
   const tableColumns = useMemo<DataTableV2ColumnDef<Record<string, string | number>>[]>(
     () =>
       Object.keys(results[0]).map(key => ({
