@@ -14,7 +14,7 @@
   limitations under the  License.
  */
 
-import { ViewType } from "@common";
+import { EnvironmentCommandPrefix, GlobalCommand, ViewType, WorkspaceCommandPrefix } from "@common";
 import vscode from "vscode";
 import { getActivationSchemaActionProvider } from "./codeActions/activationSchema";
 import { getDiagnosticFixProvider } from "./codeActions/diagnosticFixProvider";
@@ -153,20 +153,23 @@ const setContextProperty = (key: string, value: string | number | boolean) => {
  * Registers all commands that should appear as workflows in vscode's command palette.
  */
 const registerCommandPaletteWorkflows = (): vscode.Disposable[] => [
-  registerWorkflowCommand("loadSchemas", loadSchemasWorkflow),
-  registerWorkflowCommand("initWorkspace", initWorkspaceWorkflow),
-  registerWorkflowCommand("generateCertificates", generateCertificatesWorkflow),
-  registerWorkflowCommand("distributeCertificate", distributeCertificateWorkflow),
-  registerWorkflowCommand("buildExtension", buildExtensionWorkflow),
-  registerWorkflowCommand("uploadExtension", uploadExtensionWorkflow),
-  registerWorkflowCommand("activateExtension", activateExtensionWorkflow),
-  registerWorkflowCommand("createDocumentation", createDocumentationWorkflow),
-  registerWorkflowCommand("createDashboard", createDashboardWorkflow),
-  registerWorkflowCommand("createAlert", createAlertWorkflow),
-  registerWorkflowCommand("convertJmxExtension", convertJmxExtensionWorkflow),
-  registerWorkflowCommand("convertPythonExtension", convertPythonExtensionWorkflow),
-  registerWorkflowCommand("createMonitoringConfiguration", createMonitoringConfigurationWorkflow),
-  registerWorkflowCommand("downloadSupportArchive", downloadSupportArchiveWorkflow),
+  registerWorkflowCommand(GlobalCommand.LoadSchemas, loadSchemasWorkflow),
+  registerWorkflowCommand(GlobalCommand.InitWorkspace, initWorkspaceWorkflow),
+  registerWorkflowCommand(GlobalCommand.GenerateCertificates, generateCertificatesWorkflow),
+  registerWorkflowCommand(GlobalCommand.DistributeCertificate, distributeCertificateWorkflow),
+  registerWorkflowCommand(GlobalCommand.BuildExtension, buildExtensionWorkflow),
+  registerWorkflowCommand(GlobalCommand.UploadExtension, uploadExtensionWorkflow),
+  registerWorkflowCommand(GlobalCommand.ActivateExtension, activateExtensionWorkflow),
+  registerWorkflowCommand(GlobalCommand.CreateDocumentation, createDocumentationWorkflow),
+  registerWorkflowCommand(GlobalCommand.CreateDashboard, createDashboardWorkflow),
+  registerWorkflowCommand(GlobalCommand.CreateAlert, createAlertWorkflow),
+  registerWorkflowCommand(GlobalCommand.ConvertJmxExtension, convertJmxExtensionWorkflow),
+  registerWorkflowCommand(GlobalCommand.ConvertPythonExtension, convertPythonExtensionWorkflow),
+  registerWorkflowCommand(
+    GlobalCommand.CreateMonitoringConfiguration,
+    createMonitoringConfigurationWorkflow,
+  ),
+  registerWorkflowCommand(GlobalCommand.DownloadSupportArchive, downloadSupportArchiveWorkflow),
 ];
 
 /**
@@ -175,11 +178,10 @@ const registerCommandPaletteWorkflows = (): vscode.Disposable[] => [
  */
 //eslint-disable-next-line @typescript-eslint/no-explicit-any
 const registerWorkflowCommand = <T extends any[]>(
-  workflowName: string,
+  commandId: string,
   workflow: WorkflowFunction<T>,
-) => {
-  const commandId = `dynatrace-extensions.${workflowName}`;
-  return vscode.commands.registerCommand(commandId, async (...args: T) => {
+) =>
+  vscode.commands.registerCommand(commandId, async (...args: T) => {
     logger.info("Command called.", commandId);
     const result = await workflow(...args).then(
       val => {
@@ -190,7 +192,6 @@ const registerWorkflowCommand = <T extends any[]>(
     );
     return result;
   });
-};
 
 const registerCompletionProviders = (): vscode.Disposable[] => [
   registerCompletionProvider(getTopologyCompletionProvider(), MANIFEST_DOC_SELECTOR, ":"),
@@ -213,15 +214,9 @@ const registerCompletionProvider = (
  * Registers tree view data providers and their associated commands.
  */
 const registerTreeViews = (): vscode.Disposable[] => [
-  vscode.window.registerTreeDataProvider(
-    "dynatrace-extensions-workspaces",
-    getWorkspacesTreeDataProvider(),
-  ),
+  vscode.window.registerTreeDataProvider(WorkspaceCommandPrefix, getWorkspacesTreeDataProvider()),
   ...registerWorkspaceViewCommands(),
-  vscode.window.registerTreeDataProvider(
-    "dynatrace-extensions-environments",
-    getTenantsTreeDataProvider(),
-  ),
+  vscode.window.registerTreeDataProvider(EnvironmentCommandPrefix, getTenantsTreeDataProvider()),
   ...registerTenantsViewCommands(),
 ];
 
@@ -310,14 +305,14 @@ const registerDiagnosticsEventListeners = (() => {
  * and then expects that workspace to get initialized.
  */
 const handlePendingInitialization = async () => {
-  const pendingInit = getActivationContext().globalState.get("dynatrace-extensions.initPending");
+  const pendingInit = getActivationContext().globalState.get(GlobalCommand.InitPending);
   if (pendingInit) {
     logger.info(
       "There is a workspace initialization pending from previous window/activation. Triggering the command now.",
       "extension",
       "activate",
     );
-    await vscode.commands.executeCommand("dynatrace-extensions.initWorkspace");
+    await vscode.commands.executeCommand(GlobalCommand.InitWorkspace);
   }
 };
 

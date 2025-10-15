@@ -16,6 +16,7 @@
 
 import { existsSync, mkdirSync, writeFileSync } from "fs";
 import path from "path";
+import { GlobalCommand } from "@common";
 import { md, pki, random, util } from "node-forge";
 import vscode from "vscode";
 import { getActivationContext } from "../extension";
@@ -293,7 +294,7 @@ export async function generateCerts(): Promise<boolean> {
     );
     if (choice === ConfirmOption.Yes) {
       logger.debug("User chose to upload certificates. Triggering separate flow.", ...fnLogTrace);
-      await vscode.commands.executeCommand("dynatrace-extensions.distributeCertificate");
+      await vscode.commands.executeCommand(GlobalCommand.DistributeCertificate);
     }
     // We don't care about success of upload for the success of this command
     return true;

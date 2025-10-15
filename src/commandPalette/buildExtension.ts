@@ -24,6 +24,7 @@ import {
   writeFileSync,
 } from "fs";
 import path from "path";
+import { GlobalCommand } from "@common";
 import { glob } from "glob";
 import JSZip from "jszip";
 import vscode from "vscode";
@@ -160,7 +161,7 @@ async function buildExtension(filePath?: string, fastMode: boolean = false) {
       "Extension built successfully. Would you like to upload it to Dynatrace?",
     ).then(async choice => {
       if (choice === ConfirmOption.Yes) {
-        await vscode.commands.executeCommand("dynatrace-extensions.uploadExtension");
+        await vscode.commands.executeCommand(GlobalCommand.UploadExtension);
       }
     });
   }

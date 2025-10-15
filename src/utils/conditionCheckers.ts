@@ -21,6 +21,7 @@
 import { ExecOptions } from "child_process";
 import { existsSync, readdirSync, readFileSync } from "fs";
 import path from "path";
+import { GlobalCommand, VSCodeCommand } from "@common";
 import axios from "axios";
 import vscode from "vscode";
 import { getActivationContext } from "../extension";
@@ -103,7 +104,7 @@ export async function checkWorkspaceOpen(suppressMessaging: boolean = false): Pr
         .showErrorMessage("You must be inside a workspace to use this command.", "Open folder")
         .then(async opt => {
           if (opt === "Open folder") {
-            await vscode.commands.executeCommand("vscode.openFolder");
+            await vscode.commands.executeCommand(VSCodeCommand.OpenFolder);
           }
         });
     }
@@ -221,7 +222,7 @@ export async function checkCertificateExists(type: "ca" | "dev" | "all"): Promis
       .then(async opt => {
         switch (opt) {
           case "Generate new ones":
-            await vscode.commands.executeCommand("dynatrace-extensions.generateCertificates");
+            await vscode.commands.executeCommand(GlobalCommand.GenerateCertificates);
             break;
           case "Open settings":
             await vscode.commands.executeCommand(

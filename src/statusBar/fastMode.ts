@@ -14,6 +14,7 @@
   limitations under the License.
  */
 
+import { FastModeCommand } from "@common";
 import vscode from "vscode";
 import { getFastModeChannel } from "../utils/logging";
 
@@ -22,13 +23,14 @@ import { getFastModeChannel } from "../utils/logging";
  */
 export const getFastModeStatusBar = (() => {
   let fastModeStatusBar: vscode.StatusBarItem | undefined;
-  const commandId = "dynatrace-extensions-fastmode.openOutput";
 
   return () => {
     if (!fastModeStatusBar) {
-      vscode.commands.registerCommand(commandId, () => getFastModeChannel().show());
+      vscode.commands.registerCommand(FastModeCommand.OpenOutput, () =>
+        getFastModeChannel().show(),
+      );
       fastModeStatusBar = vscode.window.createStatusBarItem(vscode.StatusBarAlignment.Left, 2);
-      fastModeStatusBar.command = commandId;
+      fastModeStatusBar.command = FastModeCommand.OpenOutput;
       updateBasedOnConfig();
       vscode.workspace.onDidChangeConfiguration(() => updateBasedOnConfig());
     }

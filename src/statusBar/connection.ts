@@ -14,6 +14,7 @@
   limitations under the License.
  */
 
+import { EnvironmentCommand } from "@common";
 import vscode from "vscode";
 import { DynatraceTenantDto } from "../interfaces/treeViews";
 import { checkUrlReachable } from "../utils/conditionCheckers";
@@ -28,7 +29,7 @@ export const getConnectionStatusBar = (() => {
   return () => {
     if (!connectionStatusBar) {
       connectionStatusBar = vscode.window.createStatusBarItem(vscode.StatusBarAlignment.Left, 0);
-      connectionStatusBar.command = "dynatrace-extensions-environments.changeConnection";
+      connectionStatusBar.command = EnvironmentCommand.ChangeConnection;
       showDisconnectedStatusBar();
     }
     return connectionStatusBar;

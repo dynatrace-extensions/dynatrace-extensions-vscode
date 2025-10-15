@@ -14,7 +14,7 @@
   limitations under the License.
  */
 
-import { WmiQueryResult } from "@common";
+import { CodeLensCommand, WmiQueryResult } from "@common";
 import vscode from "vscode";
 import { getCachedWmiStatus, setCachedWmiStatus, setCachedWmiQueryResult } from "../utils/caching";
 import logger from "../utils/logging";
@@ -35,18 +35,16 @@ class WmiCodeLensProvider implements vscode.CodeLensProvider {
   private readonly regex = new RegExp("query:", "g");
 
   constructor() {
-    this.registerCommands();
-  }
-
-  private registerCommands() {
-    const commandId = "dynatrace-extensions.codelens.runWMIQuery";
-    vscode.commands.registerCommand(commandId, async (query: string) => {
+    vscode.commands.registerCommand(CodeLensCommand.RunWMIQuery, (query: string) =>
       runWMIQuery(query, (checkedQuery, status, result) => {
         this.updateQueryData(checkedQuery, status, result);
       }).catch(err =>
-        logger.error(`Running WMI Query failed unexpectedly. ${(err as Error).message}`, commandId),
-      );
-    });
+        logger.error(
+          `Running WMI Query failed unexpectedly. ${(err as Error).message}`,
+          CodeLensCommand.RunWMIQuery,
+        ),
+      ),
+    );
   }
 
   public async provideCodeLenses(document: vscode.TextDocument): Promise<vscode.CodeLens[]> {
@@ -188,7 +186,7 @@ class WmiQueryExecutionLens extends vscode.CodeLens {
     super(range, {
       title: "▶️ Run WMI Query",
       tooltip: "Run a WMI query on this host",
-      command: "dynatrace-extensions.codelens.runWMIQuery",
+      command: CodeLensCommand.RunWMIQuery,
       arguments: [query],
     });
     this.query = query;

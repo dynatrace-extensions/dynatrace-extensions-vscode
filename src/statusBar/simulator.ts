@@ -123,21 +123,12 @@ export class SimulatorManager {
         await this.start(config ?? this.currentConfiguration, showUI);
       },
     );
-    vscode.commands.registerCommand(SimulatorCommand.Stop, () => this.stop());
-    vscode.commands.registerCommand(
-      SimulatorCommand.CheckReady,
-      (showUI: boolean = true, config?: SimulationConfig) => this.checkReady(showUI, config),
-    );
-    vscode.commands.registerCommand(SimulatorCommand.OpenUI, () => this.refreshUI(true));
-    vscode.commands.registerCommand(SimulatorCommand.ReadLog, (logPath: string) =>
-      this.readLog(logPath),
-    );
-    vscode.commands.registerCommand(SimulatorCommand.AddTarget, (target: RemoteTarget) =>
-      this.addTarget(target),
-    );
-    vscode.commands.registerCommand(SimulatorCommand.DeleteTarget, (target: RemoteTarget) =>
-      this.deleteTarget(target),
-    );
+    vscode.commands.registerCommand(SimulatorCommand.Stop, this.stop.bind(this));
+    vscode.commands.registerCommand(SimulatorCommand.CheckReady, this.checkReady.bind(this));
+    vscode.commands.registerCommand(SimulatorCommand.OpenUI, this.refreshUI.bind(this, true));
+    vscode.commands.registerCommand(SimulatorCommand.ReadLog, this.readLog.bind(this));
+    vscode.commands.registerCommand(SimulatorCommand.AddTarget, this.addTarget.bind(this));
+    vscode.commands.registerCommand(SimulatorCommand.DeleteTarget, this.deleteTarget.bind(this));
 
     // Create the status bar and show it
     this.statusBar = vscode.window.createStatusBarItem(vscode.StatusBarAlignment.Left, 0);

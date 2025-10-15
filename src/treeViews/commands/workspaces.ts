@@ -14,6 +14,7 @@
   limitations under the License.
  */
 
+import { GlobalCommand, VSCodeCommand, WorkspaceCommand, WorkspaceCommandPrefix } from "@common";
 import vscode from "vscode";
 import { getActivationContext } from "../../extension";
 import { WorkspaceTreeItem } from "../../interfaces/treeViews";
@@ -26,30 +27,23 @@ import { refreshWorkspacesTreeView } from "../workspacesTreeView";
  * Registers commands that can be triggered from the extension workspaces tree view.
  */
 export const registerWorkspaceViewCommands = (): vscode.Disposable[] => {
-  const commandPrefix = "dynatrace-extensions-workspaces";
   return [
-    vscode.commands.registerCommand(`${commandPrefix}.refresh`, refreshWorkspacesTreeView),
-    vscode.commands.registerCommand(`${commandPrefix}.addWorkspace`, async () => {
-      await getActivationContext().globalState.update("dynatrace-extensions.initPending", true);
-      await vscode.commands.executeCommand("vscode.openFolder");
-    }),
-    vscode.commands.registerCommand(
-      `${commandPrefix}.openWorkspace`,
-      async (workspace: WorkspaceTreeItem) => {
-        await vscode.commands.executeCommand("vscode.openFolder", workspace.path);
-      },
+    vscode.commands.registerCommand(WorkspaceCommand.Refresh, refreshWorkspacesTreeView),
+    vscode.commands.registerCommand(WorkspaceCommand.Add, () =>
+      getActivationContext()
+        .globalState.update(GlobalCommand.InitPending, true)
+        .then(() => vscode.commands.executeCommand(VSCodeCommand.OpenFolder)),
+    ),
+    vscode.commands.registerCommand(WorkspaceCommand.Open, (workspace: WorkspaceTreeItem) =>
+      vscode.commands.executeCommand(VSCodeCommand.OpenFolder, workspace.path),
+    ),
+    vscode.commands.registerCommand(WorkspaceCommand.Delete, (workspace: WorkspaceTreeItem) =>
+      deleteWorkspace(workspace).then(refreshWorkspacesTreeView),
     ),
     vscode.commands.registerCommand(
-      `${commandPrefix}.deleteWorkspace`,
-      async (workspace: WorkspaceTreeItem) => {
-        await deleteWorkspace(workspace).then(refreshWorkspacesTreeView);
-      },
-    ),
-    vscode.commands.registerCommand(
-      `${commandPrefix}.editExtension`,
-      async (extension: WorkspaceTreeItem) => {
-        await vscode.commands.executeCommand("vscode.open", extension.path);
-      },
+      WorkspaceCommand.EditExtension,
+      (extension: WorkspaceTreeItem) =>
+        vscode.commands.executeCommand(VSCodeCommand.Open, extension.path),
     ),
     ...registerFeatureSwitchCommands("MetricSelectors", "metricSelectorsCodeLens"),
     ...registerFeatureSwitchCommands("EntitySelectors", "entitySelectorsCodeLens"),
@@ -99,8 +93,8 @@ async function deleteWorkspace(workspace: WorkspaceTreeItem) {
  * The feature name will be prefixed with `enable` and `disable`.
  */
 const registerFeatureSwitchCommands = (featureName: string, ...settingIds: string[]) => {
-  const enableCommandId = `dynatrace-extensions-workspaces.enable${featureName}`;
-  const disableCommandId = `dynatrace-extensions-workspaces.disable${featureName}`;
+  const enableCommandId = `${WorkspaceCommandPrefix}.enable${featureName}`;
+  const disableCommandId = `${WorkspaceCommandPrefix}.disable${featureName}`;
   return [
     registerUpdateConfigCommand(enableCommandId, true, ...settingIds),
     registerUpdateConfigCommand(disableCommandId, false, ...settingIds),

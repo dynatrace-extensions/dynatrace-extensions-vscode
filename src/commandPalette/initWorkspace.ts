@@ -25,6 +25,7 @@ import {
 } from "fs";
 import path from "path";
 import { TextEncoder } from "util";
+import { GlobalCommand } from "@common";
 import axios from "axios";
 import { moveSync } from "fs-extra";
 import JSZip from "jszip";
@@ -88,7 +89,7 @@ export const initWorkspaceWorkflow = async () => {
         });
       }
     } finally {
-      await context.globalState.update("dynatrace-extensions.initPending", undefined);
+      await context.globalState.update(GlobalCommand.InitPending, undefined);
     }
   }
 };
@@ -178,7 +179,7 @@ export async function initWorkspace(dt: Dynatrace, callback?: () => unknown) {
         case "Generate new ones": {
           logger.debug("Workspace will generate new certificates", ...fnLogTrace);
           const cmdSuccess = await vscode.commands.executeCommand(
-            "dynatrace-extensions.generateCertificates",
+            GlobalCommand.GenerateCertificates,
           );
           if (!cmdSuccess) {
             logger.notify(
@@ -279,7 +280,7 @@ export async function initWorkspace(dt: Dynatrace, callback?: () => unknown) {
             mkdirSync(extensionDir);
           }
           await vscode.commands.executeCommand(
-            "dynatrace-extensions.convertJmxExtension",
+            GlobalCommand.ConvertJmxExtension,
             path.resolve(extensionDir, "extension.yaml"),
           );
           break;

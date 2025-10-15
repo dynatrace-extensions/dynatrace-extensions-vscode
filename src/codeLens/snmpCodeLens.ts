@@ -16,6 +16,7 @@
 
 import { copyFileSync, existsSync, mkdirSync } from "fs";
 import path from "path";
+import { CodeLensCommand } from "@common";
 import vscode from "vscode";
 import { getLoadedMibFiles, loadUserMibFiles } from "../utils/caching";
 import { getSnmpDirPath } from "../utils/fileSystem";
@@ -35,9 +36,7 @@ class SnmpCodeLensProvider implements vscode.CodeLensProvider {
   constructor() {
     this.codeLenses = [];
     this.regex = /^(snmp:)/gm;
-    vscode.commands.registerCommand("dynatrace-extensions.codelens.importMib", async () => {
-      await this.importFiles();
-    });
+    vscode.commands.registerCommand(CodeLensCommand.ImportMib, this.importFiles.bind(this));
   }
 
   async importFiles() {
@@ -110,7 +109,7 @@ class SnmpCodeLensProvider implements vscode.CodeLensProvider {
             title: "Import file",
             tooltip:
               "Import a file from your system into the extension's snmp folder and use the data.",
-            command: "dynatrace-extensions.codelens.importMib",
+            command: CodeLensCommand.ImportMib,
           }),
         );
       }

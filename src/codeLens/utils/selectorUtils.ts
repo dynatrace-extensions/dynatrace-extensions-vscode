@@ -14,7 +14,7 @@
   limitations under the License.
  */
 
-import { PanelDataType, ViewType, MetricSeriesCollection } from "@common";
+import { PanelDataType, ViewType, MetricSeriesCollection, CodeLensCommand } from "@common";
 import vscode from "vscode";
 import { Dynatrace } from "../../dynatrace-api/dynatrace";
 import { DynatraceAPIError } from "../../dynatrace-api/errors";
@@ -38,7 +38,7 @@ export interface ValidationStatus {
 export const registerSelectorCommands = () => {
   return [
     vscode.commands.registerCommand(
-      "dynatrace-extensions.codelens.validateSelector",
+      CodeLensCommand.ValidateSelector,
       async (selector: string, type: "metric" | "entity") => {
         if (await checkTenantConnected()) {
           const dtClient = await getDynatraceClient();
@@ -50,7 +50,7 @@ export const registerSelectorCommands = () => {
       },
     ),
     vscode.commands.registerCommand(
-      "dynatrace-extensions.codelens.runSelector",
+      CodeLensCommand.RunSelector,
       async (selector: string, type: "metric" | "entity") => {
         const updateCallback = (checkedSelector: string, status: ValidationStatus) =>
           updateSelectorValidationStatus(type, checkedSelector, status);

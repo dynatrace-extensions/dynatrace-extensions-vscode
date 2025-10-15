@@ -14,15 +14,11 @@
   limitations under the License.
  */
 
-import { SimulatorStatus } from "@common";
+import { SimulatorCodeLensCommand, SimulatorStatus } from "@common";
 import vscode from "vscode";
 import { SimulatorManager } from "../statusBar/simulator";
 import logger from "../utils/logging";
 import { createSingletonProvider } from "../utils/singleton";
-
-const START_COMMAND = "dynatraceExtensions.simulator.codelens.start";
-const STOP_COMMAND = "dynatraceExtensions.simulator.codelens.stop";
-const REFRESH = "dynatraceExtensions.simulator.codelens.refresh";
 
 /**
  * Simple implementation of a Code Lens Provider to allow starting and stopping the simulator from the editor
@@ -45,7 +41,7 @@ class SimulatorLensProvider implements vscode.CodeLensProvider {
     this.lastKnownStatus = SimulatorStatus.Unknown;
 
     // Start the simulator and update the last known status
-    vscode.commands.registerCommand(START_COMMAND, () => {
+    vscode.commands.registerCommand(SimulatorCodeLensCommand.Start, () => {
       this.simulator.start(this.simulator.currentConfiguration, false).then(
         () => {
           this.lastKnownStatus = SimulatorStatus.Running;
@@ -55,13 +51,13 @@ class SimulatorLensProvider implements vscode.CodeLensProvider {
       );
     });
     // Stop the simulator and update the last known status
-    vscode.commands.registerCommand(STOP_COMMAND, () => {
+    vscode.commands.registerCommand(SimulatorCodeLensCommand.Stop, () => {
       this.simulator.stop(false);
       this.lastKnownStatus = SimulatorStatus.Ready;
       this._onDidChangeCodeLenses.fire();
     });
     // Reset the last known status and refresh the lenses
-    vscode.commands.registerCommand(REFRESH, () => {
+    vscode.commands.registerCommand(SimulatorCodeLensCommand.Refresh, () => {
       this.lastKnownStatus = SimulatorStatus.Unknown;
       this._onDidChangeCodeLenses.fire();
     });
@@ -99,7 +95,7 @@ class SimulatorLensProvider implements vscode.CodeLensProvider {
           new vscode.CodeLens(range, {
             title: "▶️ Simulate extension",
             tooltip: "Start a simulation based on your last known settings or the defaults.",
-            command: START_COMMAND,
+            command: SimulatorCodeLensCommand.Start,
           }),
         );
       } else if (this.lastKnownStatus === SimulatorStatus.Running) {
@@ -108,7 +104,7 @@ class SimulatorLensProvider implements vscode.CodeLensProvider {
           new vscode.CodeLens(range, {
             title: "⏹️ Stop simulation",
             tooltip: "Stop the currently running simulation.",
-            command: STOP_COMMAND,
+            command: SimulatorCodeLensCommand.Stop,
           }),
         );
       } else {
@@ -117,7 +113,7 @@ class SimulatorLensProvider implements vscode.CodeLensProvider {
           new vscode.CodeLens(range, {
             title: "❌ Simulation not possible",
             tooltip: "Please check your simulator configuration and click to try again.",
-            command: REFRESH,
+            command: SimulatorCodeLensCommand.Refresh,
           }),
         );
       }

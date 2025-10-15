@@ -14,6 +14,7 @@
   limitations under the License.
  */
 
+import { GlobalCommand } from "@common";
 import vscode from "vscode";
 import { getConnectedTenant } from "../treeViews/tenantsTreeView";
 import { getCachedParsedExtension } from "../utils/caching";
@@ -34,12 +35,7 @@ class ScreenLensProvider implements vscode.CodeLensProvider {
   constructor() {
     this.codeLenses = [];
     this.regex = /^ {2}- ./gm;
-    vscode.commands.registerCommand(
-      "dynatrace-extensions.openScreen",
-      async (entityType: string, screenType: "list" | "details") => {
-        await this.openScreen(entityType, screenType);
-      },
-    );
+    vscode.commands.registerCommand(GlobalCommand.OpenScreen, this.openScreen.bind(this));
   }
 
   /**
@@ -85,13 +81,13 @@ class ScreenLensProvider implements vscode.CodeLensProvider {
             new vscode.CodeLens(range, {
               title: "Open List View",
               tooltip: "Open this entity's List View in Dynatrace",
-              command: "dynatrace-extensions.openScreen",
+              command: GlobalCommand.OpenScreen,
               arguments: [entityType, "list"],
             }),
             new vscode.CodeLens(range, {
               title: "Open Details View",
               tooltip: "Open this entity's Details View in Dynatrace",
-              command: "dynatrace-extensions.openScreen",
+              command: GlobalCommand.OpenScreen,
               arguments: [entityType, "details"],
             }),
           );

@@ -15,7 +15,7 @@
  */
 
 import { readFileSync } from "fs";
-import { UtilTypes } from "@common";
+import { CodeLensCommand, UtilTypes } from "@common";
 import axios from "axios";
 import vscode from "vscode";
 import { getCachedPrometheusData, setCachedPrometheusData } from "../utils/caching";
@@ -73,12 +73,7 @@ class PrometheusCodeLensProvider implements vscode.CodeLensProvider {
   constructor() {
     this.codeLenses = [];
     this.regex = /^(prometheus:)/gm;
-    vscode.commands.registerCommand(
-      "dynatrace-extensions.codelens.scrapeMetrics",
-      async (changeConfig: boolean) => {
-        await this.scrapeMetrics(changeConfig);
-      },
-    );
+    vscode.commands.registerCommand(CodeLensCommand.ScrapeMetrics, this.scrapeMetrics.bind(this));
   }
 
   /**
@@ -110,7 +105,7 @@ class PrometheusCodeLensProvider implements vscode.CodeLensProvider {
             title: "Scrape data",
             tooltip:
               "Connect to an exporter or read a file and scrape metrics, then use them in the Extension.",
-            command: "dynatrace-extensions.codelens.scrapeMetrics",
+            command: CodeLensCommand.ScrapeMetrics,
             arguments: [],
           }),
         );
@@ -120,7 +115,7 @@ class PrometheusCodeLensProvider implements vscode.CodeLensProvider {
             new vscode.CodeLens(range, {
               title: "Edit config",
               tooltip: "Make changes to the scraping configuration.",
-              command: "dynatrace-extensions.codelens.scrapeMetrics",
+              command: CodeLensCommand.ScrapeMetrics,
               arguments: [true],
             }),
           );

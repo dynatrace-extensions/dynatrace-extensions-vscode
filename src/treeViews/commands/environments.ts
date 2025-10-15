@@ -16,7 +16,7 @@
 
 import { readFileSync, readdirSync, rmSync, writeFileSync } from "fs";
 import path from "path";
-import { SimulationLocation } from "@common";
+import { EnvironmentCommand, SimulationLocation } from "@common";
 import vscode from "vscode";
 import { DynatraceAPIError } from "../../dynatrace-api/errors";
 import { getActivationContext } from "../../extension";
@@ -99,90 +99,73 @@ export function validateEnvironmentUrl(value: string): string | null {
  * the disposables created.
  */
 export const registerTenantsViewCommands = () => {
-  const commandPrefix = "dynatrace-extensions-environments";
   return [
-    vscode.commands.registerCommand(`${commandPrefix}.refresh`, refreshTenantsTreeView),
-    vscode.commands.registerCommand(`${commandPrefix}.addEnvironment`, () =>
+    vscode.commands.registerCommand(EnvironmentCommand.Refresh, refreshTenantsTreeView),
+    vscode.commands.registerCommand(EnvironmentCommand.Add, () =>
       addEnvironment().then(refreshTenantsTreeView),
     ),
-    vscode.commands.registerCommand(
-      `${commandPrefix}.useEnvironment`,
-      async (tenant: DynatraceTenant) => {
-        const { url, apiUrl, token, label } = tenant;
-        await registerTenant(url, apiUrl, encryptToken(token), label, true);
-        showConnectedStatusBar(tenant).catch(() => {});
-        refreshTenantsTreeView();
-      },
-    ),
-    vscode.commands.registerCommand(
-      `${commandPrefix}.editEnvironment`,
-      async (tenant: DynatraceTenant) => {
-        await editEnvironment(tenant).then(refreshTenantsTreeView);
-      },
-    ),
-    vscode.commands.registerCommand(
-      `${commandPrefix}.deleteEnvironment`,
-      async (tenant: DynatraceTenant) => {
-        await deleteEnvironment(tenant).then(refreshTenantsTreeView);
-      },
-    ),
-    vscode.commands.registerCommand(`${commandPrefix}.changeConnection`, async () => {
-      await changeConnection().then(refreshTenantsTreeView);
+    vscode.commands.registerCommand(EnvironmentCommand.Use, async (tenant: DynatraceTenant) => {
+      const { url, apiUrl, token, label } = tenant;
+      await registerTenant(url, apiUrl, encryptToken(token), label, true);
+      showConnectedStatusBar(tenant).catch(() => {});
+      refreshTenantsTreeView();
     }),
+    vscode.commands.registerCommand(EnvironmentCommand.Edit, (tenant: DynatraceTenant) =>
+      editEnvironment(tenant).then(refreshTenantsTreeView),
+    ),
+    vscode.commands.registerCommand(EnvironmentCommand.Delete, (tenant: DynatraceTenant) =>
+      deleteEnvironment(tenant).then(refreshTenantsTreeView),
+    ),
+    vscode.commands.registerCommand(EnvironmentCommand.ChangeConnection, () =>
+      changeConnection().then(refreshTenantsTreeView),
+    ),
+    vscode.commands.registerCommand(EnvironmentCommand.AddConfig, (extension: DeployedExtension) =>
+      addMonitoringConfiguration(extension).then(success => {
+        if (success) {
+          refreshTenantsTreeView();
+        }
+      }),
+    ),
     vscode.commands.registerCommand(
-      `${commandPrefix}.addConfig`,
-      async (extension: DeployedExtension) => {
-        await addMonitoringConfiguration(extension).then(success => {
+      EnvironmentCommand.EditConfig,
+      (config: MonitoringConfiguration) =>
+        editMonitoringConfiguration(config).then(success => {
           if (success) {
             refreshTenantsTreeView();
           }
-        });
-      },
+        }),
     ),
     vscode.commands.registerCommand(
-      `${commandPrefix}.editConfig`,
-      async (config: MonitoringConfiguration) => {
-        await editMonitoringConfiguration(config).then(success => {
+      EnvironmentCommand.DeleteConfig,
+      (config: MonitoringConfiguration) =>
+        deleteMonitoringConfiguration(config).then(success => {
           if (success) {
             refreshTenantsTreeView();
           }
-        });
-      },
+        }),
     ),
     vscode.commands.registerCommand(
-      `${commandPrefix}.deleteConfig`,
-      async (config: MonitoringConfiguration) => {
-        await deleteMonitoringConfiguration(config).then(success => {
-          if (success) {
-            refreshTenantsTreeView();
-          }
-        });
-      },
-    ),
-    vscode.commands.registerCommand(
-      `${commandPrefix}.saveConfig`,
-      async (config: MonitoringConfiguration) => {
-        await saveMoniotringConfiguration(config).catch(err => {
+      EnvironmentCommand.SaveConfig,
+      (config: MonitoringConfiguration) =>
+        saveMoniotringConfiguration(config).catch(err => {
           logger.notify(
             "ERROR",
             `Unable to save configuration. ${(err as Error).message}`,
             ...logTrace,
             "saveMoniotringConfiguration",
           );
-        });
-      },
+        }),
     ),
     vscode.commands.registerCommand(
-      `${commandPrefix}.openExtension`,
-      async (extension: DeployedExtension) => {
-        await openExtension(extension).catch(err => {
+      EnvironmentCommand.OpenExtension,
+      (extension: DeployedExtension) =>
+        openExtension(extension).catch(err => {
           logger.warn(
             `Couldn't open URL for extension ${extension.id}: ${(err as Error).message}`,
             ...logTrace,
             "openExtension",
           );
-        });
-      },
+        }),
     ),
   ];
 };
