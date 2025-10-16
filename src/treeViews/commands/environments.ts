@@ -16,7 +16,7 @@
 
 import { readFileSync, readdirSync, rmSync, writeFileSync } from "fs";
 import path from "path";
-import { EnvironmentCommand, SimulationLocation } from "@common";
+import { EnvironmentCommand, SimulationLocation, Utils } from "@common";
 import vscode from "vscode";
 import { DynatraceAPIError } from "../../dynatrace-api/errors";
 import { getActivationContext } from "../../extension";
@@ -107,7 +107,7 @@ export const registerTenantsViewCommands = () => {
     vscode.commands.registerCommand(EnvironmentCommand.Use, async (tenant: DynatraceTenant) => {
       const { url, apiUrl, token, label } = tenant;
       await registerTenant(url, apiUrl, encryptToken(token), label, true);
-      showConnectedStatusBar(tenant).catch(() => {});
+      showConnectedStatusBar(tenant).catch(Utils.noOp);
       refreshTenantsTreeView();
     }),
     vscode.commands.registerCommand(EnvironmentCommand.Edit, (tenant: DynatraceTenant) =>
@@ -406,14 +406,14 @@ async function changeConnection() {
     if (environment) {
       const { url, apiUrl, token, label } = environment;
       await registerTenant(url, apiUrl, token, label, true);
-      showConnectedStatusBar(environment).catch(() => {});
+      showConnectedStatusBar(environment).catch(Utils.noOp);
       return;
     }
   }
 
   // If no choice made, persist the current connection if any
   if (currentEnv) {
-    showConnectedStatusBar(currentEnv).catch(() => {});
+    showConnectedStatusBar(currentEnv).catch(Utils.noOp);
   }
 }
 

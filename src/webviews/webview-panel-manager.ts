@@ -157,16 +157,15 @@ class WebviewPanelManager implements vscode.WebviewPanelSerializer {
     if (this.currentPanels.has(viewType)) {
       // If a webview panel of this view type exists, send it the new data
       const existingPanel = this.currentPanels.get(viewType);
-      existingPanel?.webview.postMessage({ messageType: WebviewEventType.UpdateData, data }).then(
-        () => {},
-        err => {
+      existingPanel?.webview
+        .postMessage({ messageType: WebviewEventType.UpdateData, data })
+        .then(undefined, err => {
           logger.error(err, ...fnLogTrace);
           logger.error(
             `Could not post message to webview. ${(err as Error).message}`,
             ...fnLogTrace,
           );
-        },
-      );
+        });
     } else {
       // Otherwise, create and show a new one
       const newPanel = vscode.window.createWebviewPanel(viewType, title, getColumn(), {
@@ -193,16 +192,10 @@ class WebviewPanelManager implements vscode.WebviewPanelSerializer {
     const fnLogTrace = [...this.logTrace, "postMessage"];
     if (this.currentPanels.has(viewType)) {
       const existingPanel = this.currentPanels.get(viewType);
-      existingPanel?.webview.postMessage(message).then(
-        () => {},
-        err => {
-          logger.error(err, ...fnLogTrace);
-          logger.error(
-            `Could not post message to webview. ${(err as Error).message}`,
-            ...fnLogTrace,
-          );
-        },
-      );
+      existingPanel?.webview.postMessage(message).then(undefined, err => {
+        logger.error(err, ...fnLogTrace);
+        logger.error(`Could not post message to webview. ${(err as Error).message}`, ...fnLogTrace);
+      });
     }
   }
 

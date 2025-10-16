@@ -27,6 +27,7 @@ import {
   SimulatorStatus,
   OsType,
   EecType,
+  Utils,
 } from "@common";
 import vscode from "vscode";
 import * as extension from "../../../../src/extension";
@@ -343,7 +344,7 @@ describe.only("Simulator Manager", () => {
     beforeEach(() => {
       jest.spyOn(fileSystemUtils, "getSimulatorTargets").mockReturnValue([]);
       jest.spyOn(fileSystemUtils, "getSimulatorSummaries").mockReturnValue([]);
-      renderSpy = jest.spyOn(webviewUtils, "renderPanel").mockImplementation(() => {});
+      renderSpy = jest.spyOn(webviewUtils, "renderPanel").mockImplementation(Utils.noOp);
     });
 
     it("first updates the panel with CHECKING status (render)", async () => {
@@ -367,7 +368,9 @@ describe.only("Simulator Manager", () => {
     it("first updates the panel with CHECKING status (postMessage)", async () => {
       jest.spyOn(simulatorManager, "checkMandatoryRequirements").mockReturnValue([true, []]);
       simulatorManager = new SimulatorManager();
-      postMessageSpy = jest.spyOn(webviewUtils, "postMessageToPanel").mockImplementation(() => {});
+      postMessageSpy = jest
+        .spyOn(webviewUtils, "postMessageToPanel")
+        .mockImplementation(Utils.noOp);
 
       await simulatorManager.checkReady(false);
 

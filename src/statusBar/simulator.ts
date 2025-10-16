@@ -138,10 +138,8 @@ export class SimulatorManager {
     this.statusBar.show();
 
     // Initial check for configuration
-    this.checkReady(false).then(
-      () => {},
-      err =>
-        logger.warn(`Initial simulator status check: ${(err as Error).message}`, ...this.logTrace),
+    this.checkReady(false).then(undefined, err =>
+      logger.warn(`Initial simulator status check: ${(err as Error).message}`, ...this.logTrace),
     );
   }
 

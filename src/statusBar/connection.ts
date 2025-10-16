@@ -14,7 +14,7 @@
   limitations under the License.
  */
 
-import { EnvironmentCommand } from "@common";
+import { EnvironmentCommand, Utils } from "@common";
 import vscode from "vscode";
 import { DynatraceTenantDto } from "../interfaces/treeViews";
 import { checkUrlReachable } from "../utils/conditionCheckers";
@@ -76,7 +76,7 @@ let connectionInterval: NodeJS.Timeout | undefined;
 const startConnectionChecks = (tenant: DynatraceTenantDto) => {
   if (!connectionInterval) {
     connectionInterval = setInterval(() => {
-      showConnectedStatusBar(tenant).catch(() => {});
+      showConnectedStatusBar(tenant).catch(Utils.noOp);
     }, 5_000);
   }
 };

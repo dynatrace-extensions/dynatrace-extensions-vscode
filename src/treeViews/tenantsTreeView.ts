@@ -15,6 +15,7 @@
  */
 
 import path from "path";
+import { Utils } from "@common";
 import vscode from "vscode";
 import { Dynatrace } from "../dynatrace-api/dynatrace";
 import {
@@ -110,7 +111,7 @@ class TenantsTreeDataProviderImpl implements TenantsTreeDataProvider {
       .then(children => children.pop())
       .then(tenant => {
         if (tenant) {
-          showConnectedStatusBar(tenant).catch(() => {});
+          showConnectedStatusBar(tenant).catch(Utils.noOp);
         }
       })
       .catch(err => {
@@ -198,7 +199,7 @@ class TenantsTreeDataProviderImpl implements TenantsTreeDataProvider {
     return getAllTenants().map(tenant => {
       const { id, url, apiUrl, label, current, token } = tenant;
       if (current) {
-        showConnectedStatusBar(tenant).catch(() => {});
+        showConnectedStatusBar(tenant).catch(Utils.noOp);
       }
       return createDynatraceTenantTreeItem(url, decryptToken(token), id, label, current, apiUrl);
     });
