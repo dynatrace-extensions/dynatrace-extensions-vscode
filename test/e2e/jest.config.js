@@ -9,7 +9,7 @@ const config = {
   },
   testMatch: ["<rootDir>/__tests__/*.test.ts"],
   moduleNameMapper: {
-    "@common": "<rootDir>/common",
+    "@common": "<rootDir>../../common",
   },
 };
 
