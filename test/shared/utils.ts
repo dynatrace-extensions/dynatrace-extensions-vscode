@@ -46,3 +46,42 @@ export const mockFileSystemItem = (mockFs: jest.Mocked<typeof fs>, items: FileSy
     throw new Error(`File not found ${p.toString()}`);
   });
 };
+
+/**
+ * Loop-safe function to make use of setTimeout
+ */
+export async function loopSafeWait(duration: number) {
+  await new Promise(resolve => setTimeout(resolve, duration));
+}
+
+type WaitOptions = {
+  interval?: number;
+  timeout?: number;
+  waitFirst?: boolean;
+};
+
+export async function waitForCondition(
+  condition: () => boolean | PromiseLike<boolean> | Thenable<boolean>,
+  { interval = 50, timeout = Number.POSITIVE_INFINITY, waitFirst = true }: WaitOptions = {},
+): Promise<void> {
+  const startTime = Date.now();
+
+  const checkCondition = async () => {
+    const result = await condition();
+
+    if (result) {
+      return;
+    } else if (Date.now() - startTime >= timeout) {
+      throw new Error(`Timeout after ${timeout} ms`);
+    } else {
+      await loopSafeWait(interval);
+      return checkCondition();
+    }
+  };
+
+  if (waitFirst) {
+    await loopSafeWait(interval);
+  }
+
+  return checkCondition();
+}

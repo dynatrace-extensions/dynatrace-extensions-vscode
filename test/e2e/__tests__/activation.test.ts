@@ -15,7 +15,7 @@
  */
 
 import vscode from "vscode";
-import { waitForCondition } from "../../../src/utils/general";
+import { waitForCondition } from "../../shared/utils";
 
 jest.mock("../../../src/utils/logging");
 
