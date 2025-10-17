@@ -73,6 +73,37 @@ const PROJECT_TYPES = {
     label: "Existing 2.0 Extension",
     detail: "Start by downloading an extension already deployed in your tenant.",
   },
+  exampleExtension: {
+    label: "Example 2.0 Extension",
+    detail: "Start by using example extension for any datasource.",
+  },
+};
+
+const EXAMPLE_SELECTION = {
+  python_example: {
+    label: "Example Python Extension",
+    detail: "Start with an example Python Extension to use as a reference.",
+  },
+  snmp_example: {
+    label: "Example SNMP Extension",
+    detail: "Start with an example SNMP Extension to use as a reference.",
+  },
+  jmx_example: {
+    label: "Example JMX Extension",
+    detail: "Start with an example JMX Extension to use as a reference.",
+  },
+  prometheus_example: {
+    label: "Example Prometheus Extension",
+    detail: "Start with an example Prometheus Extension to use as a reference.",
+  },
+  sql_example: {
+    label: "Example SQL Extension",
+    detail: "Start with an example SQL Extension to use as a reference.",
+  },
+  wmi_example: {
+    label: "Example WMI Extension",
+    detail: "Start with an example WMI extension to use as a reference.",
+  },
 };
 
 export const initWorkspaceWorkflow = async () => {
@@ -231,6 +262,7 @@ export async function initWorkspace(dt: Dynatrace, callback?: () => unknown) {
 
       // Determine type of extension project
       let projectType;
+      let exampleType;
       if (getExtensionFilePath()) {
         logger.debug(
           "Extension manifest detected. Choosing 'default extension' starter template.",
@@ -279,6 +311,39 @@ export async function initWorkspace(dt: Dynatrace, callback?: () => unknown) {
         }
         case PROJECT_TYPES.existingExtension:
           await existingExtensionSetup(dt, rootPath);
+          break;
+        case PROJECT_TYPES.exampleExtension:
+          logger.debug("Prompting user for example selection", ...fnLogTrace);
+          exampleType = await vscode.window.showQuickPick(Object.values(EXAMPLE_SELECTION), {
+            canPickMany: false,
+            title: "What type of example extension would you like to start with?",
+            placeHolder: "Example Python Extension",
+            ignoreFocusOut: true,
+          });
+          switch (exampleType) {
+            case EXAMPLE_SELECTION.python_example:
+              await pythonExampleExtensionSetup(rootPath, progress);
+              break;
+            case EXAMPLE_SELECTION.sql_example:
+              await declarativeExampleExtensionSetup(rootPath, "sql", "sql-vscode-example");
+              break;
+            case EXAMPLE_SELECTION.jmx_example:
+              await declarativeExampleExtensionSetup(rootPath, "jmx", "jmx-vscode-example");
+              break;
+            case EXAMPLE_SELECTION.prometheus_example:
+              await declarativeExampleExtensionSetup(
+                rootPath,
+                "prometheus",
+                "prometheus-vscode-example",
+              );
+              break;
+            case EXAMPLE_SELECTION.snmp_example:
+              await declarativeExampleExtensionSetup(rootPath, "snmp", "snmp-vscode-example");
+              break;
+            case EXAMPLE_SELECTION.wmi_example:
+              await declarativeExampleExtensionSetup(rootPath, "wmi", "wmi-vscode-example");
+              break;
+          }
           break;
         default:
           if (schemaVersion) {
@@ -360,6 +425,189 @@ async function pythonExtensionSetup(
     moveSync(path.resolve(tempPath, chosenName, p), path.resolve(rootPath, p)),
   );
   rmdirSync(path.resolve(tempPath, chosenName));
+}
+/**
+ * Sets up the workspace for the example Python extension.
+ * Downloads the extension files from the github repo as a zip and unpacks them.
+ * Checks if dt-sdk is available, installs dt-sdk if needed.
+ * @param rootPath path of the workspace (extension is created in its root)
+ * @returns
+ */
+
+async function pythonExampleExtensionSetup(
+  rootPath: string,
+  progress: vscode.Progress<{
+    message?: string;
+    increment?: number;
+  }>,
+) {
+  const extensionName = "python-vscode-example";
+  const fnLogTrace = [...logTrace, "pythonExampleExtensionSetup"];
+  logger.debug("Setting up the example python extension", ...fnLogTrace);
+  await unzipExampleExtension(fnLogTrace, rootPath, "python", extensionName);
+  // Get correct python env
+  const envOptions = await getPythonVenvOpts();
+  // Check: dt-sdk available?
+  const dtSdkAvailable = await checkDtSdkPresent(undefined, undefined, envOptions);
+  if (!dtSdkAvailable) {
+    progress.report({ message: "Installing dependencies. This may take a while." });
+    await runCommand(
+      "pip install --upgrade dt-extensions-sdk[cli]",
+      undefined,
+      undefined,
+      envOptions,
+    );
+
+    notify("INFO", "Python example downloaded and unzipped successfully.", ...fnLogTrace);
+  }
+  await changeSchemaExampleExtension(fnLogTrace);
+}
+
+/**
+ * Sets up the workspace for the example declarative extension chosen.
+ * Downloads the extension files from the github repo as a zip and unpacks them.
+ * @param rootPath path of the workspace (extension is created in its root)
+ * @param dataSource dataSource of the declarative extension being used.
+ * @param extensionName name of the extension repository
+ * @returns
+ */
+async function declarativeExampleExtensionSetup(
+  rootPath: string,
+  dataSource: string,
+  extensionName: string,
+) {
+  const fnLogTrace = [...logTrace, "decalarativeExampleExtensionSetup"];
+  logger.debug(`Setting up the example ${dataSource} extension`, ...fnLogTrace);
+  await unzipExampleExtension(fnLogTrace, rootPath, dataSource, extensionName);
+  await changeSchemaExampleExtension(fnLogTrace);
+}
+
+/**
+ * Downloads and unzips the example extensions from github into the rootpath
+ * @param fnLogTrace log trace
+ * @param rootPath path of the workspace (extension is created in its root)
+ * @param dataSource dataSource of the declarative extension being used.
+ * @param extensionName name of the extension repository
+ * @returns
+ */
+async function unzipExampleExtension(
+  fnLogTrace: string[],
+  rootPath: string,
+  dataSource: string,
+  extensionName: string,
+) {
+  // 'Clone' repo from github
+  const url = `https://github.com/dynatrace-extensions/${extensionName}/archive/refs/heads/main.zip`;
+  try {
+    const resp = await axios.get<ArrayBuffer>(url, { responseType: "arraybuffer" });
+    if (resp.status === 200) {
+      const exampleZip = resp.data;
+      logger.debug("Unzipping downloaded file.");
+      try {
+        const zip = await new JSZip().loadAsync(exampleZip);
+        logger.info(`Extracting zip into ${rootPath}`, ...logTrace, "extractZip");
+        const files = zip.files;
+        for (const relativePath in files) {
+          const file = files[relativePath];
+          // Unpack the directory to the rootPath directly.
+          const pathArr = relativePath.split(path.sep);
+          pathArr[0] = `.${path.sep}`;
+          const newPath = pathArr.join(path.sep);
+          if (file) {
+            const filePath = path.join(rootPath, newPath);
+            if (file.dir) {
+              if (!existsSync(filePath)) {
+                logger.info(`Creating dir: ${filePath}`);
+                mkdirSync(filePath, { recursive: true });
+              }
+            } else {
+              const fileContent = await file.async("nodebuffer");
+
+              if (relativePath.endsWith(".zip")) {
+                const innerZip = await JSZip.loadAsync(fileContent);
+                await extractZip(innerZip, rootPath);
+              } else {
+                const basePath = filePath.split(path.sep).slice(0, -1).join(path.sep);
+                if (!existsSync(basePath)) {
+                  mkdirSync(basePath, { recursive: true });
+                }
+                writeFileSync(filePath, fileContent);
+              }
+            }
+          }
+        }
+      } catch (err) {
+        logger.warn(
+          `Could not unzip file to ${rootPath}, it will have to be downloaded and unzipped manually from ${url}.`,
+          ...fnLogTrace,
+        );
+        notify(
+          "ERROR",
+          `Could not unzip file. It will have to be downloaded and unzipped manually from: ${url}`,
+        );
+      }
+    }
+  } catch (err) {
+    logger.warn(
+      `Could not download repo, this will have to be manually downloaded from ${url}`,
+      ...fnLogTrace,
+    );
+    notify(
+      "ERROR",
+      `Could not download files. They will have to be downloaded and unzipped manually from: ${url}`,
+    );
+  }
+  notify("INFO", `${dataSource} example downloaded and unzipped successfully.`, ...fnLogTrace);
+}
+
+/**
+ * Sets schema version to the one set in the initWorkspace flow.
+ * This function is necessary because the yaml asset pulled from github
+ * has its own version set and is pulled after loadScehma is initially handled.
+ * @param fnLogTrace
+ * @returns
+ */
+async function changeSchemaExampleExtension(fnLogTrace: string[]) {
+  const context = getActivationContext();
+  const schemaVersion: string | undefined = context.workspaceState.get<string>("schemaVersion");
+  if (!schemaVersion) {
+    notify("ERROR", "Could not get schema");
+    return false;
+  }
+  const mainSchema = vscode.Uri.file(
+    path.join(path.join(context.globalStorageUri.fsPath, schemaVersion), "extension.schema.json"),
+  ).toString();
+  vscode.workspace
+    .getConfiguration()
+    .update("yaml.schemas", { [mainSchema]: "extension.yaml" })
+    .then(undefined, () => {
+      logger.error("Could not update configuration yaml.schemas", ...fnLogTrace);
+    });
+  try {
+    // If extension.yaml already exists, update the version there too
+    const extensionFile = getExtensionFilePath();
+    if (extensionFile) {
+      const extensionContent = readFileSync(extensionFile).toString();
+      writeFileSync(
+        extensionFile,
+        extensionContent.replace(
+          /^minDynatraceVersion: ("?[0-9.]+"?)/gm,
+          `minDynatraceVersion: ${schemaVersion}`,
+        ),
+      );
+    }
+  } catch (err) {
+    logger.notify(
+      "ERROR",
+      "Extension YAML was not updated. Schema loading only partially complete.",
+      ...logTrace,
+    );
+    logger.notify("ERROR", (err as Error).message, ...logTrace);
+    return false;
+  }
+
+  logger.notify("INFO", "Schema loading complete.", ...logTrace);
+  return true;
 }
 
 /**

@@ -1,5 +1,10 @@
 # Change Log
 
+## Version 2.9.0 (07.10.2025)
+
+### ✨ New in this version:
+
+- Added functionality for 'example' extensions to be selected when initializing a workspace. All of the repos are hosted on github: `https://github.com/dynatrace-extensions/{data source}-vscode-example` (i.e. https://github.com/dynatrace-extensions/snmp-vscode-example)
 
 ## Version 2.8.1 (30.07.2025)
 
