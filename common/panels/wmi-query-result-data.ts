@@ -14,11 +14,17 @@
   limitations under the License.
  */
 
-export interface PanelData {
-  dataType: string;
-  data: unknown;
+import { PanelDataBase, PanelDataType } from ".";
+
+export interface WmiQueryResult {
+  query: string;
+  responseTime: string;
+  error: boolean;
+  errorMessage?: string;
+  results: Record<string, string | number>[];
 }
 
-export interface LogData {
-  logContent: string;
+export interface WmiQueryResultPanelData extends PanelDataBase {
+  dataType: typeof PanelDataType.WmiQueryResults;
+  data: WmiQueryResult;
 }

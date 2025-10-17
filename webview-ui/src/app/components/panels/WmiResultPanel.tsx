@@ -23,15 +23,13 @@ import {
 import { Flex } from "@dynatrace/strato-components/layouts";
 import { Text, Heading } from "@dynatrace/strato-components/typography";
 import { format as sqlFormat } from "sql-formatter";
-import { WmiQueryResult } from "src/app/interfaces/wmiResultPanel";
+import { WmiQueryResult } from "@common";
 
 interface WmiResultPanelProps {
   data: WmiQueryResult;
 }
 
-export const WmiResultPanel = ({ data }: WmiResultPanelProps) => {
-  const { query, results, responseTime } = data;
-
+export const WmiResultPanel = ({ data: { query, results, responseTime } }: WmiResultPanelProps) => {
   const tableColumns = useMemo<DataTableV2ColumnDef<Record<string, string | number>>[]>(
     () =>
       Object.keys(results[0]).map(key => ({

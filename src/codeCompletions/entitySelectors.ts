@@ -14,7 +14,7 @@
   limitations under the License.
  */
 
-import * as vscode from "vscode";
+import vscode from "vscode";
 import { ExtensionStub } from "../interfaces/extensionMeta";
 import { getCachedBuiltinEntityTypes, getCachedParsedExtension } from "../utils/caching";
 import {
@@ -23,24 +23,13 @@ import {
   getRelationships,
   getRelationshipTypes,
 } from "../utils/extensionParsing";
+import { createSingletonProvider } from "../utils/singleton";
 import { getBlockItemIndexAtLine, getParentBlocks } from "../utils/yamlParsing";
 
 const TRIGGER_SUGGEST_CMD: vscode.Command = {
   command: "editor.action.triggerSuggest",
   title: "Re-trigger suggestions...",
 };
-
-/**
- * Singleton access to EntitySelectorCompletionProvider
- */
-export const getEntitySelectorCompletionProvider = (() => {
-  let instance: EntitySelectorCompletionProvider | undefined;
-
-  return () => {
-    instance = instance === undefined ? new EntitySelectorCompletionProvider() : instance;
-    return instance;
-  };
-})();
 
 /**
  * Provider for code auto-completions within entity selectors.
@@ -204,7 +193,7 @@ class EntitySelectorCompletionProvider implements vscode.CompletionItemProvider 
       .filter(e => !usedTypes.includes(e));
     const builtinTypes = getCachedBuiltinEntityTypes()
       .map(type => type.type?.toLowerCase())
-      .filter(e => e !== undefined && !usedTypes.includes(e)) as string[];
+      .filter((e): e is string => e !== undefined && !usedTypes.includes(e));
 
     if (customTypes.length > 0) {
       const customTypeCompletion = new vscode.CompletionItem(
@@ -481,3 +470,10 @@ class EntitySelectorCompletionProvider implements vscode.CompletionItemProvider 
     return selector;
   }
 }
+
+/**
+ * Singleton access to EntitySelectorCompletionProvider
+ */
+export const getEntitySelectorCompletionProvider = createSingletonProvider(
+  EntitySelectorCompletionProvider,
+);

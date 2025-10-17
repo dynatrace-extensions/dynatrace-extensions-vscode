@@ -14,16 +14,24 @@
   limitations under the License.
  */
 
-import * as fs from "fs";
-import * as path from "path";
-import * as vscode from "vscode";
-import * as extension from "../../../../src/extension";
-import { DatasourceName, ExtensionStub } from "../../../../src/interfaces/extensionMeta";
+import fs from "fs";
+import path from "path";
 import {
+  PanelDataType,
+  ViewType,
   RemoteTarget,
   SimulationConfig,
   SimulatorData,
-} from "../../../../src/interfaces/simulator";
+  WebviewEventType,
+  SimulationLocation,
+  SimulatorStatus,
+  OsType,
+  EecType,
+  Utils,
+} from "@common";
+import vscode from "vscode";
+import * as extension from "../../../../src/extension";
+import { DatasourceName, ExtensionStub } from "../../../../src/interfaces/extensionMeta";
 import { SimulatorManager } from "../../../../src/statusBar/simulator";
 import * as cachingUtils from "../../../../src/utils/caching";
 import * as conditionCheckers from "../../../../src/utils/conditionCheckers";
@@ -31,7 +39,6 @@ import * as extensionParsingUtils from "../../../../src/utils/extensionParsing";
 import * as fileSystemUtils from "../../../../src/utils/fileSystem";
 import * as otherExtensionsUtils from "../../../../src/utils/otherExtensions";
 import * as simulatorUtils from "../../../../src/utils/simulator";
-import * as webviewManager from "../../../../src/webviews/webview-panel-manager";
 import * as webviewUtils from "../../../../src/webviews/webview-utils";
 import { mockFileSystemItem } from "../../../shared/utils";
 import { MockExtensionContext, MockUri } from "../../mocks/vscode";
@@ -72,7 +79,7 @@ describe.only("Simulator Manager", () => {
       expect(failedChecks).toContain("Manifest");
       expect(failedChecks).toContain("Datasource");
       expect(failedChecks).toContain("Activation file");
-      expect(simulatorManager.simulatorStatus).toBe("UNSUPPORTED");
+      expect(simulatorManager.simulatorStatus).toBe(SimulatorStatus.Unsupported);
     });
 
     test.each([
@@ -116,7 +123,7 @@ describe.only("Simulator Manager", () => {
 
       expect(status).toBe(false);
       expect(failedChecks).toContain("Activation file");
-      expect(simulatorManager.simulatorStatus).toBe("UNSUPPORTED");
+      expect(simulatorManager.simulatorStatus).toBe(SimulatorStatus.Unsupported);
     });
 
     it("should pass and update with valid checked details", () => {
@@ -138,7 +145,7 @@ describe.only("Simulator Manager", () => {
 
       expect(status).toBe(true);
       expect(failedChecks).toHaveLength(0);
-      expect(simulatorManager.simulatorStatus).toBe("READY");
+      expect(simulatorManager.simulatorStatus).toBe(SimulatorStatus.Ready);
     });
   });
 
@@ -146,8 +153,8 @@ describe.only("Simulator Manager", () => {
     const mockTarget: RemoteTarget = {
       name: "mockTarget",
       address: "mockHost",
-      eecType: "ONEAGENT",
-      osType: "LINUX",
+      eecType: EecType.OneAgent,
+      osType: OsType.Linux,
       privateKey: "mockKey",
       username: "mockUser",
     };
@@ -156,12 +163,12 @@ describe.only("Simulator Manager", () => {
       jest.replaceProperty(simulatorManager, "datasourceName", "python");
       jest.spyOn(otherExtensionsUtils, "getPythonVenvOpts").mockReturnValue(Promise.resolve({}));
       jest.spyOn(conditionCheckers, "checkDtSdkPresent").mockReturnValue(Promise.resolve(false));
-      const expectedStatus = "NOTREADY";
+      const expectedStatus = SimulatorStatus.NotReady;
       const expectedMessage = "Python SDK not found";
 
       const [actualStatus, actualMessage] = await simulatorManager.checkSimulationConfig(
-        "LOCAL",
-        "ONEAGENT",
+        SimulationLocation.Local,
+        EecType.OneAgent,
       );
 
       expect(actualStatus).toBe(expectedStatus);
@@ -171,12 +178,12 @@ describe.only("Simulator Manager", () => {
     it("should fail check on LOCAL for non-python extension if DS can't be simulated", async () => {
       jest.replaceProperty(simulatorManager, "datasourceName", "mockDS");
       jest.spyOn(simulatorUtils, "canSimulateDatasource").mockReturnValue(false);
-      const expectedStatus = "NOTREADY";
+      const expectedStatus = SimulatorStatus.NotReady;
       const expectedMessage = "Datasource mockDS cannot be simulated on this OS";
 
       const [actualStatus, actualMessage] = await simulatorManager.checkSimulationConfig(
-        "LOCAL",
-        "ONEAGENT",
+        SimulationLocation.Local,
+        EecType.OneAgent,
       );
 
       expect(actualStatus).toBe(expectedStatus);
@@ -187,12 +194,12 @@ describe.only("Simulator Manager", () => {
       jest.replaceProperty(simulatorManager, "datasourceName", "mockDS");
       jest.spyOn(simulatorUtils, "canSimulateDatasource").mockReturnValue(true);
       jest.spyOn(simulatorUtils, "getDatasourcePath").mockReturnValue("mock/dsLocation");
-      const expectedStatus = "NOTREADY";
+      const expectedStatus = SimulatorStatus.NotReady;
       const expectedMessage = "Could not find datasource executable at mock/dsLocation";
 
       const [actualStatus, actualMessage] = await simulatorManager.checkSimulationConfig(
-        "LOCAL",
-        "ONEAGENT",
+        SimulationLocation.Local,
+        EecType.OneAgent,
       );
 
       expect(actualStatus).toBe(expectedStatus);
@@ -201,12 +208,12 @@ describe.only("Simulator Manager", () => {
 
     it("should fail check on REMOTE for python extension", async () => {
       jest.replaceProperty(simulatorManager, "datasourceName", "python");
-      const expectedStatus = "NOTREADY";
+      const expectedStatus = SimulatorStatus.NotReady;
       const expectedMessage = "Python datasource can only be simulated on local machine";
 
       const [actualStatus, actualMessage] = await simulatorManager.checkSimulationConfig(
-        "REMOTE",
-        "ONEAGENT",
+        SimulationLocation.Remote,
+        EecType.OneAgent,
       );
 
       expect(actualStatus).toBe(expectedStatus);
@@ -215,12 +222,12 @@ describe.only("Simulator Manager", () => {
 
     it("should fail check on REMOTE for non-python if target missing", async () => {
       jest.replaceProperty(simulatorManager, "datasourceName", "mockDS");
-      const expectedStatus = "NOTREADY";
+      const expectedStatus = SimulatorStatus.NotReady;
       const expectedMessage = "No target given for remote simulation";
 
       const [actualStatus, actualMessage] = await simulatorManager.checkSimulationConfig(
-        "REMOTE",
-        "ONEAGENT",
+        SimulationLocation.Remote,
+        EecType.OneAgent,
       );
 
       expect(actualStatus).toBe(expectedStatus);
@@ -231,12 +238,12 @@ describe.only("Simulator Manager", () => {
       const canSimulateDatasourceSpy = jest.spyOn(simulatorUtils, "canSimulateDatasource");
       canSimulateDatasourceSpy.mockReturnValue(false);
       jest.replaceProperty(simulatorManager, "datasourceName", "mockDS");
-      const expectedStatus = "NOTREADY";
+      const expectedStatus = SimulatorStatus.NotReady;
       const expectedMessage = `Datasource mockDS cannot be simulated on ${mockTarget.osType}`;
 
       const [actualStatus, actualMessage] = await simulatorManager.checkSimulationConfig(
-        "REMOTE",
-        "ONEAGENT",
+        SimulationLocation.Remote,
+        EecType.OneAgent,
         mockTarget,
       );
 
@@ -253,12 +260,12 @@ describe.only("Simulator Manager", () => {
       jest.replaceProperty(simulatorManager, "datasourceName", "python");
       jest.spyOn(otherExtensionsUtils, "getPythonVenvOpts").mockReturnValue(Promise.resolve({}));
       jest.spyOn(conditionCheckers, "checkDtSdkPresent").mockReturnValue(Promise.resolve(true));
-      const expectedStatus = "READY";
+      const expectedStatus = SimulatorStatus.Ready;
       const expectedMessage = "";
 
       const [actualStatus, actualMessage] = await simulatorManager.checkSimulationConfig(
-        "LOCAL",
-        "ONEAGENT",
+        SimulationLocation.Local,
+        EecType.OneAgent,
       );
 
       expect(actualStatus).toBe(expectedStatus);
@@ -273,12 +280,12 @@ describe.only("Simulator Manager", () => {
       jest
         .spyOn(simulatorUtils, "getDatasourcePath")
         .mockReturnValue(path.join("mock", "dsLocation"));
-      const expectedStatus = "READY";
+      const expectedStatus = SimulatorStatus.Ready;
       const expectedMessage = "";
 
       const [actualStatus, actualMessage] = await simulatorManager.checkSimulationConfig(
-        "LOCAL",
-        "ONEAGENT",
+        SimulationLocation.Local,
+        EecType.OneAgent,
       );
 
       expect(actualStatus).toBe(expectedStatus);
@@ -291,12 +298,12 @@ describe.only("Simulator Manager", () => {
       canSimulateDatasourceSpy.mockReturnValue(true);
       jest.replaceProperty(simulatorManager, "datasourceName", "mockDS");
       jest.spyOn(simulatorUtils, "getDatasourcePath").mockReturnValue("mock/dsLocation");
-      const expectedStatus = "READY";
+      const expectedStatus = SimulatorStatus.Ready;
       const expectedMessage = "";
 
       const [actualStatus, actualMessage] = await simulatorManager.checkSimulationConfig(
-        "REMOTE",
-        "ONEAGENT",
+        SimulationLocation.Remote,
+        EecType.OneAgent,
         mockTarget,
       );
 
@@ -314,8 +321,8 @@ describe.only("Simulator Manager", () => {
     let renderSpy: jest.SpyInstance;
     let postMessageSpy: jest.SpyInstance;
     const fallbackConfigValue: SimulationConfig = {
-      eecType: "ONEAGENT",
-      location: "LOCAL",
+      eecType: EecType.OneAgent,
+      location: SimulationLocation.Local,
       sendMetrics: false,
     };
     const mockPanelData: SimulatorData = {
@@ -329,7 +336,7 @@ describe.only("Simulator Manager", () => {
         localActiveGateDsExists: false,
         localOneAgentDsExists: false,
       },
-      status: "UNSUPPORTED",
+      status: SimulatorStatus.Unsupported,
       statusMessage: "undefined",
       failedChecks: ["Activation file"],
     };
@@ -337,7 +344,7 @@ describe.only("Simulator Manager", () => {
     beforeEach(() => {
       jest.spyOn(fileSystemUtils, "getSimulatorTargets").mockReturnValue([]);
       jest.spyOn(fileSystemUtils, "getSimulatorSummaries").mockReturnValue([]);
-      renderSpy = jest.spyOn(webviewUtils, "renderPanel").mockImplementation(() => {});
+      renderSpy = jest.spyOn(webviewUtils, "renderPanel").mockImplementation(Utils.noOp);
     });
 
     it("first updates the panel with CHECKING status (render)", async () => {
@@ -349,28 +356,32 @@ describe.only("Simulator Manager", () => {
       expect(renderSpy).toHaveBeenCalledTimes(2);
       expect(renderSpy).toHaveBeenNthCalledWith(
         1,
-        webviewManager.REGISTERED_PANELS.SIMULATOR_UI,
+        ViewType.ExtensionSimulator,
         "Extension Simulator",
-        { dataType: "SIMULATOR_DATA", data: { ...mockPanelData, status: "CHECKING" } },
+        {
+          dataType: PanelDataType.ExtensionSimulator,
+          data: { ...mockPanelData, status: SimulatorStatus.Checking },
+        },
       );
     });
 
     it("first updates the panel with CHECKING status (postMessage)", async () => {
       jest.spyOn(simulatorManager, "checkMandatoryRequirements").mockReturnValue([true, []]);
       simulatorManager = new SimulatorManager();
-      postMessageSpy = jest.spyOn(webviewUtils, "postMessageToPanel").mockImplementation(() => {});
+      postMessageSpy = jest
+        .spyOn(webviewUtils, "postMessageToPanel")
+        .mockImplementation(Utils.noOp);
 
       await simulatorManager.checkReady(false);
 
       expect(postMessageSpy).toHaveBeenCalledTimes(2);
-      expect(postMessageSpy).toHaveBeenNthCalledWith(
-        1,
-        webviewManager.REGISTERED_PANELS.SIMULATOR_UI,
-        {
-          messageType: "updateData",
-          data: { dataType: "SIMULATOR_DATA", data: { ...mockPanelData, status: "CHECKING" } },
+      expect(postMessageSpy).toHaveBeenNthCalledWith(1, ViewType.ExtensionSimulator, {
+        messageType: WebviewEventType.UpdateData,
+        data: {
+          dataType: PanelDataType.ExtensionSimulator,
+          data: { ...mockPanelData, status: SimulatorStatus.Checking },
         },
-      );
+      });
     });
 
     it("then updates the panel with READY state and panel data", async () => {
@@ -380,9 +391,12 @@ describe.only("Simulator Manager", () => {
 
       expect(renderSpy).toHaveBeenNthCalledWith(
         2,
-        webviewManager.REGISTERED_PANELS.SIMULATOR_UI,
+        ViewType.ExtensionSimulator,
         "Extension Simulator",
-        { dataType: "SIMULATOR_DATA", data: { ...mockPanelData, status: "READY" } },
+        {
+          dataType: PanelDataType.ExtensionSimulator,
+          data: { ...mockPanelData, status: SimulatorStatus.Ready },
+        },
       );
     });
 
@@ -397,11 +411,15 @@ describe.only("Simulator Manager", () => {
       expect(renderSpy).toHaveBeenCalledTimes(2);
       expect(renderSpy).toHaveBeenNthCalledWith(
         2,
-        webviewManager.REGISTERED_PANELS.SIMULATOR_UI,
+        ViewType.ExtensionSimulator,
         "Extension Simulator",
         {
-          dataType: "SIMULATOR_DATA",
-          data: { ...mockPanelData, status: "UNSUPPORTED", failedChecks: mockFailedChecks },
+          dataType: PanelDataType.ExtensionSimulator,
+          data: {
+            ...mockPanelData,
+            status: SimulatorStatus.Unsupported,
+            failedChecks: mockFailedChecks,
+          },
         },
       );
     });
@@ -410,18 +428,22 @@ describe.only("Simulator Manager", () => {
       jest.spyOn(simulatorManager, "checkMandatoryRequirements").mockReturnValue([true, []]);
       jest
         .spyOn(simulatorManager, "checkSimulationConfig")
-        .mockReturnValue(Promise.resolve(["NOTREADY", "mockMessage"]));
+        .mockReturnValue(Promise.resolve([SimulatorStatus.NotReady, "mockMessage"]));
 
       await simulatorManager.checkReady(true, fallbackConfigValue);
 
       expect(renderSpy).toHaveBeenCalledTimes(2);
       expect(renderSpy).toHaveBeenNthCalledWith(
         2,
-        webviewManager.REGISTERED_PANELS.SIMULATOR_UI,
+        ViewType.ExtensionSimulator,
         "Extension Simulator",
         {
-          dataType: "SIMULATOR_DATA",
-          data: { ...mockPanelData, status: "NOTREADY", statusMessage: "mockMessage" },
+          dataType: PanelDataType.ExtensionSimulator,
+          data: {
+            ...mockPanelData,
+            status: SimulatorStatus.NotReady,
+            statusMessage: "mockMessage",
+          },
         },
       );
     });

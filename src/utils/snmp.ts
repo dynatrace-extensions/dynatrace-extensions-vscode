@@ -20,13 +20,12 @@
  ********************************************************************************/
 
 import { existsSync, mkdirSync, readFileSync, readdirSync, renameSync, writeFileSync } from "fs";
-import * as path from "path";
+import path from "path";
 import axios from "axios";
 import JSZip from "jszip";
 import { getActivationContext } from "../extension";
 import { setHttpsAgent } from "./general";
-import { notify } from "./logging";
-import * as logger from "./logging";
+import logger from "./logging";
 
 const logTrace = ["utils", "snmp"];
 const AG_MIB_VERSION = "1.281"; // For now, we hardcode this.
@@ -945,7 +944,7 @@ class MibParser {
                       `${ModuleName}: Cannot import ${JSON.stringify(IMPORTS)}`,
                       ...fnLogTrace,
                     );
-                    notify(
+                    logger.notify(
                       "WARN",
                       `Local MIB files missing dependency ${ImportModule} required by ${ModuleName}`,
                       ...fnLogTrace,

@@ -23,12 +23,13 @@ import {
   rmdirSync,
   writeFileSync,
 } from "fs";
-import * as path from "path";
+import path from "path";
 import { TextEncoder } from "util";
+import { GlobalCommand } from "@common";
 import axios from "axios";
 import { moveSync } from "fs-extra";
 import JSZip from "jszip";
-import * as vscode from "vscode";
+import vscode from "vscode";
 import { Dynatrace } from "../dynatrace-api/dynatrace";
 import { getActivationContext } from "../extension";
 import { getDynatraceClient } from "../treeViews/tenantsTreeView";
@@ -47,15 +48,15 @@ import {
   registerWorkspace,
   writeGititnore,
 } from "../utils/fileSystem";
-import { notify } from "../utils/logging";
-import * as logger from "../utils/logging";
+import logger from "../utils/logging";
 import { getPythonVenvOpts } from "../utils/otherExtensions";
 import { runCommand } from "../utils/subprocesses";
+import { showQuickPick } from "../utils/vscode";
 import { loadSchemas } from "./loadSchemas";
 
 const logTrace = ["commandPalette", "initWorkspace"];
 
-const PROJECT_TYPES = {
+const PROJECT_TYPE = {
   defaultExtension: {
     label: "Extension 2.0",
     detail: "Default choice for existing projects and most new ones. If unsure, choose this.",
@@ -77,8 +78,9 @@ const PROJECT_TYPES = {
     label: "Example 2.0 Extension",
     detail: "Start by using example extension for any datasource.",
   },
-};
+} satisfies Record<string, vscode.QuickPickItem>;
 
+const PROJECT_TYPES = Object.values(PROJECT_TYPE);
 const EXAMPLE_SELECTION = {
   python_example: {
     label: "Example Python Extension",
@@ -118,7 +120,7 @@ export const initWorkspaceWorkflow = async () => {
         });
       }
     } finally {
-      await context.globalState.update("dynatrace-extensions.initPending", undefined);
+      await context.globalState.update(GlobalCommand.InitPending, undefined);
     }
   }
 };
@@ -152,20 +154,20 @@ export async function initWorkspace(dt: Dynatrace, callback?: () => unknown) {
         if (cmdSuccess) {
           schemaVersion = context.workspaceState.get<string>("schemaVersion");
           if (!schemaVersion) {
-            notify(
+            logger.notify(
               "ERROR",
               "Error loading schemas. Cannot continue initialization.",
               ...fnLogTrace,
             );
             return false;
           }
-          notify("INFO", `Loaded schemas version ${schemaVersion}`, ...fnLogTrace);
+          logger.notify("INFO", `Loaded schemas version ${schemaVersion}`, ...fnLogTrace);
         } else {
-          notify("ERROR", "Cannot initialize workspace without schemas.", ...fnLogTrace);
+          logger.notify("ERROR", "Cannot initialize workspace without schemas.", ...fnLogTrace);
           return false;
         }
       } else {
-        notify("INFO", `Using cached schema version ${schemaVersion}`, ...fnLogTrace);
+        logger.notify("INFO", `Using cached schema version ${schemaVersion}`, ...fnLogTrace);
         const mainSchema = vscode.Uri.file(
           path.join(
             path.join(context.globalStorageUri.fsPath, schemaVersion),
@@ -185,8 +187,7 @@ export async function initWorkspace(dt: Dynatrace, callback?: () => unknown) {
 
       // Which certificates to use?
       progress.report({ message: "Setting up workspace certificates" });
-      const certChoice = await vscode.window.showQuickPick(["Use existing", "Generate new ones"], {
-        canPickMany: false,
+      const certChoice = await showQuickPick(["Use existing", "Generate new ones"], {
         ignoreFocusOut: true,
         title: "Initialize Workspace: Certificates",
         placeHolder:
@@ -197,7 +198,7 @@ export async function initWorkspace(dt: Dynatrace, callback?: () => unknown) {
           logger.debug("Workspace will use existing certificates", ...fnLogTrace);
           const hasCertificates = await checkSettings("developerCertkeyLocation");
           if (!hasCertificates) {
-            notify(
+            logger.notify(
               "ERROR",
               "Personal certificates not found. Workspace not initialized.",
               ...fnLogTrace,
@@ -209,16 +210,24 @@ export async function initWorkspace(dt: Dynatrace, callback?: () => unknown) {
         case "Generate new ones": {
           logger.debug("Workspace will generate new certificates", ...fnLogTrace);
           const cmdSuccess = await vscode.commands.executeCommand(
-            "dynatrace-extensions.generateCertificates",
+            GlobalCommand.GenerateCertificates,
           );
           if (!cmdSuccess) {
-            notify("ERROR", "Cannot initialize workspace without certificates.", ...fnLogTrace);
+            logger.notify(
+              "ERROR",
+              "Cannot initialize workspace without certificates.",
+              ...fnLogTrace,
+            );
             return false;
           }
           break;
         }
         default:
-          notify("ERROR", "No certificate choice made. Workspace not initialized.", ...fnLogTrace);
+          logger.notify(
+            "ERROR",
+            "No certificate choice made. Workspace not initialized.",
+            ...fnLogTrace,
+          );
           return false;
       }
 
@@ -261,25 +270,24 @@ export async function initWorkspace(dt: Dynatrace, callback?: () => unknown) {
       progress.report({ message: "Generating content for your project" });
 
       // Determine type of extension project
-      let projectType;
+      let projectType: vscode.QuickPickItem | undefined = PROJECT_TYPE.defaultExtension;
       let exampleType;
+
       if (getExtensionFilePath()) {
         logger.debug(
           "Extension manifest detected. Choosing 'default extension' starter template.",
           ...fnLogTrace,
         );
-        projectType = PROJECT_TYPES.defaultExtension;
       } else {
         logger.debug("Prompting user for template selection", ...fnLogTrace);
-        projectType = await vscode.window.showQuickPick(Object.values(PROJECT_TYPES), {
-          canPickMany: false,
+        projectType = await showQuickPick(PROJECT_TYPES, {
           title: "What type of project are you starting?",
           placeHolder: "Extension 2.0",
           ignoreFocusOut: true,
         });
       }
       if (!projectType) {
-        notify("ERROR", "No selection made. Operation cancelled.", ...fnLogTrace);
+        logger.notify("ERROR", "No selection made. Operation cancelled.", ...fnLogTrace);
         return;
       }
       // This was done earlier in the flow already.
@@ -294,25 +302,25 @@ export async function initWorkspace(dt: Dynatrace, callback?: () => unknown) {
 
       // Setup based on type of project
       switch (projectType) {
-        case PROJECT_TYPES.pythonExtension:
+        case PROJECT_TYPE.pythonExtension:
           await pythonExtensionSetup(rootPath, storagePath, progress);
           break;
-        case PROJECT_TYPES.jmxConversion: {
+        case PROJECT_TYPE.jmxConversion: {
           logger.debug("JMX Conversion template selected. Triggering subflow", ...fnLogTrace);
           const extensionDir = path.resolve(rootPath, "extension");
           if (!existsSync(extensionDir)) {
             mkdirSync(extensionDir);
           }
           await vscode.commands.executeCommand(
-            "dynatrace-extensions.convertJmxExtension",
+            GlobalCommand.ConvertJmxExtension,
             path.resolve(extensionDir, "extension.yaml"),
           );
           break;
         }
-        case PROJECT_TYPES.existingExtension:
+        case PROJECT_TYPE.existingExtension:
           await existingExtensionSetup(dt, rootPath);
           break;
-        case PROJECT_TYPES.exampleExtension:
+        case PROJECT_TYPE.exampleExtension:
           logger.debug("Prompting user for example selection", ...fnLogTrace);
           exampleType = await vscode.window.showQuickPick(Object.values(EXAMPLE_SELECTION), {
             canPickMany: false,
@@ -356,11 +364,11 @@ export async function initWorkspace(dt: Dynatrace, callback?: () => unknown) {
       pushManifestTextForParsing();
 
       // Create or update the .gitignore
-      await writeGititnore(projectType === PROJECT_TYPES.pythonExtension);
+      await writeGititnore(projectType === PROJECT_TYPE.pythonExtension);
     },
   );
 
-  notify("INFO", "Workspace initialization completed successfully.", ...fnLogTrace);
+  logger.notify("INFO", "Workspace initialization completed successfully.", ...fnLogTrace);
 }
 
 /**
@@ -458,7 +466,7 @@ async function pythonExampleExtensionSetup(
       envOptions,
     );
 
-    notify("INFO", "Python example downloaded and unzipped successfully.", ...fnLogTrace);
+    logger.notify("INFO", "Python example downloaded and unzipped successfully.", ...fnLogTrace);
   }
   await changeSchemaExampleExtension(fnLogTrace);
 }
@@ -524,14 +532,14 @@ async function unzipExampleExtension(
               const fileContent = await file.async("nodebuffer");
 
               if (relativePath.endsWith(".zip")) {
-                const innerZip = await JSZip.loadAsync(fileContent);
+                const innerZip = await JSZip.loadAsync(Uint8Array.from(fileContent));
                 await extractZip(innerZip, rootPath);
               } else {
                 const basePath = filePath.split(path.sep).slice(0, -1).join(path.sep);
                 if (!existsSync(basePath)) {
                   mkdirSync(basePath, { recursive: true });
                 }
-                writeFileSync(filePath, fileContent);
+                writeFileSync(filePath, Uint8Array.from(fileContent));
               }
             }
           }
@@ -541,7 +549,7 @@ async function unzipExampleExtension(
           `Could not unzip file to ${rootPath}, it will have to be downloaded and unzipped manually from ${url}.`,
           ...fnLogTrace,
         );
-        notify(
+        logger.notify(
           "ERROR",
           `Could not unzip file. It will have to be downloaded and unzipped manually from: ${url}`,
         );
@@ -552,12 +560,16 @@ async function unzipExampleExtension(
       `Could not download repo, this will have to be manually downloaded from ${url}`,
       ...fnLogTrace,
     );
-    notify(
+    logger.notify(
       "ERROR",
       `Could not download files. They will have to be downloaded and unzipped manually from: ${url}`,
     );
   }
-  notify("INFO", `${dataSource} example downloaded and unzipped successfully.`, ...fnLogTrace);
+  logger.notify(
+    "INFO",
+    `${dataSource} example downloaded and unzipped successfully.`,
+    ...fnLogTrace,
+  );
 }
 
 /**
@@ -571,7 +583,7 @@ async function changeSchemaExampleExtension(fnLogTrace: string[]) {
   const context = getActivationContext();
   const schemaVersion: string | undefined = context.workspaceState.get<string>("schemaVersion");
   if (!schemaVersion) {
-    notify("ERROR", "Could not get schema");
+    logger.notify("ERROR", "Could not get schema");
     return false;
   }
   const mainSchema = vscode.Uri.file(
@@ -622,19 +634,18 @@ async function existingExtensionSetup(dt: Dynatrace, rootPath: string) {
   const fnLogTrace = [...logTrace, "existingExtensionSetup"];
   logger.debug("Setting up workspace with an existing extension", ...fnLogTrace);
 
-  const download = await vscode.window.showQuickPick(
+  const download = await showQuickPick(
     (await dt.extensionsV2.list()).map(ext => ({
       label: `${ext.extensionName} (${ext.version})`,
       extension: ext,
     })),
     {
       title: "Choose an extension to download",
-      canPickMany: false,
       ignoreFocusOut: true,
     },
   );
   if (!download) {
-    notify("ERROR", "No selection made. Operation aborted.", ...fnLogTrace);
+    logger.notify("ERROR", "No selection made. Operation aborted.", ...fnLogTrace);
     return;
   }
 
@@ -669,7 +680,9 @@ async function existingExtensionSetup(dt: Dynatrace, rootPath: string) {
         );
         if (whlPath[0]) {
           await extractZip(
-            await new JSZip().loadAsync(readFileSync(path.join(libPath, whlPath[0]))),
+            await new JSZip().loadAsync(
+              Uint8Array.from(readFileSync(path.join(libPath, whlPath[0]))),
+            ),
             rootPath,
           );
           rmSync(path.join(rootPath, `${moduleName}-${download.extension.version}.dist-info`), {
@@ -684,7 +697,7 @@ async function existingExtensionSetup(dt: Dynatrace, rootPath: string) {
     }
   } catch (err) {
     logger.error(err, ...fnLogTrace);
-    notify(
+    logger.notify(
       "WARN",
       "Not all files were extracted successfully. Manual edits are still needed.",
       ...fnLogTrace,

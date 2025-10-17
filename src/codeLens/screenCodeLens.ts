@@ -14,23 +14,13 @@
   limitations under the License.
  */
 
-import * as vscode from "vscode";
+import { GlobalCommand } from "@common";
+import vscode from "vscode";
 import { getConnectedTenant } from "../treeViews/tenantsTreeView";
 import { getCachedParsedExtension } from "../utils/caching";
-import * as logger from "../utils/logging";
+import logger from "../utils/logging";
+import { createSingletonProvider } from "../utils/singleton";
 import { getBlockItemIndexAtLine, getParentBlocks } from "../utils/yamlParsing";
-
-/**
- * Provides singleton access to the ScreenLensProvider
- */
-export const getScreenLensProvider = (() => {
-  let instance: ScreenLensProvider | undefined;
-
-  return () => {
-    instance = instance === undefined ? new ScreenLensProvider() : instance;
-    return instance;
-  };
-})();
 
 /**
  * Implementation of a Code Lens Provider to allow opening Dynatrace screens in the browser.
@@ -45,12 +35,7 @@ class ScreenLensProvider implements vscode.CodeLensProvider {
   constructor() {
     this.codeLenses = [];
     this.regex = /^ {2}- ./gm;
-    vscode.commands.registerCommand(
-      "dynatrace-extensions.openScreen",
-      async (entityType: string, screenType: "list" | "details") => {
-        await this.openScreen(entityType, screenType);
-      },
-    );
+    vscode.commands.registerCommand(GlobalCommand.OpenScreen, this.openScreen.bind(this));
   }
 
   /**
@@ -96,13 +81,13 @@ class ScreenLensProvider implements vscode.CodeLensProvider {
             new vscode.CodeLens(range, {
               title: "Open List View",
               tooltip: "Open this entity's List View in Dynatrace",
-              command: "dynatrace-extensions.openScreen",
+              command: GlobalCommand.OpenScreen,
               arguments: [entityType, "list"],
             }),
             new vscode.CodeLens(range, {
               title: "Open Details View",
               tooltip: "Open this entity's Details View in Dynatrace",
-              command: "dynatrace-extensions.openScreen",
+              command: GlobalCommand.OpenScreen,
               arguments: [entityType, "details"],
             }),
           );
@@ -148,3 +133,8 @@ class ScreenLensProvider implements vscode.CodeLensProvider {
     }
   }
 }
+
+/**
+ * Provides singleton access to the ScreenLensProvider
+ */
+export const getScreenLensProvider = createSingletonProvider(ScreenLensProvider);

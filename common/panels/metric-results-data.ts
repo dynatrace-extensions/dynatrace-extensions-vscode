@@ -14,6 +14,8 @@
   limitations under the License.
  */
 
+import { PanelDataBase, PanelDataType } from ".";
+
 interface Rollup {
   type?: "AUTO" | "AVG" | "MAX" | "MEDIAN" | "MIN" | "PERCENTILE" | "SUM";
   parameter?: number;
@@ -57,14 +59,14 @@ interface AppliedFilter {
   filter?: Filter;
 }
 
-interface MetricSeries {
+export interface MetricSeries {
   dimensionMap: Record<string, string>;
   timestamps: number[];
   dimensions: string[];
   values: number[];
 }
 
-interface MetricSeriesCollection {
+export interface MetricSeriesCollection {
   dataPointCountRatio: number;
   dimensionCountRatio: number;
   appliedOptionalFilters?: AppliedFilter[];
@@ -73,4 +75,7 @@ interface MetricSeriesCollection {
   warnings?: string;
 }
 
-export { MetricSeriesCollection };
+export interface MetricResultsPanelData extends PanelDataBase {
+  dataType: typeof PanelDataType.MetricResults;
+  data: MetricSeriesCollection[];
+}

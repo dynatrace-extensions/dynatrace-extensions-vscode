@@ -14,22 +14,13 @@
   limitations under the License.
  */
 
-import * as vscode from "vscode";
+import { SimulationLocation } from "@common";
+import vscode from "vscode";
 import { MinimalConfiguration } from "../treeViews/commands/environments";
 import { getCachedEntityInstances, updateEntityInstances } from "../utils/caching";
 import { getExtensionFilePath } from "../utils/fileSystem";
-
-/**
- * Singleton access to ConfigurationCompletionProvider
- */
-export const getConfigurationCompletionProvider = (() => {
-  let instance: ConfigurationCompletionProvider | undefined;
-
-  return () => {
-    instance = instance === undefined ? new ConfigurationCompletionProvider() : instance;
-    return instance;
-  };
-})();
+import { parseJSON } from "../utils/jsonParsing";
+import { createSingletonProvider } from "../utils/singleton";
 
 /**
  * Provider for code auto-completions related to monitoring configuration files.
@@ -45,16 +36,16 @@ class ConfigurationCompletionProvider implements vscode.CompletionItemProvider {
     if (!extensionFilePath) {
       return [];
     }
-    const configObject = JSON.parse(
+    const configObject: MinimalConfiguration = parseJSON(
       document.getText().replace(/^\/\/.*?$/gm, ""),
-    ) as MinimalConfiguration;
+    );
 
     if (line.endsWith('"scope": "')) {
       switch (configObject.value.activationContext) {
-        case "LOCAL":
+        case SimulationLocation.Local:
           completionItems.push(...(await this.createLocalScopeCompletions()));
           break;
-        case "REMOTE":
+        case SimulationLocation.Remote:
           completionItems.push(...this.createRemoteScopeCompletions());
           break;
       }
@@ -95,3 +86,10 @@ class ConfigurationCompletionProvider implements vscode.CompletionItemProvider {
     return completions;
   }
 }
+
+/**
+ * Singleton access to ConfigurationCompletionProvider
+ */
+export const getConfigurationCompletionProvider = createSingletonProvider(
+  ConfigurationCompletionProvider,
+);

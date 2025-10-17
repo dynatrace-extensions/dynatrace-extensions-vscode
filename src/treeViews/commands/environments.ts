@@ -15,8 +15,9 @@
  */
 
 import { readFileSync, readdirSync, rmSync, writeFileSync } from "fs";
-import * as path from "path";
-import * as vscode from "vscode";
+import path from "path";
+import { EnvironmentCommand, SimulationLocation, Utils } from "@common";
+import vscode from "vscode";
 import { DynatraceAPIError } from "../../dynatrace-api/errors";
 import { getActivationContext } from "../../extension";
 import {
@@ -34,8 +35,10 @@ import {
   registerTenant,
   removeTenant,
 } from "../../utils/fileSystem";
-import * as logger from "../../utils/logging";
+import { parseJSON } from "../../utils/jsonParsing";
+import logger from "../../utils/logging";
 import { createObjectFromSchema } from "../../utils/schemaParsing";
+import { ConfirmOption, showQuickPick, showQuickPickConfirm } from "../../utils/vscode";
 import { refreshTenantsTreeView } from "../tenantsTreeView";
 
 const logTrace = ["treeViews", "commands", "environments"];
@@ -43,7 +46,7 @@ const logTrace = ["treeViews", "commands", "environments"];
 export interface MinimalConfiguration {
   scope: string;
   value: {
-    activationContext: "LOCAL" | "REMOTE";
+    activationContext: SimulationLocation;
     description: string;
     version: string;
     featureSets?: string[];
@@ -96,90 +99,73 @@ export function validateEnvironmentUrl(value: string): string | null {
  * the disposables created.
  */
 export const registerTenantsViewCommands = () => {
-  const commandPrefix = "dynatrace-extensions-environments";
   return [
-    vscode.commands.registerCommand(`${commandPrefix}.refresh`, () => refreshTenantsTreeView()),
-    vscode.commands.registerCommand(`${commandPrefix}.addEnvironment`, () =>
-      addEnvironment().then(() => refreshTenantsTreeView()),
+    vscode.commands.registerCommand(EnvironmentCommand.Refresh, refreshTenantsTreeView),
+    vscode.commands.registerCommand(EnvironmentCommand.Add, () =>
+      addEnvironment().then(refreshTenantsTreeView),
     ),
-    vscode.commands.registerCommand(
-      `${commandPrefix}.useEnvironment`,
-      async (tenant: DynatraceTenant) => {
-        const { url, apiUrl, token, label } = tenant;
-        await registerTenant(url, apiUrl, encryptToken(token), label, true);
-        showConnectedStatusBar(tenant).catch(() => {});
-        refreshTenantsTreeView();
-      },
-    ),
-    vscode.commands.registerCommand(
-      `${commandPrefix}.editEnvironment`,
-      async (tenant: DynatraceTenant) => {
-        await editEnvironment(tenant).then(() => refreshTenantsTreeView());
-      },
-    ),
-    vscode.commands.registerCommand(
-      `${commandPrefix}.deleteEnvironment`,
-      async (tenant: DynatraceTenant) => {
-        await deleteEnvironment(tenant).then(() => refreshTenantsTreeView());
-      },
-    ),
-    vscode.commands.registerCommand(`${commandPrefix}.changeConnection`, async () => {
-      await changeConnection().then(() => refreshTenantsTreeView());
+    vscode.commands.registerCommand(EnvironmentCommand.Use, async (tenant: DynatraceTenant) => {
+      const { url, apiUrl, token, label } = tenant;
+      await registerTenant(url, apiUrl, encryptToken(token), label, true);
+      showConnectedStatusBar(tenant).catch(Utils.noOp);
+      refreshTenantsTreeView();
     }),
+    vscode.commands.registerCommand(EnvironmentCommand.Edit, (tenant: DynatraceTenant) =>
+      editEnvironment(tenant).then(refreshTenantsTreeView),
+    ),
+    vscode.commands.registerCommand(EnvironmentCommand.Delete, (tenant: DynatraceTenant) =>
+      deleteEnvironment(tenant).then(refreshTenantsTreeView),
+    ),
+    vscode.commands.registerCommand(EnvironmentCommand.ChangeConnection, () =>
+      changeConnection().then(refreshTenantsTreeView),
+    ),
+    vscode.commands.registerCommand(EnvironmentCommand.AddConfig, (extension: DeployedExtension) =>
+      addMonitoringConfiguration(extension).then(success => {
+        if (success) {
+          refreshTenantsTreeView();
+        }
+      }),
+    ),
     vscode.commands.registerCommand(
-      `${commandPrefix}.addConfig`,
-      async (extension: DeployedExtension) => {
-        await addMonitoringConfiguration(extension).then(success => {
+      EnvironmentCommand.EditConfig,
+      (config: MonitoringConfiguration) =>
+        editMonitoringConfiguration(config).then(success => {
           if (success) {
             refreshTenantsTreeView();
           }
-        });
-      },
+        }),
     ),
     vscode.commands.registerCommand(
-      `${commandPrefix}.editConfig`,
-      async (config: MonitoringConfiguration) => {
-        await editMonitoringConfiguration(config).then(success => {
+      EnvironmentCommand.DeleteConfig,
+      (config: MonitoringConfiguration) =>
+        deleteMonitoringConfiguration(config).then(success => {
           if (success) {
             refreshTenantsTreeView();
           }
-        });
-      },
+        }),
     ),
     vscode.commands.registerCommand(
-      `${commandPrefix}.deleteConfig`,
-      async (config: MonitoringConfiguration) => {
-        await deleteMonitoringConfiguration(config).then(success => {
-          if (success) {
-            refreshTenantsTreeView();
-          }
-        });
-      },
-    ),
-    vscode.commands.registerCommand(
-      `${commandPrefix}.saveConfig`,
-      async (config: MonitoringConfiguration) => {
-        await saveMoniotringConfiguration(config).catch(err => {
+      EnvironmentCommand.SaveConfig,
+      (config: MonitoringConfiguration) =>
+        saveMoniotringConfiguration(config).catch(err => {
           logger.notify(
             "ERROR",
             `Unable to save configuration. ${(err as Error).message}`,
             ...logTrace,
             "saveMoniotringConfiguration",
           );
-        });
-      },
+        }),
     ),
     vscode.commands.registerCommand(
-      `${commandPrefix}.openExtension`,
-      async (extension: DeployedExtension) => {
-        await openExtension(extension).catch(err => {
+      EnvironmentCommand.OpenExtension,
+      (extension: DeployedExtension) =>
+        openExtension(extension).catch(err => {
           logger.warn(
             `Couldn't open URL for extension ${extension.id}: ${(err as Error).message}`,
             ...logTrace,
             "openExtension",
           );
-        });
-      },
+        }),
     ),
   ];
 };
@@ -292,13 +278,12 @@ async function addEnvironment() {
     ignoreFocusOut: true,
   });
 
-  const current = await vscode.window.showQuickPick(["Yes", "No"], {
+  const current = await showQuickPickConfirm({
     title: "Set this as your currrent environment?",
-    canPickMany: false,
     ignoreFocusOut: true,
   });
 
-  await registerTenant(url, apiUrl, encryptToken(token), name, current === "Yes");
+  await registerTenant(url, apiUrl, encryptToken(token), name, current === ConfirmOption.Yes);
 }
 
 /**
@@ -360,13 +345,12 @@ async function editEnvironment(environment: DynatraceTenant) {
     ignoreFocusOut: true,
   });
 
-  const current = await vscode.window.showQuickPick(["Yes", "No"], {
+  const current = await showQuickPickConfirm({
     title: "Set this as your currrent environment?",
-    canPickMany: false,
     ignoreFocusOut: true,
   });
 
-  await registerTenant(url, apiUrl, encryptToken(token), name, current === "Yes");
+  await registerTenant(url, apiUrl, encryptToken(token), name, current === ConfirmOption.Yes);
 }
 
 /**
@@ -376,13 +360,12 @@ async function editEnvironment(environment: DynatraceTenant) {
  * @returns
  */
 async function deleteEnvironment(environment: DynatraceTenant) {
-  const confirm = await vscode.window.showQuickPick(["Yes", "No"], {
+  const confirm = await showQuickPickConfirm({
     title: `Delete environment ${environment.label}?`,
-    canPickMany: false,
     ignoreFocusOut: true,
   });
 
-  if (confirm !== "Yes") {
+  if (confirm !== ConfirmOption.Yes) {
     logger.notify("INFO", "Operation cancelled.", ...logTrace, "deleteEnvironment");
     return;
   }
@@ -408,10 +391,9 @@ async function changeConnection() {
     return;
   }
   const currentEnv = environments.find(e => e.current);
-  const choice = await vscode.window.showQuickPick(
+  const choice = await showQuickPick(
     environments.map(e => (e.current ? `⭐ ${e.label}` : e.label)),
     {
-      canPickMany: false,
       ignoreFocusOut: true,
       title: "Connect to a different environment",
       placeHolder: "Select an environment from the list",
@@ -424,14 +406,14 @@ async function changeConnection() {
     if (environment) {
       const { url, apiUrl, token, label } = environment;
       await registerTenant(url, apiUrl, token, label, true);
-      showConnectedStatusBar(environment).catch(() => {});
+      showConnectedStatusBar(environment).catch(Utils.noOp);
       return;
     }
   }
 
   // If no choice made, persist the current connection if any
   if (currentEnv) {
-    showConnectedStatusBar(currentEnv).catch(() => {});
+    showConnectedStatusBar(currentEnv).catch(Utils.noOp);
   }
 }
 
@@ -464,11 +446,7 @@ async function editMonitoringConfiguration(config: MonitoringConfiguration): Pro
     // Push the changes
     response =>
       config.dt.extensionsV2
-        .putMonitoringConfiguration(
-          config.extensionName,
-          config.id,
-          JSON.parse(response) as Record<string, unknown>,
-        )
+        .putMonitoringConfiguration(config.extensionName, config.id, parseJSON(response))
         .then(() => {
           logger.notify("INFO", "Configuration updated successfully.", ...fnLogTrace);
           return true;
@@ -499,13 +477,12 @@ async function editMonitoringConfiguration(config: MonitoringConfiguration): Pro
  */
 async function deleteMonitoringConfiguration(config: MonitoringConfiguration): Promise<boolean> {
   const fnLogTrace = [...logTrace, "deleteMonitoringConfiguration"];
-  const confirm = await vscode.window.showQuickPick(["Yes", "No"], {
+  const confirm = await showQuickPickConfirm({
     title: `Delete configuration ${config.label}?`,
-    canPickMany: false,
     ignoreFocusOut: true,
   });
 
-  if (confirm !== "Yes") {
+  if (confirm !== ConfirmOption.Yes) {
     logger.notify("INFO", "Operation cancelled.", ...fnLogTrace);
     return false;
   }
@@ -556,14 +533,14 @@ async function addMonitoringConfiguration(extension: DeployedExtension) {
       // If there are config files
       if (configFiles.length > 0) {
         // Choose whether configuration comes from file or new content
-        const choice = await vscode.window.showQuickPick([
+        const choice = await showQuickPick([
           ...configFiles.map(file => {
             const filePath = path.join(configDir, file);
-            const config =
+            const config: MinimalConfiguration =
               file === "simulator.json"
                 ? // Simulator JSON has a list of configs
-                  (JSON.parse(readFileSync(filePath).toString()) as MinimalConfiguration[])[0]
-                : (JSON.parse(readFileSync(filePath).toString()) as MinimalConfiguration);
+                  parseJSON<MinimalConfiguration[]>(readFileSync(filePath).toString())[0]
+                : parseJSON(readFileSync(filePath).toString());
             return {
               label: `From file ${file}`,
               detail: `Description: ${config.value.description}; ${
@@ -584,8 +561,8 @@ async function addMonitoringConfiguration(extension: DeployedExtension) {
         if ("filePath" in choice) {
           configObject = choice.filePath.endsWith("simulator.json")
             ? // Simulator JSON has a list of configs
-              (JSON.parse(readFileSync(choice.filePath).toString()) as MinimalConfiguration[])[0]
-            : (JSON.parse(readFileSync(choice.filePath).toString()) as MinimalConfiguration);
+              parseJSON<MinimalConfiguration[]>(readFileSync(choice.filePath).toString())[0]
+            : parseJSON(readFileSync(choice.filePath).toString());
         }
       }
     }
@@ -606,13 +583,13 @@ async function addMonitoringConfiguration(extension: DeployedExtension) {
       "once you save and close this tab.";
 
     // Allow the user to make changes
-    configObject = JSON.parse(
+    configObject = parseJSON(
       await getConfigurationDetailsViaFile(
         headerContent,
         JSON.stringify(configTemplate, undefined, 4),
         false,
       ),
-    ) as MinimalConfiguration;
+    );
   }
 
   // Finally, create the configuration

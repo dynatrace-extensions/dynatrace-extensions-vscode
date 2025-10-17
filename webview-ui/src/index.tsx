@@ -16,18 +16,12 @@
 
 import React from "react";
 import ReactDOM from "react-dom/client";
-import styled, { createGlobalStyle } from "styled-components";
+import { createGlobalStyle } from "styled-components";
 import App from "./app/App";
-import { PanelData } from "./app/interfaces/general";
-import { DtRuntime, mockDtRuntime } from "./mock-dt-runtime";
+import { PanelData } from "@common";
+import { mockDtRuntime } from "./mock-dt-runtime";
 import { AppRoot } from "@dynatrace/strato-components";
 import { ToastContainer } from "@dynatrace/strato-components-preview";
-
-declare global {
-  interface Window extends DtRuntime {
-    panelData: PanelData;
-  }
-}
 
 // A map of Dynatrace theme variables to equivalent VSCode ones.
 const THEME_VARIABLES: { dtVar: string; vsVar: string }[] = [

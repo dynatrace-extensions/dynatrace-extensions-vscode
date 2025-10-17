@@ -20,16 +20,18 @@
 
 import { ExecOptions } from "child_process";
 import { existsSync, readdirSync, readFileSync } from "fs";
-import * as path from "path";
+import path from "path";
+import { GlobalCommand, VSCodeCommand } from "@common";
 import axios from "axios";
-import * as vscode from "vscode";
+import vscode from "vscode";
 import { getActivationContext } from "../extension";
 import { getConnectedTenant } from "../treeViews/tenantsTreeView";
 import { getDiagnostics } from "./diagnostics";
 import { getExtensionFilePath, resolveRealPath } from "./fileSystem";
 import { setHttpsAgent } from "./general";
-import * as logger from "./logging";
+import logger from "./logging";
 import { runCommand } from "./subprocesses";
+import { ConfirmOption, showQuickPickConfirm } from "./vscode";
 
 const logTrace = ["utils", "conditionCheckers"];
 
@@ -102,7 +104,7 @@ export async function checkWorkspaceOpen(suppressMessaging: boolean = false): Pr
         .showErrorMessage("You must be inside a workspace to use this command.", "Open folder")
         .then(async opt => {
           if (opt === "Open folder") {
-            await vscode.commands.executeCommand("vscode.openFolder");
+            await vscode.commands.executeCommand(VSCodeCommand.OpenFolder);
           }
         });
     }
@@ -156,13 +158,12 @@ export async function checkOverwriteCertificates(): Promise<boolean> {
   const certsDir = path.join(storageUri, "certificates");
   if (existsSync(certsDir)) {
     if (existsSync(path.join(certsDir, "dev.pem")) || existsSync(path.join(certsDir, "ca.pem"))) {
-      const choice = await vscode.window.showQuickPick(["Yes", "No"], {
-        canPickMany: false,
+      const choice = await showQuickPickConfirm({
         title: "Workspace already has certificates.",
         placeHolder: "Would you like to generate new ones?",
         ignoreFocusOut: true,
       });
-      if (!choice || choice === "No") {
+      if (choice !== ConfirmOption.Yes) {
         status = false;
       }
     }
@@ -221,7 +222,7 @@ export async function checkCertificateExists(type: "ca" | "dev" | "all"): Promis
       .then(async opt => {
         switch (opt) {
           case "Generate new ones":
-            await vscode.commands.executeCommand("dynatrace-extensions.generateCertificates");
+            await vscode.commands.executeCommand(GlobalCommand.GenerateCertificates);
             break;
           case "Open settings":
             await vscode.commands.executeCommand(

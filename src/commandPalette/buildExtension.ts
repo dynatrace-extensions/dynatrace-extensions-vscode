@@ -23,10 +23,11 @@ import {
   unlinkSync,
   writeFileSync,
 } from "fs";
-import * as path from "path";
+import path from "path";
+import { GlobalCommand } from "@common";
 import { glob } from "glob";
 import JSZip from "jszip";
-import * as vscode from "vscode";
+import vscode from "vscode";
 import { Dynatrace } from "../dynatrace-api/dynatrace";
 import { DynatraceAPIError } from "../dynatrace-api/errors";
 import { getActivationContext } from "../extension";
@@ -50,9 +51,10 @@ import {
   resolveRealPath,
 } from "../utils/fileSystem";
 import { loopSafeWait } from "../utils/general";
-import * as logger from "../utils/logging";
+import logger from "../utils/logging";
 import { getPythonVenvOpts } from "../utils/otherExtensions";
 import { runCommand } from "../utils/subprocesses";
+import { ConfirmOption, showConfirmationInformationMessage } from "../utils/vscode";
 
 const logTrace = ["commandPalette", "buildExtension"];
 
@@ -155,17 +157,13 @@ async function buildExtension(filePath?: string, fastMode: boolean = false) {
   // Follow-up is carried out separately to keep notification messages cleaner
   if (promptForUpload) {
     logger.debug("Follow-up flow available. Prompting for upload.", ...fnLogTrace);
-    await vscode.window
-      .showInformationMessage(
-        "Extension built successfully. Would you like to upload it to Dynatrace?",
-        "Yes",
-        "No",
-      )
-      .then(async choice => {
-        if (choice === "Yes") {
-          await vscode.commands.executeCommand("dynatrace-extensions.uploadExtension");
-        }
-      });
+    await showConfirmationInformationMessage(
+      "Extension built successfully. Would you like to upload it to Dynatrace?",
+    ).then(async choice => {
+      if (choice === ConfirmOption.Yes) {
+        await vscode.commands.executeCommand(GlobalCommand.UploadExtension);
+      }
+    });
   }
 }
 
@@ -277,7 +275,7 @@ const shouldIncrementVersion = async (
   const deployedVersions = await dt.extensionsV2
     .listVersions(extensionName, signal)
     .then(ext => ext.map(e => e.version))
-    .catch(() => [] as string[]);
+    .catch((): string[] => []);
 
   return deployedVersions.includes(extensionVersion);
 };
@@ -533,10 +531,11 @@ const uploadExtension = async (fileName: string, dt: Dynatrace, signal: AbortSig
   do {
     [uploadStatus, lastError] = await dt.extensionsV2
       .upload(file, false, signal)
-      .then(() => ["success", undefined] as [string, undefined])
-      .catch(
-        (err: DynatraceAPIError) => [err.errorParams.message, err] as [string, DynatraceAPIError],
-      );
+      .then((): [string, undefined] => ["success", undefined])
+      .catch((err: DynatraceAPIError): [string, DynatraceAPIError] => [
+        err.errorParams.message,
+        err,
+      ]);
     // Previous version deletion may not be complete yet, loop until done.
     if (uploadStatus.startsWith("Extension versions quantity limit")) {
       await loopSafeWait(1000);

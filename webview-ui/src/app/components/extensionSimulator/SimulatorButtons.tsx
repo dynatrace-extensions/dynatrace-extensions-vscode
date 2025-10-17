@@ -24,8 +24,7 @@ import {
   WarningIcon,
 } from "@dynatrace/strato-icons";
 import React from "react";
-import { SIMULATOR_START_CMD, SIMULATOR_STOP_CMD } from "../../constants/constants";
-import { SimulationConfig, SimulatorStatus } from "../../interfaces/simulator";
+import { SimulationConfig, SimulatorStatus, SimulatorCommand } from "@common";
 import { triggerCommand } from "../../utils/app-utils";
 
 interface StateButtonProps {
@@ -42,11 +41,11 @@ export const StateButton = ({
   showMandatoryChecks,
 }: StateButtonProps) => {
   switch (simulatorStatus) {
-    case "RUNNING":
+    case SimulatorStatus.Running:
       return (
         <Tooltip text='Stop the simulation'>
           <Button
-            onClick={() => triggerCommand(SIMULATOR_STOP_CMD)}
+            onClick={triggerCommand.bind(undefined, SimulatorCommand.Stop)}
             variant='accent'
             color='primary'
           >
@@ -56,11 +55,11 @@ export const StateButton = ({
           </Button>
         </Tooltip>
       );
-    case "READY":
+    case SimulatorStatus.Ready:
       return (
         <Tooltip text='Start the simulation'>
           <Button
-            onClick={() => triggerCommand(SIMULATOR_START_CMD, currentConfig)}
+            onClick={triggerCommand.bind(undefined, SimulatorCommand.Start, currentConfig)}
             variant='accent'
             color='primary'
           >
@@ -70,17 +69,17 @@ export const StateButton = ({
           </Button>
         </Tooltip>
       );
-    case "NOTREADY":
+    case SimulatorStatus.NotReady:
       return (
         <Tooltip text='There are issues with your simulator configuration. Check your settings.'>
-          <Button onClick={() => showSettings(true)} variant='accent' color='warning'>
+          <Button onClick={showSettings.bind(undefined, true)} variant='accent' color='warning'>
             <Button.Prefix>
               <WarningIcon />
             </Button.Prefix>
           </Button>
         </Tooltip>
       );
-    case "CHECKING":
+    case SimulatorStatus.Checking:
       return (
         <Tooltip text='Checking your configuration'>
           <Button variant='emphasized' color='primary' disabled>
@@ -88,10 +87,14 @@ export const StateButton = ({
           </Button>
         </Tooltip>
       );
-    case "UNSUPPORTED":
+    case SimulatorStatus.Unsupported:
       return (
         <Tooltip text="One or more mandatory settings are not defined. Click to see what's wrong.">
-          <Button onClick={() => showMandatoryChecks(true)} variant='accent' color='critical'>
+          <Button
+            onClick={showMandatoryChecks.bind(undefined, true)}
+            variant='accent'
+            color='critical'
+          >
             <Button.Prefix>
               <CriticalIcon />
             </Button.Prefix>
@@ -105,7 +108,7 @@ export const StateButton = ({
 
 export const SettingsButton = ({ showSettings }: { showSettings: (state: boolean) => void }) => (
   <Tooltip text='Settings'>
-    <Button onClick={() => showSettings(true)} variant='default' color='primary'>
+    <Button onClick={showSettings.bind(undefined, true)} variant='default' color='primary'>
       <Button.Prefix>
         <SettingIcon />
       </Button.Prefix>

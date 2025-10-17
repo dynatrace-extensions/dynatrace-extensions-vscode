@@ -27,22 +27,17 @@ import {
   statSync,
   writeFileSync,
 } from "fs";
-import * as os from "os";
-import * as path from "path";
+import os from "os";
+import path from "path";
+import { ExecutionSummary, RemoteTarget } from "@common";
 import { copySync } from "fs-extra";
 import { glob } from "glob";
 import JSZip from "jszip";
-import * as vscode from "vscode";
+import vscode from "vscode";
 import { getActivationContext } from "../extension";
-import {
-  ExecutionSummary,
-  LocalExecutionSummary,
-  RemoteExecutionSummary,
-  RemoteTarget,
-} from "../interfaces/simulator";
 import { DynatraceTenantDto, ExtensionWorkspaceDto } from "../interfaces/treeViews";
-import { notify } from "./logging";
-import * as logger from "./logging";
+import { parseJSON } from "./jsonParsing";
+import logger from "./logging";
 
 const logTrace = ["utils", "fileSystem"];
 
@@ -185,7 +180,7 @@ export async function registerWorkspace() {
  * Gets metadata of all extension workspaces currently registered in the global storage.
  */
 export function getAllWorkspaces(): ExtensionWorkspaceDto[] {
-  return JSON.parse(readFileSync(getWorkspacesJsonPath()).toString()) as ExtensionWorkspaceDto[];
+  return parseJSON(readFileSync(getWorkspacesJsonPath()).toString());
 }
 
 /**
@@ -208,7 +203,7 @@ export function findWorkspace(
  * Gets metadata of all Dynatrace tenants currently registered in the global storage.
  */
 export function getAllTenants(): DynatraceTenantDto[] {
-  return JSON.parse(readFileSync(getTenantsJsonPath()).toString()) as DynatraceTenantDto[];
+  return parseJSON(readFileSync(getTenantsJsonPath()).toString());
 }
 
 /**
@@ -302,7 +297,7 @@ export async function removeWorkspace(workspaceId: string) {
 /**
  * Writes an extension simulator summary to the global storage.
  */
-export function registerSimulatorSummary(summary: LocalExecutionSummary | RemoteExecutionSummary) {
+export function registerSimulatorSummary(summary: ExecutionSummary) {
   const summaries = getSimulatorSummaries();
   summaries.push(summary);
   writeFileSync(getSummariesJsonPath(), JSON.stringify(summaries));
@@ -311,18 +306,13 @@ export function registerSimulatorSummary(summary: LocalExecutionSummary | Remote
 /**
  * Gets all extension simulator summaries from the global storage.
  */
-export function getSimulatorSummaries(): (LocalExecutionSummary | RemoteExecutionSummary)[] {
+export function getSimulatorSummaries(): ExecutionSummary[] {
   const context = getActivationContext();
   const summariesJson = path.join(context.globalStorageUri.fsPath, "summaries.json");
-  return (
-    JSON.parse(readFileSync(summariesJson).toString()) as (
-      | LocalExecutionSummary
-      | RemoteExecutionSummary
-    )[]
-  ).map(s => ({
+  return parseJSON<ExecutionSummary[]>(readFileSync(summariesJson).toString()).map(s => ({
     ...s,
     startTime: new Date(s.startTime),
-  })) as (LocalExecutionSummary | RemoteExecutionSummary)[];
+  }));
 }
 
 /**
@@ -417,7 +407,7 @@ export function deleteSimulatorTarget(target: RemoteTarget) {
  * Fetches all extension simulator summaries from the global storage.
  */
 export function getSimulatorTargets(): RemoteTarget[] {
-  return JSON.parse(readFileSync(getTargetsJsonPath()).toString()) as RemoteTarget[];
+  return parseJSON(readFileSync(getTargetsJsonPath()).toString());
 }
 
 /**
@@ -809,7 +799,7 @@ export async function migrateFromLegacyExtension() {
         });
     },
   );
-  notify("INFO", "Migration from legacy version complete.");
+  logger.notify("INFO", "Migration from legacy version complete.");
 }
 
 /**

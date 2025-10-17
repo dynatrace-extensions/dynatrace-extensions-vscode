@@ -14,17 +14,16 @@
   limitations under the License.
  */
 
-import * as vscode from "vscode";
+import { PanelDataType, ViewType, MetricSeriesCollection, CodeLensCommand } from "@common";
+import vscode from "vscode";
 import { Dynatrace } from "../../dynatrace-api/dynatrace";
 import { DynatraceAPIError } from "../../dynatrace-api/errors";
-import { MetricSeriesCollection } from "../../dynatrace-api/interfaces/metrics";
 import { Entity } from "../../dynatrace-api/interfaces/monitoredEntities";
 import { ExtensionStub } from "../../interfaces/extensionMeta";
 import { getDynatraceClient } from "../../treeViews/tenantsTreeView";
 import { checkTenantConnected } from "../../utils/conditionCheckers";
-import * as logger from "../../utils/logging";
+import logger from "../../utils/logging";
 import { getBlockItemIndexAtLine, getParentBlocks } from "../../utils/yamlParsing";
-import { REGISTERED_PANELS } from "../../webviews/webview-panel-manager";
 import { renderPanel } from "../../webviews/webview-utils";
 import { updateSelectorValidationStatus } from "../selectorCodeLens";
 
@@ -39,7 +38,7 @@ export interface ValidationStatus {
 export const registerSelectorCommands = () => {
   return [
     vscode.commands.registerCommand(
-      "dynatrace-extensions.codelens.validateSelector",
+      CodeLensCommand.ValidateSelector,
       async (selector: string, type: "metric" | "entity") => {
         if (await checkTenantConnected()) {
           const dtClient = await getDynatraceClient();
@@ -51,7 +50,7 @@ export const registerSelectorCommands = () => {
       },
     ),
     vscode.commands.registerCommand(
-      "dynatrace-extensions.codelens.runSelector",
+      CodeLensCommand.RunSelector,
       async (selector: string, type: "metric" | "entity") => {
         const updateCallback = (checkedSelector: string, status: ValidationStatus) =>
           updateSelectorValidationStatus(type, checkedSelector, status);
@@ -87,30 +86,28 @@ export async function validateSelector(
   if (selectorType === "metric") {
     return dt.metrics
       .query(selector)
-      .then(() => ({ status: "valid" }) as ValidationStatus)
+      .then((): ValidationStatus => ({ status: "valid" }))
       .catch(
-        (err: DynatraceAPIError) =>
-          ({
-            status: "invalid",
-            error: {
-              code: err.errorParams.code,
-              message: err.errorParams.message,
-            },
-          }) as ValidationStatus,
-      );
-  }
-  return dt.entitiesV2
-    .list(selector)
-    .then(() => ({ status: "valid" }) as ValidationStatus)
-    .catch(
-      (err: DynatraceAPIError) =>
-        ({
+        (err: DynatraceAPIError): ValidationStatus => ({
           status: "invalid",
           error: {
             code: err.errorParams.code,
             message: err.errorParams.message,
           },
-        }) as ValidationStatus,
+        }),
+      );
+  }
+  return dt.entitiesV2
+    .list(selector)
+    .then((): ValidationStatus => ({ status: "valid" }))
+    .catch(
+      (err: DynatraceAPIError): ValidationStatus => ({
+        status: "invalid",
+        error: {
+          code: err.errorParams.code,
+          message: err.errorParams.message,
+        },
+      }),
     );
 }
 
@@ -137,8 +134,8 @@ export async function runSelector(
     if (selectorType === "metric") {
       await dt.metrics.query(selector, "5m").then((res: MetricSeriesCollection[]) => {
         statusCallback(selector, { status: "valid" });
-        renderPanel(REGISTERED_PANELS.METRIC_RESULTS, "Metric selector results", {
-          dataType: "METRIC_RESULTS",
+        renderPanel(ViewType.MetricResults, "Metric selector results", {
+          dataType: PanelDataType.MetricResults,
           data: res,
         });
       });

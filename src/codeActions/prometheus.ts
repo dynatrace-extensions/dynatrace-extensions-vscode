@@ -14,7 +14,7 @@
   limitations under the License.
  */
 
-import * as vscode from "vscode";
+import vscode from "vscode";
 import { ExtensionStub } from "../interfaces/extensionMeta";
 
 import { getCachedParsedExtension, getCachedPrometheusData } from "../utils/caching";
@@ -23,20 +23,9 @@ import {
   getPrometheusLabelKeys,
   getPrometheusMetricKeys,
 } from "../utils/extensionParsing";
+import { createSingletonProvider } from "../utils/singleton";
 import { getBlockItemIndexAtLine, getParentBlocks } from "../utils/yamlParsing";
 import { buildMetricMetadataSnippet, indentSnippet } from "./utils/snippetBuildingUtils";
-
-/**
- * Provides singleton access to the PrometheusActionProvider.
- */
-export const getPrometheusActionProvider = (() => {
-  let instance: PrometheusActionProvider | undefined;
-
-  return () => {
-    instance = instance === undefined ? new PrometheusActionProvider() : instance;
-    return instance;
-  };
-})();
 
 /**
  * Provider for Code Actions that work with scraped Prometheus data to automatically
@@ -245,11 +234,7 @@ class PrometheusActionProvider implements vscode.CodeActionProvider {
     extension: ExtensionStub,
   ): vscode.CodeAction[] {
     const codeActions: vscode.CodeAction[] = [];
-    const datasourceMetrics = getMetricsFromDataSource(extension, true) as {
-      key: string;
-      type: string;
-      value: string;
-    }[];
+    const datasourceMetrics = getMetricsFromDataSource(extension, true);
     const metadataMetrics = extension.metrics ? extension.metrics.map(m => m.key) : [];
 
     const metricsToInsert = datasourceMetrics
@@ -315,6 +300,11 @@ class PrometheusActionProvider implements vscode.CodeActionProvider {
     return codeActions;
   }
 }
+
+/**
+ * Provides singleton access to the PrometheusActionProvider.
+ */
+export const getPrometheusActionProvider = createSingletonProvider(PrometheusActionProvider);
 
 /**
  * Splits a metric key on underscore ("_") and puts together all parts with first

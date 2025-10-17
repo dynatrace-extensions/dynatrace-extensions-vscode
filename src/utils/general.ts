@@ -20,8 +20,8 @@
 
 import { readFileSync } from "fs";
 import { globalAgent } from "https";
-import * as vscode from "vscode";
-import * as logger from "./logging";
+import vscode from "vscode";
+import logger from "./logging";
 
 /**
  * Loop-safe function to make use of setTimeout
@@ -31,62 +31,35 @@ export async function loopSafeWait(duration: number) {
 }
 
 type WaitOptions = {
-  interval: number;
-  timeout: number;
-  waitFirst: boolean;
+  interval?: number;
+  timeout?: number;
+  waitFirst?: boolean;
 };
 
-const defaultWaitOptions: WaitOptions = {
-  interval: 50,
-  timeout: Number.POSITIVE_INFINITY,
-  waitFirst: true,
-};
-
-export function waitForCondition(
+export async function waitForCondition(
   condition: () => boolean | PromiseLike<boolean> | Thenable<boolean>,
-  options?: Partial<WaitOptions>,
-) {
-  const { interval, timeout, waitFirst } = {
-    ...defaultWaitOptions,
-    ...options,
+  { interval = 50, timeout = Number.POSITIVE_INFINITY, waitFirst = true }: WaitOptions = {},
+): Promise<void> {
+  const startTime = Date.now();
+
+  const checkCondition = async () => {
+    const result = await condition();
+
+    if (result) {
+      return;
+    } else if (Date.now() - startTime >= timeout) {
+      throw new Error(`Timeout after ${timeout} ms`);
+    } else {
+      await loopSafeWait(interval);
+      return checkCondition();
+    }
   };
 
-  return new Promise<void>((resolve, reject) => {
-    const startTime = Date.now();
+  if (waitFirst) {
+    await loopSafeWait(interval);
+  }
 
-    const checkCondition = () => {
-      const result = condition();
-
-      if (typeof result === "object" && "then" in result) {
-        (result as PromiseLike<boolean>).then(
-          conditionResult => {
-            if (conditionResult) {
-              resolve();
-            } else if (Date.now() - startTime >= timeout) {
-              reject(new Error(`Timeout after ${timeout} ms`));
-            } else {
-              setTimeout(checkCondition, interval);
-            }
-          },
-          err => {
-            reject(err);
-          },
-        );
-      } else if (result) {
-        resolve();
-      } else if (Date.now() - startTime >= timeout) {
-        reject(new Error(`Timeout after ${timeout} ms`));
-      } else {
-        setTimeout(checkCondition, interval);
-      }
-    };
-
-    if (waitFirst) {
-      setTimeout(checkCondition, interval);
-    } else {
-      checkCondition();
-    }
-  });
+  return checkCondition();
 }
 
 interface TenantConnectivitySettings {
@@ -103,13 +76,12 @@ export const setHttpsAgent = (baseUrl: string) => {
   let caFile = "";
   let disableSSL = false;
 
-  let configList = vscode.workspace
-    .getConfiguration("dynatraceExtensions", null)
-    .get<TenantConnectivitySettings[]>("tenantConnectivitySettings", []);
-
-  // The defaultValue in vscode's .get method is buggy. Returns undefined if not found.
-  // eslint-disable-next-line
-  configList = configList === undefined ? [] : configList.filter(cfg => baseUrl.startsWith(cfg.tenantUrl));
+  const configList = (
+    vscode.workspace
+      .getConfiguration("dynatraceExtensions", null)
+      // The defaultValue in vscode's .get method is buggy. Returns undefined if not found.
+      .get<TenantConnectivitySettings[]>("tenantConnectivitySettings", []) ?? []
+  ).filter(cfg => baseUrl.startsWith(cfg.tenantUrl));
 
   if (configList.length > 0) {
     caFile = configList[0].certificatePath ?? "";

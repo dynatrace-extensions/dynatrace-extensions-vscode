@@ -14,24 +14,14 @@
   limitations under the License.
  */
 
-import * as vscode from "vscode";
+import { CodeLensCommand, WmiQueryResult } from "@common";
+import vscode from "vscode";
 import { getCachedWmiStatus, setCachedWmiStatus, setCachedWmiQueryResult } from "../utils/caching";
-import * as logger from "../utils/logging";
+import logger from "../utils/logging";
+import { createSingletonProvider } from "../utils/singleton";
 import { getBlockRange } from "../utils/yamlParsing";
 import { ValidationStatus } from "./utils/selectorUtils";
-import { WmiQueryResult, runWMIQuery } from "./utils/wmiUtils";
-
-/**
- * Provides singleton access to the WmiCodeLensProvider
- */
-export const getWmiCodeLensProvider = (() => {
-  let instance: WmiCodeLensProvider | undefined;
-
-  return () => {
-    instance = instance === undefined ? new WmiCodeLensProvider() : instance;
-    return instance;
-  };
-})();
+import { runWMIQuery } from "./utils/wmiUtils";
 
 /**
  * Implementation of a Code Lens provider for WMI Queries. It creates two lenses, for executing a
@@ -45,18 +35,16 @@ class WmiCodeLensProvider implements vscode.CodeLensProvider {
   private readonly regex = new RegExp("query:", "g");
 
   constructor() {
-    this.registerCommands();
-  }
-
-  private registerCommands() {
-    const commandId = "dynatrace-extensions.codelens.runWMIQuery";
-    vscode.commands.registerCommand(commandId, async (query: string) => {
+    vscode.commands.registerCommand(CodeLensCommand.RunWMIQuery, (query: string) =>
       runWMIQuery(query, (checkedQuery, status, result) => {
         this.updateQueryData(checkedQuery, status, result);
       }).catch(err =>
-        logger.error(`Running WMI Query failed unexpectedly. ${(err as Error).message}`, commandId),
-      );
-    });
+        logger.error(
+          `Running WMI Query failed unexpectedly. ${(err as Error).message}`,
+          CodeLensCommand.RunWMIQuery,
+        ),
+      ),
+    );
   }
 
   public async provideCodeLenses(document: vscode.TextDocument): Promise<vscode.CodeLens[]> {
@@ -184,6 +172,11 @@ class WmiQueryStatusLens extends vscode.CodeLens {
 }
 
 /**
+ * Provides singleton access to the WmiCodeLensProvider
+ */
+export const getWmiCodeLensProvider = createSingletonProvider(WmiCodeLensProvider);
+
+/**
  * Implements a Code Lens that can be used to execute a WMI Query
  */
 class WmiQueryExecutionLens extends vscode.CodeLens {
@@ -193,7 +186,7 @@ class WmiQueryExecutionLens extends vscode.CodeLens {
     super(range, {
       title: "▶️ Run WMI Query",
       tooltip: "Run a WMI query on this host",
-      command: "dynatrace-extensions.codelens.runWMIQuery",
+      command: CodeLensCommand.RunWMIQuery,
       arguments: [query],
     });
     this.query = query;

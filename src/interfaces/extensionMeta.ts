@@ -14,6 +14,8 @@
   limitations under the License.
  */
 
+import { UtilTypes } from "@common";
+
 export type DatasourceName =
   | "snmp"
   | "wmi"
@@ -28,14 +30,17 @@ export type DatasourceName =
   | "python"
   | "unsupported";
 
-export type DetailInjectionCardType =
-  | "ENTITIES_LIST"
-  | "CHART_GROUP"
-  | "MESSAGE"
-  | "LOGS"
-  | "EVENTS"
-  | "METRIC_TABLE"
-  | "INJECTIONS";
+export const DetailInjectionCardType = {
+  ENTITIES_LIST: "ENTITIES_LIST",
+  CHART_GROUP: "CHART_GROUP",
+  MESSAGE: "MESSAGE",
+  LOGS: "LOGS",
+  EVENTS: "EVENTS",
+  METRIC_TABLE: "METRIC_TABLE",
+  INJECTIONS: "INJECTIONS",
+} as const;
+// eslint-disable-next-line @typescript-eslint/no-redeclare
+export type DetailInjectionCardType = UtilTypes.ObjectValues<typeof DetailInjectionCardType>;
 
 interface TopologyStub {
   types?: TopologyType[];

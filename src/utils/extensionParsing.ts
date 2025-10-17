@@ -20,7 +20,7 @@
 
 import { FeatureSetDoc } from "../interfaces/extensionDocs";
 import { DatasourceGroup, DatasourceName, ExtensionStub } from "../interfaces/extensionMeta";
-import * as logger from "./logging";
+import logger from "./logging";
 
 const logTrace = ["utils", "extensionParsing"];
 
@@ -669,7 +669,12 @@ export function getAllMetricsByFeatureSet(extension: ExtensionStub): FeatureSetD
  * @param extension extension.yaml serialized as object
  * @returns list of metric keys and their types
  */
-export function getMetricsFromDataSource(extension: ExtensionStub, includeValues: boolean = false) {
+export function getMetricsFromDataSource<
+  T extends boolean,
+  U = (T extends true
+    ? { key: string; type: string; value: string }
+    : { key: string; type: string })[],
+>(extension: ExtensionStub, includeValues: T = false as T): U {
   const metrics: { key: string; type: string; value?: string }[] = [];
   const datasource = getExtensionDatasource(extension);
   datasource.forEach(group => {
@@ -701,7 +706,7 @@ export function getMetricsFromDataSource(extension: ExtensionStub, includeValues
     }
   });
 
-  return metrics;
+  return metrics as U;
 }
 
 /**
@@ -710,10 +715,10 @@ export function getMetricsFromDataSource(extension: ExtensionStub, includeValues
  * @param extension
  * @param includeValues
  */
-export function getDimensionsFromDataSource(
-  extension: ExtensionStub,
-  includeValues: boolean = false,
-) {
+export function getDimensionsFromDataSource<
+  T extends boolean = false,
+  U = (T extends true ? { key: string; value: string } : { key: string })[],
+>(extension: ExtensionStub, includeValues: T = false as T): U {
   const dimensions: { key: string; value?: string }[] = [];
   const datasource = getExtensionDatasource(extension);
   datasource.forEach(group => {
@@ -743,7 +748,7 @@ export function getDimensionsFromDataSource(
     }
   });
 
-  return dimensions;
+  return dimensions as U;
 }
 
 /**

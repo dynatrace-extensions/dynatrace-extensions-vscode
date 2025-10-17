@@ -15,8 +15,8 @@
  */
 
 import { readFileSync, writeFileSync } from "fs";
-import * as path from "path";
-import * as vscode from "vscode";
+import path from "path";
+import vscode from "vscode";
 import {
   AlertDefinition,
   AlertDoc,
@@ -31,7 +31,8 @@ import { getCachedParsedExtension } from "../utils/caching";
 import { checkWorkspaceOpen, isExtensionsWorkspace } from "../utils/conditionCheckers";
 import { getAllMetricsByFeatureSet } from "../utils/extensionParsing";
 import { getExtensionFilePath } from "../utils/fileSystem";
-import * as logger from "../utils/logging";
+import { parseJSON } from "../utils/jsonParsing";
+import logger from "../utils/logging";
 
 const logTrace = ["commandPalette", "createDocumentation"];
 
@@ -53,9 +54,9 @@ function extractAlerts(extension: ExtensionStub, extensionDir: string): AlertDoc
     return [];
   }
   return extension.alerts.map(pathEntry => {
-    const alert = JSON.parse(
+    const alert: AlertDefinition = parseJSON(
       readFileSync(path.join(extensionDir, pathEntry.path)).toString(),
-    ) as AlertDefinition;
+    );
 
     const alertCondition = alert.monitoringStrategy.alertCondition.toLowerCase();
     const violatingSamples = alert.monitoringStrategy.violatingSamples;
@@ -100,9 +101,9 @@ function extractDashboards(extension: ExtensionStub, extensionDir: string): Dash
     return [];
   }
   return extension.dashboards.map(pathEntry => {
-    const dashboard = JSON.parse(
+    const dashboard: DynatraceDashboard = parseJSON(
       readFileSync(path.join(extensionDir, pathEntry.path)).toString(),
-    ) as DynatraceDashboard;
+    );
 
     return {
       name: dashboard.dashboardMetadata.name,

@@ -14,9 +14,10 @@
   limitations under the License.
  */
 
-import * as vscode from "vscode";
+import vscode from "vscode";
 import { COUNT_METRIC_KEY_SUFFIX, GAUGE_METRIC_KEY_SUFFIX } from "../constants";
 import { getDiagnostics } from "../utils/diagnostics";
+import { createSingletonProvider } from "../utils/singleton";
 
 interface InsertOptions {
   editType: "insert";
@@ -34,18 +35,6 @@ interface DeleteOptions {
   editType: "delete";
   editRange: vscode.Range;
 }
-
-/**
- * Provides singleton access to the DiagnosticFixProvider
- */
-export const getDiagnosticFixProvider = (() => {
-  let instance: DiagnosticFixProvider | undefined;
-
-  return () => {
-    instance = instance === undefined ? new DiagnosticFixProvider() : instance;
-    return instance;
-  };
-})();
 
 /**
  * Provider for Code Actions that proposes fixes for Dynatrace Extensions Diagnostics
@@ -208,3 +197,8 @@ class DiagnosticFixProvider implements vscode.CodeActionProvider {
     return fixActions;
   }
 }
+
+/**
+ * Provides singleton access to the DiagnosticFixProvider
+ */
+export const getDiagnosticFixProvider = createSingletonProvider(DiagnosticFixProvider);

@@ -19,10 +19,10 @@
  ********************************************************************************/
 
 import { ExecOptions } from "child_process";
-import * as path from "path";
-import * as vscode from "vscode";
+import path from "path";
+import vscode from "vscode";
 import { ProposedExtensionAPI } from "../interfaces/python";
-import * as logger from "./logging";
+import logger from "./logging";
 
 const logTrace = ["utils", "otherExtensions"];
 
