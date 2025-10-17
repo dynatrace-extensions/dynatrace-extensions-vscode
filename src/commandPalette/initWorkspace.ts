@@ -74,13 +74,13 @@ const PROJECT_TYPE = {
     label: "Existing 2.0 Extension",
     detail: "Start by downloading an extension already deployed in your tenant.",
   },
-   exampleExtension: {
+  exampleExtension: {
     label: "Example 2.0 Extension",
     detail: "Start by using example extension for any datasource.",
   },
 } satisfies Record<string, vscode.QuickPickItem>;
 
-const PROJECT_TYPES = Object.values(PROJECT_TYPE); 
+const PROJECT_TYPES = Object.values(PROJECT_TYPE);
 const EXAMPLE_SELECTION = {
   python_example: {
     label: "Example Python Extension",
@@ -320,7 +320,7 @@ export async function initWorkspace(dt: Dynatrace, callback?: () => unknown) {
         case PROJECT_TYPE.existingExtension:
           await existingExtensionSetup(dt, rootPath);
           break;
-        case PROJECT_TYPES.exampleExtension:
+        case PROJECT_TYPE.exampleExtension:
           logger.debug("Prompting user for example selection", ...fnLogTrace);
           exampleType = await vscode.window.showQuickPick(Object.values(EXAMPLE_SELECTION), {
             canPickMany: false,
@@ -466,7 +466,7 @@ async function pythonExampleExtensionSetup(
       envOptions,
     );
 
-    notify("INFO", "Python example downloaded and unzipped successfully.", ...fnLogTrace);
+    logger.notify("INFO", "Python example downloaded and unzipped successfully.", ...fnLogTrace);
   }
   await changeSchemaExampleExtension(fnLogTrace);
 }
@@ -532,14 +532,14 @@ async function unzipExampleExtension(
               const fileContent = await file.async("nodebuffer");
 
               if (relativePath.endsWith(".zip")) {
-                const innerZip = await JSZip.loadAsync(fileContent);
+                const innerZip = await JSZip.loadAsync(Uint8Array.from(fileContent));
                 await extractZip(innerZip, rootPath);
               } else {
                 const basePath = filePath.split(path.sep).slice(0, -1).join(path.sep);
                 if (!existsSync(basePath)) {
                   mkdirSync(basePath, { recursive: true });
                 }
-                writeFileSync(filePath, fileContent);
+                writeFileSync(filePath, Uint8Array.from(fileContent));
               }
             }
           }
@@ -549,7 +549,7 @@ async function unzipExampleExtension(
           `Could not unzip file to ${rootPath}, it will have to be downloaded and unzipped manually from ${url}.`,
           ...fnLogTrace,
         );
-        notify(
+        logger.notify(
           "ERROR",
           `Could not unzip file. It will have to be downloaded and unzipped manually from: ${url}`,
         );
@@ -560,12 +560,16 @@ async function unzipExampleExtension(
       `Could not download repo, this will have to be manually downloaded from ${url}`,
       ...fnLogTrace,
     );
-    notify(
+    logger.notify(
       "ERROR",
       `Could not download files. They will have to be downloaded and unzipped manually from: ${url}`,
     );
   }
-  notify("INFO", `${dataSource} example downloaded and unzipped successfully.`, ...fnLogTrace);
+  logger.notify(
+    "INFO",
+    `${dataSource} example downloaded and unzipped successfully.`,
+    ...fnLogTrace,
+  );
 }
 
 /**
@@ -579,7 +583,7 @@ async function changeSchemaExampleExtension(fnLogTrace: string[]) {
   const context = getActivationContext();
   const schemaVersion: string | undefined = context.workspaceState.get<string>("schemaVersion");
   if (!schemaVersion) {
-    notify("ERROR", "Could not get schema");
+    logger.notify("ERROR", "Could not get schema");
     return false;
   }
   const mainSchema = vscode.Uri.file(
@@ -676,7 +680,9 @@ async function existingExtensionSetup(dt: Dynatrace, rootPath: string) {
         );
         if (whlPath[0]) {
           await extractZip(
-            await new JSZip().loadAsync(readFileSync(path.join(libPath, whlPath[0]))),
+            await new JSZip().loadAsync(
+              Uint8Array.from(readFileSync(path.join(libPath, whlPath[0]))),
+            ),
             rootPath,
           );
           rmSync(path.join(rootPath, `${moduleName}-${download.extension.version}.dist-info`), {
