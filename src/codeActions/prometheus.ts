@@ -23,7 +23,6 @@ import {
   getPrometheusLabelKeys,
   getPrometheusMetricKeys,
 } from "../utils/extensionParsing";
-import * as logger from "../utils/logging";
 import { getBlockItemIndexAtLine, getParentBlocks } from "../utils/yamlParsing";
 import { buildMetricMetadataSnippet, indentSnippet } from "./utils/snippetBuildingUtils";
 
