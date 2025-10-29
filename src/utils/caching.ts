@@ -156,6 +156,20 @@ const loadBaristaIcons = async () => {
     "https://raw.githubusercontent.com/dynatrace-oss/barista/master/docs/barista-icons/icons.json";
   const internalURL = "https://barista.lab.dynatrace.org/data/resources/icons.json";
 
+  if (
+    vscode.workspace
+      .getConfiguration("dynatraceExtensions", null)
+      .get<boolean>("disableExternalCalls", false)
+  ) {
+    logger.warn(
+      "Will not fetch Barista icons due to 'disableExternalCalls' setting",
+      ...logTrace,
+      "loadBaristaIcons",
+    );
+    baristaIcons = [];
+    return;
+  }
+
   let icons = await loadBaristaIconsFromUrl(internalURL);
   if (icons.length === 0) {
     icons = await loadBaristaIconsFromUrl(publicURL);

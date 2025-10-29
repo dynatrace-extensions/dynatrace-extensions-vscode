@@ -23,13 +23,14 @@ import { existsSync, mkdirSync, readFileSync, readdirSync, renameSync, writeFile
 import path from "path";
 import axios from "axios";
 import JSZip from "jszip";
+import vscode from "vscode";
 import { getActivationContext } from "../extension";
 import { setHttpsAgent } from "./general";
 import logger from "./logging";
 
 const logTrace = ["utils", "snmp"];
 const AG_MIB_VERSION = "1.281"; // For now, we hardcode this.
-const BASE_URL = "https://oid-rep.orange-labs.fr/get"; // URL to online OID Repository
+const BASE_URL = "https://oid-base.com/get"; // URL to online OID Repository
 
 export interface OidInformation {
   description?: string;
@@ -81,6 +82,14 @@ export async function downloadActiveGateMibFiles() {
   }
 
   // Download MIBs from our public repo
+  if (
+    vscode.workspace
+      .getConfiguration("dynatraceExtensions", null)
+      .get<boolean>("disableExternalCalls", false)
+  ) {
+    logger.warn("Skipping MIB download due to 'disableExternalCalls' setting", ...fnLogTrace);
+    return;
+  }
   logger.debug("Downloading MIBs to global storage", ...fnLogTrace);
   const zipUrl = `https://api.github.com/repos/dynatrace-extensions/snmp-mib-files/zipball/${AG_MIB_VERSION}`;
   setHttpsAgent(zipUrl);
@@ -170,7 +179,7 @@ function processOidData(details: string, oid?: string): OidInformation {
     status: statusMatches.length > 1 ? statusMatches[1] : undefined,
     description: descriptionMatches.length > 1 ? descriptionMatches[1] : undefined,
     index: indexMatches.length > 1 ? indexMatches[1] : undefined,
-    source: oid ? `https://oid-rep.orange-labs.fr/get/${oid}` : "Local MIB files",
+    source: oid ? `${BASE_URL}/get/${oid}` : "Local MIB files",
   };
 }
 
@@ -181,6 +190,15 @@ function processOidData(details: string, oid?: string): OidInformation {
  */
 export async function fetchOID(oid: string) {
   const fnLogTrace = [...logTrace, "fetchOID"];
+  if (
+    vscode.workspace
+      .getConfiguration("dynatraceExtensions", null)
+      .get<boolean>("disableExternalCalls", false)
+  ) {
+    logger.warn("Skipping OID fetch due to 'disableExternalCalls' setting", ...fnLogTrace);
+    return {};
+  }
+
   logger.debug(`Fetching OID ${oid} from online database`, ...fnLogTrace);
   setHttpsAgent(BASE_URL);
   return axios

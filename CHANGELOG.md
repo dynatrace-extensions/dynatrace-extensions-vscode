@@ -1,10 +1,15 @@
 # Change Log
 
-## Version 2.9.0 (07.10.2025)
+## Version 2.9.0 (unreleased)
 
 ### ✨ New in this version:
 
-- Added functionality for 'example' extensions to be selected when initializing a workspace. All of the repos are hosted on github: `https://github.com/dynatrace-extensions/{data source}-vscode-example` (i.e. https://github.com/dynatrace-extensions/snmp-vscode-example)
+- [Provide example extension.yamls for each data source](https://github.com/dynatrace-extensions/dynatrace-extensions-vscode/issues/276)
+- [Better extension starter templates](https://github.com/dynatrace-extensions/dynatrace-extensions-vscode/issues/174)
+- [New setting for disabling external calls](https://github.com/dynatrace-extensions/dynatrace-extensions-vscode/issues/275)
+
+### 🚀 Improved in this version:
+- [Improvements to Prometheus scraping](https://github.com/dynatrace-extensions/dynatrace-extensions-vscode/issues/274)
 
 ## Version 2.8.1 (30.07.2025)
 
