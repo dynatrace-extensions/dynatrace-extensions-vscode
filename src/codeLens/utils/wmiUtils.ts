@@ -15,9 +15,10 @@
  */
 
 import { exec } from "child_process";
+import { PanelDataType, ViewType, WmiQueryResult } from "@common";
 import { getCachedWmiQueryResult } from "../../utils/caching";
-import * as logger from "../../utils/logging";
-import { REGISTERED_PANELS } from "../../webviews/webview-panel-manager";
+import { parseJSON } from "../../utils/jsonParsing";
+import logger from "../../utils/logging";
 import { renderPanel } from "../../webviews/webview-utils";
 import { ValidationStatus } from "./selectorUtils";
 
@@ -27,14 +28,6 @@ const ignoreProperties =
   '"SystemProperties", "ClassPath", "Qualifiers", "Site", "Container", "PSComputerName", ' +
   '"__GENUS", "__CLASS", "__SUPERCLASS", "__DYNASTY", "__RELPATH", "__PROPERTY_COUNT", ' +
   '"__DERIVATION", "__SERVER", "__NAMESPACE", "__PATH")';
-
-export interface WmiQueryResult {
-  query: string;
-  responseTime: string;
-  error: boolean;
-  errorMessage?: string;
-  results: Array<Record<string, string | number>>;
-}
 
 /**
  * Runs a WMI query using PowerShell and returns the JSON format of the results
@@ -61,8 +54,8 @@ export async function runWMIQuery(
       oc.show();
     } else {
       updateCallback(query, { status: "valid" });
-      renderPanel(REGISTERED_PANELS.WMI_RESULTS, "WMI query results", {
-        dataType: "WMI_RESULT",
+      renderPanel(ViewType.WmiQueryResults, "WMI query results", {
+        dataType: PanelDataType.WmiQueryResults,
         data: cachedWmiQueryResult,
       });
     }
@@ -116,10 +109,9 @@ export async function runWMIQuery(
         }
 
         // Wrap single objects in an array for type safety
-        const jsonResponse = JSON.parse(stdout.startsWith("[") ? stdout : `[${stdout}]`) as Record<
-          string,
-          string | number
-        >[];
+        const jsonResponse: Record<string, string | number>[] = parseJSON(
+          stdout.startsWith("[") ? stdout : `[${stdout}]`,
+        );
 
         const responseTime = ((new Date().getTime() - startTime.getTime()) / 1000).toString();
         const queryResult = {
@@ -128,8 +120,8 @@ export async function runWMIQuery(
           results: jsonResponse,
           responseTime,
         };
-        renderPanel(REGISTERED_PANELS.WMI_RESULTS, "WMI query results", {
-          dataType: "WMI_RESULT",
+        renderPanel(ViewType.WmiQueryResults, "WMI query results", {
+          dataType: PanelDataType.WmiQueryResults,
           data: queryResult,
         });
         updateCallback(query, { status: "valid" }, queryResult);

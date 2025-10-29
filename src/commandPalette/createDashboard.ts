@@ -15,9 +15,8 @@
  */
 
 import { existsSync, mkdirSync, readFileSync, writeFileSync } from "fs";
-import * as path from "path";
-import * as vscode from "vscode";
-import { Dashboard } from "../dynatrace-api/interfaces/dashboards";
+import path from "path";
+import vscode from "vscode";
 import { ExtensionStub, DocumentDashboard } from "../interfaces/extensionMeta";
 import { getDynatraceClient } from "../treeViews/tenantsTreeView";
 import { getCachedParsedExtension } from "../utils/caching";
@@ -29,7 +28,9 @@ import {
 } from "../utils/dashboards";
 import { getEntityMetrics, getMetricDisplayName } from "../utils/extensionParsing";
 import { getExtensionFilePath } from "../utils/fileSystem";
-import * as logger from "../utils/logging";
+import { parseJSON } from "../utils/jsonParsing";
+import logger from "../utils/logging";
+import { ConfirmOption, showConfirmationInformationMessage, showQuickPick } from "../utils/vscode";
 
 export const createDashboardWorkflow = async () => {
   if ((await checkWorkspaceOpen()) && (await isExtensionsWorkspace())) {
@@ -549,25 +550,21 @@ async function createClassicDashboard(extensionFile: string, extension: Extensio
   // If we're connected to the API, prompt for upload.
   await getDynatraceClient().then(async dt => {
     if (dt) {
-      await vscode.window
-        .showInformationMessage(
-          "Would you like to upload the classic dashboard to Dynatrace?",
-          "Yes",
-          "No",
-        )
-        .then(choice => {
-          if (choice === "Yes") {
-            dt.dashboards
-              .post(JSON.parse(dashboardJson) as Dashboard)
-              .then(() => {
-                logger.notify("INFO", "Upload successful.", ...fnLogTrace);
-              })
-              .catch(err => {
-                outputChannel.replace(JSON.stringify(err, null, 2));
-                outputChannel.show();
-              });
-          }
-        });
+      await showConfirmationInformationMessage(
+        "Would you like to upload the classic dashboard to Dynatrace?",
+      ).then(choice => {
+        if (choice === ConfirmOption.Yes) {
+          dt.dashboards
+            .post(parseJSON(dashboardJson))
+            .then(() => {
+              logger.notify("INFO", "Upload successful.", ...fnLogTrace);
+            })
+            .catch(err => {
+              outputChannel.replace(JSON.stringify(err, null, 2));
+              outputChannel.show();
+            });
+        }
+      });
     }
   });
 }
@@ -661,15 +658,12 @@ export async function createOverviewDashboard() {
     return;
   }
 
-  const dbSelections = await vscode.window.showQuickPick(
-    ["Classic Dashboard", "Platform Document"],
-    {
-      canPickMany: true,
-      placeHolder: "Select one or both",
-      title: "Select Dashboard Type(s)",
-      ignoreFocusOut: true,
-    },
-  );
+  const dbSelections = await showQuickPick(["Classic Dashboard", "Platform Document"], {
+    canPickMany: true,
+    placeHolder: "Select one or both",
+    title: "Select Dashboard Type(s)",
+    ignoreFocusOut: true,
+  });
 
   if (!dbSelections || dbSelections.length === 0) {
     logger.error("No dashboard option was selected.", ...fnLogTrace);

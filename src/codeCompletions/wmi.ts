@@ -14,20 +14,9 @@
   limitations under the License.
  */
 
-import * as vscode from "vscode";
+import vscode from "vscode";
 import { getCachedParsedExtension, getCachedWmiQueryResult } from "../utils/caching";
-
-/**
- * Singleton access to WmiCompletionProvider
- */
-export const getWmiCompletionProvider = (() => {
-  let instance: WmiCompletionProvider | undefined;
-
-  return () => {
-    instance = instance === undefined ? new WmiCompletionProvider() : instance;
-    return instance;
-  };
-})();
+import { createSingletonProvider } from "../utils/singleton";
 
 class WmiCompletionProvider implements vscode.CompletionItemProvider {
   provideCompletionItems(
@@ -111,3 +100,8 @@ class WmiCompletionProvider implements vscode.CompletionItemProvider {
     return undefined;
   }
 }
+
+/**
+ * Singleton access to WmiCompletionProvider
+ */
+export const getWmiCompletionProvider = createSingletonProvider(WmiCompletionProvider);

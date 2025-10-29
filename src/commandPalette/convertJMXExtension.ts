@@ -15,10 +15,11 @@
  */
 
 import { readFileSync, writeFileSync } from "fs";
-import * as path from "path";
-import * as jszip from "jszip";
-import * as vscode from "vscode";
-import * as yaml from "yaml";
+import path from "path";
+import { EecType } from "@common";
+import jszip from "jszip";
+import vscode from "vscode";
+import yaml from "yaml";
 import { slugify } from "../codeActions/utils/snippetBuildingUtils";
 import { Dynatrace } from "../dynatrace-api/dynatrace";
 import {
@@ -44,7 +45,9 @@ import {
 import { getDynatraceClient } from "../treeViews/tenantsTreeView";
 import { pushManifestTextForParsing } from "../utils/caching";
 import { getExtensionWorkspaceDir } from "../utils/fileSystem";
-import * as logger from "../utils/logging";
+import { parseJSON } from "../utils/jsonParsing";
+import logger from "../utils/logging";
+import { ConfirmOption, showQuickPick, showQuickPickConfirm } from "../utils/vscode";
 
 const logTrace = ["commandPalette", "convertJMXExtension"];
 const OPTION_LOCAL_FILE: vscode.QuickPickItem = {
@@ -158,7 +161,7 @@ async function extractPluginJSONFromZip(
   const pluginJsonFileContent = await zip.file(pluginJSONFile)?.async("string");
   if (!pluginJsonFileContent) return [undefined, "Could not extract the plugin.json file."];
 
-  const v1Extension = JSON.parse(pluginJsonFileContent) as ExtensionV1;
+  const v1Extension: ExtensionV1 = parseJSON(pluginJsonFileContent);
   return [v1Extension, ""];
 }
 
@@ -559,12 +562,12 @@ async function convertV1UiToScreens(
       entityType: "PROCESS_GROUP_INSTANCE",
       detailsInjections: [
         ...chartsCards.map(card => ({
-          type: "CHART_GROUP" as DetailInjectionCardType,
+          type: DetailInjectionCardType.CHART_GROUP,
           key: card.key,
           conditions: [...injectionConditions],
         })),
         ...metricTableCards.map(card => ({
-          type: "METRIC_TABLE" as DetailInjectionCardType,
+          type: DetailInjectionCardType.METRIC_TABLE,
           key: card.key,
           conditions: [...injectionConditions],
         })),
@@ -585,14 +588,13 @@ async function convertV1UiToScreens(
     });
   }
 
-  const createHostInjection = await vscode.window.showQuickPick(["Yes", "No"], {
-    canPickMany: false,
+  const createHostInjection = await showQuickPickConfirm({
     ignoreFocusOut: true,
     title: "Visualize your data",
     placeHolder: "Show this JMX data on the Host details page?",
   });
 
-  if (createHostInjection === "Yes") {
+  if (createHostInjection === ConfirmOption.Yes) {
     // Create a unique card key
     const cardKey = `metrictable-jmx-${extensionName
       .replace(/[^a-zA-Z0-9_-]/g, "_")
@@ -616,7 +618,7 @@ async function convertV1UiToScreens(
       entityType: "HOST",
       detailsInjections: [
         {
-          type: "METRIC_TABLE" as DetailInjectionCardType,
+          type: DetailInjectionCardType.METRIC_TABLE,
           key: cardKey,
           conditions: [
             `metricAvailable|metric=dsfm:extension.status:filter(and(eq("dt.extension.name","custom:${extensionName}"),in("dt.entity.host", entitySelector("entityId($(entityId))"))))|lastWrittenWithinDays=5`,
@@ -681,8 +683,7 @@ async function convertJMXExtensionToV2(jmxV1Extension: ExtensionV1): Promise<Ext
   if (jmxV1Extension.technologies) {
     technology = jmxV1Extension.technologies[0];
   } else {
-    const techChoice = await vscode.window.showQuickPick(TECH_OPTIONS, {
-      canPickMany: false,
+    const techChoice = await showQuickPick(TECH_OPTIONS, {
       ignoreFocusOut: true,
       title: "Select a process technology",
       placeHolder: "Select a Java-based technology/framework or 'All other' if none match",
@@ -738,7 +739,7 @@ export async function extractv1ExtensionFromLocal(): Promise<[ExtensionV1 | unde
   const [v1Extension, errorMessage] = pluginJSONFile[0].fsPath.endsWith(".zip")
     ? await extractPluginJSONFromZip(readFileSync(pluginJSONFile[0].fsPath))
     : // If this is a json file, just read it
-      [JSON.parse(readFileSync(pluginJSONFile[0].fsPath).toString()) as ExtensionV1, ""];
+      [parseJSON<ExtensionV1>(readFileSync(pluginJSONFile[0].fsPath).toString()), ""];
 
   return [v1Extension, errorMessage];
 }
@@ -766,13 +767,13 @@ export async function extractV1FromRemote(
       return extension.type === "JMX" && !extension.id.startsWith("dynatrace.");
     } else {
       return (
-        extension.type === "ACTIVEGATE" ||
-        (extension.type === "ONEAGENT" && !extension.id.startsWith("dynatrace."))
+        extension.type === EecType.ActiveGate ||
+        (extension.type === EecType.OneAgent && !extension.id.startsWith("dynatrace."))
       );
     }
   });
 
-  const extensionChoice = await vscode.window.showQuickPick(
+  const extensionChoice = await showQuickPick(
     filterdExtensions.map(e => ({
       label: e.name,
       description: e.id,
@@ -805,10 +806,9 @@ export async function convertJMXExtension(dt?: Dynatrace, outputPath?: string) {
   logger.info("Executing Covert JMX command", ...fnLogTrace);
   // User chooses if they want to use a local file or browse from the Dynatrace environment
   const pluginJSONOrigins = [OPTION_LOCAL_FILE, OPTION_DYNATRACE_ENVIRONMENT];
-  const pluginJSONOrigin = await vscode.window.showQuickPick(pluginJSONOrigins, {
+  const pluginJSONOrigin = await showQuickPick(pluginJSONOrigins, {
     placeHolder: "How would you like to import the JMX V1 extension?",
     title: "Convert JMX extension",
-    canPickMany: false,
     ignoreFocusOut: true,
   });
 

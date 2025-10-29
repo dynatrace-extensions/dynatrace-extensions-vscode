@@ -26,10 +26,9 @@ import {
 import { Menu } from "@dynatrace/strato-components-preview/navigation";
 import { EmptyState } from "@dynatrace/strato-components-preview/content";
 import { PlusIcon, EditIcon, DeleteIcon, ConnectorIcon } from "@dynatrace/strato-icons";
-import { SIMULATOR_ADD_TARGERT_CMD, SIMULATOR_DELETE_TARGERT_CMD } from "../../constants/constants";
-import { RemoteTarget } from "../../interfaces/simulator";
 import { triggerCommand } from "../../utils/app-utils";
 import { TargetRegistrationForm } from "./TargetRegistrationForm";
+import { SimulatorCommand, RemoteTarget, EecType } from "@common";
 
 interface SimulatorTargetsProps {
   targets: RemoteTarget[];
@@ -58,7 +57,7 @@ export const SimulatorTargets = ({ targets }: SimulatorTargetsProps) => {
     setEditingTarget(target);
     handleOpenModal();
   };
-  const addTarget = (target: RemoteTarget) => triggerCommand(SIMULATOR_ADD_TARGERT_CMD, target);
+  const addTarget = (target: RemoteTarget) => triggerCommand(SimulatorCommand.AddTarget, target);
   const nameIsUnique = (name: string) => targets.findIndex(t => t.name === name) < 0;
 
   const tableColumns = useMemo<DataTableV2ColumnDef<RemoteTarget>[]>(
@@ -89,8 +88,8 @@ export const SimulatorTargets = ({ targets }: SimulatorTargetsProps) => {
 
   const tableData = useMemo<Record<string, RemoteTarget[]>>(
     () => ({
-      OneAgents: targets.filter(t => t.eecType === "ONEAGENT"),
-      ActiveGates: targets.filter(t => t.eecType === "ACTIVEGATE"),
+      OneAgents: targets.filter(t => t.eecType === EecType.OneAgent),
+      ActiveGates: targets.filter(t => t.eecType === EecType.ActiveGate),
     }),
     [targets],
   );
@@ -130,13 +129,19 @@ export const SimulatorTargets = ({ targets }: SimulatorTargetsProps) => {
                 {(row: RemoteTarget) => (
                   <Menu>
                     <Menu.Content>
-                      <Menu.Item onSelect={() => handleEditTarget(row)}>
+                      <Menu.Item onSelect={handleEditTarget.bind(undefined, row)}>
                         <Menu.ItemIcon>
                           <EditIcon />
                         </Menu.ItemIcon>
                         Edit
                       </Menu.Item>
-                      <Menu.Item onSelect={() => triggerCommand(SIMULATOR_DELETE_TARGERT_CMD, row)}>
+                      <Menu.Item
+                        onSelect={triggerCommand.bind(
+                          undefined,
+                          SimulatorCommand.DeleteTarget,
+                          row,
+                        )}
+                      >
                         <Menu.ItemIcon>
                           <DeleteIcon />
                         </Menu.ItemIcon>

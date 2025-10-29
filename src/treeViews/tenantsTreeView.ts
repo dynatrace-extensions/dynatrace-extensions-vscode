@@ -14,12 +14,12 @@
   limitations under the License.
  */
 
-import path = require("path");
-import * as vscode from "vscode";
+import path from "path";
+import { Utils } from "@common";
+import vscode from "vscode";
 import { Dynatrace } from "../dynatrace-api/dynatrace";
 import {
   DeployedExtension,
-  DynatraceTenantDto,
   DynatraceTenant,
   MonitoringConfiguration,
   TenantsTreeDataProvider,
@@ -28,10 +28,11 @@ import {
 import { showConnectedStatusBar } from "../statusBar/connection";
 import { decryptToken } from "../utils/cryptography";
 import { getAllTenants } from "../utils/fileSystem";
-import * as logger from "../utils/logging";
+import logger from "../utils/logging";
+import { createSingletonProvider } from "../utils/singleton";
 
 const ICONS_PATH = path.join(__filename, "..", "..", "src", "assets", "icons");
-const ICONS: Record<string, { light: string; dark: string }> = {
+const ICONS = {
   DEPLOYED_EXTENSION: {
     light: path.join(ICONS_PATH, "deployed_extension_light.png"),
     dark: path.join(ICONS_PATH, "deployed_extension_dark.png"),
@@ -44,7 +45,7 @@ const ICONS: Record<string, { light: string; dark: string }> = {
     light: path.join(ICONS_PATH, "platform_current_light.png"),
     dark: path.join(ICONS_PATH, "platform_current_dark.png"),
   },
-};
+} satisfies Record<string, { light: string; dark: string }>;
 type ConfigStatus = "ERROR" | "OK" | "UNKNOWN";
 const CONFIG_STATUS_COLORS: Record<ConfigStatus, string> = {
   ERROR: "🔴",
@@ -71,7 +72,9 @@ export const getConnectedTenant = async () => {
   const tenant = await getTenantsTreeDataProvider()
     .getChildren()
     .then(children =>
-      (children as DynatraceTenant[]).filter(c => c.contextValue === "currentDynatraceEnvironment"),
+      children.filter(
+        (c): c is DynatraceTenant => c.contextValue === "currentDynatraceEnvironment",
+      ),
     )
     .then(children => children.pop());
   return tenant;
@@ -80,18 +83,6 @@ export const getConnectedTenant = async () => {
 export const refreshTenantsTreeView = () => {
   getTenantsTreeDataProvider().refresh();
 };
-
-/**
- * Returns a singleton instance of the EnvironmentsTreeDataProvider.
- */
-export const getTenantsTreeDataProvider = (() => {
-  let instance: TenantsTreeDataProvider | undefined;
-
-  return () => {
-    instance = instance === undefined ? new TenantsTreeDataProviderImpl() : instance;
-    return instance;
-  };
-})();
 
 /**
  * A tree data provider that renders all Dynatrace Environments that have been registered
@@ -113,14 +104,14 @@ class TenantsTreeDataProviderImpl implements TenantsTreeDataProvider {
   constructor() {
     this.getChildren()
       .then(children =>
-        (children as DynatraceTenant[]).filter(
-          c => c.contextValue === "currentDynatraceEnvironment",
+        children.filter(
+          (c): c is DynatraceTenant => c.contextValue === "currentDynatraceEnvironment",
         ),
       )
       .then(children => children.pop())
       .then(tenant => {
         if (tenant) {
-          showConnectedStatusBar(tenant).catch(() => {});
+          showConnectedStatusBar(tenant).catch(Utils.noOp);
         }
       })
       .catch(err => {
@@ -167,7 +158,7 @@ class TenantsTreeDataProviderImpl implements TenantsTreeDataProvider {
                     extension.extensionName,
                     extension.version,
                     element.dt,
-                    (element as DynatraceTenant).url,
+                    element.url,
                   ),
                 ),
               ),
@@ -205,15 +196,22 @@ class TenantsTreeDataProviderImpl implements TenantsTreeDataProvider {
     }
 
     // If no item specified, grab all environments from global storage
-    return getAllTenants().map((tenant: DynatraceTenantDto) => {
+    return getAllTenants().map(tenant => {
       const { id, url, apiUrl, label, current, token } = tenant;
       if (current) {
-        showConnectedStatusBar(tenant).catch(() => {});
+        showConnectedStatusBar(tenant).catch(Utils.noOp);
       }
       return createDynatraceTenantTreeItem(url, decryptToken(token), id, label, current, apiUrl);
     });
   }
 }
+
+/**
+ * Returns a singleton instance of the EnvironmentsTreeDataProvider.
+ */
+export const getTenantsTreeDataProvider = createSingletonProvider<TenantsTreeDataProvider>(
+  TenantsTreeDataProviderImpl,
+);
 
 /**
  * Creates a TreeItem object that represents a Dynatrace (SaaS, Managed, Platform) tenant registered

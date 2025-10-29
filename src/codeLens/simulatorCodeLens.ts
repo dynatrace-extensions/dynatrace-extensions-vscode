@@ -14,25 +14,11 @@
   limitations under the License.
  */
 
-import * as vscode from "vscode";
+import { SimulatorCodeLensCommand, SimulatorStatus } from "@common";
+import vscode from "vscode";
 import { SimulatorManager } from "../statusBar/simulator";
-import * as logger from "../utils/logging";
-
-const START_COMMAND = "dynatraceExtensions.simulator.codelens.start";
-const STOP_COMMAND = "dynatraceExtensions.simulator.codelens.stop";
-const REFRESH = "dynatraceExtensions.simulator.codelens.refresh";
-
-/**
- * Provides singleton access to the SimulatorLensProvider
- */
-export const getSimulatorLensProvider = (() => {
-  let instance: SimulatorLensProvider | undefined;
-
-  return (simulator: SimulatorManager) => {
-    instance = instance === undefined ? new SimulatorLensProvider(simulator) : instance;
-    return instance;
-  };
-})();
+import logger from "../utils/logging";
+import { createSingletonProvider } from "../utils/singleton";
 
 /**
  * Simple implementation of a Code Lens Provider to allow starting and stopping the simulator from the editor
@@ -42,7 +28,7 @@ class SimulatorLensProvider implements vscode.CodeLensProvider {
   private readonly logTrace = ["codeLens", "simulatorCodeLens", this.constructor.name];
   private codeLenses: vscode.CodeLens[];
   private simulator: SimulatorManager;
-  private lastKnownStatus: string;
+  private lastKnownStatus: SimulatorStatus;
   private _onDidChangeCodeLenses: vscode.EventEmitter<void> = new vscode.EventEmitter<void>();
   public readonly onDidChangeCodeLenses: vscode.Event<void> = this._onDidChangeCodeLenses.event;
 
@@ -52,27 +38,27 @@ class SimulatorLensProvider implements vscode.CodeLensProvider {
   constructor(simulator: SimulatorManager) {
     this.simulator = simulator;
     this.codeLenses = [];
-    this.lastKnownStatus = "UNKNOWN";
+    this.lastKnownStatus = SimulatorStatus.Unknown;
 
     // Start the simulator and update the last known status
-    vscode.commands.registerCommand(START_COMMAND, () => {
+    vscode.commands.registerCommand(SimulatorCodeLensCommand.Start, () => {
       this.simulator.start(this.simulator.currentConfiguration, false).then(
         () => {
-          this.lastKnownStatus = "RUNNING";
+          this.lastKnownStatus = SimulatorStatus.Running;
           this._onDidChangeCodeLenses.fire();
         },
         err => logger.error(err, ...this.logTrace),
       );
     });
     // Stop the simulator and update the last known status
-    vscode.commands.registerCommand(STOP_COMMAND, () => {
+    vscode.commands.registerCommand(SimulatorCodeLensCommand.Stop, () => {
       this.simulator.stop(false);
-      this.lastKnownStatus = "READY";
+      this.lastKnownStatus = SimulatorStatus.Ready;
       this._onDidChangeCodeLenses.fire();
     });
     // Reset the last known status and refresh the lenses
-    vscode.commands.registerCommand(REFRESH, () => {
-      this.lastKnownStatus = "UNKNOWN";
+    vscode.commands.registerCommand(SimulatorCodeLensCommand.Refresh, () => {
+      this.lastKnownStatus = SimulatorStatus.Unknown;
       this._onDidChangeCodeLenses.fire();
     });
   }
@@ -89,10 +75,10 @@ class SimulatorLensProvider implements vscode.CodeLensProvider {
       const range = new vscode.Range(position, position);
 
       // If we don't know the status yet, check if the simulator is ready
-      if (this.lastKnownStatus === "UNKNOWN") {
+      if (this.lastKnownStatus === SimulatorStatus.Unknown) {
         const readyCheck = this.simulator.checkMandatoryRequirements();
         if (readyCheck[0]) {
-          this.lastKnownStatus = "READY";
+          this.lastKnownStatus = SimulatorStatus.Ready;
           const configCheck = await this.simulator.checkSimulationConfig(
             this.simulator.currentConfiguration.location,
             this.simulator.currentConfiguration.eecType,
@@ -100,25 +86,25 @@ class SimulatorLensProvider implements vscode.CodeLensProvider {
           );
           this.lastKnownStatus = configCheck[0];
         } else {
-          this.lastKnownStatus = "NOTREADY";
+          this.lastKnownStatus = SimulatorStatus.NotReady;
         }
       }
       // If the simulator is ready, we can display this code lens
-      if (this.lastKnownStatus === "READY") {
+      if (this.lastKnownStatus === SimulatorStatus.Ready) {
         this.codeLenses.push(
           new vscode.CodeLens(range, {
             title: "▶️ Simulate extension",
             tooltip: "Start a simulation based on your last known settings or the defaults.",
-            command: START_COMMAND,
+            command: SimulatorCodeLensCommand.Start,
           }),
         );
-      } else if (this.lastKnownStatus === "RUNNING") {
+      } else if (this.lastKnownStatus === SimulatorStatus.Running) {
         // Otherwise, offer to stop it if it's running
         this.codeLenses.push(
           new vscode.CodeLens(range, {
             title: "⏹️ Stop simulation",
             tooltip: "Stop the currently running simulation.",
-            command: STOP_COMMAND,
+            command: SimulatorCodeLensCommand.Stop,
           }),
         );
       } else {
@@ -127,7 +113,7 @@ class SimulatorLensProvider implements vscode.CodeLensProvider {
           new vscode.CodeLens(range, {
             title: "❌ Simulation not possible",
             tooltip: "Please check your simulator configuration and click to try again.",
-            command: REFRESH,
+            command: SimulatorCodeLensCommand.Refresh,
           }),
         );
       }
@@ -136,3 +122,8 @@ class SimulatorLensProvider implements vscode.CodeLensProvider {
     return this.codeLenses;
   }
 }
+
+/**
+ * Provides singleton access to the SimulatorLensProvider
+ */
+export const getSimulatorLensProvider = createSingletonProvider(SimulatorLensProvider);

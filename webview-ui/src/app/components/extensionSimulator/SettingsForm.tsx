@@ -36,7 +36,7 @@ import {
   SimulationLocation,
   SimulationSpecs,
   SimulatorStatus,
-} from "../../interfaces/simulator";
+} from "@common";
 
 interface RemoteTargetsFieldSetProps {
   targets: RemoteTarget[];
@@ -118,10 +118,12 @@ export const SettingsForm = ({
   simulatorStatusMessage,
 }: SettingsFormProps) => {
   const [location, setLocation] = useState<SimulationLocation>(
-    !specs.localActiveGateDsExists && !specs.localOneAgentDsExists ? "REMOTE" : "LOCAL",
+    !specs.localActiveGateDsExists && !specs.localOneAgentDsExists
+      ? SimulationLocation.Remote
+      : SimulationLocation.Local,
   );
   const [eecType, setEecType] = useState<EecType>(
-    specs.dsSupportsOneAgentEec ? "ONEAGENT" : "ACTIVEGATE",
+    specs.dsSupportsOneAgentEec ? EecType.OneAgent : EecType.ActiveGate,
   );
   const [target, setTarget] = useState<string | null>(null);
   const [sendMetrics, setSendMetrics] = useState(false);
@@ -143,7 +145,7 @@ export const SettingsForm = ({
   } = useForm<ExecutionForm>({ mode: "all" });
 
   const createConfig = (): [SimulationConfig | undefined, string] => {
-    if (location === "REMOTE" && (target === null || target[0] === "")) {
+    if (location === SimulationLocation.Remote && (target === null || target[0] === "")) {
       return [undefined, "Must select a target for remote simulation"];
     }
 
@@ -161,8 +163,8 @@ export const SettingsForm = ({
   };
 
   const clearForm = () => {
-    setLocation("LOCAL");
-    setEecType("ONEAGENT");
+    setLocation(SimulationLocation.Local);
+    setEecType(EecType.OneAgent);
     setTarget(null);
   };
 
@@ -186,10 +188,10 @@ export const SettingsForm = ({
     <Modal
       title='Simulator settings'
       show={modalOpen}
-      onDismiss={() => setModalOpen(false)}
+      onDismiss={setModalOpen.bind(undefined, false)}
       size='small'
     >
-      <form onSubmit={handleSubmit(handleSubmitClick)} onReset={() => clearForm()} noValidate>
+      <form onSubmit={handleSubmit(handleSubmitClick)} onReset={clearForm} noValidate>
         <Flex flexDirection='column' gap={32}>
           <FieldSet legend='Simulation behavior' name='simulation-details'>
             <Switch value={sendMetrics} onChange={setSendMetrics}>
@@ -208,7 +210,7 @@ export const SettingsForm = ({
                   }}
                 >
                   <Radio
-                    value='LOCAL'
+                    value={SimulationLocation.Local}
                     disabled={
                       !(
                         specs.isPython ||
@@ -219,7 +221,7 @@ export const SettingsForm = ({
                   >
                     Local machine
                   </Radio>
-                  <Radio value='REMOTE' disabled={specs.isPython}>
+                  <Radio value={SimulationLocation.Remote} disabled={specs.isPython}>
                     Remote target
                   </Radio>
                 </RadioGroup>
@@ -234,18 +236,18 @@ export const SettingsForm = ({
                   }}
                 >
                   <Radio
-                    value='ONEAGENT'
+                    value={EecType.OneAgent}
                     disabled={
-                      (location === "LOCAL" && !specs.localOneAgentDsExists) ||
+                      (location === SimulationLocation.Local && !specs.localOneAgentDsExists) ||
                       !specs.dsSupportsOneAgentEec
                     }
                   >
                     OneAgent
                   </Radio>
                   <Radio
-                    value='ACTIVEGATE'
+                    value={EecType.ActiveGate}
                     disabled={
-                      (location === "LOCAL" && !specs.localActiveGateDsExists) ||
+                      (location === SimulationLocation.Local && !specs.localActiveGateDsExists) ||
                       !specs.dsSupportsActiveGateEec
                     }
                   >
@@ -255,7 +257,7 @@ export const SettingsForm = ({
               </FormField>
             </Flex>
           </FieldSet>
-          {location === "REMOTE" && (
+          {location === SimulationLocation.Remote && (
             <FieldSet legend='Remote target' name='remote-target'>
               <RemoteTargetsFieldSet
                 targets={targets}
@@ -275,7 +277,7 @@ export const SettingsForm = ({
               />
             </FieldSet>
           )}
-          {simulatorStatus === "NOTREADY" && (
+          {simulatorStatus === SimulatorStatus.NotReady && (
             <Container variant='default' color='critical'>
               <Flex gap={12}>
                 <WarningIcon />

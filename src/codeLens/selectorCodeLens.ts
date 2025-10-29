@@ -14,7 +14,8 @@
   limitations under the License.
  */
 
-import * as vscode from "vscode";
+import { CodeLensCommand } from "@common";
+import vscode from "vscode";
 import { ExtensionStub } from "../interfaces/extensionMeta";
 import {
   getCachedParsedExtension,
@@ -215,7 +216,7 @@ class SelectorValidationLens extends vscode.CodeLens {
     super(range, {
       title: "Validate selector",
       tooltip: "Run a query and check if the selector is valid",
-      command: "dynatrace-extensions.codelens.validateSelector",
+      command: CodeLensCommand.ValidateSelector,
       arguments: [selector, selectorType],
     });
     this.selector = selector;
@@ -236,7 +237,7 @@ class SelectorRunnerLens extends vscode.CodeLens {
     super(range, {
       title: "Query data",
       tooltip: "Run the query and visualize its results",
-      command: "dynatrace-extensions.codelens.runSelector",
+      command: CodeLensCommand.RunSelector,
       arguments: [selector, selectorType],
     });
     this.selector = selector;

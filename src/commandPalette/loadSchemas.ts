@@ -15,15 +15,16 @@
  */
 
 import { existsSync, mkdirSync, readFileSync, writeFile, writeFileSync } from "fs";
-import * as path from "path";
+import path from "path";
 import axios from "axios";
-import * as vscode from "vscode";
+import vscode from "vscode";
 import { Dynatrace } from "../dynatrace-api/dynatrace";
 import { getActivationContext } from "../extension";
 import { getDynatraceClient } from "../treeViews/tenantsTreeView";
 import { checkTenantConnected } from "../utils/conditionCheckers";
 import { getExtensionFilePath } from "../utils/fileSystem";
-import * as logger from "../utils/logging";
+import logger from "../utils/logging";
+import { ConfirmOption, showQuickPick, showQuickPickConfirm } from "../utils/vscode";
 
 const logTrace = ["commandPalette", "loadSchemas"];
 
@@ -48,17 +49,19 @@ export async function loadSchemas(dt: Dynatrace): Promise<boolean> {
   const context = getActivationContext();
   logger.info("Executing Load Schemas command", ...logTrace);
   // Fetch available schema versions from cluster
-  const availableVersions = await dt.extensionsV2.listSchemaVersions().catch(async err => {
-    logger.notify("ERROR", (err as Error).message, ...logTrace);
-    return [];
-  });
+  const availableVersions = await dt.extensionsV2
+    .listSchemaVersions()
+    .catch(async (err): Promise<string[]> => {
+      logger.notify("ERROR", (err as Error).message, ...logTrace);
+      return [];
+    });
   if (availableVersions.length === 0) {
     logger.notify("ERROR", "No schemas available. Operation cancelled.", ...logTrace);
     return false;
   }
 
   // Prompt user for version selection
-  const version = await vscode.window.showQuickPick(availableVersions, {
+  const version = await showQuickPick(availableVersions, {
     placeHolder: "Choose a schema version",
     title: "Extension workspace: Load Schemas",
   });
@@ -74,11 +77,11 @@ export async function loadSchemas(dt: Dynatrace): Promise<boolean> {
   if (!existsSync(location)) {
     cancelled = await downloadSchemaFiles(location, version, dt);
   } else {
-    const download = await vscode.window.showQuickPick(["Yes", "No"], {
+    const download = await showQuickPickConfirm({
       placeHolder: "Schema version already available. Do you wish to download again?",
     });
 
-    if (download === "Yes") {
+    if (download === ConfirmOption.Yes) {
       cancelled = await downloadSchemaFiles(location, version, dt);
     }
   }
@@ -162,8 +165,8 @@ function downloadSchemaFiles(location: string, version: string, dt: Dynatrace) {
                   return "cancelled";
                 }
                 let fileName = "unknownSchema";
-                if (Object.prototype.hasOwnProperty.call(resp, "$id")) {
-                  const parts = (resp.$id as string).split("/");
+                if (typeof resp.$id === "string") {
+                  const parts = resp.$id.split("/");
                   fileName = parts[parts.length - 1];
                 }
                 writeFile(`${location}/${fileName}`, JSON.stringify(resp), err => {

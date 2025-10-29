@@ -137,7 +137,7 @@ This project is structured as follows:
 	|   |-- shared/				# Shared test utils
 	|   |-- unit/				# Unit test suite
 	|
-	|-- webview-ui/     # Sparate project for the custom webview UI (React app)
+	|-- webview-ui/     # Separate project for the custom webview UI (React app)
 	|
 	|-- package.json			# Node JS configuration, but also contributions to the VSCode UI
 	|

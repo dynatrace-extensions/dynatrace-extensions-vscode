@@ -14,6 +14,8 @@
   limitations under the License.
  */
 
+import { OsType } from "@common";
+
 interface ActiveGateModule {
   misconfigured: boolean;
   type:
@@ -42,7 +44,7 @@ export interface ActiveGate {
   id: string;
   networkAddresses: string[];
   loadBalancerADdresses: string[];
-  osType: "LINUX" | "WINDOWS";
+  osType: OsType;
   osArchitecture: "S390" | "X86";
   osBitness: "64";
   type: "CLUSTER" | "ENVIRONMENT" | "ENVIRONMENT_MULTI";

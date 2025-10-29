@@ -13,6 +13,9 @@
     "noFallthroughCasesInSwitch": true,
     "useUnknownInCatchVariables": true,
     "noImplicitReturns": false,
+    "paths": {
+      "@common": ["./common"]
+    }
   },
-  "include": ["src/**/*.ts"],
+  "include": ["src/**/*.ts", "common/**/*.ts"]
 }

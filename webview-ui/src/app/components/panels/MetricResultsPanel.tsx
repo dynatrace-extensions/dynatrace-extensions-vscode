@@ -25,7 +25,7 @@ import { CodeSnippet, EmptyState } from "@dynatrace/strato-components-preview/co
 import { Heading, Text, Code } from "@dynatrace/strato-components/typography";
 import { Flex, Container, Divider } from "@dynatrace/strato-components/layouts";
 import { WarningIcon } from "@dynatrace/strato-icons";
-import { MetricSeriesCollection, MetricSeries } from "../../interfaces/metricResultsPanel";
+import { MetricSeriesCollection, MetricSeries } from "@common";
 
 interface MetricResultsPanelProps {
   data: MetricSeriesCollection[];

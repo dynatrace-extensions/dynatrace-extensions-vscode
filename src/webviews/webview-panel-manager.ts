@@ -14,32 +14,12 @@
   limitations under the License.
  */
 
-import * as vscode from "vscode";
+import { ViewType, PanelData, WebviewEvent, WebviewEventType, PanelDataType } from "@common";
+import vscode from "vscode";
 import { getActivationContext } from "../extension";
-import { PanelData, WebviewMessage } from "../interfaces/webview";
-import * as logger from "../utils/logging";
+import logger from "../utils/logging";
+import { createSingletonProvider } from "../utils/singleton";
 import { getNonce, getColumn, getDtShellDefaults } from "./webview-utils";
-
-/**
- * Registered viewType (id) values for known webivew panels.
- */
-export enum REGISTERED_PANELS {
-  METRIC_RESULTS = "dynatrace-extensions.MetricResults",
-  WMI_RESULTS = "dynatrace-extensions.WmiResults",
-  SIMULATOR_UI = "dynatrace-extensions.SimulatorUI",
-}
-
-/**
- * Provides singleton access to the WebviewPanelManager instance.
- */
-export const getWebviewPanelManager = (() => {
-  let instance: WebviewPanelManager | undefined;
-
-  return () => {
-    instance = instance === undefined ? new WebviewPanelManager() : instance;
-    return instance;
-  };
-})();
 
 /**
  * This class manages the state and behavior of webview panels rendered as a React app.
@@ -48,14 +28,14 @@ export const getWebviewPanelManager = (() => {
  */
 class WebviewPanelManager implements vscode.WebviewPanelSerializer {
   private readonly logTrace = ["webviews", "webviewPanel", "WebviewPanelManager"];
-  private currentPanels: Map<REGISTERED_PANELS, vscode.WebviewPanel>;
-  private disposables: Map<REGISTERED_PANELS, vscode.Disposable[]>;
+  private currentPanels: Map<ViewType, vscode.WebviewPanel>;
+  private disposables: Map<ViewType, vscode.Disposable[]>;
 
   private readonly extensionUri: vscode.Uri;
 
   constructor() {
-    this.currentPanels = new Map<REGISTERED_PANELS, vscode.WebviewPanel>();
-    this.disposables = new Map<REGISTERED_PANELS, vscode.Disposable[]>();
+    this.currentPanels = new Map<ViewType, vscode.WebviewPanel>();
+    this.disposables = new Map<ViewType, vscode.Disposable[]>();
     this.extensionUri = getActivationContext().extensionUri;
   }
 
@@ -114,7 +94,7 @@ class WebviewPanelManager implements vscode.WebviewPanelSerializer {
    * Cleans up and disposes of webview resources of given view type panel
    * @param viewType string representing the view type (id) of the panel
    */
-  private dispose(viewType: REGISTERED_PANELS) {
+  private dispose(viewType: ViewType) {
     const panel = this.currentPanels.get(viewType);
     const disposables = this.disposables.get(viewType);
 
@@ -142,7 +122,7 @@ class WebviewPanelManager implements vscode.WebviewPanelSerializer {
    * @param panel webview panel
    * @param data panel data
    */
-  private setupPanel(viewType: REGISTERED_PANELS, panel: vscode.WebviewPanel, data: PanelData) {
+  private setupPanel(viewType: ViewType, panel: vscode.WebviewPanel, data: PanelData) {
     // Event listener for disposing the panel
     panel.onDidDispose(
       () => {
@@ -172,21 +152,20 @@ class WebviewPanelManager implements vscode.WebviewPanelSerializer {
    * @param title title of the panel
    * @param data data to be sent to the webview
    */
-  public render(viewType: REGISTERED_PANELS, title: string, data: PanelData) {
+  public render(viewType: ViewType, title: string, data: PanelData) {
     const fnLogTrace = [...this.logTrace, "render"];
     if (this.currentPanels.has(viewType)) {
       // If a webview panel of this view type exists, send it the new data
       const existingPanel = this.currentPanels.get(viewType);
-      existingPanel?.webview.postMessage({ messageType: "updateData", data }).then(
-        () => {},
-        err => {
+      existingPanel?.webview
+        .postMessage({ messageType: WebviewEventType.UpdateData, data })
+        .then(undefined, err => {
           logger.error(err, ...fnLogTrace);
           logger.error(
             `Could not post message to webview. ${(err as Error).message}`,
             ...fnLogTrace,
           );
-        },
-      );
+        });
     } else {
       // Otherwise, create and show a new one
       const newPanel = vscode.window.createWebviewPanel(viewType, title, getColumn(), {
@@ -209,20 +188,14 @@ class WebviewPanelManager implements vscode.WebviewPanelSerializer {
    * @param viewType
    * @param message
    */
-  public postMessage(viewType: REGISTERED_PANELS, message: WebviewMessage) {
+  public postMessage(viewType: ViewType, message: WebviewEvent) {
     const fnLogTrace = [...this.logTrace, "postMessage"];
     if (this.currentPanels.has(viewType)) {
       const existingPanel = this.currentPanels.get(viewType);
-      existingPanel?.webview.postMessage(message).then(
-        () => {},
-        err => {
-          logger.error(err, ...fnLogTrace);
-          logger.error(
-            `Could not post message to webview. ${(err as Error).message}`,
-            ...fnLogTrace,
-          );
-        },
-      );
+      existingPanel?.webview.postMessage(message).then(undefined, err => {
+        logger.error(err, ...fnLogTrace);
+        logger.error(`Could not post message to webview. ${(err as Error).message}`, ...fnLogTrace);
+      });
     }
   }
 
@@ -233,12 +206,17 @@ class WebviewPanelManager implements vscode.WebviewPanelSerializer {
    */
   async deserializeWebviewPanel(panel: vscode.WebviewPanel, state?: PanelData) {
     this.setupPanel(
-      panel.viewType as REGISTERED_PANELS,
+      panel.viewType as ViewType,
       panel,
       state ?? {
-        dataType: "EMPTY_STATE",
+        dataType: PanelDataType.Empty,
         data: undefined,
       },
     );
   }
 }
+
+/**
+ * Provides singleton access to the WebviewPanelManager instance.
+ */
+export const getWebviewPanelManager = createSingletonProvider(WebviewPanelManager);

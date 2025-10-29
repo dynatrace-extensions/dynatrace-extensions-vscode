@@ -15,10 +15,11 @@
  */
 
 import { readFileSync, readdirSync } from "fs";
-import * as path from "path";
+import path from "path";
 import { describe, expect, test } from "@jest/globals";
 import { convertPluginJsonToActivationSchema } from "../../../../src/commandPalette/python/pythonConversion";
 import { ExtensionV1 } from "../../../../src/interfaces/extensionMeta";
+import { parseJSON } from "../../../../src/utils/jsonParsing";
 
 const samplePluginJson: ExtensionV1 = {
   name: "custom.remote.python.rabbit_mq",
@@ -102,9 +103,9 @@ describe("V1 Plugin Conversion Utils", () => {
       const jsonDirPath = path.resolve(__dirname, "..", "..", "test_data", "plugin_json");
       const pluginJsonFiles = readdirSync(jsonDirPath);
       for (const pluginJsonFile of pluginJsonFiles) {
-        const pluginJson = JSON.parse(
+        const pluginJson: ExtensionV1 = parseJSON(
           readFileSync(path.resolve(jsonDirPath, pluginJsonFile), "utf8"),
-        ) as ExtensionV1;
+        );
         const converted = await convertPluginJsonToActivationSchema(pluginJson);
 
         expect(converted).toBeDefined();

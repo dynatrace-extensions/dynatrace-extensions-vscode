@@ -15,7 +15,7 @@
  */
 
 import { readFileSync } from "fs";
-import * as vscode from "vscode";
+import vscode from "vscode";
 import { Dynatrace } from "../dynatrace-api/dynatrace";
 import { DynatraceAPIError } from "../dynatrace-api/errors";
 import { getActivationContext } from "../extension";
@@ -28,7 +28,12 @@ import {
   checkWorkspaceOpen,
 } from "../utils/conditionCheckers";
 import { initWorkspaceStorage, resolveRealPath, uploadComponentCert } from "../utils/fileSystem";
-import * as logger from "../utils/logging";
+import logger from "../utils/logging";
+import {
+  ConfirmOption,
+  showConfirmationInformationMessage,
+  showQuickPickConfirm,
+} from "../utils/vscode";
 
 export const distributeCertificateWorkflow = async () => {
   if ((await checkWorkspaceOpen()) && (await checkTenantConnected())) {
@@ -69,13 +74,12 @@ export async function distributeCertificate(dt: Dynatrace) {
   let update = false;
   if (caCertId) {
     logger.debug(`Detected existng certificate under ID ${caCertId}`, ...fnLogTrace);
-    const choice = await vscode.window.showQuickPick(["Yes", "No"], {
-      canPickMany: false,
-      ignoreFocusOut: true,
-      title: "Certificate already exists in Dynatrace",
-      placeHolder: "Would you like to overwrite it?",
-    });
-    update = choice === "Yes";
+    update =
+      (await showQuickPickConfirm({
+        ignoreFocusOut: true,
+        title: "Certificate already exists in Dynatrace",
+        placeHolder: "Would you like to overwrite it?",
+      })) === ConfirmOption.Yes;
   }
 
   // Update existing certificate by replacing the content
@@ -139,12 +143,10 @@ export async function distributeCertificate(dt: Dynatrace) {
   const oaPresent = checkOneAgentInstalled();
 
   if (agPresent || oaPresent) {
-    const choice = await vscode.window.showInformationMessage(
+    const choice = await showConfirmationInformationMessage(
       "Do you want to also distribute this certificate to locally installed OneAgents/ActiveGates?",
-      "Yes",
-      "No",
     );
-    if (choice === "Yes") {
+    if (choice === ConfirmOption.Yes) {
       try {
         if (oaPresent) {
           uploadComponentCert(certPath, "OneAgent");

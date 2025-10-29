@@ -15,13 +15,14 @@
  */
 
 import { writeFileSync } from "fs";
-import * as path from "path";
-import * as vscode from "vscode";
+import path from "path";
+import vscode from "vscode";
 import { Dynatrace } from "../dynatrace-api/dynatrace";
 import { getDynatraceClient } from "../treeViews/tenantsTreeView";
 import { pushManifestTextForParsing } from "../utils/caching";
 import { getExtensionWorkspaceDir } from "../utils/fileSystem";
-import * as logger from "../utils/logging";
+import logger from "../utils/logging";
+import { showQuickPick } from "../utils/vscode";
 import { extractV1FromRemote, extractv1ExtensionFromLocal } from "./convertJMXExtension";
 import { convertPluginJsonToActivationSchema } from "./python/pythonConversion";
 
@@ -65,10 +66,9 @@ export async function convertPythonExtension(dt?: Dynatrace, outputPath?: string
   logger.info("Executing Convert Python Extension command", ...fnLogTrace);
   // User chooses if they want to use a local file or browse from the Dynatrace environment
   const pluginJSONOrigins = [OPTION_LOCAL_FILE, OPTION_DYNATRACE_ENVIRONMENT];
-  const pluginJSONOrigin = await vscode.window.showQuickPick(pluginJSONOrigins, {
+  const pluginJSONOrigin = await showQuickPick(pluginJSONOrigins, {
     placeHolder: "How would you like to import the Python V1 extension?",
     title: "Convert Python plugin.json",
-    canPickMany: false,
     ignoreFocusOut: true,
   });
 

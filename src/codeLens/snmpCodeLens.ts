@@ -15,23 +15,13 @@
  */
 
 import { copyFileSync, existsSync, mkdirSync } from "fs";
-import * as path from "path";
-import * as vscode from "vscode";
+import path from "path";
+import { CodeLensCommand } from "@common";
+import vscode from "vscode";
 import { getLoadedMibFiles, loadUserMibFiles } from "../utils/caching";
 import { getSnmpDirPath } from "../utils/fileSystem";
-import { notify } from "../utils/logging";
-
-/**
- * Provides singleton access to the SnmpCodeLensProvider
- */
-export const getSnmpCodeLensProvider = (() => {
-  let instance: SnmpCodeLensProvider | undefined;
-
-  return () => {
-    instance = instance === undefined ? new SnmpCodeLensProvider() : instance;
-    return instance;
-  };
-})();
+import logger from "../utils/logging";
+import { createSingletonProvider } from "../utils/singleton";
 
 /**
  * Implementation of a Code Lens Provider to facilitate importing custom MIBs and keeping track of
@@ -46,9 +36,7 @@ class SnmpCodeLensProvider implements vscode.CodeLensProvider {
   constructor() {
     this.codeLenses = [];
     this.regex = /^(snmp:)/gm;
-    vscode.commands.registerCommand("dynatrace-extensions.codelens.importMib", async () => {
-      await this.importFiles();
-    });
+    vscode.commands.registerCommand(CodeLensCommand.ImportMib, this.importFiles.bind(this));
   }
 
   async importFiles() {
@@ -58,7 +46,7 @@ class SnmpCodeLensProvider implements vscode.CodeLensProvider {
       title: "Select MIB files",
     });
     if (!files) {
-      notify("ERROR", "No files selected. Operation cancelled.");
+      logger.notify("ERROR", "No files selected. Operation cancelled.");
       return;
     }
     const newFiles = files.filter(
@@ -81,7 +69,7 @@ class SnmpCodeLensProvider implements vscode.CodeLensProvider {
         });
       }
     } else {
-      notify("INFO", "Selected files have already been imported.");
+      logger.notify("INFO", "Selected files have already been imported.");
     }
   }
 
@@ -121,7 +109,7 @@ class SnmpCodeLensProvider implements vscode.CodeLensProvider {
             title: "Import file",
             tooltip:
               "Import a file from your system into the extension's snmp folder and use the data.",
-            command: "dynatrace-extensions.codelens.importMib",
+            command: CodeLensCommand.ImportMib,
           }),
         );
       }
@@ -130,3 +118,8 @@ class SnmpCodeLensProvider implements vscode.CodeLensProvider {
     return this.codeLenses;
   }
 }
+
+/**
+ * Provides singleton access to the SnmpCodeLensProvider
+ */
+export const getSnmpCodeLensProvider = createSingletonProvider(SnmpCodeLensProvider);

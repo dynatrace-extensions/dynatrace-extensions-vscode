@@ -19,8 +19,8 @@
  ********************************************************************************/
 
 import { exec, ExecOptions } from "child_process";
-import * as vscode from "vscode";
-import * as logger from "./logging";
+import vscode from "vscode";
+import logger from "./logging";
 
 const logTrace = ["utils", "subprocesses"];
 

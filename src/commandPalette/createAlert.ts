@@ -14,16 +14,17 @@
   limitations under the License.
  */
 
-import * as crypto from "crypto";
+import crypto from "crypto";
 import { existsSync, mkdirSync, readFileSync, writeFileSync } from "fs";
-import path = require("path");
-import * as vscode from "vscode";
+import path from "path";
+import vscode from "vscode";
 import { MetricMetadata } from "../interfaces/extensionMeta";
 import { getCachedParsedExtension } from "../utils/caching";
 import { checkWorkspaceOpen, isExtensionsWorkspace } from "../utils/conditionCheckers";
 import { getAllMetricKeys, getEntityForMetric } from "../utils/extensionParsing";
 import { createUniqueFileName, getExtensionFilePath } from "../utils/fileSystem";
-import * as logger from "../utils/logging";
+import logger from "../utils/logging";
+import { showQuickPick } from "../utils/vscode";
 
 const logTrace = ["commandPalette", "createAlert"];
 
@@ -64,7 +65,7 @@ export async function createAlert() {
     return;
   }
 
-  const metricToUse = await vscode.window.showQuickPick(metricKeys, {
+  const metricToUse = await showQuickPick(metricKeys, {
     placeHolder: "Choose a metric",
     title: "Extension workspace: Create Alert",
     ignoreFocusOut: true,
@@ -86,7 +87,7 @@ export async function createAlert() {
   }
 
   // Ask the user if the condition is ABOVE or BELOW
-  const alertCondition = await vscode.window.showQuickPick(["ABOVE", "BELOW"], {
+  const alertCondition = await showQuickPick(["ABOVE", "BELOW"], {
     placeHolder: `Alert condition for ${metricToUse}`,
     title: "Extension workspace: Create Alert",
     ignoreFocusOut: true,

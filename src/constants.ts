@@ -1,4 +1,4 @@
-import * as vscode from "vscode";
+import vscode from "vscode";
 import { ExtensionDiagnosticDto } from "./utils/diagnostics";
 
 // Document selector for the extension.yaml file

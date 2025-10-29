@@ -3,18 +3,15 @@ const config = {
   displayName: "E2E",
   preset: "ts-jest",
   runner: "vscode",
-  modulePathIgnorePatterns: [
-    "<rootDir>/../../.vscode-test"
-  ],
+  rootDir: ".",
   transform: {
-    "^.+\\.ts$": [
-      'ts-jest',
-      { tsconfig: '<rootDir>/../../tsconfig.test.json' }
-    ]
+    "^.+\\.ts$": ["ts-jest", { tsconfig: "<rootDir>/../../tsconfig.test.json" }],
   },
-  testMatch: [
-    "<rootDir>/__tests__/*.test.ts",
-  ],
-}
+  modulePathIgnorePatterns: ["<rootDir>/../../.vscode-test"],
+  testMatch: ["<rootDir>/__tests__/**/*.test.ts"],
+  moduleNameMapper: {
+    "@common": "<rootDir>/../../common",
+  },
+};
 
-module.exports = config
+module.exports = config;

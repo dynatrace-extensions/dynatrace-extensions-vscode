@@ -18,16 +18,10 @@
  * UTILITIES RELATED TO SIMULATING EXTENSIONS
  ********************************************************************************/
 
-import * as vscode from "vscode";
-import {
-  EecType,
-  OsType,
-  RemoteTarget,
-  SimulationConfig,
-  SimulationLocation,
-} from "../interfaces/simulator";
+import { EecType, OsType, RemoteTarget, SimulationConfig, SimulationLocation } from "@common";
+import vscode from "vscode";
 import { getSimulatorTargets } from "./fileSystem";
-import * as logger from "./logging";
+import logger from "./logging";
 
 const logTrace = ["utils", "simulator"];
 
@@ -39,9 +33,9 @@ const logTrace = ["utils", "simulator"];
  * @returns - directory path
  */
 export function getDatasourceDir(os: OsType, eecType: EecType, dataSource: string) {
-  const eec = eecType === "ONEAGENT" ? "oneagent" : "remotepluginmodule";
+  const eec = eecType === EecType.OneAgent ? "oneagent" : "remotepluginmodule";
   const datasourceDir =
-    os === "WINDOWS"
+    os === OsType.Windows
       ? `C:\\Program Files\\dynatrace\\${eec}\\agent\\datasources\\${dataSource}\\`
       : `/opt/dynatrace/${eec}/agent/datasources/${dataSource}/`;
 
@@ -57,8 +51,8 @@ export function getDatasourceDir(os: OsType, eecType: EecType, dataSource: strin
  * @returns name of the file
  */
 export function getDatasourceExe(os: OsType, eecType: EecType, dataSource: string) {
-  const exePrefix = eecType === "ONEAGENT" ? "oneagent" : "dynatrace";
-  const datasourceExe = `${exePrefix}source${dataSource}` + (os === "WINDOWS" ? ".exe" : "");
+  const exePrefix = eecType === EecType.OneAgent ? "oneagent" : "dynatrace";
+  const datasourceExe = `${exePrefix}source${dataSource}` + (os === OsType.Windows ? ".exe" : "");
 
   logger.debug(`Datasource exe is: ${datasourceExe}`, ...logTrace, "getDatasourceExe");
 
@@ -92,9 +86,9 @@ export function getDatasourcePath(os: OsType, eecType: EecType, dataSource: stri
  */
 export function canSimulateDatasource(os: OsType, eecType: EecType, dataSource: string) {
   const DATASOURCES = {
-    WINDOWS: {
-      ONEAGENT: ["prometheus", "python", "statsd", "wmi"],
-      ACTIVEGATE: [
+    [OsType.Windows]: {
+      [EecType.OneAgent]: ["prometheus", "python", "statsd", "wmi"],
+      [EecType.ActiveGate]: [
         "prometheus",
         "snmp",
         "snmptraps",
@@ -105,9 +99,9 @@ export function canSimulateDatasource(os: OsType, eecType: EecType, dataSource: 
         "python",
       ],
     },
-    LINUX: {
-      ONEAGENT: ["prometheus", "python", "statsd"],
-      ACTIVEGATE: [
+    [OsType.Linux]: {
+      [EecType.OneAgent]: ["prometheus", "python", "statsd"],
+      [EecType.ActiveGate]: [
         "prometheus",
         "python",
         "snmp",
@@ -145,8 +139,8 @@ export function loadDefaultSimulationConfig(): SimulationConfig {
   const fnLogTrace = [...logTrace, "loadDefaultSimulationConfig"];
   // A fallback value in case the user's settings are invalid.
   const fallbackValue: SimulationConfig = {
-    eecType: "ONEAGENT",
-    location: "LOCAL",
+    eecType: EecType.OneAgent,
+    location: SimulationLocation.Local,
     sendMetrics: false,
   };
 
@@ -171,7 +165,7 @@ export function loadDefaultSimulationConfig(): SimulationConfig {
   }
 
   // For remote simulation, check the chosen target is valid
-  if (defaultLocation === "REMOTE") {
+  if (defaultLocation === SimulationLocation.Remote) {
     // Target name is required
     const targetName = config.get<string>("remoteTargetName");
     if (!targetName || targetName === "") {

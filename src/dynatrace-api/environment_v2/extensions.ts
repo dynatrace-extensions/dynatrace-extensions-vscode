@@ -87,7 +87,7 @@ export class ExtensionsServiceV2 {
    * @returns list of versions
    */
   async listVersions(extensionName: string, signal?: AbortSignal): Promise<MinimalExtension[]> {
-    return this.httpClient.paginatedCall<MinimalExtension>({
+    return this.httpClient.paginatedCall({
       path: `${this.endpoint}/${extensionName}`,
       item: "extensions",
       signal,
@@ -172,7 +172,7 @@ export class ExtensionsServiceV2 {
     activeOnly?: boolean,
     signal?: AbortSignal,
   ): Promise<ExtensionMonitoringConfiguration[]> {
-    return this.httpClient.paginatedCall<ExtensionMonitoringConfiguration>({
+    return this.httpClient.paginatedCall({
       path: `${this.endpoint}/${extensionName}/monitoringConfigurations`,
       item: "items",
       params: { version: version, active: activeOnly },

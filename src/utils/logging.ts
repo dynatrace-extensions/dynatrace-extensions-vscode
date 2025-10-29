@@ -15,9 +15,9 @@
  */
 
 import { statSync, writeFileSync } from "fs";
-import * as path from "path";
+import path from "path";
 import chalk from "chalk";
-import * as vscode from "vscode";
+import vscode from "vscode";
 import { getActivationContext } from "../extension";
 import { removeOldestFiles } from "./fileSystem";
 
@@ -311,3 +311,16 @@ const getConfiguredMaxFiles = (() => {
     return maxFiles;
   };
 })();
+
+export default {
+  disposeOutputChannels,
+  getGenericChannel,
+  getFastModeChannel,
+  notify,
+  error,
+  warn,
+  info,
+  debug,
+  log,
+  cleanUpLogFiles,
+};

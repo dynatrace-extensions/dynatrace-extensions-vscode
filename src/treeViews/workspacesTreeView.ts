@@ -15,10 +15,9 @@
  */
 
 import { readFileSync } from "fs";
-import * as path from "path";
-import * as glob from "glob";
-import * as vscode from "vscode";
-import * as yaml from "yaml";
+import path from "path";
+import { glob } from "glob";
+import vscode from "vscode";
 import { ExtensionStub } from "../interfaces/extensionMeta";
 import {
   WorkspaceTreeItem,
@@ -26,6 +25,8 @@ import {
   WorkspacesTreeDataProvider,
 } from "../interfaces/treeViews";
 import { getAllWorkspaces } from "../utils/fileSystem";
+import { createSingletonProvider } from "../utils/singleton";
+import { parseYAML } from "../utils/yamlParsing";
 
 const ICONS_PATH = path.join(__filename, "..", "..", "src", "assets", "icons");
 const ICONS: Record<string, { light: string; dark: string }> = {
@@ -42,18 +43,6 @@ const ICONS: Record<string, { light: string; dark: string }> = {
     dark: path.join(ICONS_PATH, "manifest_dark.png"),
   },
 };
-
-/**
- * Returns a singleton instance of the WorkspacesTreeDataProvider.
- */
-export const getWorkspacesTreeDataProvider = (() => {
-  let instance: WorkspacesTreeDataProvider | undefined;
-
-  return () => {
-    instance = instance === undefined ? new WorkspacesTreeDataProviderImpl() : instance;
-    return instance;
-  };
-})();
 
 export const refreshWorkspacesTreeView = () => {
   getWorkspacesTreeDataProvider().refresh();
@@ -139,7 +128,7 @@ class WorkspacesTreeDataProviderImpl implements WorkspacesTreeDataProvider {
       ];
       extensionFiles.forEach(filepath => {
         const extensionFilePath = path.join(workspacePath, filepath);
-        const extension = yaml.parse(readFileSync(extensionFilePath).toString()) as ExtensionStub;
+        const extension: ExtensionStub = parseYAML(readFileSync(extensionFilePath).toString());
         extensions.push(
           createWorkspacesTreeItem(
             extension.name,
@@ -170,3 +159,10 @@ class WorkspacesTreeDataProviderImpl implements WorkspacesTreeDataProvider {
     );
   }
 }
+
+/**
+ * Returns a singleton instance of the WorkspacesTreeDataProvider.
+ */
+export const getWorkspacesTreeDataProvider = createSingletonProvider<WorkspacesTreeDataProvider>(
+  WorkspacesTreeDataProviderImpl,
+);

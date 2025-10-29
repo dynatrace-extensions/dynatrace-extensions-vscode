@@ -15,8 +15,9 @@
  */
 
 import { readFileSync, readdirSync, writeFileSync } from "fs";
-import path = require("path");
-import * as vscode from "vscode";
+import path from "path";
+import { SimulationLocation, SimulationLocations } from "@common";
+import vscode from "vscode";
 import { Dynatrace } from "../dynatrace-api/dynatrace";
 import {
   MinimalConfiguration,
@@ -31,8 +32,10 @@ import {
 } from "../utils/conditionCheckers";
 import { getDatasourceName } from "../utils/extensionParsing";
 import { createUniqueFileName, getExtensionFilePath } from "../utils/fileSystem";
-import * as logger from "../utils/logging";
+import { parseJSON } from "../utils/jsonParsing";
+import logger from "../utils/logging";
 import { createGenericConfigObject, createObjectFromSchema } from "../utils/schemaParsing";
+import { showQuickPick } from "../utils/vscode";
 
 export const createMonitoringConfigurationWorkflow = async () => {
   if (
@@ -90,12 +93,11 @@ export async function createMonitoringConfiguration(dt: Dynatrace) {
   } else {
     logger.debug("Extension is not deployed. Need to build schema from scratch", ...fnLogTrace);
     const datasourceName = getDatasourceName(extension);
-    let activationContext;
-    activationContext = "REMOTE";
+    let activationContext: SimulationLocation | undefined = SimulationLocation.Remote;
+
     // For datasources that support both local and remote activation
     if (["wmi", "prometheus", "python"].includes(datasourceName)) {
-      activationContext = await vscode.window.showQuickPick(["LOCAL", "REMOTE"], {
-        canPickMany: false,
+      activationContext = await showQuickPick(SimulationLocations, {
         ignoreFocusOut: true,
         title: "Where will this configuration run?",
       });
@@ -112,7 +114,7 @@ export async function createMonitoringConfiguration(dt: Dynatrace) {
         ...fnLogTrace,
       );
       const activationSchemaFile = path.join(extensionFilePath, "..", "activationSchema.json");
-      const activationSchema = JSON.parse(readFileSync(activationSchemaFile).toString()) as unknown;
+      const activationSchema = parseJSON(readFileSync(activationSchemaFile).toString());
       initialConfig = {
         value: createObjectFromSchema(activationSchema, { activationContext: activationContext }),
         scope: "",
@@ -136,13 +138,13 @@ export async function createMonitoringConfiguration(dt: Dynatrace) {
 // This a simple monitoring configuration template. Make any changes as needed below.
 // Lines starting with '//' will be ignored. This will be saved as a separate file ` +
     "once you save and close this tab.";
-  const configObject = JSON.parse(
+  const configObject: MinimalConfiguration = parseJSON(
     await getConfigurationDetailsViaFile(
       headerContent,
       JSON.stringify(initialConfig, undefined, 4),
       false,
     ),
-  ) as MinimalConfiguration;
+  );
 
   // Name and save the file
   const fileName = await vscode.window.showInputBox({

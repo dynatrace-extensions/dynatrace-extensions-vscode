@@ -15,10 +15,9 @@
  */
 
 import { lstatSync, readdirSync, readFileSync } from "fs";
-import * as path from "path";
+import path from "path";
 import JSZip from "jszip";
-import * as vscode from "vscode";
-import * as yaml from "yaml";
+import vscode from "vscode";
 import { Dynatrace } from "../dynatrace-api/dynatrace";
 import { DynatraceAPIError } from "../dynatrace-api/errors";
 import { ExtensionStub } from "../interfaces/extensionMeta";
@@ -30,7 +29,9 @@ import {
   isExtensionsWorkspace,
 } from "../utils/conditionCheckers";
 import { loopSafeWait } from "../utils/general";
-import * as logger from "../utils/logging";
+import logger from "../utils/logging";
+import { ConfirmOption, showConfirmationInformationMessage, showQuickPick } from "../utils/vscode";
+import { parseYAML } from "../utils/yamlParsing";
 import { activateExtension } from "./activateExtension";
 
 export const uploadExtensionWorkflow = async () => {
@@ -86,7 +87,7 @@ export async function uploadExtension(dt: Dynatrace, tenantUrl: string) {
     logger.notify("ERROR", "Latest archive is invalid: no extension.yaml", ...fnLogTrace);
     return;
   }
-  const extension = yaml.parse(extensionYaml) as ExtensionStub;
+  const extension: ExtensionStub = parseYAML(extensionYaml);
   const extensionVersion = extension.version;
   const extensionName = extension.name;
 
@@ -98,10 +99,10 @@ export async function uploadExtension(dt: Dynatrace, tenantUrl: string) {
     logger.debug("10 extensions already on tenant. Must delete one", ...fnLogTrace);
     const choice = await vscode.window.showWarningMessage(
       "Maximum number of extensions detected. Would you like to remove the last one?",
-      "Yes",
-      "No",
+      ConfirmOption.Yes,
+      ConfirmOption.No,
     );
-    if (choice !== "Yes") {
+    if (choice !== ConfirmOption.Yes) {
       logger.notify("ERROR", "Operation cancelled.", ...fnLogTrace);
       return;
     }
@@ -116,18 +117,16 @@ export async function uploadExtension(dt: Dynatrace, tenantUrl: string) {
       .catch(async () => {
         logger.warn("Could not delete oldest version", ...fnLogTrace);
         // Could not delete oldest version, prompt user to select another one
-        await vscode.window
-          .showQuickPick(
-            dt.extensionsV2
-              .listVersions(extensionName)
-              .then(versions => versions.slice(1).map(version => version.version)),
-            {
-              canPickMany: false,
-              ignoreFocusOut: true,
-              title: "Could not delete latest version",
-              placeHolder: "Please choose an alternative",
-            },
-          )
+        await showQuickPick(
+          dt.extensionsV2
+            .listVersions(extensionName)
+            .then(versions => versions.slice(1).map(version => version.version)),
+          {
+            ignoreFocusOut: true,
+            title: "Could not delete latest version",
+            placeHolder: "Please choose an alternative",
+          },
+        )
           // Remove the user's chosen version
           .then(version => {
             if (version) {
@@ -180,12 +179,10 @@ export async function uploadExtension(dt: Dynatrace, tenantUrl: string) {
 
   // Prompt for version activation
   if (status === "success") {
-    const choice = await vscode.window.showInformationMessage(
+    const choice = await showConfirmationInformationMessage(
       "Extension uploaded successfully. Do you want to activate this version?",
-      "Yes",
-      "No",
     );
-    if (choice !== "Yes") {
+    if (choice !== ConfirmOption.Yes) {
       const open = await vscode.window.showInformationMessage("Operation completed.", "Open");
       if (open === "Open") {
         const baseUrl = tenantUrl.includes(".apps")

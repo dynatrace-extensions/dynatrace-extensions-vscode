@@ -18,7 +18,12 @@
  * UTILITIES FOR PARSING RAW YAML CONTENT
  ********************************************************************************/
 
-import * as vscode from "vscode";
+import vscode from "vscode";
+import yaml from "yaml";
+
+export function parseYAML<T>(data: string): T {
+  return yaml.parse(data) as T;
+}
 
 /**
  * Gets the indent of a text line.

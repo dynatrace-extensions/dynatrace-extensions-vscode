@@ -18,10 +18,10 @@
  * UTILITIES RELATED TO CRYPTOGRAPHIC FUNCTIONS AND HELPERS
  ********************************************************************************/
 
-import * as crypto from "crypto";
-import * as fs from "fs";
-import * as forge from "node-forge";
-import * as logger from "./logging";
+import crypto from "crypto";
+import fs from "fs";
+import forge from "node-forge";
+import logger from "./logging";
 
 const logTrace = ["utils", "cryptography"];
 

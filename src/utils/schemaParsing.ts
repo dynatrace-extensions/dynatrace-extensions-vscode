@@ -19,9 +19,10 @@
  ********************************************************************************/
 
 import { existsSync, readFileSync } from "fs";
-import path = require("path");
+import path from "path";
 import { DatasourceName } from "../interfaces/extensionMeta";
-import * as logger from "./logging";
+import { parseJSON } from "./jsonParsing";
+import logger from "./logging";
 
 const logTrace = ["utils", "schemaParsing"];
 
@@ -387,6 +388,6 @@ export function createGenericConfigObject(
   if (!existsSync(schemaPath)) {
     return { description: "", version: "0.0.0" };
   }
-  const schema = JSON.parse(readFileSync(schemaPath).toString()) as unknown;
+  const schema = parseJSON(readFileSync(schemaPath).toString());
   return createObjectFromSchema(schema, startingObject);
 }
