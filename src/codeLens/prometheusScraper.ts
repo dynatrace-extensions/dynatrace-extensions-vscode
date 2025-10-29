@@ -346,15 +346,18 @@ class PrometheusCodeLensProvider implements vscode.CodeLensProvider {
         // # HELP defines description of a metric
         if (line.startsWith("# HELP")) {
           const key = line.split("# HELP ")[1].split(" ")[0];
-          const description = line.split(`${key} `)[1];
+          let description = line.split(`${key} `)[1];
           if (!(key in scrapedMetrics)) {
             scrapedMetrics[key] = {};
           }
-          scrapedMetrics[key].description = description;
+          if (description.startsWith("description:")) {
+            description = description.replace(/description: /gm, "");
+          }
+          scrapedMetrics[key].description = '"' + description.replace(/(\r\n|\n|\r)/gm, "") + '"';
           // # TYPE defines type of a metric
         } else if (line.startsWith("# TYPE")) {
           const key = line.split("# TYPE ")[1].split(" ")[0];
-          let type = line.split(`${key} `)[1];
+          let type = line.split(`${key} `)[1].trim();
           if (type === "counter") {
             type = "count";
           }
@@ -362,9 +365,34 @@ class PrometheusCodeLensProvider implements vscode.CodeLensProvider {
             scrapedMetrics[key] = {};
           }
           scrapedMetrics[key].type = type;
-          // Any other line contains dimensions and the value
-        } else {
-          const [key, dimensionsStr] = line.split(line.includes("{") ? "{" : " ");
+          // Any other line that is not a comment contains dimensions and the value
+        } else if (!line.startsWith("#")) {
+          let key = line.split(line.includes("{") ? "{" : " ")[0];
+          const dimensionsStr = line.split(line.includes("{") ? "{" : " ")[1];
+          if (key.endsWith("_total")) {
+            if (
+              key.split("_total")[0] in scrapedMetrics &&
+              scrapedMetrics[key.split("_total")[0]].type === "count"
+            ) {
+              key = key.split("_total")[0];
+            }
+          }
+          if (key.endsWith("_count")) {
+            if (
+              key.split("_count")[0] in scrapedMetrics &&
+              scrapedMetrics[key.split("_count")[0]].type === "summary"
+            ) {
+              key = key.split("_count")[0];
+            }
+          }
+          if (key.endsWith("_sum")) {
+            if (
+              key.split("_sum")[0] in scrapedMetrics &&
+              scrapedMetrics[key.split("_sum")[0]].type === "summary"
+            ) {
+              key = key.split("_sum")[0];
+            }
+          }
           if (!(key in scrapedMetrics)) {
             scrapedMetrics[key] = {};
           }

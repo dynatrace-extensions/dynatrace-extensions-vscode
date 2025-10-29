@@ -74,7 +74,14 @@ class PrometheusActionProvider implements vscode.CodeActionProvider {
       const metricKeys = getPrometheusMetricKeys(parsedExtension, groupIdx, subgroupIdx);
       const labelKeys = getPrometheusLabelKeys(parsedExtension, groupIdx, subgroupIdx);
       if (lineText.includes("metrics:")) {
-        codeActions.push(...this.createMetricInsertions(document, range, metricKeys));
+        codeActions.push(
+          ...this.createMetricInsertions(
+            document,
+            range,
+            metricKeys,
+            parentBlocks[parentBlocks.length - 1] === "subgroups",
+          ),
+        );
       }
       if (lineText.includes("dimensions:")) {
         codeActions.push(...this.createDimensionInsertions(document, range, metricKeys, labelKeys));
@@ -107,10 +114,22 @@ class PrometheusActionProvider implements vscode.CodeActionProvider {
     }
     const firstLineMatch = /[a-z]/i.exec(document.lineAt(range.start.line).text);
     if (firstLineMatch) {
-      const indent = firstLineMatch.index;
-      const insertPosition = new vscode.Position(range.start.line + 1, 0);
+      let indent = firstLineMatch.index;
+      let line = range.start.line + 1;
+      if (actionName === "Insert all scraped metrics") {
+        line = range.start.line;
+        indent = indent - 2;
+      }
+      const insertPosition = new vscode.Position(line, 0);
       const action = new vscode.CodeAction(actionName, vscode.CodeActionKind.QuickFix);
       action.edit = new vscode.WorkspaceEdit();
+      if (actionName === "Insert all scraped metrics") {
+        const deleteRange = new vscode.Range(
+          new vscode.Position(line, 0),
+          new vscode.Position(line + 1, 0),
+        );
+        action.edit.delete(document.uri, deleteRange);
+      }
       action.edit.insert(document.uri, insertPosition, indentSnippet(textToInsert, indent));
       return action;
     }
@@ -122,35 +141,43 @@ class PrometheusActionProvider implements vscode.CodeActionProvider {
    * @param document the document that triggered the action provider
    * @param range the range that triggered the action
    * @param existingKeys keys that have already been inserted in yaml (to be excluded)
+   * @param isSubgroup boolean that indicates if we are in a subgroup or not
    * @returns list of code actions
    */
   private createMetricInsertions(
     document: vscode.TextDocument,
     range: vscode.Range,
     existingKeys: string[],
+    isSubgroup: boolean,
   ): vscode.CodeAction[] {
     const codeActions: vscode.CodeAction[] = [];
     const availableKeys = Object.keys(getCachedPrometheusData()).filter(
       key => !existingKeys.includes(key),
     );
 
-    // Insert all metrics in one go
-    if (availableKeys.length > 1) {
-      const action = this.createInsertAction(
-        "Insert all scraped metrics",
-        availableKeys
-          .map(
-            key =>
-              `- key: ${key}\n  value: metric:${key}\n  type: ${String(
-                getCachedPrometheusData()[key].type,
-              )}`,
-          )
-          .join("\n"),
-        document,
-        range,
-      );
-      if (action) {
-        codeActions.push(action);
+    if (!isSubgroup) {
+      let j = 0;
+      let response = "subgroups:";
+      for (let i = 0; i < availableKeys.length; i++) {
+        if (i === j * 100) {
+          j++;
+          response = `${response}\n- subgroup: "${j}"\n  metrics:\n`;
+        }
+        const key = availableKeys[i];
+        response = `${response}  - key: ${key}\n    value: metric:${key}\n    type: ${String(getCachedPrometheusData()[key].type)}\n`;
+      }
+
+      // Insert all metrics in one go
+      if (availableKeys.length > 1) {
+        const action = this.createInsertAction(
+          "Insert all scraped metrics",
+          response,
+          document,
+          range,
+        );
+        if (action) {
+          codeActions.push(action);
+        }
       }
     }
 
