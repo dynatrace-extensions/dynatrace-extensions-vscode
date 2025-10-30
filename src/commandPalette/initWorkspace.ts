@@ -58,20 +58,24 @@ const logTrace = ["commandPalette", "initWorkspace"];
 
 const PROJECT_TYPE: Record<string, vscode.QuickPickItem> = {
   defaultExtension: {
-    label: "Extension 2.0",
+    label: "YAML Extension",
+    iconPath: new vscode.ThemeIcon("file-code"),
     detail: "Default choice for existing projects and most new ones. If unsure, choose this.",
     description: "⭐",
   },
   pythonExtension: {
-    label: "Python Extension 2.0",
-    detail: "Develop an Extension 2.0 based on the Python datasource.",
+    label: "Python Extension",
+    iconPath: new vscode.ThemeIcon("terminal"),
+    detail: "Develop an Extension based on the Python datasource. Requires python 3.10",
   },
   jmxConversion: {
     label: "JMX 1.0 Conversion",
-    detail: "Start by converting a 1.0 JMX extension to the 2.0 framework.",
+    iconPath: new vscode.ThemeIcon("references"),
+    detail: "Start by converting a legacy JMX extension to the new framework.",
   },
   existingExtension: {
-    label: "Existing 2.0 Extension",
+    label: "Download an Extension",
+    iconPath: new vscode.ThemeIcon("cloud-download"),
     detail: "Start by downloading an extension already deployed in your tenant.",
   },
 };
@@ -82,8 +86,9 @@ if (
     .get<boolean>("disableExternalCalls", false)
 ) {
   PROJECT_TYPE.exampleExtension = {
-    label: "Example 2.0 Extension",
-    detail: "Start by using example extension for any datasource.",
+    label: "Download an Example",
+    iconPath: new vscode.ThemeIcon("github"),
+    detail: "Download one of our example extensions from GitHub.",
   };
 }
 
@@ -91,30 +96,12 @@ PROJECT_TYPE satisfies Record<string, vscode.QuickPickItem>;
 
 const PROJECT_TYPES = Object.values(PROJECT_TYPE);
 const EXAMPLE_SELECTION = {
-  python_example: {
-    label: "Example Python Extension",
-    detail: "Start with an example Python Extension to use as a reference.",
-  },
-  snmp_example: {
-    label: "Example SNMP Extension",
-    detail: "Start with an example SNMP Extension to use as a reference.",
-  },
-  jmx_example: {
-    label: "Example JMX Extension",
-    detail: "Start with an example JMX Extension to use as a reference.",
-  },
-  prometheus_example: {
-    label: "Example Prometheus Extension",
-    detail: "Start with an example Prometheus Extension to use as a reference.",
-  },
-  sql_example: {
-    label: "Example SQL Extension",
-    detail: "Start with an example SQL Extension to use as a reference.",
-  },
-  wmi_example: {
-    label: "Example WMI Extension",
-    detail: "Start with an example WMI extension to use as a reference.",
-  },
+  python_example: { label: "Python" },
+  snmp_example: { label: "SNMP" },
+  jmx_example: { label: "JMX" },
+  prometheus_example: { label: "Prometheus" },
+  sql_example: { label: "SQL" },
+  wmi_example: { label: "WMI" },
 };
 
 export const initWorkspaceWorkflow = async () => {
@@ -291,7 +278,7 @@ export async function initWorkspace(dt: Dynatrace, callback?: () => unknown) {
         logger.debug("Prompting user for template selection", ...fnLogTrace);
         projectType = await showQuickPick(PROJECT_TYPES, {
           title: "What type of project are you starting?",
-          placeHolder: "Extension 2.0",
+          placeHolder: "YAML Extension",
           ignoreFocusOut: true,
         });
       }
@@ -333,8 +320,8 @@ export async function initWorkspace(dt: Dynatrace, callback?: () => unknown) {
           logger.debug("Prompting user for example selection", ...fnLogTrace);
           exampleType = await vscode.window.showQuickPick(Object.values(EXAMPLE_SELECTION), {
             canPickMany: false,
-            title: "What type of example extension would you like to start with?",
-            placeHolder: "Example Python Extension",
+            title: "What datasource should the example use?",
+            placeHolder: "Python",
             ignoreFocusOut: true,
           });
           switch (exampleType) {
