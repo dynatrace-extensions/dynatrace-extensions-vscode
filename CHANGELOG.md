@@ -1,6 +1,6 @@
 # Change Log
 
-## Version 2.9.0 (unreleased)
+## Version 2.9.0 (30.10.2025)
 
 ### ✨ New in this version:
 
