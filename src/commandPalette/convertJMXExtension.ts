@@ -486,7 +486,26 @@ async function convertV1UiToScreens(
   metricKeyMap: Map<string, { key: string; dimensions: string[] }>,
 ) {
   const screens: ScreenStub[] = [];
-  const uiCharts = [...(ui.charts ?? []), ...(ui.keycharts ?? [])];
+  let uiCharts = [...(ui.charts ?? []), ...(ui.keycharts ?? [])];
+  uiCharts = uiCharts
+    .map(elem => {
+      if (elem.series.length > 10) {
+        const newElem = [];
+        for (let i = 0; i < elem.series.length / 10; i++) {
+          const newSeries = elem.series.slice(i * 10, i * 10 + 10);
+          newElem.push({
+            group: `${elem.group}-${i}`,
+            title: `${elem.title}`,
+            description: `${elem.description}`,
+            series: newSeries,
+          } as ChartDto);
+        }
+        return newElem;
+      } else {
+        return elem;
+      }
+    })
+    .flat();
 
   // If a technology was selected, generate PGI injections
   if (technology !== "UNKNOWN") {
