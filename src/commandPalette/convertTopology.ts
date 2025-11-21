@@ -14,12 +14,13 @@
   limitations under the License.
  */
 
-import * as vscode from "vscode";
-import { writeFileSync, mkdirSync, readFileSync } from "fs";
+import { writeFileSync, mkdirSync } from "fs";
 import { join, dirname } from "path";
+import * as vscode from "vscode";
 import yaml from "yaml";
 import { ExtensionStub, MetricMetadata, TopologyType } from "../interfaces/extensionMeta";
 import { getCachedParsedExtension } from "../utils/caching";
+import { updateYamlNode } from "../utils/dashboards";
 import { getExtensionFilePath } from "../utils/fileSystem";
 import logger from "../utils/logging";
 
@@ -304,6 +305,41 @@ const findMatchingMetric = (condition: string, metrics?: MetricMetadata[]): stri
 };
 
 /**
+ * Extracts ID components from an idPattern string
+ * Example: "squid-{dt.entity.process_group_instance}-{port}" -> ["dt.entity.process_group_instance", "port"]
+ * @param idPattern - The idPattern string containing {fieldName} placeholders
+ * @returns Array of field names extracted from the pattern
+ */
+const extractIdComponentsFromPattern = (idPattern: string): string[] => {
+  const matches = idPattern.match(/\{([^}]+)\}/g);
+  if (!matches) {
+    return [];
+  }
+  return matches.map(match => match.slice(1, -1)); // Remove { and }
+};
+
+/**
+ * Converts a field name to a valid ID component name (lowercase with underscores, no dots)
+ * Example: "dt.entity.process_group_instance" -> "dt_entity_process_group_instance"
+ * @param fieldName - The field name to convert
+ * @returns Sanitized ID component name
+ */
+const sanitizeIdComponentName = (fieldName: string): string => {
+  return fieldName.toLowerCase().replace(/\./g, "_");
+};
+
+/**
+ * Extracts the field name from a pattern string
+ * Example: "{org.id}" -> "org.id"
+ * @param pattern - The pattern string containing {fieldName}
+ * @returns The field name or the original pattern if no match
+ */
+const extractFieldNameFromPattern = (pattern: string): string => {
+  const match = pattern.match(/\{([^}]+)\}/);
+  return match ? match[1] : pattern;
+};
+
+/**
  * Creates a smartscape node processor for OpenPipeline
  */
 const createSmartscapeNodeProcessor = (
@@ -315,20 +351,31 @@ const createSmartscapeNodeProcessor = (
   matcher: string,
   counter: number,
 ): OpenPipelineProcessor => {
-  // Build ID components from required dimensions
-  // If no required dimensions exist, create a default ID component based on the type name
-  let idComponents =
-    rule.requiredDimensions?.map(dim => ({
-      idComponent: dim.key,
+  // Build ID components from idPattern if it exists
+  let idComponents: Array<{ idComponent: string; referencedFieldName: string }> = [];
+
+  if (rule.idPattern) {
+    const fieldNames = extractIdComponentsFromPattern(rule.idPattern);
+    idComponents = fieldNames.map(fieldName => ({
+      idComponent: sanitizeIdComponentName(fieldName),
+      referencedFieldName: fieldName,
+    }));
+  }
+
+  // Fallback to required dimensions if no idPattern or no components extracted
+  if (idComponents.length === 0 && rule.requiredDimensions) {
+    idComponents = rule.requiredDimensions.map(dim => ({
+      idComponent: sanitizeIdComponentName(dim.key),
       referencedFieldName: dim.key,
-    })) || [];
+    }));
+  }
 
   // Ensure at least one ID component exists (API requirement: minimum size is 1)
   if (idComponents.length === 0) {
     const defaultIdKey = `${type.name.toLowerCase()}.id`;
     idComponents = [
       {
-        idComponent: `${type.name.replace(/:/g, "_")}_id`,
+        idComponent: sanitizeIdComponentName(defaultIdKey),
         referencedFieldName: defaultIdKey,
       },
     ];
@@ -339,7 +386,7 @@ const createSmartscapeNodeProcessor = (
     .filter(attr => !BLOCKED_FIELDS.includes(attr.key))
     .map(attr => ({
       fieldName: attr.key,
-      referencedFieldName: attr.key,
+      referencedFieldName: extractFieldNameFromPattern(attr.pattern),
     }));
 
   const processorId = `${newName}_${extractNode ? "node" : "entity"}_${source.sourceType}_${counter}`;
@@ -453,6 +500,7 @@ const writeMetricSourceToFile = (extension: ExtensionStub): void => {
 
 /**
  * Updates the extension.yaml file to add OpenPipeline configuration references
+ * Uses line-by-line replacement to preserve YAML formatting
  * @param extension - The extension metadata
  */
 const updateExtensionYaml = (extension: ExtensionStub): void => {
@@ -464,32 +512,31 @@ const updateExtensionYaml = (extension: ExtensionStub): void => {
       throw new Error("Could not find extension.yaml file");
     }
 
-    // Read the current extension.yaml file
-    const yamlContent = readFileSync(extensionFile, "utf-8");
-    // eslint-disable-next-line @typescript-eslint/no-unsafe-assignment
-    const extensionData: Record<string, unknown> = yaml.parse(yamlContent);
-
-    // Add or update the openpipeline section
-    extensionData.openpipeline = {
-      pipelines: [
-        {
-          displayName: `${extension.name} pipeline`,
-          pipelinePath: "openpipeline/metric.pipeline.json",
-          configScope: "metrics",
-        },
-      ],
-      sources: [
-        {
-          displayName: `${extension.name} source`,
-          sourcePath: "openpipeline/metric.source.json",
-          configScope: "metrics",
-        },
-      ],
+    // Build the openpipeline YAML node
+    const openpipelineConfig = {
+      openpipeline: {
+        pipelines: [
+          {
+            displayName: `${extension.name} pipeline`,
+            pipelinePath: "openpipeline/metric.pipeline.json",
+            configScope: "metrics",
+          },
+        ],
+        sources: [
+          {
+            displayName: `${extension.name} source`,
+            sourcePath: "openpipeline/metric.source.json",
+            configScope: "metrics",
+          },
+        ],
+      },
     };
 
-    // Write the updated YAML back to the file
-    const updatedYaml = yaml.stringify(extensionData);
-    writeFileSync(extensionFile, updatedYaml, "utf-8");
+    // Convert to YAML string
+    const openpipelineYaml = yaml.stringify(openpipelineConfig);
+
+    // Update the YAML file using line-by-line replacement to preserve formatting
+    updateYamlNode(extensionFile, "openpipeline:", openpipelineYaml);
 
     logger.info("Updated extension.yaml with OpenPipeline configuration", ...logTrace);
   } catch (error) {

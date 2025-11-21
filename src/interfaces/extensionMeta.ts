@@ -51,6 +51,7 @@ export interface TopologyType {
   displayName: string;
   name: string;
   rules: {
+    idPattern?: string;
     requiredDimensions?: {
       key: string;
       valuePattern?: string;
