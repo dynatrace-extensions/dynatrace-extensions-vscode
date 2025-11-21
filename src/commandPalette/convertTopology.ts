@@ -39,7 +39,11 @@ interface OpenPipelineProcessor {
     extractNode: boolean;
     nodeName?: {
       type: string;
-      value: string;
+      constant?: string;
+      field?: {
+        sourceFieldName: string;
+        defaultValue: string;
+      };
     };
     fieldsToExtract?: Array<{
       fieldName: string;
@@ -50,6 +54,18 @@ interface OpenPipelineProcessor {
 
 // Fields that are not allowed to be extracted in OpenPipeline
 const BLOCKED_FIELDS = ["dt.security_context"];
+
+/**
+ * Cleans up the extension name by removing common prefixes
+ * @param extensionName - The full extension name (e.g., "custom:com.dynatrace.mulesoft-cloudhub")
+ * @returns The cleaned extension name (e.g., "mulesoft-cloudhub")
+ */
+const cleanExtensionName = (extensionName: string): string => {
+  return extensionName
+    .replace(/^custom:com\.dynatrace\./, "")
+    .replace(/^com\.dynatrace\./, "")
+    .replace(/^custom:/, "");
+};
 
 /**
  * Workflow that creates a Smartscape topology configuration from the extension's
@@ -104,9 +120,10 @@ export const convertTopologyToOpenPipeline = async (extension: ExtensionStub) =>
   // }
 
   // Create the OpenPipeline configuration
+  const cleanedName = cleanExtensionName(extension.name);
   const pipeline = {
     customId: extension.name,
-    displayName: `${extension.name} - Smartscape Topology`,
+    displayName: `extension: ${cleanedName}`,
     smartscapeNodeExtraction: {
       processors,
     },
@@ -128,6 +145,8 @@ const convertTopologyTypes = async (
 ): Promise<OpenPipelineProcessor[]> => {
   const processors: OpenPipelineProcessor[] = [];
   let processorCounter = 0;
+  // Track entity types that already have extractNode: true
+  const entityTypesWithNodeExtraction = new Set<string>();
 
   // We loop through the existing topology.types, creating the configuration dynamically
   // while asking the user for input when necessary
@@ -187,39 +206,45 @@ const convertTopologyTypes = async (
         );
         processors.push(entityProcessor);
 
-        // Ask user for node extraction matcher
-        const matchingMetric = findMatchingMetric(source.condition, metrics);
-        const suggestedNodeMatcher = matchingMetric
-          ? `matchesValue(metric.key, "${matchingMetric}")`
-          : suggestedEntityMatcher;
+        // Only create node extraction processor if this entity type doesn't have one yet
+        if (!entityTypesWithNodeExtraction.has(newName)) {
+          // Ask user for node extraction matcher
+          const matchingMetric = findMatchingMetric(source.condition, metrics);
+          const suggestedNodeMatcher = matchingMetric
+            ? `matchesValue(metric.key, "${matchingMetric}")`
+            : suggestedEntityMatcher;
 
-        const nodeMatcher = await vscode.window.showInputBox({
-          prompt: `Enter matcher condition for node extraction (extractNode: true) for "${type.displayName}"`,
-          placeHolder: suggestedNodeMatcher,
-          value: suggestedNodeMatcher,
-          validateInput: value => {
-            if (!value || value.trim() === "") {
-              return "Matcher cannot be empty";
-            }
-            return null;
-          },
-        });
+          const nodeMatcher = await vscode.window.showInputBox({
+            prompt: `Enter matcher condition for node extraction (extractNode: true) for "${type.displayName}"`,
+            placeHolder: suggestedNodeMatcher,
+            value: suggestedNodeMatcher,
+            validateInput: value => {
+              if (!value || value.trim() === "") {
+                return "Matcher cannot be empty";
+              }
+              return null;
+            },
+          });
 
-        if (!nodeMatcher) {
-          throw Error("User cancelled the operation");
+          if (!nodeMatcher) {
+            throw Error("User cancelled the operation");
+          }
+
+          // Create node extraction processor (extractNode: true)
+          const nodeProcessor = createSmartscapeNodeProcessor(
+            type,
+            newName,
+            source,
+            rule,
+            true,
+            nodeMatcher,
+            processorCounter++,
+          );
+          processors.push(nodeProcessor);
+
+          // Mark this entity type as having node extraction
+          entityTypesWithNodeExtraction.add(newName);
         }
-
-        // Create node extraction processor (extractNode: true)
-        const nodeProcessor = createSmartscapeNodeProcessor(
-          type,
-          newName,
-          source,
-          rule,
-          true,
-          nodeMatcher,
-          processorCounter++,
-        );
-        processors.push(nodeProcessor);
       }
     }
   }
@@ -340,6 +365,49 @@ const extractFieldNameFromPattern = (pattern: string): string => {
 };
 
 /**
+ * Extracts node name configuration from instanceNamePattern
+ * @param instanceNamePattern - The pattern string (e.g., "{org.name}")
+ * @param defaultValue - The default value to use if field is not found
+ * @returns Node name configuration object
+ */
+const extractNodeNameFromPattern = (
+  instanceNamePattern: string | undefined,
+  defaultValue: string,
+): {
+  type: string;
+  constant?: string;
+  field?: { sourceFieldName: string; defaultValue: string };
+} => {
+  // If no pattern is provided, use constant with default value
+  if (!instanceNamePattern) {
+    return {
+      type: "constant",
+      constant: defaultValue,
+    };
+  }
+
+  // Extract the first field name from the pattern
+  const match = instanceNamePattern.match(/\{([^}]+)\}/);
+
+  if (match) {
+    const fieldName = match[1];
+    return {
+      type: "field",
+      field: {
+        sourceFieldName: fieldName,
+        defaultValue: defaultValue,
+      },
+    };
+  }
+
+  // If no field found, use the pattern itself as constant
+  return {
+    type: "constant",
+    constant: instanceNamePattern,
+  };
+};
+
+/**
  * Creates a smartscape node processor for OpenPipeline
  */
 const createSmartscapeNodeProcessor = (
@@ -351,6 +419,13 @@ const createSmartscapeNodeProcessor = (
   matcher: string,
   counter: number,
 ): OpenPipelineProcessor => {
+  // Validate that instanceNamePattern exists
+  if (rule.instanceNamePattern === undefined) {
+    throw new Error(
+      `Rule for type "${type.name}" is missing instanceNamePattern. All topology rules must have an instanceNamePattern defined.`,
+    );
+  }
+
   // Build ID components from idPattern if it exists
   let idComponents: Array<{ idComponent: string; referencedFieldName: string }> = [];
 
@@ -395,6 +470,9 @@ const createSmartscapeNodeProcessor = (
     ? `Extract node for ${type.displayName}`
     : `Create entity for ${type.displayName}`;
 
+  // Extract node name from instanceNamePattern, defaulting to the new entity type name
+  const nodeName = extractNodeNameFromPattern(rule.instanceNamePattern, newName);
+
   return {
     id: processorId,
     type: "smartscapeNode",
@@ -405,10 +483,7 @@ const createSmartscapeNodeProcessor = (
       nodeIdFieldName: "node_id",
       idComponents,
       extractNode,
-      nodeName: {
-        type: "constant",
-        value: type.displayName,
-      },
+      nodeName,
       fieldsToExtract: fieldsToExtract.length > 0 ? fieldsToExtract : undefined,
     },
   };
@@ -484,8 +559,9 @@ const writeMetricSourceToFile = (extension: ExtensionStub): void => {
     }
 
     // Create the metric source configuration
+    const cleanedName = cleanExtensionName(extension.name);
     const metricSource = {
-      displayName: `${extension.name} metric source`,
+      displayName: `extension: ${cleanedName}`,
       staticRouting: {
         pipelineId: extension.name,
       },
