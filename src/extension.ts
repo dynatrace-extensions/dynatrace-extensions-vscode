@@ -43,6 +43,7 @@ import { createAlertWorkflow } from "./commandPalette/createAlert";
 import { createMonitoringConfigurationWorkflow } from "./commandPalette/createConfiguration";
 import { createDashboardWorkflow } from "./commandPalette/createDashboard";
 import { createDocumentationWorkflow } from "./commandPalette/createDocumentation";
+import { createSmartscapeTopologyWorkflow } from "./commandPalette/convertTopology";
 import { distributeCertificateWorkflow } from "./commandPalette/distributeCertificate";
 import { downloadSupportArchiveWorkflow } from "./commandPalette/downloadSupportArchive";
 import { generateCertificatesWorkflow } from "./commandPalette/generateCertificates";
@@ -169,6 +170,7 @@ const registerCommandPaletteWorkflows = (): vscode.Disposable[] => [
     GlobalCommand.CreateMonitoringConfiguration,
     createMonitoringConfigurationWorkflow,
   ),
+  registerWorkflowCommand(GlobalCommand.CreateSmartscapeTopology, createSmartscapeTopologyWorkflow),
   registerWorkflowCommand(GlobalCommand.DownloadSupportArchive, downloadSupportArchiveWorkflow),
 ];
 

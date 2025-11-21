@@ -104,6 +104,11 @@
         "category": "Dynatrace extensions"
       },
       {
+        "command": "dynatrace-extensions.createSmartscapeTopology",
+        "title": "Create Smartscape Topology",
+        "category": "Dynatrace extensions"
+      },
+      {
         "command": "dynatrace-extensions-workspaces.refresh",
         "title": "Refresh",
         "icon": "$(refresh)"

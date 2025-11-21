@@ -52,6 +52,7 @@ export const GlobalCommand = createCommands("dynatrace-extensions", {
   CreateDashboard: "createDashboard",
   CreateAlert: "createAlert",
   CreateMonitoringConfiguration: "createMonitoringConfiguration",
+  CreateSmartscapeTopology: "createSmartscapeTopology",
   DownloadSupportArchive: "downloadSupportArchive",
 } as const);
 // eslint-disable-next-line @typescript-eslint/no-redeclare
