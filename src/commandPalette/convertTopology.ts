@@ -391,11 +391,15 @@ const createSmartscapeNodeProcessor = (
 
   const processorId = `${newName}_${extractNode ? "node" : "entity"}_${source.sourceType}_${counter}`;
 
+  const description = extractNode
+    ? `Extract node for ${type.displayName}`
+    : `Create entity for ${type.displayName}`;
+
   return {
     id: processorId,
     type: "smartscapeNode",
     matcher,
-    description: `Extract ${extractNode ? "node" : "entities"} for ${type.displayName}`,
+    description,
     smartscapeNode: {
       nodeType: newName,
       nodeIdFieldName: "node_id",
