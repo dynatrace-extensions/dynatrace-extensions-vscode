@@ -22,32 +22,37 @@ import { updateYamlNode } from "../utils/dashboards";
 import { getExtensionFilePath } from "../utils/fileSystem";
 import logger from "../utils/logging";
 
-interface OpenPipelineProcessor {
+export interface OpenPipelineProcessor {
   id: string;
   type: string;
   matcher: string;
   description?: string;
-  smartscapeNode: {
-    nodeType: string;
-    nodeIdFieldName: string;
-    idComponents: Array<{
-      idComponent: string;
-      referencedFieldName: string;
-    }>;
-    extractNode: boolean;
-    nodeName?: {
-      type: string;
-      constant?: string;
-      field?: {
-        sourceFieldName: string;
-        defaultValue: string;
-      };
+  smartscapeNode: OpenPipelineSmartscapeNode;
+}
+export interface OpenPipelineFieldsToExtract {
+  fieldName: string;
+  referencedFieldName: string;
+}
+
+export interface OpenPipelineIdComponent {
+  idComponent: string;
+  referencedFieldName: string;
+}
+
+export interface OpenPipelineSmartscapeNode {
+  nodeType: string;
+  nodeIdFieldName: string;
+  idComponents: Array<OpenPipelineIdComponent>;
+  extractNode: boolean;
+  nodeName?: {
+    type: string;
+    constant?: string;
+    field?: {
+      sourceFieldName: string;
+      defaultValue: string;
     };
-    fieldsToExtract?: Array<{
-      fieldName: string;
-      referencedFieldName: string;
-    }>;
   };
+  fieldsToExtract?: Array<OpenPipelineFieldsToExtract>;
 }
 
 // Fields that are not allowed to be extracted in OpenPipeline

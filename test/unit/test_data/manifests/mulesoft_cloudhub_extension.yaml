@@ -1,0 +1,2725 @@
+name: custom:com.dynatrace.mulesoft-cloudhub
+version: 2.2.12
+minDynatraceVersion: 1.905.0
+minEECVersion: 1.328.0
+author:
+  name: Dynatrace
+python:
+  runtime:
+    module: mulesoft_cloudhub
+    version:
+      min: "3.9"
+  activation:
+    remote:
+      path: activationSchema.json
+dashboards:
+  - path: dashboards/overview.json
+metrics:
+  - key: cloudhub.org.v_cores_production
+    metadata:
+      displayName: vCores Production
+      description: The number of vCores assigned to production for this Organization
+      unit: Count
+      sourceEntityType: cloudhub:org
+      tags:
+        - custom:mulesoft-cloudhub
+  - key: cloudhub.org.v_cores_sandbox
+    metadata:
+      displayName: vCores Sandbox
+      description: The number of vCores assigned to sandbox for this Organization
+      unit: Count
+      sourceEntityType: cloudhub:org
+      tags:
+        - custom:mulesoft-cloudhub
+  - key: cloudhub.org.v_cores_design
+    metadata:
+      displayName: vCores Design
+      description: The number of vCores assigned to design for this Organization
+      unit: Count
+      sourceEntityType: cloudhub:org
+      tags:
+        - custom:mulesoft-cloudhub
+  - key: cloudhub.org.vpcs
+    metadata:
+      displayName: VPCs
+      description: The number of VPCs in use by this Organization
+      unit: Count
+      sourceEntityType: cloudhub:org
+      tags:
+        - custom:mulesoft-cloudhub
+  - key: cloudhub.org.vpns
+    metadata:
+      displayName: VPNs
+      description: The number of VPNs in use by this Organization
+      unit: Count
+      sourceEntityType: cloudhub:org
+      tags:
+        - custom:mulesoft-cloudhub
+  - key: cloudhub.org.gateways
+    metadata:
+      displayName: Gateways
+      description: The number of Gateways in use by this Organization
+      unit: Count
+      sourceEntityType: cloudhub:org
+      tags:
+        - custom:mulesoft-cloudhub
+  - key: cloudhub.env.applications
+    metadata:
+      displayName: Applications
+      description: The number of applications in this environment
+      unit: Count
+      sourceEntityType: cloudhub:env
+      tags:
+        - custom:mulesoft-cloudhub
+  - key: cloudhub.env.started_applications
+    metadata:
+      displayName: Started Applications
+      description: The number of started applications in this environment
+      unit: Count
+      sourceEntityType: cloudhub:env
+      tags:
+        - custom:mulesoft-cloudhub
+  - key: cloudhub.app.workers
+    metadata:
+      displayName: Workers
+      description: The number of workers in this application
+      unit: Count
+      sourceEntityType: cloudhub:app
+      tags:
+        - custom:mulesoft-cloudhub
+  - key: cloudhub.app.remaining_workers
+    metadata:
+      displayName: Remaining Workers
+      description: The number of remaining workers in this application
+      unit: Count
+      sourceEntityType: cloudhub:app
+      tags:
+        - custom:mulesoft-cloudhub
+  - key: cloudhub.app.requests
+    metadata:
+      displayName: Inbound Requests
+      description: The number of inbound requests for this application
+      unit: Count
+      sourceEntityType: cloudhub:app
+      tags:
+        - custom:mulesoft-cloudhub
+  - key: cloudhub.app.errors
+    metadata:
+      displayName: Errors
+      description: The number of errors for this application
+      unit: Count
+      sourceEntityType: cloudhub:app
+      tags:
+        - custom:mulesoft-cloudhub
+  - key: cloudhub.app.response_time
+    metadata:
+      displayName: Inbound Response Time
+      description: The average inbound response time for this application
+      unit: MilliSecond
+      sourceEntityType: cloudhub:app
+      tags:
+        - custom:mulesoft-cloudhub
+  - key: cloudhub.app.worker.heap_used
+    metadata:
+      displayName: JVM Heap Used
+      description: JVM Heap Used for a worker
+      unit: Byte
+      sourceEntityType: cloudhub:app
+      tags:
+        - custom:mulesoft-cloudhub
+  - key: cloudhub.app.worker.heap_total
+    metadata:
+      displayName: JVM Heap Total
+      description: JVM Heap Total for a worker
+      unit: Byte
+      sourceEntityType: cloudhub:app
+      tags:
+        - custom:mulesoft-cloudhub
+  - key: cloudhub.app.worker.threads
+    metadata:
+      displayName: Thread Count
+      description: Number of threads running for a worker
+      unit: Count
+      sourceEntityType: cloudhub:app
+      tags:
+        - custom:mulesoft-cloudhub
+  - key: cloudhub.app.worker.cpu
+    metadata:
+      displayName: CPU
+      description: The CPU utilization for a worker
+      unit: Percent
+      sourceEntityType: cloudhub:app
+      tags:
+        - custom:mulesoft-cloudhub
+  - key: cloudhub.app.worker.load_average
+    metadata:
+      displayName: Load Average
+      description: The Load Average for a worker
+      unit: Count
+      sourceEntityType: cloudhub:app
+      tags:
+        - custom:mulesoft-cloudhub
+  - key: cloudhub.app.worker.available_processors
+    metadata:
+      displayName: Available Processors
+      description: Available Processors for a worker
+      unit: Count
+      sourceEntityType: cloudhub:app
+      tags:
+        - custom:mulesoft-cloudhub
+  - key: cloudhub.app.endpoints.response_time
+    metadata:
+      displayName: Response Time
+      description: Response time per endpoint
+      unit: MilliSecond
+      sourceEntityType: cloudhub:app
+      tags:
+        - custom:mulesoft-cloudhub
+  - key: cloudhub.app.endpoints.requests
+    metadata:
+      displayName: Requests
+      description: Requests per endpoint
+      unit: Count
+      sourceEntityType: cloudhub:app
+      tags:
+        - custom:mulesoft-cloudhub
+  - key: cloudhub.app.endpoints.outbound.response_time
+    metadata:
+      displayName: Outbound Response Time
+      description: Outbound response time per endpoint
+      unit: MilliSecond
+      sourceEntityType: cloudhub:app
+      tags:
+        - custom:mulesoft-cloudhub
+  - key: cloudhub.app.endpoints.outbound.requests
+    metadata:
+      displayName: Outbound Requests
+      description: Outbound requests per endpoint
+      unit: Count
+      sourceEntityType: cloudhub:app
+      tags:
+        - custom:mulesoft-cloudhub
+  - key: cloudhub.app.endpoints.outbound.operations.response_time
+    metadata:
+      displayName: Outbound Response Time (by operation)
+      description: Outbound response time per operation
+      unit: MilliSecond
+      sourceEntityType: cloudhub:app
+      tags:
+        - custom:mulesoft-cloudhub
+  - key: cloudhub.app.endpoints.outbound.operations.requests
+    metadata:
+      displayName: Outbound Requests (by operation)
+      description: Outbound requests per operation
+      unit: Count
+      sourceEntityType: cloudhub:app
+      tags:
+        - custom:mulesoft-cloudhub
+  - key: cloudhub.api.requests
+    metadata:
+      displayName: API Requests
+      description: Number of requests per api, status code and method
+      unit: Count
+      sourceEntityType: cloudhub:api
+      tags:
+        - custom:mulesoft-cloudhub
+  - key: cloudhub.api.request_size
+    metadata:
+      displayName: API Request Size
+      description: Size of requests per api, status code and method
+      unit: Byte
+      sourceEntityType: cloudhub:api
+      tags:
+        - custom:mulesoft-cloudhub
+  - key: cloudhub.api.response_size
+    metadata:
+      displayName: API Response Size
+      description: Size of responses per api, status code and method
+      unit: Byte
+      sourceEntityType: cloudhub:api
+      tags:
+        - custom:mulesoft-cloudhub
+  - key: cloudhub.api.response_time
+    metadata:
+      displayName: API Response Time
+      description: Response time per api, status code and method
+      unit: MilliSecond
+      sourceEntityType: cloudhub:api
+      tags:
+        - custom:mulesoft-cloudhub
+  - key: cloudhub.api.policy_violations
+    metadata:
+      displayName: API Policy Violations
+      description: Policy Violations per api and policy
+      unit: Count
+      sourceEntityType: cloudhub:api
+      tags:
+        - custom:mulesoft-cloudhub
+  - key: cloudhub.api.location.requests
+    metadata:
+      displayName: API Requests by Location
+      description: Number of requests per api and location
+      unit: Count
+      sourceEntityType: cloudhub:api
+      tags:
+        - custom:mulesoft-cloudhub
+  - key: cloudhub.vpn.tunnel.accepted_routes
+    metadata:
+      displayName: Tunnel accepted Routes
+      description: Number of routes accepted by a VPN tunnel
+      unit: Count
+      tags:
+        - custom:mulesoft-cloudhub
+  - key: cloudhub.vpn.tunnel.status
+    metadata:
+      displayName: Tunnel Status
+      description: Tunnel Status, 0 for UP, 1 for DOWN
+      unit: Count
+      tags:
+        - custom:mulesoft-cloudhub
+topology:
+  types:
+    - name: cloudhub:org
+      displayName: Mulesoft Organization
+      rules:
+        - idPattern: cloudhub:org_{org.id}
+          instanceNamePattern: "{org.name}"
+          iconPattern: city
+          sources:
+            - sourceType: Metrics
+              condition: $prefix(cloudhub.org.)
+          requiredDimensions:
+            - key: org.type
+          attributes:
+            - key: org_id
+              pattern: "{org.id}"
+              displayName: ID
+            - key: org_name
+              pattern: "{org.name}"
+              displayName: Name
+            - key: org_owner_id
+              pattern: "{org.owner_id}"
+              displayName: Owner ID
+            - key: org_type
+              pattern: "{org.type}"
+              displayName: Type
+            - key: org_is_root
+              pattern: "{org.is_root}"
+              displayName: Is Root
+            - key: org_is_master
+              pattern: "{org.is_master}"
+              displayName: Master
+            - key: org_mfa_required
+              pattern: "{org.mfa_required}"
+              displayName: MFA Required
+            - key: dt.security_context
+              displayName: Security Context
+              pattern: "{dt.security_context}"
+        - idPattern: cloudhub:org_{org.id}
+          instanceNamePattern: "{org.name}"
+          iconPattern: city
+          sources:
+            - sourceType: Metrics
+              condition: $prefix(cloudhub.env.)
+            - sourceType: Metrics
+              condition: $prefix(cloudhub.app.)
+            - sourceType: Metrics
+              condition: $prefix(cloudhub.api.)
+            - sourceType: Metrics
+              condition: $prefix(cloudhub.vpn.)
+          attributes:
+            - key: org_id
+              pattern: "{org.id}"
+              displayName: ID
+            - key: org_name
+              pattern: "{org.name}"
+              displayName: Name
+            - key: dt.security_context
+              displayName: Security Context
+              pattern: "{dt.security_context}"
+    - name: cloudhub:env
+      displayName: Mulesoft Environment
+      rules:
+        - idPattern: cloudhub:env_{org.id}_{env.id}
+          instanceNamePattern: "{env.name}"
+          iconPattern: environment
+          sources:
+            - sourceType: Metrics
+              condition: $prefix(cloudhub.env.)
+          attributes:
+            - key: env_id
+              pattern: "{env.id}"
+              displayName: ID
+            - key: env_name
+              pattern: "{env.name}"
+              displayName: Name
+            - key: env_is_production
+              pattern: "{env.is_production}"
+              displayName: Production
+            - key: env_type
+              pattern: "{env.type}"
+              displayName: Type
+            - key: env_client_id
+              pattern: "{env.client_id}"
+              displayName: Client ID
+            - key: org_id
+              pattern: "{org.id}"
+              displayName: Organization ID
+            - key: dt.security_context
+              displayName: Security Context
+              pattern: "{dt.security_context}"
+        - idPattern: cloudhub:env_{org.id}_{env.id}
+          instanceNamePattern: "{env.name}"
+          iconPattern: environment
+          sources:
+            - sourceType: Metrics
+              condition: $prefix(cloudhub.app.)
+            - sourceType: Metrics
+              condition: $prefix(cloudhub.api.)
+          attributes:
+            - key: env_id
+              pattern: "{env.id}"
+              displayName: ID
+            - key: env_name
+              pattern: "{env.name}"
+              displayName: Name
+            - key: env_is_production
+              pattern: "{env.is_production}"
+              displayName: Production
+            - key: env_type
+              pattern: "{env.type}"
+              displayName: Type
+            - key: env_client_id
+              pattern: "{env.client_id}"
+              displayName: Client ID
+            - key: org_id
+              pattern: "{org.id}"
+              displayName: Organization ID
+            - key: dt.security_context
+              displayName: Security Context
+              pattern: "{dt.security_context}"
+    - name: cloudhub:app
+      displayName: Cloudhub Application
+      rules:
+        - idPattern: cloudhub:app_{org.id}_{env.id}_{app.id}
+          instanceNamePattern: "{app.domain} ({env.name})"
+          iconPattern: application
+          sources:
+            - sourceType: Metrics
+              condition: $prefix(cloudhub.app.)
+          attributes:
+            - key: app_id
+              pattern: "{app.id}"
+              displayName: ID
+            - key: app_domain
+              pattern: "{app.domain}"
+              displayName: Domain
+            - key: app_full_domain
+              pattern: "{app.full_domain}"
+              displayName: Full Domain
+            - key: app_worker_type
+              pattern: "{app.worker_type}"
+              displayName: Worker Type
+            - key: app_file_name
+              pattern: "{app.file_name}"
+              displayName: File Name
+            - key: app_mule_version
+              pattern: "{app.mule_version}"
+              displayName: Mule Version
+            - key: app_region
+              pattern: "{app.region}"
+              displayName: Region
+            - key: app_href
+              pattern: "{app.href}"
+              displayName: Href
+            - key: env_id
+              pattern: "{env.id}"
+              displayName: Environment ID
+            - key: org_id
+              pattern: "{org.id}"
+              displayName: Organization ID
+            - key: env_name
+              pattern: "{env.name}"
+              displayName: Environment Name
+            - key: app_status
+              pattern: "{app.status}"
+              displayName: Status
+            - key: app_type
+              pattern: "{app.type}"
+              displayName: Type
+            - key: dt.security_context
+              displayName: Security Context
+              pattern: "{dt.security_context}"
+        - idPattern: cloudhub:app_{org.id}_{env.id}_{app.id}
+          instanceNamePattern: "{app.domain} ({env.name})"
+          iconPattern: application
+          sources:
+            - sourceType: Metrics
+              condition: $prefix(cloudhub.app.worker.)
+          attributes:
+            - key: app_id
+              pattern: "{app.id}"
+              displayName: ID
+            - key: env_id
+              pattern: "{env.id}"
+              displayName: Environment ID
+            - key: org_id
+              pattern: "{org.id}"
+              displayName: Organization ID
+            - key: dt.security_context
+              displayName: Security Context
+              pattern: "{dt.security_context}"
+    - name: cloudhub:api
+      displayName: Cloudhub API
+      rules:
+        - idPattern: cloudhub:api_{org.id}_{env.id}_{asset.id}_{api_version_id}
+          instanceNamePattern: "{asset.name} ({api_version_id})"
+          iconPattern: application
+          sources:
+            - sourceType: Metrics
+              condition: $prefix(cloudhub.api.)
+          attributes:
+            - key: asset_id
+              pattern: "{asset.id}"
+              displayName: Asset ID
+            - key: env_id
+              pattern: "{env.id}"
+              displayName: Environment ID
+            - key: org_id
+              pattern: "{org.id}"
+              displayName: Organization ID
+            - key: env_name
+              pattern: "{env.name}"
+              displayName: Environment Name
+            - key: asset_name
+              pattern: "{asset.name}"
+              displayName: Asset Name
+            - key: asset_group
+              pattern: "{asset.group}"
+              displayName: Asset Group
+            - key: api_version_id
+              pattern: "{api_version_id}"
+              displayName: API Version ID
+            - key: dt.security_context
+              displayName: Security Context
+              pattern: "{dt.security_context}"
+    - name: cloudhub:worker
+      displayName: Cloudhub Worker
+      rules:
+        - idPattern: cloudhub:worker_{org.id}_{env.id}_{app.id}_{worker_id}
+          instanceNamePattern: "{worker_id} ({app.domain} - {env.name})"
+          iconPattern: robots
+          sources:
+            - sourceType: Metrics
+              condition: $prefix(cloudhub.app.worker.)
+            - sourceType: Logs
+          attributes:
+            - key: app_id
+              pattern: "{app.id}"
+              displayName: App ID
+            - key: app_domain
+              pattern: "{app.domain}"
+              displayName: App Domain
+            - key: env_id
+              pattern: "{env.id}"
+              displayName: Environment ID
+            - key: org_id
+              pattern: "{org.id}"
+              displayName: Organization ID
+            - key: worker_id
+              pattern: "{worker_id}"
+              displayName: Worker ID
+            - key: dt.security_context
+              displayName: Security Context
+              pattern: "{dt.security_context}"
+  relationships:
+    - fromType: cloudhub:env
+      toType: cloudhub:org
+      typeOfRelation: CHILD_OF
+      sources:
+        - sourceType: Metrics
+          condition: $prefix(cloudhub.env.)
+    - fromType: cloudhub:app
+      toType: cloudhub:org
+      typeOfRelation: CHILD_OF
+      sources:
+        - sourceType: Metrics
+          condition: $prefix(cloudhub.app.)
+    - fromType: cloudhub:app
+      toType: cloudhub:env
+      typeOfRelation: RUNS_ON
+      sources:
+        - sourceType: Metrics
+          condition: $prefix(cloudhub.app.)
+    - fromType: cloudhub:api
+      toType: cloudhub:org
+      typeOfRelation: CHILD_OF
+      sources:
+        - sourceType: Metrics
+          condition: $prefix(cloudhub.api.)
+    - fromType: cloudhub:api
+      toType: cloudhub:env
+      typeOfRelation: RUNS_ON
+      sources:
+        - sourceType: Metrics
+          condition: $prefix(cloudhub.api.)
+    - fromType: cloudhub:worker
+      toType: cloudhub:app
+      typeOfRelation: CHILD_OF
+      sources:
+        - sourceType: Metrics
+          condition: $prefix(cloudhub.app.worker.)
+    - fromType: cloudhub:worker
+      toType: cloudhub:env
+      typeOfRelation: RUNS_ON
+      sources:
+        - sourceType: Metrics
+          condition: $prefix(cloudhub.app.worker.)
+screens:
+  - entityType: cloudhub:org
+    propertiesCard:
+      displayOnlyConfigured: false
+      properties:
+        - type: ATTRIBUTE
+          attribute:
+            key: org_id
+            displayName: ID
+        - type: ATTRIBUTE
+          attribute:
+            key: org_name
+            displayName: Name
+        - type: ATTRIBUTE
+          attribute:
+            key: org_owner_id
+            displayName: Owner ID
+        - type: ATTRIBUTE
+          attribute:
+            key: org_type
+            displayName: Type
+        - type: ATTRIBUTE
+          attribute:
+            key: org_is_root
+            displayName: Root
+        - type: ATTRIBUTE
+          attribute:
+            key: org_is_master
+            displayName: Master
+        - type: ATTRIBUTE
+          attribute:
+            key: org_mfa_required
+            displayName: MFA Required
+    listSettings:
+      staticContent:
+        showGlobalFilter: true
+        header:
+          title: Mulesoft Organizations
+          description: List of Mulesoft Organizations
+          icon: city
+        hideDefaultBreadcrumb: true
+        breadcrumbs:
+          - type: NOOP
+            displayName: Mulesoft
+          - type: ENTITY_LIST_REF
+            displayName: Organizations
+            entityType: cloudhub:org
+      layout:
+        autoGenerate: false
+        cards:
+          - key: cloudhub-orgs-list-self
+            type: ENTITIES_LIST
+    detailsSettings:
+      target: BOTH
+      staticContent:
+        showProblems: true
+        showProperties: true
+        showTags: true
+        showGlobalFilter: true
+        showAddTag: true
+        breadcrumbs:
+          - type: NOOP
+            displayName: Mulesoft
+          - type: ENTITY_LIST_REF
+            displayName: Organizations
+            entityType: cloudhub:org
+      layout:
+        autoGenerate: false
+        cards:
+          - key: cloudhub-org-metrics
+            type: CHART_GROUP
+          - key: cloudhub-org-environments
+            type: ENTITIES_LIST
+          - key: cloudhub-org-applications
+            type: ENTITIES_LIST
+          - key: cloudhub-org-apis
+            type: ENTITIES_LIST
+          - type: INJECTIONS
+          - key: cloudhub-org-environments_dql
+            type: DQL_TABLE
+          - key: cloudhub-org-applications_dql
+            type: DQL_TABLE
+          - key: cloudhub-org-apis_dql
+            type: DQL_TABLE
+    chartsCards:
+      - key: cloudhub-org-metrics
+        target: BOTH
+        mode: NORMAL
+        numberOfVisibleCharts: 4
+        displayName: Organization overview
+        charts:
+          - visualizationType: GRAPH_CHART
+            displayName: Cores
+            graphChartConfig:
+              stacked: true
+              metrics:
+                - metricSelector: cloudhub.org.v_cores_production
+                  dqlQuery: timeseries
+                    v_cores_production=avg(cloudhub.org.v_cores_production),by:{`dt.entity.cloudhub:org`},filter:{`dt.entity.cloudhub:org`==$(entityId)}
+                  visualization:
+                    displayName: Cores Production
+                    seriesType: COLUMN
+                    themeColor: BLUE
+                - metricSelector: cloudhub.org.v_cores_sandbox
+                  dqlQuery: timeseries
+                    v_cores_sandbox=avg(cloudhub.org.v_cores_sandbox),by:{`dt.entity.cloudhub:org`},filter:{`dt.entity.cloudhub:org`==$(entityId)}
+                  visualization:
+                    displayName: Cores Sandbox
+                    seriesType: COLUMN
+                    themeColor: GREEN
+                - metricSelector: cloudhub.org.v_cores_design
+                  dqlQuery: timeseries
+                    v_cores_design=avg(cloudhub.org.v_cores_design),by:{`dt.entity.cloudhub:org`},filter:{`dt.entity.cloudhub:org`==$(entityId)}
+                  visualization:
+                    displayName: Cores Design
+                    seriesType: COLUMN
+                    themeColor: RED
+          - visualizationType: SINGLE_VALUE
+            displayName: Active VPCs
+            singleValueConfig:
+              defaultAggregation: MAX
+              metric:
+                metricSelector: cloudhub.org.vpcs
+                dqlQuery: timeseries
+                  vpcs=max(cloudhub.org.vpcs),by:{`dt.entity.cloudhub:org`},filter:{`dt.entity.cloudhub:org`==$(entityId)}
+          - visualizationType: SINGLE_VALUE
+            displayName: Active VPNs
+            singleValueConfig:
+              defaultAggregation: MAX
+              metric:
+                metricSelector: cloudhub.org.vpns
+                dqlQuery: timeseries
+                  vpns=max(cloudhub.org.vpns),by:{`dt.entity.cloudhub:org`},filter:{`dt.entity.cloudhub:org`==$(entityId)}
+          - visualizationType: SINGLE_VALUE
+            displayName: Active Gateways
+            singleValueConfig:
+              defaultAggregation: MAX
+              metric:
+                metricSelector: cloudhub.org.gateways
+                dqlQuery: timeseries
+                  gateways=max(cloudhub.org.gateways),by:{`dt.entity.cloudhub:org`},filter:{`dt.entity.cloudhub:org`==$(entityId)}
+    entitiesListCards:
+      - key: cloudhub-org-environments
+        displayName: Environments on this organization
+        pageSize: 5
+        displayCharts: false
+        enableDetailsExpandability: true
+        numberOfVisibleCharts: 2
+        entitySelectorTemplate: type(cloudhub:env),fromRelationships.isChildOf($(entityConditions))
+        displayIcons: true
+        emptyState:
+          header: No environments found
+          body: No environments found for this organization, make sure the extension is
+            collecting data for environments in this organization
+        filtering:
+          relationships:
+            - type(cloudhub:org),toRelationships.isChildOf($(entityConditions))
+        columns:
+          - type: ATTRIBUTE
+            attribute:
+              key: env_id
+              displayName: ID
+          - type: ATTRIBUTE
+            attribute:
+              key: env_is_production
+              displayName: Production
+          - type: ATTRIBUTE
+            attribute:
+              key: env_type
+              displayName: Type
+          - type: RELATION
+            conditions:
+              - relatedEntity|entitySelectorTemplate=type(cloudhub:app),fromRelationships.isChildOf($(entityConditions))
+            relation:
+              displayName: Applications
+              entitySelectorTemplate: type(cloudhub:app),fromRelationships.runsOn($(entityConditions))
+              displayAmount: true
+          - type: RELATION
+            conditions:
+              - relatedEntity|entitySelectorTemplate=type(anypoint:mq_queue),fromRelationships.isChildOf($(entityConditions))
+            relation:
+              displayName: MQ Queues
+              entitySelectorTemplate: type(anypoint:mq_queue),fromRelationships.runsOn($(entityConditions))
+              displayAmount: true
+      - key: cloudhub-org-applications
+        displayName: Applications on this organization
+        pageSize: 10
+        displayCharts: true
+        enableDetailsExpandability: true
+        numberOfVisibleCharts: 2
+        entitySelectorTemplate: type(cloudhub:app),fromRelationships.isChildOf($(entityConditions))
+        conditions:
+          - relatedEntity|entitySelectorTemplate=type(cloudhub:app),fromRelationships.isChildOf($(entityConditions))
+        displayIcons: true
+        emptyState:
+          header: No applications found
+          body: No applications found for this organization, make sure the extension is
+            collecting data for environments in this organization
+        initialSorting:
+          columnId: metric-Requests
+          order: DESCENDING
+        filtering:
+          relationships:
+            - type(cloudhub:org),toRelationships.isChildOf($(entityConditions))
+          entityFilters:
+            - displayName: Applications
+              filters:
+                - type: entityName
+                  displayName: Name
+                  freeText: true
+                  modifier: contains
+                  defaultSearch: false
+                  distinct: true
+                  entityTypes:
+                    - cloudhub:app
+                - type: app_status
+                  displayName: Status
+                  freeText: true
+                  modifier: equals
+                  defaultSearch: false
+                  distinct: true
+                  entityTypes:
+                    - cloudhub:app
+        columns:
+          - type: ATTRIBUTE
+            attribute:
+              key: app_status
+              displayName: Status
+          - type: ATTRIBUTE
+            attribute:
+              key: app_mule_version
+              displayName: Mule Version
+          - type: ATTRIBUTE
+            attribute:
+              key: app_region
+              displayName: Region
+          - type: RELATION
+            relation:
+              displayName: Environment
+              entitySelectorTemplate: type(cloudhub:env),toRelationships.runsOn($(entityConditions))
+              displayAmount: true
+        charts:
+          - displayName: Requests
+            visualizationType: GRAPH_CHART
+            graphChartConfig:
+              metrics:
+                - metricSelector: cloudhub.app.requests:sum:splitBy()
+                  visualization:
+                    themeColor: TURQUOISE
+                    seriesType: COLUMN
+          - displayName: Response Time
+            visualizationType: GRAPH_CHART
+            graphChartConfig:
+              metrics:
+                - metricSelector: cloudhub.app.response_time:splitBy()
+                  visualization:
+                    themeColor: ORANGE
+                    seriesType: AREA
+      - key: cloudhub-org-apis
+        displayName: APIs on this organization
+        pageSize: 10
+        displayCharts: true
+        enableDetailsExpandability: true
+        numberOfVisibleCharts: 2
+        entitySelectorTemplate: type(cloudhub:api),fromRelationships.isChildOf($(entityConditions))
+        conditions:
+          - relatedEntity|entitySelectorTemplate=type(cloudhub:api),fromRelationships.isChildOf($(entityConditions))
+        displayIcons: true
+        emptyState:
+          header: No apis found
+          body: No apis found for this org, make sure the extension is collecting data for
+            apis in this org
+        initialSorting:
+          columnId: metric-Requests
+          order: DESCENDING
+        filtering:
+          relationships:
+            - type(cloudhub:org),toRelationships.isChildOf($(entityConditions))
+          entityFilters:
+            - displayName: APIs
+              filters:
+                - type: entityName
+                  displayName: Name
+                  freeText: true
+                  modifier: contains
+                  defaultSearch: false
+                  distinct: true
+                  entityTypes:
+                    - cloudhub:api
+        columns:
+          - type: ATTRIBUTE
+            attribute:
+              key: asset_id
+              displayName: API ID
+          - type: ATTRIBUTE
+            attribute:
+              key: api_version_id
+              displayName: API Version ID
+          - type: ATTRIBUTE
+            attribute:
+              key: asset_group
+              displayName: Group
+          - type: RELATION
+            relation:
+              displayName: Environment
+              entitySelectorTemplate: type(cloudhub:env),toRelationships.runsOn($(entityConditions))
+        charts:
+          - displayName: Requests
+            visualizationType: GRAPH_CHART
+            graphChartConfig:
+              metrics:
+                - metricSelector: cloudhub.api.requests:sum:splitBy()
+                  visualization:
+                    themeColor: BLUE
+                    seriesType: COLUMN
+          - displayName: Response Time
+            visualizationType: GRAPH_CHART
+            graphChartConfig:
+              metrics:
+                - metricSelector: cloudhub.api.response_time:splitBy()
+                  visualization:
+                    themeColor: RED
+                    seriesType: AREA
+      - key: cloudhub-orgs-list-self
+        displayName: Organizations
+        displayIcons: true
+        displayCharts: false
+        enableDetailsExpandability: true
+        numberOfVisibleCharts: 3
+        pageSize: 5
+        hideEmptyCharts: true
+        columns:
+          - type: ATTRIBUTE
+            attribute:
+              key: org_id
+              displayName: ID
+          - type: ATTRIBUTE
+            attribute:
+              key: org_owner_id
+              displayName: Owner ID
+          - type: ATTRIBUTE
+            attribute:
+              key: org_type
+              displayName: Type
+          - type: RELATION
+            relation:
+              displayName: Environments
+              displayAmount: true
+              entitySelectorTemplate: type(cloudhub:env),fromRelationships.isChildOf($(entityConditions))
+          - type: RELATION
+            relation:
+              displayName: Applications
+              displayAmount: true
+              entitySelectorTemplate: type(cloudhub:app),fromRelationships.isChildOf($(entityConditions))
+    dqlTableCards:
+      - key: cloudhub-org-environments_dql
+        displayName: Environments on this organization
+        query:
+          query: >-
+            fetch `dt.entity.cloudhub:env`
+
+            | filter in (id,
+            classicEntitySelector("type(cloudhub:env),fromRelationships.isChildOf(type(cloudhub:org),entityId($(unquotedEntityId)))"))
+
+            | fieldsAdd `cloudhub:env.id` = id, env.record = record(entityId=id,
+            displayName=entity.name, dim="dt.entity.cloudhub:env")
+          lookups:
+            - query: |-
+                fetch `dt.entity.cloudhub:env`
+                | fieldsAdd env_id, id
+              sourceField: "`cloudhub:env.id`"
+              lookupField: id
+              fields:
+                - env_id
+            - query: |-
+                fetch `dt.entity.cloudhub:env`
+                | fieldsAdd env_is_production, id
+              sourceField: "`cloudhub:env.id`"
+              lookupField: id
+              fields:
+                - env_is_production
+            - query: |-
+                fetch `dt.entity.cloudhub:env`
+                | fieldsAdd env_type, id
+              sourceField: "`cloudhub:env.id`"
+              lookupField: id
+              fields:
+                - env_type
+            - query: >-
+                fetch `dt.entity.cloudhub:app`
+
+                | fieldsFlatten runs_on
+
+                | expand `runs_on.dt.entity.cloudhub:env`
+
+                | fieldsAdd `cloudhub:app.id` = id
+
+                | summarize app.count = count(),
+                by:{`runs_on.dt.entity.cloudhub:env`}
+              sourceField: "`cloudhub:env.id`"
+              lookupField: "`runs_on.dt.entity.cloudhub:env`"
+              fields:
+                - app.count
+            - query: >-
+                fetch `dt.entity.anypoint:mq_queue`
+
+                | fieldsFlatten runs_on
+
+                | expand `runs_on.dt.entity.cloudhub:env`
+
+                | fieldsAdd `anypoint:mq_queue.id` = id
+
+                | summarize mq_queue.count = count(),
+                by:{`runs_on.dt.entity.cloudhub:env`}
+              sourceField: "`cloudhub:env.id`"
+              lookupField: "`runs_on.dt.entity.cloudhub:env`"
+              fields:
+                - mq_queue.count
+        columns:
+          - field: env.record
+            displayName: Environments on this organization Name
+            columnType: TEXT
+            widthType: AUTO
+            defaultColumn: false
+            resizable: true
+            sortable: true
+          - field: env_id
+            displayName: ID
+            columnType: TEXT
+            widthType: AUTO
+            defaultColumn: false
+            resizable: true
+            sortable: true
+          - field: env_is_production
+            displayName: Production
+            columnType: TEXT
+            widthType: AUTO
+            defaultColumn: false
+            resizable: true
+            sortable: true
+          - field: env_type
+            displayName: Type
+            columnType: TEXT
+            widthType: AUTO
+            defaultColumn: false
+            resizable: true
+            sortable: true
+          - field: app.count
+            displayName: Applications
+            columnType: NUMBER
+            widthType: AUTO
+            defaultColumn: false
+            resizable: true
+            sortable: true
+          - field: mq_queue.count
+            displayName: MQ Queues
+            columnType: NUMBER
+            widthType: AUTO
+            defaultColumn: false
+            resizable: true
+            sortable: true
+      - key: cloudhub-org-applications_dql
+        displayName: Applications on this organization
+        query:
+          query: >-
+            fetch `dt.entity.cloudhub:app`
+
+            | filter in (id,
+            classicEntitySelector("type(cloudhub:app),fromRelationships.isChildOf(type(cloudhub:org),entityId($(unquotedEntityId)))"))
+
+            | fieldsAdd `cloudhub:app.id` = id, app.record = record(entityId=id,
+            displayName=entity.name, dim="dt.entity.cloudhub:app")
+          lookups:
+            - query: timeseries requests=sum(cloudhub.app.requests,rollup:avg,
+                scalar:true),by:{`dt.entity.cloudhub:app`}
+              sourceField: "`cloudhub:app.id`"
+              lookupField: "`dt.entity.cloudhub:app`"
+              fields:
+                - requests
+            - query: timeseries response_time=avg(cloudhub.app.response_time,
+                scalar:true),by:{`dt.entity.cloudhub:app`}
+              sourceField: "`cloudhub:app.id`"
+              lookupField: "`dt.entity.cloudhub:app`"
+              fields:
+                - response_time
+            - query: |-
+                fetch `dt.entity.cloudhub:app`
+                | fieldsAdd app_status, id
+              sourceField: "`cloudhub:app.id`"
+              lookupField: id
+              fields:
+                - app_status
+            - query: |-
+                fetch `dt.entity.cloudhub:app`
+                | fieldsAdd app_mule_version, id
+              sourceField: "`cloudhub:app.id`"
+              lookupField: id
+              fields:
+                - app_mule_version
+            - query: |-
+                fetch `dt.entity.cloudhub:app`
+                | fieldsAdd app_region, id
+              sourceField: "`cloudhub:app.id`"
+              lookupField: id
+              fields:
+                - app_region
+            - query: >-
+                fetch `dt.entity.cloudhub:env`
+
+                | fieldsFlatten runs
+
+                | expand `runs.dt.entity.cloudhub:app`
+
+                | fieldsAdd `cloudhub:env.id` = id
+
+                | summarize env.count = count(),
+                by:{`runs.dt.entity.cloudhub:app`}
+              sourceField: "`cloudhub:app.id`"
+              lookupField: "`runs.dt.entity.cloudhub:app`"
+              fields:
+                - env.count
+        columns:
+          - field: app.record
+            displayName: Applications on this organization Name
+            columnType: TEXT
+            widthType: AUTO
+            defaultColumn: false
+            resizable: true
+            sortable: true
+          - field: requests
+            displayName: Requests
+            columnType: NUMBER
+            widthType: AUTO
+            defaultColumn: false
+            resizable: true
+            sortable: true
+            formatter: unitRenderer|unit=units.unspecified.count
+          - field: response_time
+            displayName: Response Time
+            columnType: NUMBER
+            widthType: AUTO
+            defaultColumn: false
+            resizable: true
+            sortable: true
+            formatter: unitRenderer|unit=units.time.millisecond
+          - field: app_status
+            displayName: Status
+            columnType: TEXT
+            widthType: AUTO
+            defaultColumn: false
+            resizable: true
+            sortable: true
+          - field: app_mule_version
+            displayName: Mule Version
+            columnType: TEXT
+            widthType: AUTO
+            defaultColumn: false
+            resizable: true
+            sortable: true
+          - field: app_region
+            displayName: Region
+            columnType: TEXT
+            widthType: AUTO
+            defaultColumn: false
+            resizable: true
+            sortable: true
+          - field: env.count
+            displayName: Environment
+            columnType: NUMBER
+            widthType: AUTO
+            defaultColumn: false
+            resizable: true
+            sortable: true
+      - key: cloudhub-org-apis_dql
+        displayName: APIs on this organization
+        query:
+          query: >-
+            fetch `dt.entity.cloudhub:api`
+
+            | filter in (id,
+            classicEntitySelector("type(cloudhub:api),fromRelationships.isChildOf(type(cloudhub:org),entityId($(unquotedEntityId)))"))
+
+            | fieldsAdd `cloudhub:api.id` = id, api.record = record(entityId=id,
+            displayName=entity.name, dim="dt.entity.cloudhub:api")
+          lookups:
+            - query: timeseries requests=sum(cloudhub.api.requests,rollup:avg,
+                scalar:true),by:{`dt.entity.cloudhub:api`}
+              sourceField: "`cloudhub:api.id`"
+              lookupField: "`dt.entity.cloudhub:api`"
+              fields:
+                - requests
+            - query: timeseries response_time=avg(cloudhub.api.response_time,
+                scalar:true),by:{`dt.entity.cloudhub:api`}
+              sourceField: "`cloudhub:api.id`"
+              lookupField: "`dt.entity.cloudhub:api`"
+              fields:
+                - response_time
+            - query: |-
+                fetch `dt.entity.cloudhub:api`
+                | fieldsAdd asset_id, id
+              sourceField: "`cloudhub:api.id`"
+              lookupField: id
+              fields:
+                - asset_id
+            - query: |-
+                fetch `dt.entity.cloudhub:api`
+                | fieldsAdd api_version_id, id
+              sourceField: "`cloudhub:api.id`"
+              lookupField: id
+              fields:
+                - api_version_id
+            - query: |-
+                fetch `dt.entity.cloudhub:api`
+                | fieldsAdd asset_group, id
+              sourceField: "`cloudhub:api.id`"
+              lookupField: id
+              fields:
+                - asset_group
+            - query: >-
+                fetch `dt.entity.cloudhub:env`
+
+                | fieldsFlatten runs
+
+                | expand `runs.dt.entity.cloudhub:api`
+
+                | fieldsAdd `cloudhub:env.id` = id, env.record =
+                record(entityId=id, displayName=entity.name,
+                dim="dt.entity.cloudhub:env"),
+                `env.api.id`=`runs.dt.entity.cloudhub:api`
+              sourceField: "`cloudhub:api.id`"
+              lookupField: "`env.api.id`"
+              fields:
+                - env.record
+        columns:
+          - field: api.record
+            displayName: APIs on this organization Name
+            columnType: TEXT
+            widthType: AUTO
+            defaultColumn: false
+            resizable: true
+            sortable: true
+          - field: requests
+            displayName: Requests
+            columnType: NUMBER
+            widthType: AUTO
+            defaultColumn: false
+            resizable: true
+            sortable: true
+            formatter: unitRenderer|unit=units.unspecified.count
+          - field: response_time
+            displayName: Response Time
+            columnType: NUMBER
+            widthType: AUTO
+            defaultColumn: false
+            resizable: true
+            sortable: true
+            formatter: unitRenderer|unit=units.time.millisecond
+          - field: asset_id
+            displayName: API ID
+            columnType: TEXT
+            widthType: AUTO
+            defaultColumn: false
+            resizable: true
+            sortable: true
+          - field: api_version_id
+            displayName: API Version ID
+            columnType: TEXT
+            widthType: AUTO
+            defaultColumn: false
+            resizable: true
+            sortable: true
+          - field: asset_group
+            displayName: Group
+            columnType: TEXT
+            widthType: AUTO
+            defaultColumn: false
+            resizable: true
+            sortable: true
+          - field: env.record
+            displayName: Environment
+            columnType: TEXT
+            widthType: AUTO
+            defaultColumn: false
+            resizable: true
+            sortable: true
+  - entityType: cloudhub:env
+    propertiesCard:
+      displayOnlyConfigured: false
+      properties:
+        - type: RELATION
+          relation:
+            displayName: Organization
+            entitySelectorTemplate: type(cloudhub:org),toRelationships.isChildOf($(entityConditions))
+            fallbackMessage: No organization found
+    listSettings:
+      staticContent:
+        showGlobalFilter: true
+        header:
+          title: Mulesoft Environments
+          description: List of Mulesoft Environments
+          icon: city
+        hideDefaultBreadcrumb: true
+        breadcrumbs:
+          - type: NOOP
+            displayName: Mulesoft
+          - type: ENTITY_LIST_REF
+            displayName: Environments
+            entityType: cloudhub:env
+      layout:
+        autoGenerate: false
+        cards:
+          - key: cloudhub-env-list-self
+            type: ENTITIES_LIST
+    detailsSettings:
+      target: BOTH
+      staticContent:
+        showProblems: true
+        showProperties: true
+        showTags: true
+        showGlobalFilter: true
+        showAddTag: true
+        breadcrumbs:
+          - type: NOOP
+            displayName: Mulesoft
+          - type: ENTITY_LIST_REF
+            displayName: Environments
+            entityType: cloudhub:env
+      layout:
+        autoGenerate: false
+        cards:
+          - key: cloudhub-env-applications
+            type: ENTITIES_LIST
+          - key: cloudhub-env-apis
+            type: ENTITIES_LIST
+          - key: cloudhub-env-metrics
+            type: CHART_GROUP
+          - type: INJECTIONS
+          - key: cloudhub-env-applications_dql
+            type: DQL_TABLE
+          - key: cloudhub-env-apis_dql
+            type: DQL_TABLE
+    chartsCards:
+      - key: cloudhub-env-metrics
+        target: BOTH
+        mode: NORMAL
+        numberOfVisibleCharts: 1
+        displayName: Environment overview
+        conditions:
+          - relatedEntity|entitySelectorTemplate=type(cloudhub:app),fromRelationships.runsOn($(entityConditions))
+        hideEmptyCharts: true
+        charts:
+          - visualizationType: GRAPH_CHART
+            displayName: Applications
+            graphChartConfig:
+              stacked: true
+              metrics:
+                - metricSelector: cloudhub.env.started_applications:splitBy()
+                  dqlQuery: timeseries
+                    started_applications=avg(cloudhub.env.started_applications),by:{`dt.entity.cloudhub:env`},filter:{`dt.entity.cloudhub:env`==$(entityId)}
+                  visualization:
+                    displayName: Started
+                    seriesType: COLUMN
+                    themeColor: GREEN
+                - metricSelector: cloudhub.env.applications:splitBy()
+                  dqlQuery: timeseries
+                    applications=avg(cloudhub.env.applications),by:{`dt.entity.cloudhub:env`},filter:{`dt.entity.cloudhub:env`==$(entityId)}
+                  visualization:
+                    displayName: Created
+                    seriesType: COLUMN
+                    themeColor: BLUE
+    entitiesListCards:
+      - key: cloudhub-env-applications
+        displayName: Applications on this environment
+        pageSize: 10
+        displayCharts: true
+        enableDetailsExpandability: true
+        numberOfVisibleCharts: 2
+        entitySelectorTemplate: type(cloudhub:app),fromRelationships.runsOn($(entityConditions))
+        conditions:
+          - relatedEntity|entitySelectorTemplate=type(cloudhub:app),fromRelationships.runsOn($(entityConditions))
+        displayIcons: true
+        emptyState:
+          header: No applications found
+          body: No applications found for this environment, make sure the extension is
+            collecting data for applications in this environment in this
+            organization
+        initialSorting:
+          columnId: metric-Requests
+          order: DESCENDING
+        filtering:
+          relationships:
+            - type(cloudhub:env),toRelationships.runsOn($(entityConditions))
+          entityFilters:
+            - displayName: Applications
+              filters:
+                - type: entityName
+                  displayName: Name
+                  freeText: true
+                  modifier: contains
+                  defaultSearch: false
+                  distinct: true
+                  entityTypes:
+                    - cloudhub:app
+                - type: app_status
+                  displayName: Status
+                  freeText: true
+                  modifier: equals
+                  defaultSearch: false
+                  distinct: true
+                  entityTypes:
+                    - cloudhub:app
+        columns:
+          - type: ATTRIBUTE
+            attribute:
+              key: app_status
+              displayName: Status
+          - type: ATTRIBUTE
+            attribute:
+              key: app_mule_version
+              displayName: Mule Version
+          - type: ATTRIBUTE
+            attribute:
+              key: app_region
+              displayName: Region
+          - type: RELATION
+            relation:
+              displayName: Organization
+              entitySelectorTemplate: type(cloudhub:org),toRelationships.isChildOf($(entityConditions))
+        charts:
+          - displayName: Requests
+            visualizationType: GRAPH_CHART
+            graphChartConfig:
+              metrics:
+                - metricSelector: cloudhub.app.requests:sum:splitBy()
+                  visualization:
+                    themeColor: TURQUOISE
+                    seriesType: COLUMN
+          - displayName: Response Time
+            visualizationType: GRAPH_CHART
+            graphChartConfig:
+              metrics:
+                - metricSelector: cloudhub.app.response_time:splitBy()
+                  visualization:
+                    themeColor: ORANGE
+                    seriesType: AREA
+      - key: cloudhub-env-list-self
+        displayName: Environments
+        displayIcons: true
+        displayCharts: false
+        enableDetailsExpandability: true
+        numberOfVisibleCharts: 3
+        pageSize: 5
+        hideEmptyCharts: true
+        columns:
+          - type: ATTRIBUTE
+            attribute:
+              key: env_id
+              displayName: ID
+          - type: ATTRIBUTE
+            attribute:
+              key: env_is_production
+              displayName: Production
+          - type: ATTRIBUTE
+            attribute:
+              key: env_type
+              displayName: Type
+          - type: RELATION
+            relation:
+              displayName: Organization
+              entitySelectorTemplate: type(cloudhub:org),toRelationships.isChildOf($(entityConditions))
+          - type: RELATION
+            relation:
+              displayName: Applications
+              entitySelectorTemplate: type(cloudhub:app),fromRelationships.runsOn($(entityConditions))
+              displayAmount: true
+          - type: RELATION
+            relation:
+              displayName: Workers
+              entitySelectorTemplate: type(cloudhub:worker),fromRelationships.runsOn($(entityConditions))
+              displayAmount: true
+      - key: cloudhub-env-apis
+        displayName: APIs on this environment
+        pageSize: 10
+        displayCharts: true
+        enableDetailsExpandability: true
+        numberOfVisibleCharts: 2
+        entitySelectorTemplate: type(cloudhub:api),fromRelationships.runsOn($(entityConditions))
+        conditions:
+          - relatedEntity|entitySelectorTemplate=type(cloudhub:api),fromRelationships.runsOn($(entityConditions))
+        displayIcons: true
+        emptyState:
+          header: No apis found
+          body: No apis found for this environment, make sure the extension is collecting
+            data for apis in this environment in this organization
+        initialSorting:
+          columnId: metric-Requests
+          order: DESCENDING
+        filtering:
+          relationships:
+            - type(cloudhub:env),toRelationships.runsOn($(entityConditions))
+          entityFilters:
+            - displayName: APIs
+              filters:
+                - type: entityName
+                  displayName: Name
+                  freeText: true
+                  modifier: contains
+                  defaultSearch: false
+                  distinct: true
+                  entityTypes:
+                    - cloudhub:api
+        columns:
+          - type: ATTRIBUTE
+            attribute:
+              key: asset_id
+              displayName: API ID
+          - type: ATTRIBUTE
+            attribute:
+              key: api_version_id
+              displayName: API Version ID
+          - type: ATTRIBUTE
+            attribute:
+              key: asset_group
+              displayName: Group
+          - type: RELATION
+            relation:
+              displayName: Organization
+              entitySelectorTemplate: type(cloudhub:org),toRelationships.isChildOf($(entityConditions))
+        charts:
+          - displayName: Requests
+            visualizationType: GRAPH_CHART
+            graphChartConfig:
+              metrics:
+                - metricSelector: cloudhub.api.requests:sum:splitBy()
+                  visualization:
+                    themeColor: BLUE
+                    seriesType: COLUMN
+          - displayName: Response Time
+            visualizationType: GRAPH_CHART
+            graphChartConfig:
+              metrics:
+                - metricSelector: cloudhub.api.response_time:splitBy()
+                  visualization:
+                    themeColor: RED
+                    seriesType: AREA
+    dqlTableCards:
+      - key: cloudhub-env-applications_dql
+        displayName: Applications on this environment
+        query:
+          query: >-
+            fetch `dt.entity.cloudhub:app`
+
+            | filter in (id,
+            classicEntitySelector("type(cloudhub:app),fromRelationships.runsOn(type(cloudhub:env),entityId($(unquotedEntityId)))"))
+
+            | fieldsAdd `cloudhub:app.id` = id, app.record = record(entityId=id,
+            displayName=entity.name, dim="dt.entity.cloudhub:app")
+          lookups:
+            - query: timeseries requests=sum(cloudhub.app.requests,rollup:avg,
+                scalar:true),by:{`dt.entity.cloudhub:app`}
+              sourceField: "`cloudhub:app.id`"
+              lookupField: "`dt.entity.cloudhub:app`"
+              fields:
+                - requests
+            - query: timeseries response_time=avg(cloudhub.app.response_time,
+                scalar:true),by:{`dt.entity.cloudhub:app`}
+              sourceField: "`cloudhub:app.id`"
+              lookupField: "`dt.entity.cloudhub:app`"
+              fields:
+                - response_time
+            - query: |-
+                fetch `dt.entity.cloudhub:app`
+                | fieldsAdd app_status, id
+              sourceField: "`cloudhub:app.id`"
+              lookupField: id
+              fields:
+                - app_status
+            - query: |-
+                fetch `dt.entity.cloudhub:app`
+                | fieldsAdd app_mule_version, id
+              sourceField: "`cloudhub:app.id`"
+              lookupField: id
+              fields:
+                - app_mule_version
+            - query: |-
+                fetch `dt.entity.cloudhub:app`
+                | fieldsAdd app_region, id
+              sourceField: "`cloudhub:app.id`"
+              lookupField: id
+              fields:
+                - app_region
+            - query: >-
+                fetch `dt.entity.cloudhub:org`
+
+                | fieldsFlatten parent_of
+
+                | expand `parent_of.dt.entity.cloudhub:app`
+
+                | fieldsAdd `cloudhub:org.id` = id, org.record =
+                record(entityId=id, displayName=entity.name,
+                dim="dt.entity.cloudhub:org"),
+                `org.app.id`=`parent_of.dt.entity.cloudhub:app`
+              sourceField: "`cloudhub:app.id`"
+              lookupField: "`org.app.id`"
+              fields:
+                - org.record
+        columns:
+          - field: app.record
+            displayName: Applications on this environment Name
+            columnType: TEXT
+            widthType: AUTO
+            defaultColumn: false
+            resizable: true
+            sortable: true
+          - field: requests
+            displayName: Requests
+            columnType: NUMBER
+            widthType: AUTO
+            defaultColumn: false
+            resizable: true
+            sortable: true
+            formatter: unitRenderer|unit=units.unspecified.count
+          - field: response_time
+            displayName: Response Time
+            columnType: NUMBER
+            widthType: AUTO
+            defaultColumn: false
+            resizable: true
+            sortable: true
+            formatter: unitRenderer|unit=units.time.millisecond
+          - field: app_status
+            displayName: Status
+            columnType: TEXT
+            widthType: AUTO
+            defaultColumn: false
+            resizable: true
+            sortable: true
+          - field: app_mule_version
+            displayName: Mule Version
+            columnType: TEXT
+            widthType: AUTO
+            defaultColumn: false
+            resizable: true
+            sortable: true
+          - field: app_region
+            displayName: Region
+            columnType: TEXT
+            widthType: AUTO
+            defaultColumn: false
+            resizable: true
+            sortable: true
+          - field: org.record
+            displayName: Organization
+            columnType: TEXT
+            widthType: AUTO
+            defaultColumn: false
+            resizable: true
+            sortable: true
+      - key: cloudhub-env-apis_dql
+        displayName: APIs on this environment
+        query:
+          query: >-
+            fetch `dt.entity.cloudhub:api`
+
+            | filter in (id,
+            classicEntitySelector("type(cloudhub:api),fromRelationships.runsOn(type(cloudhub:env),entityId($(unquotedEntityId)))"))
+
+            | fieldsAdd `cloudhub:api.id` = id, api.record = record(entityId=id,
+            displayName=entity.name, dim="dt.entity.cloudhub:api")
+          lookups:
+            - query: timeseries requests=sum(cloudhub.api.requests,rollup:avg,
+                scalar:true),by:{`dt.entity.cloudhub:api`}
+              sourceField: "`cloudhub:api.id`"
+              lookupField: "`dt.entity.cloudhub:api`"
+              fields:
+                - requests
+            - query: timeseries response_time=avg(cloudhub.api.response_time,
+                scalar:true),by:{`dt.entity.cloudhub:api`}
+              sourceField: "`cloudhub:api.id`"
+              lookupField: "`dt.entity.cloudhub:api`"
+              fields:
+                - response_time
+            - query: |-
+                fetch `dt.entity.cloudhub:api`
+                | fieldsAdd asset_id, id
+              sourceField: "`cloudhub:api.id`"
+              lookupField: id
+              fields:
+                - asset_id
+            - query: |-
+                fetch `dt.entity.cloudhub:api`
+                | fieldsAdd api_version_id, id
+              sourceField: "`cloudhub:api.id`"
+              lookupField: id
+              fields:
+                - api_version_id
+            - query: |-
+                fetch `dt.entity.cloudhub:api`
+                | fieldsAdd asset_group, id
+              sourceField: "`cloudhub:api.id`"
+              lookupField: id
+              fields:
+                - asset_group
+            - query: >-
+                fetch `dt.entity.cloudhub:org`
+
+                | fieldsFlatten parent_of
+
+                | expand `parent_of.dt.entity.cloudhub:api`
+
+                | fieldsAdd `cloudhub:org.id` = id, org.record =
+                record(entityId=id, displayName=entity.name,
+                dim="dt.entity.cloudhub:org"),
+                `org.api.id`=`parent_of.dt.entity.cloudhub:api`
+              sourceField: "`cloudhub:api.id`"
+              lookupField: "`org.api.id`"
+              fields:
+                - org.record
+        columns:
+          - field: api.record
+            displayName: APIs on this environment Name
+            columnType: TEXT
+            widthType: AUTO
+            defaultColumn: false
+            resizable: true
+            sortable: true
+          - field: requests
+            displayName: Requests
+            columnType: NUMBER
+            widthType: AUTO
+            defaultColumn: false
+            resizable: true
+            sortable: true
+            formatter: unitRenderer|unit=units.unspecified.count
+          - field: response_time
+            displayName: Response Time
+            columnType: NUMBER
+            widthType: AUTO
+            defaultColumn: false
+            resizable: true
+            sortable: true
+            formatter: unitRenderer|unit=units.time.millisecond
+          - field: asset_id
+            displayName: API ID
+            columnType: TEXT
+            widthType: AUTO
+            defaultColumn: false
+            resizable: true
+            sortable: true
+          - field: api_version_id
+            displayName: API Version ID
+            columnType: TEXT
+            widthType: AUTO
+            defaultColumn: false
+            resizable: true
+            sortable: true
+          - field: asset_group
+            displayName: Group
+            columnType: TEXT
+            widthType: AUTO
+            defaultColumn: false
+            resizable: true
+            sortable: true
+          - field: org.record
+            displayName: Organization
+            columnType: TEXT
+            widthType: AUTO
+            defaultColumn: false
+            resizable: true
+            sortable: true
+  - entityType: cloudhub:app
+    propertiesCard:
+      displayOnlyConfigured: false
+      properties:
+        - type: RELATION
+          relation:
+            displayName: Organization
+            entitySelectorTemplate: type(cloudhub:org),toRelationships.isChildOf($(entityConditions))
+            fallbackMessage: No organization found
+        - type: RELATION
+          relation:
+            displayName: Environment
+            entitySelectorTemplate: type(cloudhub:env),toRelationships.runsOn($(entityConditions))
+            fallbackMessage: No environment found
+    listSettings:
+      staticContent:
+        showGlobalFilter: true
+        header:
+          title: Cloudhub Applications
+          description: List of Cloudhub Applications
+          icon: city
+        hideDefaultBreadcrumb: true
+        breadcrumbs:
+          - type: NOOP
+            displayName: Mulesoft
+          - type: ENTITY_LIST_REF
+            displayName: Applications
+            entityType: cloudhub:app
+      layout:
+        autoGenerate: false
+        cards:
+          - key: cloudhub-app-list-self
+            type: ENTITIES_LIST
+    detailsSettings:
+      target: BOTH
+      staticContent:
+        showProblems: true
+        showProperties: true
+        showTags: true
+        showGlobalFilter: true
+        showAddTag: true
+        breadcrumbs:
+          - type: NOOP
+            displayName: Mulesoft
+          - type: ENTITY_LIST_REF
+            displayName: Applications
+            entityType: cloudhub:app
+      layout:
+        autoGenerate: false
+        cards:
+          - key: cloudhub-app-metrics-a
+            type: CHART_GROUP
+          - key: cloudhub-app-metrics-b
+            type: CHART_GROUP
+          - key: cloudhub-app-workers
+            type: ENTITIES_LIST
+          - key: cloudhub-app-workers_dql
+            type: DQL_TABLE
+    chartsCards:
+      - key: cloudhub-app-metrics-a
+        target: BOTH
+        mode: NORMAL
+        numberOfVisibleCharts: 4
+        hideEmptyCharts: true
+        displayName: Application overview
+        charts:
+          - visualizationType: PIE_CHART
+            displayName: Response types
+            pieChartConfig:
+              themeColor: GREEN
+              showLegend: true
+              metric:
+                metricSelector: cloudhub.app.endpoints.requests:splitBy("response_type"):sum
+                dqlQuery: "timeseries
+                  requests=sum(cloudhub.app.endpoints.requests,rollup:avg),by:
+                  {response_type ,
+                  `dt.entity.cloudhub:app`},filter:{`dt.entity.cloudhub:app`==$\
+                  (entityId)}"
+          - visualizationType: GRAPH_CHART
+            displayName: Response time per endpoint
+            graphChartConfig:
+              metrics:
+                - metricSelector: cloudhub.app.endpoints.response_time:splitBy("endpoint")
+                  dqlQuery: "timeseries
+                    response_time=avg(cloudhub.app.endpoints.response_time),by:
+                    {endpoint ,
+                    `dt.entity.cloudhub:app`},filter:{`dt.entity.cloudhub:app`=\
+                    =$(entityId)}"
+                  visualization:
+                    displayName: Requests per Type
+                    seriesType: LINE
+                    themeColor: BLUE
+          - visualizationType: GRAPH_CHART
+            displayName: Inbound Requests per endpoint
+            graphChartConfig:
+              stacked: true
+              metrics:
+                - metricSelector: cloudhub.app.endpoints.requests:splitBy("endpoint")
+                  dqlQuery: "timeseries requests=avg(cloudhub.app.endpoints.requests),by:
+                    {endpoint ,
+                    `dt.entity.cloudhub:app`},filter:{`dt.entity.cloudhub:app`=\
+                    =$(entityId)}"
+                  visualization:
+                    displayName: Inbound Requests per Endpoint
+                    seriesType: COLUMN
+                    themeColor: TURQUOISE
+          - visualizationType: GRAPH_CHART
+            displayName: Outbound Requests per endpoint
+            graphChartConfig:
+              stacked: true
+              metrics:
+                - metricSelector: cloudhub.app.endpoints.outbound.requests:splitBy("endpoint")
+                  dqlQuery: "timeseries requests=avg(cloudhub.app.endpoints.outbound.requests),by:
+                    {endpoint ,
+                    `dt.entity.cloudhub:app`},filter:{`dt.entity.cloudhub:app`=\
+                    =$(entityId)}"
+                  visualization:
+                    displayName: Outbound Requests per Endpoint
+                    seriesType: COLUMN
+                    themeColor: GREEN
+          - visualizationType: GRAPH_CHART
+            displayName: Outbound Response Time per endpoint
+            graphChartConfig:
+              stacked: true
+              metrics:
+                - metricSelector: cloudhub.app.endpoints.outbound.response_time:splitBy("endpoint")
+                  dqlQuery: "timeseries
+                    response_time=avg(cloudhub.app.endpoints.outbound.response_\
+                    time),by: {endpoint ,
+                    `dt.entity.cloudhub:app`},filter:{`dt.entity.cloudhub:app`=\
+                    =$(entityId)}"
+                  visualization:
+                    displayName: Outbound Response Time per endpoint
+                    seriesType: COLUMN
+                    themeColor: GREEN
+          - visualizationType: GRAPH_CHART
+            displayName: Outbound Requests per operation
+            graphChartConfig:
+              stacked: true
+              metrics:
+                - metricSelector: cloudhub.app.endpoints.outbound.operations.requests:splitBy("remote_host",
+                    "operation")
+                  dqlQuery: "timeseries
+                    requests=avg(cloudhub.app.endpoints.outbound.operations.req\
+                    uests),by: {operation,remote_host ,
+                    `dt.entity.cloudhub:app`},filter:{`dt.entity.cloudhub:app`=\
+                    =$(entityId)}"
+                  visualization:
+                    displayName: Outbound Requests per operation
+                    seriesType: COLUMN
+                    themeColor: GREEN
+          - visualizationType: GRAPH_CHART
+            displayName: Outbound Response Time per operation
+            graphChartConfig:
+              stacked: true
+              metrics:
+                - metricSelector: cloudhub.app.endpoints.outbound.operations.response_time:splitBy("remote_host",
+                    "operation")
+                  dqlQuery: "timeseries
+                    response_time=avg(cloudhub.app.endpoints.outbound.operation\
+                    s.response_time),by: {operation,remote_host ,
+                    `dt.entity.cloudhub:app`},filter:{`dt.entity.cloudhub:app`=\
+                    =$(entityId)}"
+                  visualization:
+                    displayName: Outbound Response Time per operation
+                    seriesType: COLUMN
+                    themeColor: GREEN
+          - visualizationType: GRAPH_CHART
+            displayName: Response Time
+            graphChartConfig:
+              metrics:
+                - metricSelector: cloudhub.app.response_time:splitBy()
+                  dqlQuery: timeseries
+                    response_time=avg(cloudhub.app.response_time),by:{`dt.entity.cloudhub:app`},filter:{`dt.entity.cloudhub:app`==$(entityId)}
+                  visualization:
+                    displayName: Response Time
+                    seriesType: LINE
+                    themeColor: BLUE
+          - visualizationType: GRAPH_CHART
+            displayName: Requests and Errors
+            graphChartConfig:
+              metrics:
+                - metricSelector: cloudhub.app.requests:splitBy()
+                  dqlQuery: timeseries
+                    requests=avg(cloudhub.app.requests),by:{`dt.entity.cloudhub:app`},filter:{`dt.entity.cloudhub:app`==$(entityId)}
+                  visualization:
+                    displayName: Requests
+                    seriesType: LINE
+                    themeColor: GREEN
+                - metricSelector: cloudhub.app.errors:splitBy()
+                  dqlQuery: timeseries
+                    errors=avg(cloudhub.app.errors),by:{`dt.entity.cloudhub:app`},filter:{`dt.entity.cloudhub:app`==$(entityId)}
+                  visualization:
+                    displayName: Errors
+                    seriesType: COLUMN
+                    themeColor: RED
+      - key: cloudhub-app-metrics-b
+        target: BOTH
+        mode: NORMAL
+        numberOfVisibleCharts: 4
+        displayName: Workers
+        charts:
+          - visualizationType: GRAPH_CHART
+            displayName: CPU
+            graphChartConfig:
+              yAxes:
+                - key: y-absolute
+                  position: LEFT
+                  name: CPU Utilization
+                  visible: true
+                  max: "100"
+                  min: "0"
+              metrics:
+                - metricSelector: cloudhub.app.worker.cpu:splitBy("dt.entity.cloudhub:worker")
+                  dqlQuery: "timeseries cpu=avg(cloudhub.app.worker.cpu),by:
+                    {`dt.entity.cloudhub:worker` ,
+                    `dt.entity.cloudhub:app`},filter:{`dt.entity.cloudhub:app`=\
+                    =$(entityId)}"
+                  yAxisKey: y-absolute
+                  visualization:
+                    displayName: CPU
+                    seriesType: LINE
+                    themeColor: RED
+          - visualizationType: GRAPH_CHART
+            displayName: Threads
+            graphChartConfig:
+              metrics:
+                - metricSelector: cloudhub.app.worker.threads:splitBy("dt.entity.cloudhub:worker")
+                  dqlQuery: "timeseries threads=avg(cloudhub.app.worker.threads),by:
+                    {`dt.entity.cloudhub:worker` ,
+                    `dt.entity.cloudhub:app`},filter:{`dt.entity.cloudhub:app`=\
+                    =$(entityId)}"
+                  visualization:
+                    displayName: Threads
+                    seriesType: LINE
+                    themeColor: BLUE
+          - visualizationType: GRAPH_CHART
+            displayName: Heap
+            graphChartConfig:
+              metrics:
+                - metricSelector: cloudhub.app.worker.heap_used:splitBy("dt.entity.cloudhub:worker")
+                  dqlQuery: "timeseries heap_used=avg(cloudhub.app.worker.heap_used),by:
+                    {`dt.entity.cloudhub:worker` ,
+                    `dt.entity.cloudhub:app`},filter:{`dt.entity.cloudhub:app`=\
+                    =$(entityId)}"
+                  visualization:
+                    displayName: Used
+                    seriesType: LINE
+                    themeColor: BLUE
+                - metricSelector: cloudhub.app.worker.heap_total:splitBy("dt.entity.cloudhub:worker")
+                  dqlQuery: "timeseries heap_total=avg(cloudhub.app.worker.heap_total),by:
+                    {`dt.entity.cloudhub:worker` ,
+                    `dt.entity.cloudhub:app`},filter:{`dt.entity.cloudhub:app`=\
+                    =$(entityId)}"
+                  visualization:
+                    displayName: Total
+                    seriesType: LINE
+                    themeColor: PURPLE
+          - visualizationType: GRAPH_CHART
+            displayName: Load Average
+            graphChartConfig:
+              metrics:
+                - metricSelector: cloudhub.app.worker.load_average:splitBy("dt.entity.cloudhub:worker")
+                  dqlQuery: "timeseries load_average=avg(cloudhub.app.worker.load_average),by:
+                    {`dt.entity.cloudhub:worker` ,
+                    `dt.entity.cloudhub:app`},filter:{`dt.entity.cloudhub:app`=\
+                    =$(entityId)}"
+                  visualization:
+                    displayName: Used
+                    seriesType: LINE
+                    themeColor: ORANGE
+    entitiesListCards:
+      - key: cloudhub-app-workers
+        displayName: Workers for this application
+        pageSize: 5
+        displayCharts: false
+        enableDetailsExpandability: true
+        numberOfVisibleCharts: 3
+        entitySelectorTemplate: type(cloudhub:worker),fromRelationships.isChildOf($(entityConditions))
+        displayIcons: true
+        emptyState:
+          header: No workers found
+          body: No workers found for this application
+        filtering:
+          relationships:
+            - type(cloudhub:app),toRelationships.isChildOf($(entityConditions))
+        columns:
+          - type: ATTRIBUTE
+            attribute:
+              key: worker_id
+              displayName: ID
+          - type: RELATION
+            relation:
+              displayName: Environment
+              entitySelectorTemplate: type(cloudhub:env),toRelationships.runsOn($(entityConditions))
+        charts:
+          - displayName: CPU
+            visualizationType: GRAPH_CHART
+            graphChartConfig:
+              metrics:
+                - metricSelector: cloudhub.app.worker.cpu:splitBy()
+                  visualization:
+                    themeColor: TURQUOISE
+                    seriesType: COLUMN
+          - displayName: Memory Usage
+            visualizationType: GRAPH_CHART
+            graphChartConfig:
+              metrics:
+                - metricSelector: cloudhub.app.worker.heap_used:splitBy()
+                  visualization:
+                    themeColor: ORANGE
+                    seriesType: LINE
+                - metricSelector: cloudhub.app.worker.heap_total:splitBy()
+                  visualization:
+                    themeColor: GREEN
+                    seriesType: LINE
+          - displayName: Threads
+            visualizationType: GRAPH_CHART
+            graphChartConfig:
+              metrics:
+                - metricSelector: cloudhub.app.worker.threads:splitBy()
+                  visualization:
+                    themeColor: PURPLE
+                    seriesType: COLUMN
+      - key: cloudhub-app-list-self
+        displayName: Applications
+        displayIcons: true
+        displayCharts: false
+        enableDetailsExpandability: true
+        numberOfVisibleCharts: 2
+        pageSize: 5
+        hideEmptyCharts: true
+        columns:
+          - type: ATTRIBUTE
+            attribute:
+              key: app_status
+              displayName: Status
+          - type: ATTRIBUTE
+            attribute:
+              key: app_full_domain
+              displayName: Full domain
+          - type: ATTRIBUTE
+            attribute:
+              key: app_mule_version
+              displayName: Mule Version
+          - type: ATTRIBUTE
+            attribute:
+              key: app_region
+              displayName: Region
+          - type: RELATION
+            relation:
+              displayName: Environment
+              entitySelectorTemplate: type(cloudhub:env),toRelationships.runsOn($(entityConditions))
+              displayAmount: true
+          - type: RELATION
+            relation:
+              displayName: Organization
+              entitySelectorTemplate: type(cloudhub:org),toRelationships.isChildOf($(entityConditions))
+              displayAmount: true
+          - type: RELATION
+            relation:
+              displayName: Workers
+              entitySelectorTemplate: type(cloudhub:worker),fromRelationships.isChildOf($(entityConditions))
+              displayAmount: true
+        charts:
+          - displayName: Requests
+            visualizationType: GRAPH_CHART
+            graphChartConfig:
+              metrics:
+                - metricSelector: cloudhub.app.requests:sum:splitBy()
+                  visualization:
+                    themeColor: TURQUOISE
+                    seriesType: AREA
+          - displayName: Response Time
+            visualizationType: GRAPH_CHART
+            graphChartConfig:
+              metrics:
+                - metricSelector: cloudhub.app.response_time:splitBy()
+                  visualization:
+                    themeColor: ORANGE
+                    seriesType: AREA
+    dqlTableCards:
+      - key: cloudhub-app-workers_dql
+        displayName: Workers for this application
+        query:
+          query: >-
+            fetch `dt.entity.cloudhub:worker`
+
+            | filter in (id,
+            classicEntitySelector("type(cloudhub:worker),fromRelationships.isChildOf(type(cloudhub:app),entityId($(unquotedEntityId)))"))
+
+            | fieldsAdd `cloudhub:worker.id` = id, worker.record =
+            record(entityId=id, displayName=entity.name,
+            dim="dt.entity.cloudhub:worker")
+          lookups:
+            - query: timeseries cpu=avg(cloudhub.app.worker.cpu,
+                scalar:true),by:{`dt.entity.cloudhub:worker`}
+              sourceField: "`cloudhub:worker.id`"
+              lookupField: "`dt.entity.cloudhub:worker`"
+              fields:
+                - cpu
+            - query: timeseries heap_used=avg(cloudhub.app.worker.heap_used,
+                scalar:true),by:{`dt.entity.cloudhub:worker`}
+              sourceField: "`cloudhub:worker.id`"
+              lookupField: "`dt.entity.cloudhub:worker`"
+              fields:
+                - heap_used
+            - query: timeseries heap_total=avg(cloudhub.app.worker.heap_total,
+                scalar:true),by:{`dt.entity.cloudhub:worker`}
+              sourceField: "`cloudhub:worker.id`"
+              lookupField: "`dt.entity.cloudhub:worker`"
+              fields:
+                - heap_total
+            - query: timeseries threads=avg(cloudhub.app.worker.threads,
+                scalar:true),by:{`dt.entity.cloudhub:worker`}
+              sourceField: "`cloudhub:worker.id`"
+              lookupField: "`dt.entity.cloudhub:worker`"
+              fields:
+                - threads
+            - query: |-
+                fetch `dt.entity.cloudhub:worker`
+                | fieldsAdd worker_id, id
+              sourceField: "`cloudhub:worker.id`"
+              lookupField: id
+              fields:
+                - worker_id
+            - query: >-
+                fetch `dt.entity.cloudhub:env`
+
+                | fieldsFlatten runs
+
+                | expand `runs.dt.entity.cloudhub:worker`
+
+                | fieldsAdd `cloudhub:env.id` = id, env.record =
+                record(entityId=id, displayName=entity.name,
+                dim="dt.entity.cloudhub:env"),
+                `env.worker.id`=`runs.dt.entity.cloudhub:worker`
+              sourceField: "`cloudhub:worker.id`"
+              lookupField: "`env.worker.id`"
+              fields:
+                - env.record
+        columns:
+          - field: worker.record
+            displayName: Workers for this application Name
+            columnType: TEXT
+            widthType: AUTO
+            defaultColumn: false
+            resizable: true
+            sortable: true
+          - field: cpu
+            displayName: CPU
+            columnType: NUMBER
+            widthType: AUTO
+            defaultColumn: false
+            resizable: true
+            sortable: true
+            formatter: unitRenderer|unit=units.percentage.percent
+          - field: heap_used
+            displayName: JVM Heap Used
+            columnType: NUMBER
+            widthType: AUTO
+            defaultColumn: false
+            resizable: true
+            sortable: true
+            formatter: unitRenderer|unit=units.data.byte
+          - field: heap_total
+            displayName: JVM Heap Total
+            columnType: NUMBER
+            widthType: AUTO
+            defaultColumn: false
+            resizable: true
+            sortable: true
+            formatter: unitRenderer|unit=units.data.byte
+          - field: threads
+            displayName: Threads
+            columnType: NUMBER
+            widthType: AUTO
+            defaultColumn: false
+            resizable: true
+            sortable: true
+            formatter: unitRenderer|unit=units.unspecified.count
+          - field: worker_id
+            displayName: ID
+            columnType: TEXT
+            widthType: AUTO
+            defaultColumn: false
+            resizable: true
+            sortable: true
+          - field: env.record
+            displayName: Environment
+            columnType: TEXT
+            widthType: AUTO
+            defaultColumn: false
+            resizable: true
+            sortable: true
+  - entityType: cloudhub:api
+    propertiesCard:
+      displayOnlyConfigured: false
+      properties:
+        - type: RELATION
+          relation:
+            displayName: Organization
+            entitySelectorTemplate: type(cloudhub:org),toRelationships.isChildOf($(entityConditions))
+            fallbackMessage: No organization found
+        - type: RELATION
+          relation:
+            displayName: Environment
+            entitySelectorTemplate: type(cloudhub:env),toRelationships.runsOn($(entityConditions))
+            fallbackMessage: No environment found
+    listSettings:
+      staticContent:
+        showGlobalFilter: true
+        header:
+          title: Cloudhub APIs
+          description: List of Cloudhub APIs
+          icon: application
+        hideDefaultBreadcrumb: true
+        breadcrumbs:
+          - type: NOOP
+            displayName: Mulesoft
+          - type: ENTITY_LIST_REF
+            displayName: APIs
+            entityType: cloudhub:api
+      layout:
+        autoGenerate: false
+        cards:
+          - key: cloudhub-api-list-self
+            type: ENTITIES_LIST
+    detailsSettings:
+      target: BOTH
+      staticContent:
+        showProblems: true
+        showProperties: true
+        showTags: true
+        showGlobalFilter: true
+        showAddTag: true
+        breadcrumbs:
+          - type: NOOP
+            displayName: Mulesoft
+          - type: ENTITY_LIST_REF
+            displayName: APIs
+            entityType: cloudhub:api
+      layout:
+        autoGenerate: false
+        cards:
+          - key: cloudhub-api-metrics-a
+            type: CHART_GROUP
+          - key: cloudhub-api-metrics-b
+            type: CHART_GROUP
+    chartsCards:
+      - key: cloudhub-api-metrics-a
+        target: BOTH
+        mode: NORMAL
+        numberOfVisibleCharts: 4
+        displayName: API overview
+        charts:
+          - visualizationType: PIE_CHART
+            displayName: Response codes
+            pieChartConfig:
+              themeColor: GREEN
+              showLegend: true
+              metric:
+                metricSelector: cloudhub.api.requests:splitBy("status_code"):sum
+                dqlQuery: "timeseries requests=sum(cloudhub.api.requests,rollup:avg),by:
+                  {status_code ,
+                  `dt.entity.cloudhub:api`},filter:{`dt.entity.cloudhub:api`==$\
+                  (entityId)}"
+          - visualizationType: GRAPH_CHART
+            displayName: Response time per version
+            graphChartConfig:
+              metrics:
+                - metricSelector: cloudhub.api.response_time:splitBy("api_version_id")
+                  dqlQuery: "timeseries response_time=avg(cloudhub.api.response_time),by:
+                    {api_version_id ,
+                    `dt.entity.cloudhub:api`},filter:{`dt.entity.cloudhub:api`=\
+                    =$(entityId)}"
+                  visualization:
+                    displayName: Requests per Type
+                    seriesType: LINE
+                    themeColor: BLUE
+          - visualizationType: GRAPH_CHART
+            displayName: Requests
+            graphChartConfig:
+              stacked: true
+              metrics:
+                - metricSelector: cloudhub.api.requests:splitBy("method")
+                  dqlQuery: "timeseries requests=avg(cloudhub.api.requests),by: {method ,
+                    `dt.entity.cloudhub:api`},filter:{`dt.entity.cloudhub:api`=\
+                    =$(entityId)}"
+                  visualization:
+                    displayName: Requests by Method
+                    seriesType: COLUMN
+                    themeColor: TURQUOISE
+          - visualizationType: GRAPH_CHART
+            displayName: Request Size
+            graphChartConfig:
+              metrics:
+                - metricSelector: cloudhub.api.request_size:splitBy()
+                  dqlQuery: timeseries
+                    request_size=avg(cloudhub.api.request_size),by:{`dt.entity.cloudhub:api`},filter:{`dt.entity.cloudhub:api`==$(entityId)}
+                  visualization:
+                    displayName: Request Size
+                    seriesType: LINE
+                    themeColor: BLUE
+          - visualizationType: GRAPH_CHART
+            displayName: Request Size
+            graphChartConfig:
+              metrics:
+                - metricSelector: cloudhub.api.response_size:splitBy()
+                  dqlQuery: timeseries
+                    response_size=avg(cloudhub.api.response_size),by:{`dt.entity.cloudhub:api`},filter:{`dt.entity.cloudhub:api`==$(entityId)}
+                  visualization:
+                    displayName: Response Size
+                    seriesType: LINE
+                    themeColor: PURPLE
+          - visualizationType: GRAPH_CHART
+            displayName: Policy Violations
+            graphChartConfig:
+              metrics:
+                - metricSelector: cloudhub.api.policy_violations:splitBy("policy_id")
+                  dqlQuery: "timeseries policy_violations=avg(cloudhub.api.policy_violations),by:
+                    {policy_id ,
+                    `dt.entity.cloudhub:api`},filter:{`dt.entity.cloudhub:api`=\
+                    =$(entityId)}"
+                  visualization:
+                    displayName: Policy Violations
+                    seriesType: COLUMN
+                    themeColor: RED
+          - visualizationType: GRAPH_CHART
+            displayName: Requests by Location
+            graphChartConfig:
+              stacked: true
+              metrics:
+                - metricSelector: cloudhub.api.location.requests:splitBy("country")
+                  dqlQuery: "timeseries requests=avg(cloudhub.api.location.requests),by: {country
+                    ,
+                    `dt.entity.cloudhub:api`},filter:{`dt.entity.cloudhub:api`=\
+                    =$(entityId)}"
+                  visualization:
+                    displayName: Requests by Country
+                    seriesType: COLUMN
+                    themeColor: ORANGE
+      - key: cloudhub-api-metrics-b
+        target: BOTH
+        mode: NORMAL
+        numberOfVisibleCharts: 3
+        displayName: API statistics
+        charts:
+          - visualizationType: PIE_CHART
+            displayName: Requests by Location
+            pieChartConfig:
+              themeColor: GREEN
+              showLegend: true
+              metric:
+                metricSelector: cloudhub.api.location.requests:splitBy("country"):sum
+                dqlQuery: "timeseries
+                  requests=sum(cloudhub.api.location.requests,rollup:avg),by:
+                  {country ,
+                  `dt.entity.cloudhub:api`},filter:{`dt.entity.cloudhub:api`==$\
+                  (entityId)}"
+          - visualizationType: PIE_CHART
+            displayName: Requests by Method
+            pieChartConfig:
+              themeColor: DEFAULT
+              showLegend: true
+              metric:
+                metricSelector: cloudhub.api.requests:splitBy("method"):sum
+                dqlQuery: "timeseries requests=sum(cloudhub.api.requests,rollup:avg),by: {method
+                  ,
+                  `dt.entity.cloudhub:api`},filter:{`dt.entity.cloudhub:api`==$\
+                  (entityId)}"
+          - visualizationType: GRAPH_CHART
+            displayName: Request vs Response Size
+            graphChartConfig:
+              stacked: true
+              defaultAggregation: SUM
+              metrics:
+                - metricSelector: cloudhub.api.request_size:splitBy():sum
+                  dqlQuery: timeseries
+                    request_size=sum(cloudhub.api.request_size,rollup:avg),by:{`dt.entity.cloudhub:api`},filter:{`dt.entity.cloudhub:api`==$(entityId)}
+                  visualization:
+                    displayName: Request Size
+                    seriesType: COLUMN
+                    themeColor: BLUE
+                - metricSelector: cloudhub.api.response_size:splitBy():sum
+                  dqlQuery: timeseries
+                    response_size=sum(cloudhub.api.response_size,rollup:avg),by:{`dt.entity.cloudhub:api`},filter:{`dt.entity.cloudhub:api`==$(entityId)}
+                  visualization:
+                    displayName: Response Size
+                    seriesType: COLUMN
+                    themeColor: ORANGE
+    entitiesListCards:
+      - key: cloudhub-api-list-self
+        displayName: APIs
+        displayIcons: true
+        displayCharts: false
+        enableDetailsExpandability: true
+        numberOfVisibleCharts: 2
+        pageSize: 5
+        hideEmptyCharts: true
+        columns:
+          - type: ATTRIBUTE
+            attribute:
+              key: asset_name
+              displayName: Name
+          - type: ATTRIBUTE
+            attribute:
+              key: api_version_id
+              displayName: Version ID
+          - type: RELATION
+            relation:
+              displayName: Environment
+              entitySelectorTemplate: type(cloudhub:env),toRelationships.runsOn($(entityConditions))
+              displayAmount: true
+          - type: RELATION
+            relation:
+              displayName: Organization
+              entitySelectorTemplate: type(cloudhub:org),toRelationships.isChildOf($(entityConditions))
+              displayAmount: true
+        charts:
+          - displayName: Requests
+            visualizationType: GRAPH_CHART
+            graphChartConfig:
+              metrics:
+                - metricSelector: cloudhub.api.requests:sum:splitBy()
+                  visualization:
+                    themeColor: TURQUOISE
+                    seriesType: AREA
+          - displayName: Response Time
+            visualizationType: GRAPH_CHART
+            graphChartConfig:
+              metrics:
+                - metricSelector: cloudhub.api.response_time:splitBy()
+                  visualization:
+                    themeColor: ORANGE
+                    seriesType: AREA
+  - entityType: cloudhub:worker
+    propertiesCard:
+      displayOnlyConfigured: false
+      properties:
+        - type: RELATION
+          relation:
+            displayName: Application
+            entitySelectorTemplate: type(cloudhub:app),toRelationships.isChildOf($(entityConditions))
+            fallbackMessage: No application found
+        - type: RELATION
+          relation:
+            displayName: Environment
+            entitySelectorTemplate: type(cloudhub:env),toRelationships.runsOn($(entityConditions))
+            fallbackMessage: No environment found
+    listSettings:
+      staticContent:
+        showGlobalFilter: true
+        header:
+          title: Cloudhub Workers
+          description: List of Cloudhub Workers
+          icon: city
+        hideDefaultBreadcrumb: true
+        breadcrumbs:
+          - type: NOOP
+            displayName: Mulesoft
+          - type: ENTITY_LIST_REF
+            displayName: Workers
+            entityType: cloudhub:worker
+      layout:
+        autoGenerate: false
+        cards:
+          - key: cloudhub-worker-list-self
+            type: ENTITIES_LIST
+    detailsSettings:
+      target: BOTH
+      staticContent:
+        showProblems: true
+        showProperties: true
+        showTags: true
+        showGlobalFilter: true
+        showAddTag: true
+        breadcrumbs:
+          - type: NOOP
+            displayName: Mulesoft
+          - type: ENTITY_LIST_REF
+            displayName: Workers
+            entityType: cloudhub:worker
+      layout:
+        autoGenerate: false
+        cards:
+          - key: cloudhub-worker-metrics-overview
+            type: CHART_GROUP
+          - key: cloudhub-worker-metrics-details
+            type: CHART_GROUP
+    chartsCards:
+      - key: cloudhub-worker-metrics-overview
+        target: BOTH
+        mode: NORMAL
+        numberOfVisibleCharts: 4
+        displayName: Worker Overview
+        charts:
+          - visualizationType: SINGLE_VALUE
+            displayName: CPU
+            singleValueConfig:
+              showSparkline: false
+              displayName: CPU
+              metric:
+                metricSelector: cloudhub.app.worker.cpu:last
+                dqlQuery: timeseries
+                  cpu=avg(cloudhub.app.worker.cpu),by:{`dt.entity.cloudhub:worker`},filter:{`dt.entity.cloudhub:worker`==$(entityId)}|fieldsAdd
+                  cpu=array(arrayLast(cpu))
+          - visualizationType: SINGLE_VALUE
+            displayName: Heap Used %
+            singleValueConfig:
+              showSparkline: false
+              displayName: Heap Used %
+              metric:
+                metricSelector: (cloudhub.app.worker.heap_used:splitBy():last) /
+                  (cloudhub.app.worker.heap_total:splitBy():last) * 100
+                dqlQuery: timeseries
+                  {heap_used=avg(cloudhub.app.worker.heap_used),heap_total=avg(cloudhub.app.worker.heap_total)},by:{`dt.entity.cloudhub:worker`},filter:{`dt.entity.cloudhub:worker`==$(entityId)}|fieldsAdd
+                  expression=arrayLast(heap_used)/arrayLast(heap_total)*100|fieldsRemove
+                  heap_used,heap_total, interval
+          - visualizationType: SINGLE_VALUE
+            displayName: Threads
+            singleValueConfig:
+              showSparkline: false
+              displayName: Threads
+              metric:
+                metricSelector: cloudhub.app.worker.threads:last
+                dqlQuery: timeseries
+                  threads=avg(cloudhub.app.worker.threads),by:{`dt.entity.cloudhub:worker`},filter:{`dt.entity.cloudhub:worker`==$(entityId)}|fieldsAdd
+                  threads=array(arrayLast(threads))
+          - visualizationType: SINGLE_VALUE
+            displayName: Load Average
+            singleValueConfig:
+              showSparkline: false
+              displayName: Load Average
+              metric:
+                metricSelector: cloudhub.app.worker.load_average:last
+                dqlQuery: timeseries
+                  load_average=avg(cloudhub.app.worker.load_average),by:{`dt.entity.cloudhub:worker`},filter:{`dt.entity.cloudhub:worker`==$(entityId)}|fieldsAdd
+                  load_average=array(arrayLast(load_average))
+      - key: cloudhub-worker-metrics-details
+        target: BOTH
+        mode: NORMAL
+        numberOfVisibleCharts: 4
+        displayName: Worker Details
+        charts:
+          - visualizationType: GRAPH_CHART
+            displayName: CPU
+            graphChartConfig:
+              metrics:
+                - metricSelector: cloudhub.app.worker.cpu:splitBy()
+                  dqlQuery: timeseries
+                    cpu=avg(cloudhub.app.worker.cpu),by:{`dt.entity.cloudhub:worker`},filter:{`dt.entity.cloudhub:worker`==$(entityId)}
+                  visualization:
+                    themeColor: TURQUOISE
+                    seriesType: LINE
+          - visualizationType: GRAPH_CHART
+            displayName: Memory
+            graphChartConfig:
+              metrics:
+                - metricSelector: cloudhub.app.worker.heap_used:splitBy()
+                  dqlQuery: timeseries
+                    heap_used=avg(cloudhub.app.worker.heap_used),by:{`dt.entity.cloudhub:worker`},filter:{`dt.entity.cloudhub:worker`==$(entityId)}
+                  visualization:
+                    themeColor: ROYALBLUE
+                    seriesType: LINE
+                - metricSelector: cloudhub.app.worker.heap_total:splitBy()
+                  dqlQuery: timeseries
+                    heap_total=avg(cloudhub.app.worker.heap_total),by:{`dt.entity.cloudhub:worker`},filter:{`dt.entity.cloudhub:worker`==$(entityId)}
+                  visualization:
+                    themeColor: GREEN
+                    seriesType: LINE
+          - visualizationType: GRAPH_CHART
+            displayName: Threads
+            graphChartConfig:
+              metrics:
+                - metricSelector: cloudhub.app.worker.threads:splitBy()
+                  dqlQuery: timeseries
+                    threads=avg(cloudhub.app.worker.threads),by:{`dt.entity.cloudhub:worker`},filter:{`dt.entity.cloudhub:worker`==$(entityId)}
+                  visualization:
+                    themeColor: RED
+                    seriesType: COLUMN
+          - visualizationType: GRAPH_CHART
+            displayName: Load Average
+            graphChartConfig:
+              metrics:
+                - metricSelector: cloudhub.app.worker.load_average:splitBy()
+                  dqlQuery: timeseries
+                    load_average=avg(cloudhub.app.worker.load_average),by:{`dt.entity.cloudhub:worker`},filter:{`dt.entity.cloudhub:worker`==$(entityId)}
+                  visualization:
+                    themeColor: DEFAULT
+                    seriesType: LINE
+          - visualizationType: GRAPH_CHART
+            displayName: Available Processors
+            graphChartConfig:
+              metrics:
+                - metricSelector: cloudhub.app.worker.available_processors:splitBy()
+                  dqlQuery: timeseries
+                    available_processors=avg(cloudhub.app.worker.available_processors),by:{`dt.entity.cloudhub:worker`},filter:{`dt.entity.cloudhub:worker`==$(entityId)}
+                  visualization:
+                    themeColor: PURPLE
+                    seriesType: COLUMN
+    entitiesListCards:
+      - key: cloudhub-worker-list-self
+        displayName: Workers
+        displayIcons: true
+        displayCharts: false
+        enableDetailsExpandability: true
+        numberOfVisibleCharts: 4
+        pageSize: 10
+        hideEmptyCharts: true
+        initialSorting:
+          columnId: metric-CPU
+          order: DESCENDING
+        columns:
+          - type: RELATION
+            relation:
+              displayName: Environment
+              entitySelectorTemplate: type(cloudhub:env),toRelationships.runsOn($(entityConditions))
+              displayAmount: true
+          - type: RELATION
+            relation:
+              displayName: Application
+              entitySelectorTemplate: type(cloudhub:app),toRelationships.isChildOf($(entityConditions))
+              displayAmount: true
+          - type: ATTRIBUTE
+            attribute:
+              key: worker_id
+              displayName: ID
+        charts:
+          - displayName: CPU
+            visualizationType: GRAPH_CHART
+            graphChartConfig:
+              metrics:
+                - metricSelector: cloudhub.app.worker.cpu:splitBy()
+                  visualization:
+                    themeColor: TURQUOISE
+                    seriesType: COLUMN
+          - displayName: Memory Usage
+            visualizationType: GRAPH_CHART
+            graphChartConfig:
+              metrics:
+                - metricSelector: cloudhub.app.worker.heap_used:splitBy()
+                  visualization:
+                    themeColor: ORANGE
+                    seriesType: LINE
+                - metricSelector: cloudhub.app.worker.heap_total:splitBy()
+                  visualization:
+                    themeColor: GREEN
+                    seriesType: LINE
+          - displayName: Threads
+            visualizationType: GRAPH_CHART
+            graphChartConfig:
+              metrics:
+                - metricSelector: cloudhub.app.worker.threads:splitBy()
+                  visualization:
+                    themeColor: PURPLE
+                    seriesType: COLUMN
+          - displayName: Load Average
+            visualizationType: GRAPH_CHART
+            graphChartConfig:
+              metrics:
+                - metricSelector: cloudhub.app.worker.load_average:splitBy()
+                  visualization:
+                    themeColor: DEFAULT
+                    seriesType: LINE
+documents:
+  dashboards:
+    - displayName: Mulesoft Cloudhub Overview
+      path: documents/mulesoft_cloudhub_overview.dashboard.json
+openpipeline:
+  pipelines:
+    - displayName: custom:com.dynatrace.mulesoft-cloudhub pipeline
+      pipelinePath: openpipeline/metric.pipeline.json
+      configScope: metrics
+  sources:
+    - displayName: custom:com.dynatrace.mulesoft-cloudhub source
+      sourcePath: openpipeline/metric.source.json
+      configScope: metrics
