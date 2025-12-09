@@ -16,10 +16,8 @@
 
 import { writeFileSync, mkdirSync } from "fs";
 import { join, dirname } from "path";
-import * as vscode from "vscode";
 import yaml from "yaml";
 import { ExtensionStub, MetricMetadata, TopologyType } from "../interfaces/extensionMeta";
-import { getCachedParsedExtension } from "../utils/caching";
 import { updateYamlNode } from "../utils/dashboards";
 import { getExtensionFilePath } from "../utils/fileSystem";
 import logger from "../utils/logging";
@@ -56,6 +54,14 @@ interface OpenPipelineProcessor {
 const BLOCKED_FIELDS = ["dt.security_context"];
 
 /**
+ * Callback function type for getting user input
+ * @param prompt - The prompt to show to the user
+ * @param suggestedValue - The suggested value
+ * @returns The input value or null if cancelled
+ */
+export type InputCallback = (prompt: string, suggestedValue: string) => Promise<string | null>;
+
+/**
  * Cleans up the extension name by removing common prefixes
  * @param extensionName - The full extension name (e.g., "custom:com.dynatrace.mulesoft-cloudhub")
  * @returns The cleaned extension name (e.g., "mulesoft-cloudhub")
@@ -68,39 +74,15 @@ const cleanExtensionName = (extensionName: string): string => {
 };
 
 /**
- * Workflow that creates a Smartscape topology configuration from the extension's
- * topology section by converting it to OpenPipeline format.
- */
-export async function createSmartscapeTopologyWorkflow() {
-  const logTrace = ["commandPalette", "createSmartscapeTopologyWorkflow"];
-  logger.info("Creating Smartscape topology configuration", ...logTrace);
-
-  const extension = getCachedParsedExtension();
-  if (!extension) {
-    logger.error("Parsed extension does not exist in cache. Command aborted.", ...logTrace);
-    return;
-  }
-
-  try {
-    const pipeline = await convertTopologyToOpenPipeline(extension);
-    writePipelineToFile(pipeline);
-    writeMetricSourceToFile(extension);
-    updateExtensionYaml(extension);
-    logger.info("Smartscape topology configuration created successfully", ...logTrace);
-    void vscode.window.showInformationMessage(
-      "Smartscape topology pipeline created at extension/openpipeline/metric.pipeline.json",
-    );
-  } catch (error) {
-    logger.error(`Failed to create Smartscape topology: ${(error as Error).message}`, ...logTrace);
-  }
-}
-
-/**
  * Converts the topology section of the extension.yaml into the equivalent
  * OpenPipeline pipelines and sources definition
  * @param extension extension.yaml serialized as object
+ * @param inputCallback - Callback function for getting user input
  */
-export const convertTopologyToOpenPipeline = async (extension: ExtensionStub) => {
+export const convertTopologyToOpenPipeline = async (
+  extension: ExtensionStub,
+  inputCallback: InputCallback,
+) => {
   if (!extension.topology) {
     throw Error("Extension does not have a topology section.");
   }
@@ -109,7 +91,11 @@ export const convertTopologyToOpenPipeline = async (extension: ExtensionStub) =>
 
   // Convert topology types to smartscape node processors
   if (extension.topology.types) {
-    const typeProcessors = await convertTopologyTypes(extension.topology.types, extension.metrics);
+    const typeProcessors = await convertTopologyTypes(
+      extension.topology.types,
+      extension.metrics,
+      inputCallback,
+    );
     processors.push(...typeProcessors);
   }
 
@@ -137,11 +123,13 @@ export const convertTopologyToOpenPipeline = async (extension: ExtensionStub) =>
  * Converts topology types to OpenPipeline smartscape node processors
  * @param types - Array of topology types from extension.yaml
  * @param metrics - Optional array of metrics for finding matching metric keys
+ * @param inputCallback - Callback function for getting user input
  * @returns Array of OpenPipeline processors
  */
-const convertTopologyTypes = async (
+export const convertTopologyTypes = async (
   types: TopologyType[],
-  metrics?: MetricMetadata[],
+  metrics: MetricMetadata[] | undefined,
+  inputCallback: InputCallback,
 ): Promise<OpenPipelineProcessor[]> => {
   const processors: OpenPipelineProcessor[] = [];
   let processorCounter = 0;
@@ -152,17 +140,8 @@ const convertTopologyTypes = async (
   // while asking the user for input when necessary
   for (const type of types) {
     // Show a input for the user to select the new name
-    const newName = await vscode.window.showInputBox({
-      prompt: `Enter new name for type "${type.name}"`,
-      placeHolder: suggestNewTypeName(type.name),
-      value: suggestNewTypeName(type.name),
-      validateInput: value => {
-        if (!value || value.trim() === "") {
-          return "Name cannot be empty";
-        }
-        return null;
-      },
-    });
+    const suggestedName = suggestNewTypeName(type.name);
+    const newName = await inputCallback(`Enter new name for type "${type.name}"`, suggestedName);
 
     if (!newName) {
       throw Error("User cancelled the operation");
@@ -178,17 +157,10 @@ const convertTopologyTypes = async (
 
         // Ask user for entity extraction matcher
         const suggestedEntityMatcher = convertConditionToMatcher(source.condition);
-        const entityMatcher = await vscode.window.showInputBox({
-          prompt: `Enter matcher condition for entity extraction (extractNode: false) for "${type.displayName}"`,
-          placeHolder: suggestedEntityMatcher,
-          value: suggestedEntityMatcher,
-          validateInput: value => {
-            if (!value || value.trim() === "") {
-              return "Matcher cannot be empty";
-            }
-            return null;
-          },
-        });
+        const entityMatcher = await inputCallback(
+          `Enter matcher condition for entity extraction (extractNode: false) for "${type.displayName}"`,
+          suggestedEntityMatcher,
+        );
 
         if (!entityMatcher) {
           throw Error("User cancelled the operation");
@@ -214,17 +186,10 @@ const convertTopologyTypes = async (
             ? `matchesValue(metric.key, "${matchingMetric}")`
             : suggestedEntityMatcher;
 
-          const nodeMatcher = await vscode.window.showInputBox({
-            prompt: `Enter matcher condition for node extraction (extractNode: true) for "${type.displayName}"`,
-            placeHolder: suggestedNodeMatcher,
-            value: suggestedNodeMatcher,
-            validateInput: value => {
-              if (!value || value.trim() === "") {
-                return "Matcher cannot be empty";
-              }
-              return null;
-            },
-          });
+          const nodeMatcher = await inputCallback(
+            `Enter matcher condition for node extraction (extractNode: true) for "${type.displayName}"`,
+            suggestedNodeMatcher,
+          );
 
           if (!nodeMatcher) {
             throw Error("User cancelled the operation");
@@ -493,7 +458,7 @@ const createSmartscapeNodeProcessor = (
  * Writes the OpenPipeline configuration to extension/openpipeline/metric.pipeline.json
  * @param pipeline - The pipeline configuration to write
  */
-const writePipelineToFile = (pipeline: unknown): void => {
+export const writePipelineToFile = (pipeline: unknown): void => {
   const logTrace = ["commandPalette", "writePipelineToFile"];
 
   try {
@@ -533,7 +498,7 @@ const writePipelineToFile = (pipeline: unknown): void => {
  * Writes the metric source configuration to extension/openpipeline/metric.source.json
  * @param extension - The extension metadata to extract the name from
  */
-const writeMetricSourceToFile = (extension: ExtensionStub): void => {
+export const writeMetricSourceToFile = (extension: ExtensionStub): void => {
   const logTrace = ["commandPalette", "writeMetricSourceToFile"];
 
   try {
@@ -583,7 +548,7 @@ const writeMetricSourceToFile = (extension: ExtensionStub): void => {
  * Uses line-by-line replacement to preserve YAML formatting
  * @param extension - The extension metadata
  */
-const updateExtensionYaml = (extension: ExtensionStub): void => {
+export const updateExtensionYaml = (extension: ExtensionStub): void => {
   const logTrace = ["commandPalette", "updateExtensionYaml"];
 
   try {
