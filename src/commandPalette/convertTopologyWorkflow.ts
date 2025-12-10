@@ -20,7 +20,7 @@ import logger from "../utils/logging";
 import {
   convertTopologyToOpenPipeline,
   writePipelineToFile,
-  writeMetricSourceToFile,
+  writePipelineSourceToFile,
   updateExtensionYaml,
 } from "./convertTopology";
 import { vscodeInputCallback } from "./convertTopologyCallbacks";
@@ -41,14 +41,36 @@ export async function createSmartscapeTopologyWorkflow() {
   }
 
   try {
-    const pipeline = await convertTopologyToOpenPipeline(extension, vscodeInputCallback);
-    writePipelineToFile(pipeline);
-    writeMetricSourceToFile(extension);
-    updateExtensionYaml(extension);
-    logger.info("Smartscape topology configuration created successfully", ...logTrace);
-    void vscode.window.showInformationMessage(
-      "Smartscape topology pipeline created at extension/openpipeline/metric.pipeline.json",
+    const { pipelineExtensionYaml, pipelineDocs } = await convertTopologyToOpenPipeline(
+      extension,
+      vscodeInputCallback,
     );
+
+    const files: string[] = [];
+
+    // Write metrics pipeline and source if present
+    if (pipelineDocs.metricPipeline) {
+      writePipelineToFile(pipelineDocs.metricPipeline, "metrics");
+      writePipelineSourceToFile(extension, "metrics");
+      files.push("metric.pipeline.json", "metric.source.json");
+    }
+
+    // Write logs pipeline and source if present
+    if (pipelineDocs.logPipeline) {
+      writePipelineToFile(pipelineDocs.logPipeline, "logs");
+      writePipelineSourceToFile(extension, "logs");
+      files.push("log.pipeline.json", "log.source.json");
+    }
+
+    updateExtensionYaml(pipelineExtensionYaml);
+    logger.info("Smartscape topology configuration created successfully", ...logTrace);
+
+    const message =
+      files.length > 0
+        ? `Smartscape topology pipelines created: ${files.join(", ")}`
+        : "No topology processors created";
+
+    void vscode.window.showInformationMessage(message);
   } catch (error) {
     logger.error(`Failed to create Smartscape topology: ${(error as Error).message}`, ...logTrace);
   }

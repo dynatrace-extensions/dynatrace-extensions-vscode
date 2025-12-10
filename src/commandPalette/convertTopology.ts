@@ -17,46 +17,24 @@
 import { writeFileSync, mkdirSync } from "fs";
 import { join, dirname } from "path";
 import yaml from "yaml";
-import { ExtensionStub, MetricMetadata, TopologyType } from "../interfaces/extensionMeta";
+import { OpenPipelineProcessor, OpenPipelinePipeline } from "../interfaces/extensionDocs";
+import {
+  ExtensionStub,
+  MetricMetadata,
+  TopologyType,
+  OpenPipeline,
+} from "../interfaces/extensionMeta";
 import { updateYamlNode } from "../utils/dashboards";
 import { getExtensionFilePath } from "../utils/fileSystem";
 import logger from "../utils/logging";
 
-export interface OpenPipelineProcessor {
-  id: string;
-  type: string;
-  matcher: string;
-  description?: string;
-  smartscapeNode: OpenPipelineSmartscapeNode;
-}
-export interface OpenPipelineFieldsToExtract {
-  fieldName: string;
-  referencedFieldName: string;
-}
-
-export interface OpenPipelineIdComponent {
-  idComponent: string;
-  referencedFieldName: string;
-}
-
-export interface OpenPipelineSmartscapeNode {
-  nodeType: string;
-  nodeIdFieldName: string;
-  idComponents: Array<OpenPipelineIdComponent>;
-  extractNode: boolean;
-  nodeName?: {
-    type: string;
-    constant?: string;
-    field?: {
-      sourceFieldName: string;
-      defaultValue: string;
-    };
-  };
-  fieldsToExtract?: Array<OpenPipelineFieldsToExtract>;
-}
-
 // Fields that are not allowed to be extracted in OpenPipeline
 const BLOCKED_FIELDS = ["dt.security_context"];
+
+interface OpenPipelineDocs {
+  metricPipeline?: OpenPipelinePipeline;
+  logPipeline?: OpenPipelinePipeline;
+}
 
 /**
  * Callback function type for getting user input
@@ -87,21 +65,26 @@ const cleanExtensionName = (extensionName: string): string => {
 export const convertTopologyToOpenPipeline = async (
   extension: ExtensionStub,
   inputCallback: InputCallback,
-) => {
+): Promise<{
+  pipelineExtensionYaml: OpenPipeline;
+  pipelineDocs: OpenPipelineDocs;
+}> => {
   if (!extension.topology) {
     throw Error("Extension does not have a topology section.");
   }
 
-  const processors: OpenPipelineProcessor[] = [];
+  let metricsProcessors: OpenPipelineProcessor[] = [];
+  let logsProcessors: OpenPipelineProcessor[] = [];
 
   // Convert topology types to smartscape node processors
   if (extension.topology.types) {
-    const typeProcessors = await convertTopologyTypes(
+    const result = await createProcessorsFromTopology(
       extension.topology.types,
       extension.metrics,
       inputCallback,
     );
-    processors.push(...typeProcessors);
+    metricsProcessors = result.metricsProcessors;
+    logsProcessors = result.logsProcessors;
   }
 
   // TODO: Convert topology relationships to smartscape edge processors
@@ -112,16 +95,66 @@ export const convertTopologyToOpenPipeline = async (
 
   // Create the OpenPipeline configuration
   const cleanedName = cleanExtensionName(extension.name);
-  const pipeline = {
-    customId: extension.name,
-    displayName: `extension: ${cleanedName}`,
-    smartscapeNodeExtraction: {
-      processors,
-    },
+
+  const pipelineDocs: OpenPipelineDocs = {};
+  const pipelineExtensionYaml: OpenPipeline = {
+    pipelines: [],
+    sources: [],
   };
 
-  logger.info(`Created pipeline with ${processors.length} processors`);
-  return pipeline;
+  // Create metrics pipeline if we have metrics processors
+  if (metricsProcessors.length > 0) {
+    const customId = `${cleanedName}-metrics`;
+    const displayName = `${cleanedName} - Pipeline`;
+    pipelineDocs.metricPipeline = {
+      customId,
+      displayName,
+      smartscapeNodeExtraction: {
+        processors: metricsProcessors,
+      },
+    };
+    pipelineExtensionYaml.pipelines.push({
+      displayName,
+      pipelinePath: "openpipeline/metric.pipeline.json",
+      configScope: "metrics",
+    });
+    pipelineExtensionYaml.sources.push({
+      displayName,
+      sourcePath: "openpipeline/metric.source.json",
+      configScope: "metrics",
+    });
+  }
+
+  // Create logs pipeline if we have logs processors
+  if (logsProcessors.length > 0) {
+    const customId = `${cleanedName}-logs`;
+    const displayName = `${cleanedName} - Pipeline`;
+    pipelineDocs.logPipeline = {
+      customId,
+      displayName,
+      smartscapeNodeExtraction: {
+        processors: logsProcessors,
+      },
+    };
+    pipelineExtensionYaml.pipelines.push({
+      displayName,
+      pipelinePath: "openpipeline/log.pipeline.json",
+      configScope: "logs",
+    });
+    pipelineExtensionYaml.sources.push({
+      displayName,
+      sourcePath: "openpipeline/log.source.json",
+      configScope: "logs",
+    });
+  }
+
+  logger.info(
+    `Created pipeline with ${metricsProcessors.length} metrics and ${logsProcessors.length} logs processors`,
+  );
+  return {
+    pipelineExtensionYaml,
+    pipelineDocs,
+  };
 };
 
 /**
@@ -131,13 +164,18 @@ export const convertTopologyToOpenPipeline = async (
  * @param inputCallback - Callback function for getting user input
  * @returns Array of OpenPipeline processors
  */
-export const convertTopologyTypes = async (
+export const createProcessorsFromTopology = async (
   types: TopologyType[],
   metrics: MetricMetadata[] | undefined,
   inputCallback: InputCallback,
-): Promise<OpenPipelineProcessor[]> => {
-  const processors: OpenPipelineProcessor[] = [];
-  let processorCounter = 0;
+): Promise<{
+  metricsProcessors: OpenPipelineProcessor[];
+  logsProcessors: OpenPipelineProcessor[];
+}> => {
+  const metricsProcessors: OpenPipelineProcessor[] = [];
+  const logsProcessors: OpenPipelineProcessor[] = [];
+  let metricsCounter = 0;
+  let logsCounter = 0;
   // Track entity types that already have extractNode: true
   const entityTypesWithNodeExtraction = new Set<string>();
 
@@ -155,68 +193,180 @@ export const convertTopologyTypes = async (
     // Process each rule in the type
     for (const rule of type.rules) {
       for (const source of rule.sources) {
-        // Skip non-Metrics sources as Logs have different condition formats
-        if (source.sourceType !== "Metrics") {
-          continue;
-        }
-
-        // Ask user for entity extraction matcher
-        const suggestedEntityMatcher = convertConditionToMatcher(source.condition);
-        const entityMatcher = await inputCallback(
-          `Enter matcher condition for entity extraction (extractNode: false) for "${type.displayName}"`,
-          suggestedEntityMatcher,
-        );
-
-        if (!entityMatcher) {
-          throw Error("User cancelled the operation");
-        }
-
-        // Create entity extraction processor (extractNode: false)
-        const entityProcessor = createSmartscapeNodeProcessor(
-          type,
-          newName,
-          source,
-          rule,
-          false,
-          entityMatcher,
-          processorCounter++,
-        );
-        processors.push(entityProcessor);
-
-        // Only create node extraction processor if this entity type doesn't have one yet
-        if (!entityTypesWithNodeExtraction.has(newName)) {
-          // Ask user for node extraction matcher
-          const matchingMetric = findMatchingMetric(source.condition, metrics);
-          const suggestedNodeMatcher = matchingMetric
-            ? `matchesValue(metric.key, "${matchingMetric}")`
-            : suggestedEntityMatcher;
-
-          const nodeMatcher = await inputCallback(
-            `Enter matcher condition for node extraction (extractNode: true) for "${type.displayName}"`,
-            suggestedNodeMatcher,
-          );
-
-          if (!nodeMatcher) {
-            throw Error("User cancelled the operation");
-          }
-
-          // Create node extraction processor (extractNode: true)
-          const nodeProcessor = createSmartscapeNodeProcessor(
+        if (source.sourceType === "Metrics") {
+          // Process Metrics source type
+          const processors = await processMetricsSource(
             type,
             newName,
             source,
             rule,
-            true,
-            nodeMatcher,
-            processorCounter++,
+            metrics,
+            inputCallback,
+            metricsCounter,
+            entityTypesWithNodeExtraction,
           );
-          processors.push(nodeProcessor);
-
-          // Mark this entity type as having node extraction
-          entityTypesWithNodeExtraction.add(newName);
+          metricsProcessors.push(...processors);
+          metricsCounter += processors.length;
+        } else if (source.sourceType === "Logs") {
+          // Process Logs source type
+          const processors = await processLogsSource(
+            type,
+            newName,
+            source,
+            rule,
+            inputCallback,
+            logsCounter,
+            entityTypesWithNodeExtraction,
+          );
+          logsProcessors.push(...processors);
+          logsCounter += processors.length;
         }
       }
     }
+  }
+
+  return { metricsProcessors, logsProcessors };
+};
+
+/**
+ * Processes a Metrics source type and creates OpenPipeline processors
+ * @returns Array of created processors
+ */
+const processMetricsSource = async (
+  type: TopologyType,
+  newName: string,
+  source: { sourceType: string; condition?: string },
+  rule: TopologyType["rules"][0],
+  metrics: MetricMetadata[] | undefined,
+  inputCallback: InputCallback,
+  processorCounter: number,
+  entityTypesWithNodeExtraction: Set<string>,
+): Promise<OpenPipelineProcessor[]> => {
+  const processors: OpenPipelineProcessor[] = [];
+
+  // Ask user for entity extraction matcher
+  const suggestedEntityMatcher = convertConditionToMatcher(source.condition);
+  const entityMatcher = await inputCallback(
+    `Enter matcher condition for entity extraction (extractNode: false) for "${type.displayName}"`,
+    suggestedEntityMatcher,
+  );
+
+  if (!entityMatcher) {
+    throw Error("User cancelled the operation");
+  }
+
+  // Create entity extraction processor (extractNode: false)
+  const entityProcessor = createSmartscapeNodeProcessor(
+    type,
+    newName,
+    source,
+    rule,
+    false,
+    entityMatcher,
+    processorCounter++,
+  );
+  processors.push(entityProcessor);
+
+  // Only create node extraction processor if this entity type doesn't have one yet
+  if (!entityTypesWithNodeExtraction.has(newName)) {
+    // Ask user for node extraction matcher
+    const matchingMetric = findMatchingMetric(source.condition, metrics);
+    const suggestedNodeMatcher = matchingMetric
+      ? `matchesValue(metric.key, "${matchingMetric}")`
+      : suggestedEntityMatcher;
+
+    const nodeMatcher = await inputCallback(
+      `Enter matcher condition for node extraction (extractNode: true) for "${type.displayName}"`,
+      suggestedNodeMatcher,
+    );
+
+    if (!nodeMatcher) {
+      throw Error("User cancelled the operation");
+    }
+
+    // Create node extraction processor (extractNode: true)
+    const nodeProcessor = createSmartscapeNodeProcessor(
+      type,
+      newName,
+      source,
+      rule,
+      true,
+      nodeMatcher,
+      processorCounter++,
+    );
+    processors.push(nodeProcessor);
+
+    // Mark this entity type as having node extraction
+    entityTypesWithNodeExtraction.add(newName);
+  }
+
+  return processors;
+};
+
+/**
+ * Processes a Logs source type and creates OpenPipeline processors
+ * @returns Array of created processors
+ */
+const processLogsSource = async (
+  type: TopologyType,
+  newName: string,
+  source: { sourceType: string },
+  rule: TopologyType["rules"][0],
+  inputCallback: InputCallback,
+  processorCounter: number,
+  entityTypesWithNodeExtraction: Set<string>,
+): Promise<OpenPipelineProcessor[]> => {
+  const processors: OpenPipelineProcessor[] = [];
+
+  // For Logs, create a matcher based on requiredDimensions
+  const suggestedEntityMatcher = convertRequiredDimensionsToMatcher(rule.requiredDimensions);
+  const entityMatcher = await inputCallback(
+    `Enter matcher condition for entity extraction (extractNode: false) for "${type.displayName}" (Logs)`,
+    suggestedEntityMatcher,
+  );
+
+  if (!entityMatcher) {
+    throw Error("User cancelled the operation");
+  }
+
+  // Create entity extraction processor (extractNode: false)
+  const entityProcessor = createSmartscapeNodeProcessor(
+    type,
+    newName,
+    source,
+    rule,
+    false,
+    entityMatcher,
+    processorCounter++,
+  );
+  processors.push(entityProcessor);
+
+  // Only create node extraction processor if this entity type doesn't have one yet
+  if (!entityTypesWithNodeExtraction.has(newName)) {
+    // For logs, we typically use the same matcher for node extraction
+    const nodeMatcher = await inputCallback(
+      `Enter matcher condition for node extraction (extractNode: true) for "${type.displayName}" (Logs)`,
+      suggestedEntityMatcher,
+    );
+
+    if (!nodeMatcher) {
+      throw Error("User cancelled the operation");
+    }
+
+    // Create node extraction processor (extractNode: true)
+    const nodeProcessor = createSmartscapeNodeProcessor(
+      type,
+      newName,
+      source,
+      rule,
+      true,
+      nodeMatcher,
+      processorCounter++,
+    );
+    processors.push(nodeProcessor);
+
+    // Mark this entity type as having node extraction
+    entityTypesWithNodeExtraction.add(newName);
   }
 
   return processors;
@@ -226,6 +376,50 @@ const suggestNewTypeName = (currentName: string): string => {
   // Entities names should be uppercase and separated by '_'
   // Example: cloudhub:org becomes CLOUDHUB_ORG
   return currentName.toUpperCase().replace(/:/g, "_");
+};
+
+/**
+ * Converts requiredDimensions to a DQL matcher expression for Logs
+ * @param requiredDimensions - Array of required dimensions with their value patterns
+ * @returns DQL matcher expression
+ */
+const convertRequiredDimensionsToMatcher = (
+  requiredDimensions?: Array<{ key: string; valuePattern?: string }>,
+): string => {
+  if (!requiredDimensions || requiredDimensions.length === 0) {
+    return "isNotNull(content)";
+  }
+
+  const conditions: string[] = [];
+
+  for (const dim of requiredDimensions) {
+    if (dim.valuePattern) {
+      // Handle $eq() function
+      const eqMatch = dim.valuePattern.match(/\$eq\(([^)]+)\)/);
+      if (eqMatch) {
+        const value = eqMatch[1];
+        conditions.push(`${dim.key} == "${value}"`);
+        continue;
+      }
+
+      // Handle $prefix() function
+      const prefixMatch = dim.valuePattern.match(/\$prefix\(([^)]+)\)/);
+      if (prefixMatch) {
+        const prefix = prefixMatch[1];
+        conditions.push(`matchesValue(${dim.key}, "${prefix}*")`);
+        continue;
+      }
+
+      // Default: exact match
+      conditions.push(`${dim.key} == "${dim.valuePattern}"`);
+    } else {
+      // If no value pattern, just check the field exists
+      conditions.push(`isNotNull(${dim.key})`);
+    }
+  }
+
+  // Combine all conditions with AND
+  return conditions.join(" and ");
 };
 
 /**
@@ -271,7 +465,13 @@ const convertConditionToMatcher = (condition: string | undefined): string => {
  * @param metrics - List of available metrics
  * @returns Matching metric key or null
  */
-const findMatchingMetric = (condition: string, metrics?: MetricMetadata[]): string | null => {
+const findMatchingMetric = (
+  condition: string | undefined,
+  metrics?: MetricMetadata[],
+): string | null => {
+  if (!condition) {
+    return null;
+  }
   if (!metrics || metrics.length === 0) {
     return null;
   }
@@ -383,7 +583,7 @@ const extractNodeNameFromPattern = (
 const createSmartscapeNodeProcessor = (
   type: TopologyType,
   newName: string,
-  source: { sourceType: string; condition: string },
+  source: { sourceType: string; condition?: string },
   rule: TopologyType["rules"][0],
   extractNode: boolean,
   matcher: string,
@@ -460,10 +660,14 @@ const createSmartscapeNodeProcessor = (
 };
 
 /**
- * Writes the OpenPipeline configuration to extension/openpipeline/metric.pipeline.json
+ * Writes the OpenPipeline configuration to extension/openpipeline/[metric|log].pipeline.json
  * @param pipeline - The pipeline configuration to write
+ * @param scope - The config scope ("metrics" or "logs")
  */
-export const writePipelineToFile = (pipeline: unknown): void => {
+export const writePipelineToFile = (
+  pipeline: OpenPipelinePipeline,
+  scope: "metrics" | "logs" = "metrics",
+): void => {
   const logTrace = ["commandPalette", "writePipelineToFile"];
 
   try {
@@ -475,7 +679,8 @@ export const writePipelineToFile = (pipeline: unknown): void => {
 
     const extensionDir = dirname(extensionFile);
     const openpipelineDir = join(extensionDir, "openpipeline");
-    const pipelineFile = join(openpipelineDir, "metric.pipeline.json");
+    const filename = scope === "logs" ? "log.pipeline.json" : "metric.pipeline.json";
+    const pipelineFile = join(openpipelineDir, filename);
 
     // Create openpipeline directory if it doesn't exist
     try {
@@ -488,11 +693,10 @@ export const writePipelineToFile = (pipeline: unknown): void => {
       );
     }
 
-    // Write the pipeline configuration
     const pipelineJson = JSON.stringify(pipeline, null, 2);
     writeFileSync(pipelineFile, pipelineJson, "utf-8");
 
-    logger.info(`Pipeline written to ${pipelineFile}`, ...logTrace);
+    logger.info(`${scope} pipeline written to ${pipelineFile}`, ...logTrace);
   } catch (error) {
     logger.error(`Failed to write pipeline to file: ${(error as Error).message}`, ...logTrace);
     throw error;
@@ -500,10 +704,14 @@ export const writePipelineToFile = (pipeline: unknown): void => {
 };
 
 /**
- * Writes the metric source configuration to extension/openpipeline/metric.source.json
+ * Writes the source configuration to extension/openpipeline/[metric|log].source.json
  * @param extension - The extension metadata to extract the name from
+ * @param scope - The config scope ("metrics" or "logs")
  */
-export const writeMetricSourceToFile = (extension: ExtensionStub): void => {
+export const writePipelineSourceToFile = (
+  extension: ExtensionStub,
+  scope: "metrics" | "logs" = "metrics",
+): void => {
   const logTrace = ["commandPalette", "writeMetricSourceToFile"];
 
   try {
@@ -515,7 +723,8 @@ export const writeMetricSourceToFile = (extension: ExtensionStub): void => {
 
     const extensionDir = dirname(extensionFile);
     const openpipelineDir = join(extensionDir, "openpipeline");
-    const sourceFile = join(openpipelineDir, "metric.source.json");
+    const filename = scope === "logs" ? "log.source.json" : "metric.source.json";
+    const sourceFile = join(openpipelineDir, filename);
 
     // Create openpipeline directory if it doesn't exist
     try {
@@ -528,20 +737,21 @@ export const writeMetricSourceToFile = (extension: ExtensionStub): void => {
       );
     }
 
-    // Create the metric source configuration
-    const cleanedName = cleanExtensionName(extension.name);
-    const metricSource = {
-      displayName: `extension: ${cleanedName}`,
+    // Create the source configuration with static routing
+    const scopeSuffix = scope === "logs" ? "-logs" : "-metrics";
+    const displaySuffix = scope === "logs" ? " logs" : " metric";
+    const source = {
+      displayName: `${extension.name}${displaySuffix} source`,
       staticRouting: {
-        pipelineId: extension.name,
+        pipelineId: `${extension.name}${scopeSuffix}`,
       },
     };
 
-    // Write the metric source configuration
-    const sourceJson = JSON.stringify(metricSource, null, 2);
+    // Write the source configuration
+    const sourceJson = JSON.stringify(source, null, 2);
     writeFileSync(sourceFile, sourceJson, "utf-8");
 
-    logger.info(`Metric source written to ${sourceFile}`, ...logTrace);
+    logger.info(`${scope} source written to ${sourceFile}`, ...logTrace);
   } catch (error) {
     logger.error(`Failed to write metric source to file: ${(error as Error).message}`, ...logTrace);
     throw error;
@@ -551,9 +761,9 @@ export const writeMetricSourceToFile = (extension: ExtensionStub): void => {
 /**
  * Updates the extension.yaml file to add OpenPipeline configuration references
  * Uses line-by-line replacement to preserve YAML formatting
- * @param extension - The extension metadata
+ * @param pipelineExtensionYaml - The OpenPipeline configuration to write to extension.yaml
  */
-export const updateExtensionYaml = (extension: ExtensionStub): void => {
+export const updateExtensionYaml = (pipelineExtensionYaml: OpenPipeline): void => {
   const logTrace = ["commandPalette", "updateExtensionYaml"];
 
   try {
@@ -564,22 +774,7 @@ export const updateExtensionYaml = (extension: ExtensionStub): void => {
 
     // Build the openpipeline YAML node
     const openpipelineConfig = {
-      openpipeline: {
-        pipelines: [
-          {
-            displayName: `${extension.name} pipeline`,
-            pipelinePath: "openpipeline/metric.pipeline.json",
-            configScope: "metrics",
-          },
-        ],
-        sources: [
-          {
-            displayName: `${extension.name} source`,
-            sourcePath: "openpipeline/metric.source.json",
-            configScope: "metrics",
-          },
-        ],
-      },
+      openpipeline: pipelineExtensionYaml,
     };
 
     // Convert to YAML string

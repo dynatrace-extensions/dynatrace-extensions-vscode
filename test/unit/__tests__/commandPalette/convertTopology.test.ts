@@ -19,13 +19,15 @@ import path from "path";
 import yaml from "yaml";
 import {
   convertTopologyToOpenPipeline,
-  convertTopologyTypes,
+  createProcessorsFromTopology,
   InputCallback,
-  OpenPipelineFieldsToExtract,
-  OpenPipelineIdComponent,
-  type OpenPipelineProcessor,
 } from "../../../../src/commandPalette/convertTopology";
 import { autoInputCallback } from "../../../../src/commandPalette/convertTopologyCallbacks";
+import {
+  OpenPipelineFieldsToExtract,
+  OpenPipelineIdComponent,
+  OpenPipelineProcessor,
+} from "../../../../src/interfaces/extensionDocs";
 import { ExtensionStub } from "../../../../src/interfaces/extensionMeta";
 
 jest.mock("../../../../src/utils/logging");
@@ -35,28 +37,47 @@ describe("convertTopology", () => {
     __dirname,
     "../../test_data/manifests/mulesoft_cloudhub_extension.yaml",
   );
+  const logsTestDataPath = path.join(
+    __dirname,
+    "../../test_data/manifests/oracle_topology_with_logs.yaml",
+  );
   let extension: ExtensionStub;
+  let logsExtension: ExtensionStub;
 
   beforeAll(() => {
     const yamlContent = fs.readFileSync(testDataPath, "utf-8");
     extension = yaml.parse(yamlContent) as ExtensionStub;
+
+    const logsYamlContent = fs.readFileSync(logsTestDataPath, "utf-8");
+    logsExtension = yaml.parse(logsYamlContent) as ExtensionStub;
   });
 
   describe("convertTopologyToOpenPipeline", () => {
     it("should convert topology to OpenPipeline format using auto callback", async () => {
-      const pipeline = await convertTopologyToOpenPipeline(extension, autoInputCallback);
+      const { pipelineExtensionYaml, pipelineDocs } = await convertTopologyToOpenPipeline(
+        extension,
+        autoInputCallback,
+      );
 
-      expect(pipeline).toBeDefined();
-      expect(pipeline.customId).toBe(extension.name);
-      expect(pipeline.displayName).toBe("extension: mulesoft-cloudhub");
-      expect(pipeline.smartscapeNodeExtraction).toBeDefined();
-      expect(pipeline.smartscapeNodeExtraction.processors).toBeInstanceOf(Array);
-      expect(pipeline.smartscapeNodeExtraction.processors.length).toBeGreaterThan(0);
+      expect(pipelineExtensionYaml).toBeDefined();
+      expect(pipelineExtensionYaml.pipelines).toBeInstanceOf(Array);
+      expect(pipelineExtensionYaml.sources).toBeInstanceOf(Array);
+
+      expect(pipelineDocs).toBeDefined();
+      expect(pipelineDocs.metricPipeline).toBeDefined();
+      expect(pipelineDocs.metricPipeline?.customId).toContain("mulesoft-cloudhub");
+      expect(pipelineDocs.metricPipeline?.smartscapeNodeExtraction).toBeDefined();
+      expect(pipelineDocs.metricPipeline?.smartscapeNodeExtraction?.processors).toBeInstanceOf(
+        Array,
+      );
+      expect(
+        pipelineDocs.metricPipeline?.smartscapeNodeExtraction?.processors.length,
+      ).toBeGreaterThan(0);
     });
 
     it("should create processors for all topology types", async () => {
-      const pipeline = await convertTopologyToOpenPipeline(extension, autoInputCallback);
-      const processors = pipeline.smartscapeNodeExtraction.processors;
+      const { pipelineDocs } = await convertTopologyToOpenPipeline(extension, autoInputCallback);
+      const processors = pipelineDocs.metricPipeline?.smartscapeNodeExtraction?.processors || [];
 
       // Should have processors for each type (org, env, app, api, vpn)
       // Each type should have at least one entity and one node processor
@@ -64,10 +85,10 @@ describe("convertTopology", () => {
 
       // Check that we have both entity and node processors
       const entityProcessors = processors.filter(
-        (p: OpenPipelineProcessor) => !p.smartscapeNode.extractNode,
+        (p: OpenPipelineProcessor) => !p.smartscapeNode?.extractNode,
       );
       const nodeProcessors = processors.filter(
-        (p: OpenPipelineProcessor) => p.smartscapeNode.extractNode,
+        (p: OpenPipelineProcessor) => p.smartscapeNode?.extractNode,
       );
 
       expect(entityProcessors.length).toBeGreaterThan(0);
@@ -75,12 +96,12 @@ describe("convertTopology", () => {
     });
 
     it("should use suggested type names", async () => {
-      const pipeline = await convertTopologyToOpenPipeline(extension, autoInputCallback);
-      const processors = pipeline.smartscapeNodeExtraction.processors;
+      const { pipelineDocs } = await convertTopologyToOpenPipeline(extension, autoInputCallback);
+      const processors = pipelineDocs.metricPipeline?.smartscapeNodeExtraction?.processors || [];
 
       // Check that type names are uppercase with underscores
-      const nodeTypes = processors.map((p: OpenPipelineProcessor) => p.smartscapeNode.nodeType);
-      const uniqueNodeTypes = [...new Set(nodeTypes)];
+      const nodeTypes = processors.map((p: OpenPipelineProcessor) => p.smartscapeNode?.nodeType);
+      const uniqueNodeTypes = [...new Set(nodeTypes.filter((t): t is string => !!t))];
 
       expect(uniqueNodeTypes).toContain("CLOUDHUB_ORG");
       expect(uniqueNodeTypes).toContain("CLOUDHUB_ENV");
@@ -93,12 +114,14 @@ describe("convertTopology", () => {
         return `CUSTOM_${suggestedValue}`;
       });
 
-      const pipeline = await convertTopologyToOpenPipeline(extension, mockCallback);
-      const processors = pipeline.smartscapeNodeExtraction.processors;
+      const { pipelineDocs } = await convertTopologyToOpenPipeline(extension, mockCallback);
+      const processors = pipelineDocs.metricPipeline?.smartscapeNodeExtraction?.processors || [];
 
       // Check that custom names were used
-      const nodeTypes = processors.map((p: OpenPipelineProcessor) => p.smartscapeNode.nodeType);
-      const hasCustomPrefix = nodeTypes.some((type: string) => type.startsWith("CUSTOM_"));
+      const nodeTypes = processors.map((p: OpenPipelineProcessor) => p.smartscapeNode?.nodeType);
+      const hasCustomPrefix = nodeTypes.some((type: string | undefined) =>
+        type?.startsWith("CUSTOM_"),
+      );
 
       expect(hasCustomPrefix).toBe(true);
       expect(mockCallback).toHaveBeenCalled();
@@ -127,14 +150,15 @@ describe("convertTopology", () => {
         throw new Error("Extension topology types not found");
       }
 
-      const processors = await convertTopologyTypes(
+      const { metricsProcessors, logsProcessors } = await createProcessorsFromTopology(
         extension.topology.types,
         extension.metrics,
         autoInputCallback,
       );
 
-      expect(processors).toBeInstanceOf(Array);
-      expect(processors.length).toBeGreaterThan(0);
+      expect(metricsProcessors).toBeInstanceOf(Array);
+      expect(logsProcessors).toBeInstanceOf(Array);
+      expect(metricsProcessors.length + logsProcessors.length).toBeGreaterThan(0);
     });
 
     it("should create processors with correct structure", async () => {
@@ -142,13 +166,14 @@ describe("convertTopology", () => {
         throw new Error("Extension topology types not found");
       }
 
-      const processors = await convertTopologyTypes(
+      const { metricsProcessors, logsProcessors } = await createProcessorsFromTopology(
         extension.topology.types,
         extension.metrics,
         autoInputCallback,
       );
 
-      processors.forEach(processor => {
+      const allProcessors = [...metricsProcessors, ...logsProcessors];
+      allProcessors.forEach(processor => {
         expect(processor).toHaveProperty("id");
         expect(processor).toHaveProperty("type", "smartscapeNode");
         expect(processor).toHaveProperty("matcher");
@@ -163,11 +188,11 @@ describe("convertTopology", () => {
         expect(smartscapeNode).toHaveProperty("nodeName");
 
         // Verify idComponents is an array with at least one element
-        expect(smartscapeNode.idComponents).toBeInstanceOf(Array);
-        expect(smartscapeNode.idComponents.length).toBeGreaterThan(0);
+        expect(smartscapeNode?.idComponents).toBeInstanceOf(Array);
+        expect(smartscapeNode?.idComponents?.length).toBeGreaterThan(0);
 
         // Verify each idComponent has required fields
-        smartscapeNode.idComponents.forEach((component: OpenPipelineIdComponent) => {
+        smartscapeNode?.idComponents?.forEach((component: OpenPipelineIdComponent) => {
           expect(component).toHaveProperty("idComponent");
           expect(component).toHaveProperty("referencedFieldName");
         });
@@ -179,14 +204,15 @@ describe("convertTopology", () => {
         throw new Error("Extension topology types not found");
       }
 
-      const processors = await convertTopologyTypes(
+      const { metricsProcessors, logsProcessors } = await createProcessorsFromTopology(
         extension.topology.types,
         extension.metrics,
         autoInputCallback,
       );
 
-      processors.forEach(processor => {
-        const fieldsToExtract = processor.smartscapeNode.fieldsToExtract || [];
+      const allProcessors = [...metricsProcessors, ...logsProcessors];
+      allProcessors.forEach(processor => {
+        const fieldsToExtract = processor.smartscapeNode?.fieldsToExtract || [];
         const blockedFields = fieldsToExtract.filter(
           (field: OpenPipelineFieldsToExtract) => field.fieldName === "dt.security_context",
         );
@@ -200,17 +226,18 @@ describe("convertTopology", () => {
         throw new Error("Extension topology types not found");
       }
 
-      const processors = await convertTopologyTypes(
+      const { metricsProcessors, logsProcessors } = await createProcessorsFromTopology(
         extension.topology.types,
         extension.metrics,
         autoInputCallback,
       );
 
+      const allProcessors = [...metricsProcessors, ...logsProcessors];
       // Group processors by node type and extractNode flag
       const nodeExtractionByType = new Map<string, number>();
 
-      processors.forEach(processor => {
-        if (processor.smartscapeNode.extractNode) {
+      allProcessors.forEach(processor => {
+        if (processor.smartscapeNode?.extractNode) {
           const nodeType = processor.smartscapeNode.nodeType;
           nodeExtractionByType.set(nodeType, (nodeExtractionByType.get(nodeType) || 0) + 1);
         }
@@ -227,13 +254,14 @@ describe("convertTopology", () => {
         throw new Error("Extension topology types not found");
       }
 
-      const processors = await convertTopologyTypes(
+      const { metricsProcessors, logsProcessors } = await createProcessorsFromTopology(
         extension.topology.types,
         extension.metrics,
         autoInputCallback,
       );
 
-      processors.forEach(processor => {
+      const allProcessors = [...metricsProcessors, ...logsProcessors];
+      allProcessors.forEach(processor => {
         expect(processor.matcher).toBeDefined();
         expect(typeof processor.matcher).toBe("string");
 
@@ -251,14 +279,15 @@ describe("convertTopology", () => {
         throw new Error("Extension topology types not found");
       }
 
-      const processors = await convertTopologyTypes(
+      const { metricsProcessors, logsProcessors } = await createProcessorsFromTopology(
         extension.topology.types,
         extension.metrics,
         autoInputCallback,
       );
 
-      processors.forEach(processor => {
-        const nodeName = processor.smartscapeNode.nodeName;
+      const allProcessors = [...metricsProcessors, ...logsProcessors];
+      allProcessors.forEach(processor => {
+        const nodeName = processor.smartscapeNode?.nodeName;
 
         expect(nodeName).toBeDefined();
 
@@ -275,6 +304,119 @@ describe("convertTopology", () => {
         } else if (nodeName.type === "constant") {
           expect(nodeName).toHaveProperty("constant");
         }
+      });
+    });
+  });
+
+  describe("Logs topology processing", () => {
+    it("should convert Logs topology to OpenPipeline format", async () => {
+      const { pipelineDocs } = await convertTopologyToOpenPipeline(
+        logsExtension,
+        autoInputCallback,
+      );
+
+      expect(pipelineDocs).toBeDefined();
+      // Should have either metrics or logs pipeline (or both)
+      const hasMetrics = !!pipelineDocs.metricPipeline;
+      const hasLogs = !!pipelineDocs.logPipeline;
+      expect(hasMetrics || hasLogs).toBe(true);
+
+      if (hasMetrics) {
+        expect(pipelineDocs.metricPipeline?.smartscapeNodeExtraction).toBeDefined();
+        expect(pipelineDocs.metricPipeline?.smartscapeNodeExtraction?.processors).toBeInstanceOf(
+          Array,
+        );
+      }
+      if (hasLogs) {
+        expect(pipelineDocs.logPipeline?.smartscapeNodeExtraction).toBeDefined();
+        expect(pipelineDocs.logPipeline?.smartscapeNodeExtraction?.processors).toBeInstanceOf(
+          Array,
+        );
+      }
+    });
+
+    it("should create processors for both Logs and Metrics sources", async () => {
+      if (!logsExtension.topology?.types) {
+        throw new Error("Extension topology types not found");
+      }
+
+      const { metricsProcessors, logsProcessors } = await createProcessorsFromTopology(
+        logsExtension.topology.types,
+        logsExtension.metrics,
+        autoInputCallback,
+      );
+
+      const allProcessors = [...metricsProcessors, ...logsProcessors];
+      // Should have processors for both Logs and Metrics sources
+      expect(allProcessors.length).toBeGreaterThan(0);
+
+      // Check that we have both entity and node processors
+      const entityProcessors = allProcessors.filter(p => !p.smartscapeNode?.extractNode);
+      const nodeProcessors = allProcessors.filter(p => p.smartscapeNode?.extractNode);
+
+      expect(entityProcessors.length).toBeGreaterThan(0);
+      expect(nodeProcessors.length).toBeGreaterThan(0);
+    });
+
+    it("should convert requiredDimensions to matchers for Logs", async () => {
+      if (!logsExtension.topology?.types) {
+        throw new Error("Extension topology types not found");
+      }
+
+      const { metricsProcessors, logsProcessors } = await createProcessorsFromTopology(
+        logsExtension.topology.types,
+        logsExtension.metrics,
+        autoInputCallback,
+      );
+
+      const allProcessors = [...metricsProcessors, ...logsProcessors];
+      allProcessors.forEach(processor => {
+        expect(processor.matcher).toBeDefined();
+        expect(typeof processor.matcher).toBe("string");
+
+        // Matcher should use DQL syntax
+        expect(processor.matcher.length).toBeGreaterThan(0);
+      });
+    });
+
+    it("should handle mixed Logs and Metrics sources in the same type", async () => {
+      if (!logsExtension.topology?.types) {
+        throw new Error("Extension topology types not found");
+      }
+
+      const { metricsProcessors, logsProcessors } = await createProcessorsFromTopology(
+        logsExtension.topology.types,
+        logsExtension.metrics,
+        autoInputCallback,
+      );
+
+      const allProcessors = [...metricsProcessors, ...logsProcessors];
+      // The test data has one type with both Logs and Metrics sources
+      // Should create processors for both
+      expect(allProcessors.length).toBeGreaterThan(2);
+    });
+
+    it("should use uppercase type names for Logs topology", async () => {
+      const { pipelineDocs } = await convertTopologyToOpenPipeline(
+        logsExtension,
+        autoInputCallback,
+      );
+
+      // Collect processors from both pipelines
+      const metricProcessors =
+        pipelineDocs.metricPipeline?.smartscapeNodeExtraction?.processors || [];
+      const logProcessors = pipelineDocs.logPipeline?.smartscapeNodeExtraction?.processors || [];
+      const processors = [...metricProcessors, ...logProcessors];
+
+      // Check that type names are uppercase with underscores
+      const nodeTypes = processors.map((p: OpenPipelineProcessor) => p.smartscapeNode?.nodeType);
+      const uniqueNodeTypes = [...new Set(nodeTypes.filter((t): t is string => !!t))];
+
+      uniqueNodeTypes.forEach((nodeType: string) => {
+        // Should be uppercase
+        expect(nodeType).toBe(nodeType.toUpperCase());
+        // Should use underscores instead of colons
+        expect(nodeType).not.toContain(":");
       });
     });
   });

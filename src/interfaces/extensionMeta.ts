@@ -579,3 +579,20 @@ export interface ActivationSchema {
   allowedScopes: string[];
   multiObject: boolean;
 }
+
+export interface OpenPipelinePipeline {
+  displayName: string;
+  pipelinePath: string;
+  configScope: "metrics" | "logs";
+}
+
+export interface OpenPipelineSource {
+  displayName: string;
+  sourcePath: string;
+  configScope: "metrics" | "logs";
+}
+
+export interface OpenPipeline {
+  pipelines: Array<OpenPipelinePipeline>;
+  sources: Array<OpenPipelineSource>;
+}
