@@ -27,7 +27,7 @@ export class CredentialVaultService {
 
   constructor(httpClient: HttpClient) {
     this.httpClient = httpClient;
-    this.endpoint = "/api/config/v1/credentials";
+    this.endpoint = "/api/v2/credentials";
   }
 
   /**
