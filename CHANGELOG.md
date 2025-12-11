@@ -1,5 +1,23 @@
 # Change Log
 
+## Version 2.9.1 (11.12.2025)
+
+### 🚀 Improved in this version:
+
+- Credential Vault API changed from `api/v1/config/credentials` to `api/v2/credentials`
+
+### 🔒 Security patches:
+
+- [auth0/node-jws Improperly Verifies HMAC Signature](https://github.com/dynatrace-extensions/dynatrace-extensions-vscode/security/dependabot/72)
+- [node-forge has ASN.1 Unbounded Recursion](https://github.com/dynatrace-extensions/dynatrace-extensions-vscode/security/dependabot/70)
+- [node-forge has an Interpretation Conflict vulnerability via its ASN.1 Validator Desynchronization](https://github.com/dynatrace-extensions/dynatrace-extensions-vscode/security/dependabot/69)
+- [node-forge is vulnerable to ASN.1 OID Integer Truncation](https://github.com/dynatrace-extensions/dynatrace-extensions-vscode/security/dependabot/68)
+- [glob CLI: Command injection via -c/--cmd executes matches with shell:true](https://github.com/dynatrace-extensions/dynatrace-extensions-vscode/security/dependabot/67)
+- [js-yaml has prototype pollution in merge (<<)](https://github.com/dynatrace-extensions/dynatrace-extensions-vscode/security/dependabot/63)
+- [vite allows server.fs.deny bypass via backslash on Windows](https://github.com/dynatrace-extensions/dynatrace-extensions-vscode/security/dependabot/58)
+
+---
+
 ## Version 2.9.0 (30.10.2025)
 
 ### ✨ New in this version:
@@ -10,6 +28,8 @@
 
 ### 🚀 Improved in this version:
 - [Improvements to Prometheus scraping](https://github.com/dynatrace-extensions/dynatrace-extensions-vscode/issues/274)
+
+---
 
 ## Version 2.8.1 (30.07.2025)
 
