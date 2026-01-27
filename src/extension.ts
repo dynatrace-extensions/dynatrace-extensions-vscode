@@ -28,6 +28,7 @@ import { getPrometheusCompletionProvider } from "./codeCompletions/prometheus";
 import { getScreensCompletionProvider } from "./codeCompletions/screensMeta";
 import { getTopologyCompletionProvider } from "./codeCompletions/topology";
 import { getWmiCompletionProvider } from "./codeCompletions/wmi";
+import { getJmxWizardCodeLensProvider } from "./codeLens/jmxWizard";
 import { getPrometheusCodeLensProvider } from "./codeLens/prometheusScraper";
 import { getScreenLensProvider } from "./codeLens/screenCodeLens";
 import { getSelectorCodeLensProvider } from "./codeLens/selectorCodeLens";
@@ -236,6 +237,7 @@ const registerCodeActionsProvider = (
 
 const registerCodeLensProviders = () => [
   registerCodeLensProvider(getSimulatorLensProvider(simulatorManager)),
+  registerCodeLensProvider(getJmxWizardCodeLensProvider(getTenantsTreeDataProvider())),
   registerCodeLensProvider(getPrometheusCodeLensProvider()),
   registerCodeLensProvider(
     getSelectorCodeLensProvider("metricSelector:", "metricSelectorsCodeLens"),
