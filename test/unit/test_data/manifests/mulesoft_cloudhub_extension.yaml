@@ -1,0 +1,305 @@
+name: custom:com.dynatrace.mulesoft-cloudhub
+version: 2.2.12
+minDynatraceVersion: 1.905.0
+minEECVersion: 1.328.0
+author:
+  name: Dynatrace
+
+topology:
+  types:
+    - name: cloudhub:org
+      displayName: Mulesoft Organization
+      rules:
+        - idPattern: cloudhub:org_{org.id}
+          instanceNamePattern: "{org.name}"
+          iconPattern: city
+          sources:
+            - sourceType: Metrics
+              condition: $prefix(cloudhub.org.)
+          requiredDimensions:
+            - key: org.type
+          attributes:
+            - key: org_id
+              pattern: "{org.id}"
+              displayName: ID
+            - key: org_name
+              pattern: "{org.name}"
+              displayName: Name
+            - key: org_owner_id
+              pattern: "{org.owner_id}"
+              displayName: Owner ID
+            - key: org_type
+              pattern: "{org.type}"
+              displayName: Type
+            - key: org_is_root
+              pattern: "{org.is_root}"
+              displayName: Is Root
+            - key: org_is_master
+              pattern: "{org.is_master}"
+              displayName: Master
+            - key: org_mfa_required
+              pattern: "{org.mfa_required}"
+              displayName: MFA Required
+            - key: dt.security_context
+              displayName: Security Context
+              pattern: "{dt.security_context}"
+        - idPattern: cloudhub:org_{org.id}
+          instanceNamePattern: "{org.name}"
+          iconPattern: city
+          sources:
+            - sourceType: Metrics
+              condition: $prefix(cloudhub.env.)
+            - sourceType: Metrics
+              condition: $prefix(cloudhub.app.)
+            - sourceType: Metrics
+              condition: $prefix(cloudhub.api.)
+            - sourceType: Metrics
+              condition: $prefix(cloudhub.vpn.)
+          attributes:
+            - key: org_id
+              pattern: "{org.id}"
+              displayName: ID
+            - key: org_name
+              pattern: "{org.name}"
+              displayName: Name
+            - key: dt.security_context
+              displayName: Security Context
+              pattern: "{dt.security_context}"
+    - name: cloudhub:env
+      displayName: Mulesoft Environment
+      rules:
+        - idPattern: cloudhub:env_{org.id}_{env.id}
+          instanceNamePattern: "{env.name}"
+          iconPattern: environment
+          sources:
+            - sourceType: Metrics
+              condition: $prefix(cloudhub.env.)
+          attributes:
+            - key: env_id
+              pattern: "{env.id}"
+              displayName: ID
+            - key: env_name
+              pattern: "{env.name}"
+              displayName: Name
+            - key: env_is_production
+              pattern: "{env.is_production}"
+              displayName: Production
+            - key: env_type
+              pattern: "{env.type}"
+              displayName: Type
+            - key: env_client_id
+              pattern: "{env.client_id}"
+              displayName: Client ID
+            - key: org_id
+              pattern: "{org.id}"
+              displayName: Organization ID
+            - key: dt.security_context
+              displayName: Security Context
+              pattern: "{dt.security_context}"
+        - idPattern: cloudhub:env_{org.id}_{env.id}
+          instanceNamePattern: "{env.name}"
+          iconPattern: environment
+          sources:
+            - sourceType: Metrics
+              condition: $prefix(cloudhub.app.)
+            - sourceType: Metrics
+              condition: $prefix(cloudhub.api.)
+          attributes:
+            - key: env_id
+              pattern: "{env.id}"
+              displayName: ID
+            - key: env_name
+              pattern: "{env.name}"
+              displayName: Name
+            - key: env_is_production
+              pattern: "{env.is_production}"
+              displayName: Production
+            - key: env_type
+              pattern: "{env.type}"
+              displayName: Type
+            - key: env_client_id
+              pattern: "{env.client_id}"
+              displayName: Client ID
+            - key: org_id
+              pattern: "{org.id}"
+              displayName: Organization ID
+            - key: dt.security_context
+              displayName: Security Context
+              pattern: "{dt.security_context}"
+    - name: cloudhub:app
+      displayName: Cloudhub Application
+      rules:
+        - idPattern: cloudhub:app_{org.id}_{env.id}_{app.id}
+          instanceNamePattern: "{app.domain} ({env.name})"
+          iconPattern: application
+          sources:
+            - sourceType: Metrics
+              condition: $prefix(cloudhub.app.)
+          attributes:
+            - key: app_id
+              pattern: "{app.id}"
+              displayName: ID
+            - key: app_domain
+              pattern: "{app.domain}"
+              displayName: Domain
+            - key: app_full_domain
+              pattern: "{app.full_domain}"
+              displayName: Full Domain
+            - key: app_worker_type
+              pattern: "{app.worker_type}"
+              displayName: Worker Type
+            - key: app_file_name
+              pattern: "{app.file_name}"
+              displayName: File Name
+            - key: app_mule_version
+              pattern: "{app.mule_version}"
+              displayName: Mule Version
+            - key: app_region
+              pattern: "{app.region}"
+              displayName: Region
+            - key: app_href
+              pattern: "{app.href}"
+              displayName: Href
+            - key: env_id
+              pattern: "{env.id}"
+              displayName: Environment ID
+            - key: org_id
+              pattern: "{org.id}"
+              displayName: Organization ID
+            - key: env_name
+              pattern: "{env.name}"
+              displayName: Environment Name
+            - key: app_status
+              pattern: "{app.status}"
+              displayName: Status
+            - key: app_type
+              pattern: "{app.type}"
+              displayName: Type
+            - key: dt.security_context
+              displayName: Security Context
+              pattern: "{dt.security_context}"
+        - idPattern: cloudhub:app_{org.id}_{env.id}_{app.id}
+          instanceNamePattern: "{app.domain} ({env.name})"
+          iconPattern: application
+          sources:
+            - sourceType: Metrics
+              condition: $prefix(cloudhub.app.worker.)
+          attributes:
+            - key: app_id
+              pattern: "{app.id}"
+              displayName: ID
+            - key: env_id
+              pattern: "{env.id}"
+              displayName: Environment ID
+            - key: org_id
+              pattern: "{org.id}"
+              displayName: Organization ID
+            - key: dt.security_context
+              displayName: Security Context
+              pattern: "{dt.security_context}"
+    - name: cloudhub:api
+      displayName: Cloudhub API
+      rules:
+        - idPattern: cloudhub:api_{org.id}_{env.id}_{asset.id}_{api_version_id}
+          instanceNamePattern: "{asset.name} ({api_version_id})"
+          iconPattern: application
+          sources:
+            - sourceType: Metrics
+              condition: $prefix(cloudhub.api.)
+          attributes:
+            - key: asset_id
+              pattern: "{asset.id}"
+              displayName: Asset ID
+            - key: env_id
+              pattern: "{env.id}"
+              displayName: Environment ID
+            - key: org_id
+              pattern: "{org.id}"
+              displayName: Organization ID
+            - key: env_name
+              pattern: "{env.name}"
+              displayName: Environment Name
+            - key: asset_name
+              pattern: "{asset.name}"
+              displayName: Asset Name
+            - key: asset_group
+              pattern: "{asset.group}"
+              displayName: Asset Group
+            - key: api_version_id
+              pattern: "{api_version_id}"
+              displayName: API Version ID
+            - key: dt.security_context
+              displayName: Security Context
+              pattern: "{dt.security_context}"
+    - name: cloudhub:worker
+      displayName: Cloudhub Worker
+      rules:
+        - idPattern: cloudhub:worker_{org.id}_{env.id}_{app.id}_{worker_id}
+          instanceNamePattern: "{worker_id} ({app.domain} - {env.name})"
+          iconPattern: robots
+          sources:
+            - sourceType: Metrics
+              condition: $prefix(cloudhub.app.worker.)
+            - sourceType: Logs
+          attributes:
+            - key: app_id
+              pattern: "{app.id}"
+              displayName: App ID
+            - key: app_domain
+              pattern: "{app.domain}"
+              displayName: App Domain
+            - key: env_id
+              pattern: "{env.id}"
+              displayName: Environment ID
+            - key: org_id
+              pattern: "{org.id}"
+              displayName: Organization ID
+            - key: worker_id
+              pattern: "{worker_id}"
+              displayName: Worker ID
+            - key: dt.security_context
+              displayName: Security Context
+              pattern: "{dt.security_context}"
+  relationships:
+    - fromType: cloudhub:env
+      toType: cloudhub:org
+      typeOfRelation: CHILD_OF
+      sources:
+        - sourceType: Metrics
+          condition: $prefix(cloudhub.env.)
+    - fromType: cloudhub:app
+      toType: cloudhub:org
+      typeOfRelation: CHILD_OF
+      sources:
+        - sourceType: Metrics
+          condition: $prefix(cloudhub.app.)
+    - fromType: cloudhub:app
+      toType: cloudhub:env
+      typeOfRelation: RUNS_ON
+      sources:
+        - sourceType: Metrics
+          condition: $prefix(cloudhub.app.)
+    - fromType: cloudhub:api
+      toType: cloudhub:org
+      typeOfRelation: CHILD_OF
+      sources:
+        - sourceType: Metrics
+          condition: $prefix(cloudhub.api.)
+    - fromType: cloudhub:api
+      toType: cloudhub:env
+      typeOfRelation: RUNS_ON
+      sources:
+        - sourceType: Metrics
+          condition: $prefix(cloudhub.api.)
+    - fromType: cloudhub:worker
+      toType: cloudhub:app
+      typeOfRelation: CHILD_OF
+      sources:
+        - sourceType: Metrics
+          condition: $prefix(cloudhub.app.worker.)
+    - fromType: cloudhub:worker
+      toType: cloudhub:env
+      typeOfRelation: RUNS_ON
+      sources:
+        - sourceType: Metrics
+          condition: $prefix(cloudhub.app.worker.)

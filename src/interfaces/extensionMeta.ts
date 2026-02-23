@@ -51,6 +51,8 @@ export interface TopologyType {
   displayName: string;
   name: string;
   rules: {
+    idPattern?: string;
+    instanceNamePattern?: string;
     requiredDimensions?: {
       key: string;
       valuePattern?: string;
@@ -576,4 +578,21 @@ export interface ActivationSchema {
   maturity: string;
   allowedScopes: string[];
   multiObject: boolean;
+}
+
+export interface OpenPipelinePipeline {
+  displayName: string;
+  pipelinePath: string;
+  configScope: "metrics" | "logs";
+}
+
+export interface OpenPipelineSource {
+  displayName: string;
+  sourcePath: string;
+  configScope: "metrics" | "logs";
+}
+
+export interface OpenPipeline {
+  pipelines: Array<OpenPipelinePipeline>;
+  sources: Array<OpenPipelineSource>;
 }

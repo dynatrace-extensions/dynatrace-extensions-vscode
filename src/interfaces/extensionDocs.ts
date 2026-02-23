@@ -92,6 +92,79 @@ interface AlertStrategy {
   alertCondition: string;
 }
 
+export interface OpenPipelineFieldsToExtract {
+  fieldName: string;
+  referencedFieldName: string;
+}
+
+export interface OpenPipelineIdComponent {
+  idComponent: string;
+  referencedFieldName: string;
+}
+
+export interface OpenPipelineStaticEdge {
+  edgeType: string;
+  targetType: string;
+  targetIdFieldName: string;
+}
+
+export interface OpenPipelineSmartscapeNode {
+  nodeType: string;
+  nodeIdFieldName: string;
+  idComponents: Array<OpenPipelineIdComponent>;
+  extractNode: boolean;
+  nodeName?: {
+    type: string;
+    constant?: string;
+    field?: {
+      sourceFieldName: string;
+      defaultValue: string;
+    };
+  };
+  fieldsToExtract?: Array<OpenPipelineFieldsToExtract>;
+  staticEdgesToExtract?: Array<OpenPipelineStaticEdge>;
+}
+
+export interface OpenPipelineSmartscapeEdge {
+  sourceType: string;
+  sourceIdFieldName: string;
+  edgeType: string;
+  targetType: string;
+  targetIdFieldName: string;
+}
+
+export interface OpenPipelineProcessor {
+  id: string;
+  type: string;
+  matcher: string;
+  description?: string;
+  smartscapeNode?: OpenPipelineSmartscapeNode;
+  smartscapeEdge?: OpenPipelineSmartscapeEdge;
+}
+
+export interface OpenPipelineStage {
+  processors: Array<OpenPipelineProcessor>;
+}
+
+export interface OpenPipelinePipeline {
+  customId: string;
+  displayName: string;
+  processing?: OpenPipelineStage;
+  metricExtraction?: OpenPipelineStage;
+  davis?: OpenPipelineStage;
+  smartscapeNodeExtraction?: OpenPipelineStage;
+  smartscapeEdgeExtraction?: OpenPipelineStage;
+}
+
+export interface OpenPipelineSource {
+  displayName: string;
+  defaultBucket?: string;
+  processing?: OpenPipelineStage;
+  staticRouting?: {
+    pipelineId: string;
+  };
+}
+
 export {
   AlertDoc,
   DashboardDoc,

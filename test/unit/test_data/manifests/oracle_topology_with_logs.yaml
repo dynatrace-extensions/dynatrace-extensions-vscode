@@ -1,0 +1,42 @@
+name: custom:com.dynatrace.extension.sql-oracle
+version: 1.0.0
+minDynatraceVersion: 1.905.0
+topology:
+  types:
+    - name: sql:com_dynatrace_extension_sql-oracle_instance
+      displayName: Oracle DB Instance
+      enabled: true
+      rules:
+        - idPattern: sql_sql-oracle_{device}_{instance.name}
+          instanceNamePattern: '{instance.name}'
+          iconPattern: oracle
+          sources:
+            - sourceType: Logs
+          requiredDimensions:
+            - key: dt.extension.name
+              valuePattern: $eq(com.dynatrace.extension.sql-oracle)
+            - key: database.type
+              valuePattern: $prefix(RAC)
+          attributes:
+            - pattern: '{device.address}'
+              key: dt.ip_addresses
+              displayName: IP Addresses
+            - pattern: '{instance.name}'
+              key: instance_name
+              displayName: Instance Name
+            - key: dt.security_context
+              displayName: Security Context
+              pattern: '{dt.security_context}'
+        - idPattern: sql_sql-oracle_{device}_{instance.name}
+          instanceNamePattern: '{instance.name}'
+          iconPattern: oracle
+          sources:
+            - sourceType: Metrics
+              condition: $eq(com.dynatrace.extension.sql-oracle.status)
+          attributes:
+            - pattern: '{status}'
+              key: status
+              displayName: Status
+            - key: dt.security_context
+              displayName: Security Context
+              pattern: '{dt.security_context}'

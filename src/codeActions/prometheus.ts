@@ -71,6 +71,7 @@ class PrometheusActionProvider implements vscode.CodeActionProvider {
         range.start.line,
         document.getText(),
       );
+      const prevLineText = document.lineAt(range.start.line - 1).text;
       const metricKeys = getPrometheusMetricKeys(parsedExtension, groupIdx, subgroupIdx);
       const labelKeys = getPrometheusLabelKeys(parsedExtension, groupIdx, subgroupIdx);
       if (lineText.includes("metrics:")) {
@@ -80,6 +81,7 @@ class PrometheusActionProvider implements vscode.CodeActionProvider {
             range,
             metricKeys,
             parentBlocks[parentBlocks.length - 1] === "subgroups",
+            !prevLineText.includes("group:"),
           ),
         );
       }
@@ -149,6 +151,7 @@ class PrometheusActionProvider implements vscode.CodeActionProvider {
     range: vscode.Range,
     existingKeys: string[],
     isSubgroup: boolean,
+    isGroup: boolean,
   ): vscode.CodeAction[] {
     const codeActions: vscode.CodeAction[] = [];
     const availableKeys = Object.keys(getCachedPrometheusData()).filter(
@@ -157,14 +160,20 @@ class PrometheusActionProvider implements vscode.CodeActionProvider {
 
     if (!isSubgroup) {
       let j = 0;
-      let response = "subgroups:";
+      let response = "";
+      let tab = "";
+      if (isGroup) {
+        response = '- group: "1"\n';
+        tab = "  ";
+      }
+      response = `${response}${tab}subgroups:`;
       for (let i = 0; i < availableKeys.length; i++) {
         if (i === j * 100) {
           j++;
-          response = `${response}\n- subgroup: "${j}"\n  metrics:\n`;
+          response = `${response}\n${tab}- subgroup: "${j}"\n${tab}  metrics:\n`;
         }
         const key = availableKeys[i];
-        response = `${response}  - key: ${key}\n    value: metric:${key}\n    type: ${String(getCachedPrometheusData()[key].type)}\n`;
+        response = `${response}  ${tab}- key: ${key}\n${tab}    value: metric:${key}\n${tab}    type: ${String(getCachedPrometheusData()[key].type)}\n`;
       }
 
       // Insert all metrics in one go

@@ -1,5 +1,27 @@
 # Change Log
 
+## Version 2.10.0 (27.01.2026)
+
+### ✨ New in this version:
+
+- [Command to create Smartscape topology](https://github.com/dynatrace-extensions/dynatrace-extensions-vscode/pull/283)
+
+### 🚀 Improved in this version:
+
+- [Generate valid YAML when using scrape prometheus action](https://github.com/dynatrace-extensions/dynatrace-extensions-vscode/pull/284)
+
+### 🪲 Fixed in this version:
+
+- [JMX Conversion - array has too many actions error](https://github.com/dynatrace-extensions/dynatrace-extensions-vscode/issues/257)
+
+### 🔒 Security patches:
+- [Lodash has Prototype Pollution Vulnerability in `_.unset` and `_.omit` functions](https://github.com/dynatrace-extensions/dynatrace-extensions-vscode/security/dependabot/77)
+- [React Router has unexpected external redirect via untrusted paths](https://github.com/dynatrace-extensions/dynatrace-extensions-vscode/security/dependabot/75)
+- [React Router vulnerable to XSS via Open Redirects](https://github.com/dynatrace-extensions/dynatrace-extensions-vscode/security/dependabot/74)
+- [qs's arrayLimit bypass in its bracket notation allows DoS via memory exhaustion](https://github.com/dynatrace-extensions/dynatrace-extensions-vscode/security/dependabot/73)
+
+---
+
 ## Version 2.9.1 (11.12.2025)
 
 ### 🚀 Improved in this version:

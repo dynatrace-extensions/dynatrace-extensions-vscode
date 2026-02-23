@@ -28,6 +28,56 @@ import { ConfirmOption, showQuickPick, showQuickPickConfirm } from "../utils/vsc
 
 const logTrace = ["commandPalette", "loadSchemas"];
 
+/**
+ * Configures JSON schemas for OpenPipeline files (*.pipeline.json and *.source.json)
+ * These schemas are downloaded alongside the extension schema in the global storage
+ * @param schemaLocation - The path to the schema version folder (e.g., globalStorage/1.900.0/)
+ */
+export const configureOpenPipelineJSONSchemas = (schemaLocation: string): void => {
+  const fnLogTrace = [...logTrace, "configureOpenPipelineJSONSchemas"];
+
+  const pipelineSchemaPath = vscode.Uri.file(
+    path.join(schemaLocation, "openpipeline.pipeline.schema.json"),
+  ).toString();
+  const sourceSchemaPath = vscode.Uri.file(
+    path.join(schemaLocation, "openpipeline.source.schema.json"),
+  ).toString();
+
+  // Get existing json.schemas configuration
+  const config = vscode.workspace.getConfiguration();
+  const existingSchemas =
+    config.get<Array<{ fileMatch: string[]; url: string }>>("json.schemas") || [];
+
+  // Remove any existing openpipeline schemas to avoid duplicates
+  const filteredSchemas = existingSchemas.filter(
+    schema =>
+      !schema.fileMatch.some(
+        match => match.endsWith(".pipeline.json") || match.endsWith(".source.json"),
+      ),
+  );
+
+  // Add our openpipeline schemas
+  const newSchemas = [
+    ...filteredSchemas,
+    {
+      fileMatch: ["*.pipeline.json"],
+      url: pipelineSchemaPath,
+    },
+    {
+      fileMatch: ["*.source.json"],
+      url: sourceSchemaPath,
+    },
+  ];
+
+  config
+    .update("json.schemas", newSchemas, vscode.ConfigurationTarget.Workspace)
+    .then(undefined, () => {
+      logger.error("Could not update configuration json.schemas", ...fnLogTrace);
+    });
+
+  logger.debug("OpenPipeline JSON schemas configured", ...fnLogTrace);
+};
+
 export const loadSchemasWorkflow = async () => {
   if (await checkTenantConnected()) {
     const dtClient = await getDynatraceClient();
@@ -101,6 +151,9 @@ export async function loadSchemas(dt: Dynatrace): Promise<boolean> {
   context.workspaceState.update("schemaVersion", version).then(undefined, () => {
     logger.error("Could not update workspace state for schemaVersion", ...logTrace);
   });
+
+  // Configure JSON schemas for OpenPipeline files
+  configureOpenPipelineJSONSchemas(location);
 
   try {
     // If extension.yaml already exists, update the version there too

@@ -77,5 +77,8 @@
     "sql-formatter": "^15.3.2",
     "styled-components": "^6.1.18",
     "wicg-inert": "^3.1.2"
+  },
+  "overrides": {
+     "@remix-run/router": ">=1.23.2"
   }
 }
