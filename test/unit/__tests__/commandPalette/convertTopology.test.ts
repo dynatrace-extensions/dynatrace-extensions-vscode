@@ -139,6 +139,30 @@ describe("convertTopology", () => {
       });
     });
 
+    it("should use dt.smartscape.<type> format for nodeIdFieldName", async () => {
+      const { pipelineDocs } = await convertTopologyToOpenPipeline(extension, autoInputCallback);
+      const processors = pipelineDocs.metricPipeline?.smartscapeNodeExtraction?.processors || [];
+
+      processors.forEach((processor: OpenPipelineProcessor) => {
+        const nodeType = processor.smartscapeNode?.nodeType;
+        const nodeIdFieldName = processor.smartscapeNode?.nodeIdFieldName;
+        expect(nodeIdFieldName).toBe(`dt.smartscape.${nodeType?.toLowerCase()}`);
+      });
+    });
+
+    it("should use dt.smartscape.<type> format for edge sourceIdFieldName and targetIdFieldName", async () => {
+      const { pipelineDocs } = await convertTopologyToOpenPipeline(extension, autoInputCallback);
+      const edgeProcessors = pipelineDocs.metricPipeline?.smartscapeEdgeExtraction?.processors || [];
+
+      expect(edgeProcessors.length).toBeGreaterThan(0);
+
+      edgeProcessors.forEach((processor: OpenPipelineProcessor) => {
+        const edge = processor.smartscapeEdge;
+        expect(edge?.sourceIdFieldName).toBe(`dt.smartscape.${edge?.sourceType?.toLowerCase()}`);
+        expect(edge?.targetIdFieldName).toBe(`dt.smartscape.${edge?.targetType?.toLowerCase()}`);
+      });
+    });
+
     it("should handle custom input callback", async () => {
       const mockCallback: InputCallback = jest.fn(async (_prompt, suggestedValue) => {
         // Return custom value instead of suggested
@@ -213,7 +237,9 @@ describe("convertTopology", () => {
 
         const smartscapeNode = processor.smartscapeNode;
         expect(smartscapeNode).toHaveProperty("nodeType");
-        expect(smartscapeNode).toHaveProperty("nodeIdFieldName", "node_id");
+        expect(smartscapeNode).toHaveProperty("nodeIdFieldName");
+        // nodeIdFieldName should follow dt.smartscape.<type> format
+        expect(smartscapeNode?.nodeIdFieldName).toMatch(/^dt\.smartscape\..+/);
         expect(smartscapeNode).toHaveProperty("idComponents");
         expect(smartscapeNode).toHaveProperty("extractNode");
         expect(smartscapeNode).toHaveProperty("nodeName");

@@ -493,10 +493,10 @@ const createSmartscapeEdgeProcessor = (
     description,
     smartscapeEdge: {
       sourceType,
-      sourceIdFieldName: "node_id",
+      sourceIdFieldName: `dt.smartscape.${sourceType.toLowerCase()}`,
       edgeType,
       targetType,
-      targetIdFieldName: "node_id",
+      targetIdFieldName: `dt.smartscape.${targetType.toLowerCase()}`,
     },
   };
 };
@@ -1004,7 +1004,7 @@ const createSmartscapeNodeProcessor = (
     description,
     smartscapeNode: {
       nodeType: newName,
-      nodeIdFieldName: "node_id",
+      nodeIdFieldName: `dt.smartscape.${newName.toLowerCase()}`,
       idComponents,
       extractNode,
       nodeName,
