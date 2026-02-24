@@ -108,6 +108,37 @@ describe("convertTopology", () => {
       expect(uniqueNodeTypes).toContain("CLOUDHUB_APP");
     });
 
+    it("should replace hyphens with underscores in suggested type names", async () => {
+      const typesWithHyphens: TopologyType[] = [
+        {
+          name: "dt.entity.cloud-application",
+          displayName: "Cloud Application",
+          rules: [
+            {
+              idPattern: "app_{app.id}",
+              instanceNamePattern: "{app.name}",
+              sources: [{ sourceType: "Metrics", condition: "$prefix(cloud.app)" }],
+              attributes: [],
+            },
+          ],
+        },
+      ];
+
+      const { metricsProcessors } = await createProcessorsFromTopology(
+        typesWithHyphens,
+        [{ key: "cloud.app.cpu", metadata: { displayName: "CPU" } }],
+        autoInputCallback,
+      );
+
+      expect(metricsProcessors.length).toBeGreaterThan(0);
+
+      metricsProcessors.forEach(processor => {
+        const nodeType = processor.smartscapeNode?.nodeType;
+        expect(nodeType).not.toContain("-");
+        expect(nodeType).toBe("DT.ENTITY.CLOUD_APPLICATION");
+      });
+    });
+
     it("should handle custom input callback", async () => {
       const mockCallback: InputCallback = jest.fn(async (_prompt, suggestedValue) => {
         // Return custom value instead of suggested

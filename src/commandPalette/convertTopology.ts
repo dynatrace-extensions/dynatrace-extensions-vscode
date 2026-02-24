@@ -725,8 +725,8 @@ const processLogsSource = async (
 
 const suggestNewTypeName = (currentName: string): string => {
   // Entities names should be uppercase and separated by '_'
-  // Example: cloudhub:org becomes CLOUDHUB_ORG
-  return currentName.toUpperCase().replace(/:/g, "_");
+  // Example: cloudhub:org becomes CLOUDHUB_ORG, cloud-application becomes CLOUD_APPLICATION
+  return currentName.toUpperCase().replace(/[:-]/g, "_");
 };
 
 /**
