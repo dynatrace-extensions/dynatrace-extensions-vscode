@@ -28,7 +28,7 @@ import {
   OpenPipelineIdComponent,
   OpenPipelineProcessor,
 } from "../../../../src/interfaces/extensionDocs";
-import { ExtensionStub } from "../../../../src/interfaces/extensionMeta";
+import { ExtensionStub, TopologyType } from "../../../../src/interfaces/extensionMeta";
 
 jest.mock("../../../../src/utils/logging");
 
@@ -271,6 +271,39 @@ describe("convertTopology", () => {
             processor.matcher.includes("==") ||
             processor.matcher.includes("isNotNull"),
         ).toBe(true);
+      });
+    });
+
+    it("should not have duplicate idComponents", async () => {
+      // Craft a topology type with an idPattern that has duplicate field references
+      const typesWithDuplicateIdPattern: TopologyType[] = [
+        {
+          name: "custom:test_entity",
+          displayName: "Test Entity",
+          rules: [
+            {
+              idPattern: "test_{field1}_{field1}_{field2}_{field2}",
+              instanceNamePattern: "{field1}",
+              sources: [{ sourceType: "Metrics", condition: "$prefix(test.metric)" }],
+              attributes: [],
+            },
+          ],
+        },
+      ];
+
+      const { metricsProcessors } = await createProcessorsFromTopology(
+        typesWithDuplicateIdPattern,
+        [{ key: "test.metric.value", metadata: { displayName: "Test Metric" } }],
+        autoInputCallback,
+      );
+
+      expect(metricsProcessors.length).toBeGreaterThan(0);
+
+      metricsProcessors.forEach(processor => {
+        const idComponents = processor.smartscapeNode?.idComponents ?? [];
+        const idComponentNames = idComponents.map((c: OpenPipelineIdComponent) => c.idComponent);
+        const uniqueNames = [...new Set(idComponentNames)];
+        expect(idComponentNames).toEqual(uniqueNames);
       });
     });
 

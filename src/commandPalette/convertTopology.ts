@@ -970,6 +970,16 @@ const createSmartscapeNodeProcessor = (
     ];
   }
 
+  // Remove duplicate idComponents (by idComponent string), keeping the first occurrence
+  const seenIdComponents = new Set<string>();
+  idComponents = idComponents.filter(component => {
+    if (seenIdComponents.has(component.idComponent)) {
+      return false;
+    }
+    seenIdComponents.add(component.idComponent);
+    return true;
+  });
+
   // Build fields to extract from attributes, filtering out blocked fields
   const fieldsToExtract = (rule.attributes ?? [])
     .filter(attr => !BLOCKED_FIELDS.includes(attr.key))
