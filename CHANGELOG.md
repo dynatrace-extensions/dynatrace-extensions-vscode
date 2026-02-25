@@ -1,5 +1,15 @@
 # Change Log
 
+## Version 2.10.1 (24.02.2026)
+
+### 🪲 Fixed in this version:
+
+- Fix duplicate entries in idComponents during topology conversion
+- Do not allow `-` in the entity type during topology conversion
+- Fix node_id to be unique per entity during topology conversion
+
+---
+
 ## Version 2.10.0 (27.01.2026)
 
 ### ✨ New in this version:
