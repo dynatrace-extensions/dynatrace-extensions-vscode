@@ -288,6 +288,28 @@ const getExtensionVersion = (manifestFileContent: string) => {
 
 const isPythonExtension = (manifestFileContent: string) => /^python:$/gm.test(manifestFileContent);
 
+async function promptPythonVersionsForBuild(): Promise<string> {
+  const pick = await vscode.window.showQuickPick<{ label: string; versions: string[] }>(
+    [
+      { label: "Python 3.10", versions: ["3.10"] },
+      { label: "Python 3.14", versions: ["3.14"] },
+      { label: "Python 3.10 + 3.14", versions: ["3.10", "3.14"] },
+    ],
+    {
+      title: "Select Python runtime(s) to build for",
+      placeHolder: "Choose Python version(s) for dt-sdk build (used to download correct wheels)",
+      ignoreFocusOut: true,
+      canPickMany: false,
+    },
+  );
+
+  // default in dt-sdk is 3.10
+  if (!pick) return "";
+
+  // if both selected, repeat flag twice: --python-version 3.10 --python-version 3.14
+  return pick.versions.map((v: string) => `--python-version ${v}`).join(" ");
+}
+
 /**
  * Archives and signs a python extension using `dt-sdk`
  * @param oc JSON output channel for communicating errors
@@ -307,9 +329,10 @@ async function assemblePython(oc: vscode.OutputChannel, cancelToken: vscode.Canc
     const workspaceStorage = getWorkspaceStorage();
     const certKeyPath = getDevCertKey();
     const setupPyDir = path.resolve(await getManifestDirPath(), "..");
+    const pythonVersionsParam = await promptPythonVersionsForBuild();
 
     await runCommand(
-      `dt-sdk build -k "${certKeyPath}" -t "${workspaceStorage}" ${platformsParam} "${setupPyDir}"`,
+      `dt-sdk build -k "${certKeyPath}" -t "${workspaceStorage}" ${platformsParam} ${pythonVersionsParam} "${setupPyDir}"`,
       oc,
       cancelToken,
       envOptions,
