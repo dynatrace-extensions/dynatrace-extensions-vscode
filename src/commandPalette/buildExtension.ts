@@ -313,7 +313,7 @@ async function assemblePython(oc: vscode.OutputChannel, cancelToken: vscode.Canc
       cancelToken,
       envOptions,
     );
-    const supportsBuildVersions = parsePythonSDKVersion(sdkVersionOutput ?? "");
+    const supportsBuildVersions = doesSDKSupportVersioning(sdkVersionOutput ?? "");
     let pythonVersionsParam = "";
     if (!supportsBuildVersions) {
       void vscode.window.showWarningMessage(
@@ -385,7 +385,7 @@ const getExtraPlatformsParameter = () => {
   return platformString;
 };
 
-const parsePythonSDKVersion = (sdkVersionOutput: string): boolean => {
+const doesSDKSupportVersioning = (sdkVersionOutput: string): boolean => {
   let response = false;
   const versionSplit = sdkVersionOutput.split(" ");
   const version = versionSplit[versionSplit.length - 1].trim();
