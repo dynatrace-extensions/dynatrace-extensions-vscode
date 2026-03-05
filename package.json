@@ -552,8 +552,21 @@
             "items": {
               "type": "string"
             },
+            "order": 1,
             "description": "A list of extra platforms to build Python wheels for. This setting overwrites the default list of linux_x86_64 and win_amd_64",
             "scope": "resource"
+          },
+          "dynatraceExtensions.pythonBuildVersions": {
+            "type": "string",
+            "description": "The Python versions that will be used when running the 'Dynatrace extensions: Build' command.",
+            "enum": [
+              "3.10 + 3.14",
+              "3.10",
+              "3.14"
+            ],
+            "order": 2,
+            "scope": "resource",
+            "default": "3.10 + 3.14"
           }
         }
       }

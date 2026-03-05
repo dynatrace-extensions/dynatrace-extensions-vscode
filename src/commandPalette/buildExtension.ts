@@ -307,9 +307,10 @@ async function assemblePython(oc: vscode.OutputChannel, cancelToken: vscode.Canc
     const workspaceStorage = getWorkspaceStorage();
     const certKeyPath = getDevCertKey();
     const setupPyDir = path.resolve(await getManifestDirPath(), "..");
+    const pythonVersionsParam = getPythonVersionsParameter();
 
     await runCommand(
-      `dt-sdk build -k "${certKeyPath}" -t "${workspaceStorage}" ${platformsParam} "${setupPyDir}"`,
+      `dt-sdk build -k "${certKeyPath}" -t "${workspaceStorage}" ${platformsParam} ${pythonVersionsParam} "${setupPyDir}"`,
       oc,
       cancelToken,
       envOptions,
@@ -368,6 +369,21 @@ const getExtraPlatformsParameter = () => {
   }
 
   return platformString;
+};
+
+const getPythonVersionsParameter = () => {
+  const pythonBuildVersions = vscode.workspace
+    .getConfiguration("dynatraceExtensions", null)
+    .get<string>("pythonBuildVersions");
+  switch (pythonBuildVersions) {
+    case "3.10":
+      return "-p 3.10";
+    case "3.14":
+      return "-p 3.14";
+    case "3.10 + 3.14":
+    default:
+      return "-p 3.10 -p 3.14";
+  }
 };
 
 /**
