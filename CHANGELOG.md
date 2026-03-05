@@ -2,8 +2,6 @@
 
 ## Version 2.10.2 (05.03.2026)
 
-⚠️ The `Dynatrace Extensions: Build` command for Python extensions now requires `dt-extensions-sdk` version `1.8.0+`.
-
 ### ✨ New in this version:
 
 - Support for building extensions with Python 3.14
