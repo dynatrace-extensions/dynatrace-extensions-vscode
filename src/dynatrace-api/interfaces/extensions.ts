@@ -61,3 +61,39 @@ export interface ExtensionStatusDto {
   timestamp: number;
   status: "ERROR" | "OK" | "UNKNOWN";
 }
+
+export interface JMXProcessListDto {
+  items: JMXProcess[];
+}
+
+export interface JMXProcess {
+  id: string;
+  name: string;
+  properties: JMXProperties;
+  agentVersion: string;
+}
+
+export interface JMXProperties {
+  HOSTS: string[];
+  TECHNOLOGIES: string[];
+  PROCESS_GROUPS: string[];
+}
+
+export interface MBeanListDto {
+  [domain: string]: MBeanDetails;
+}
+
+export interface MBeanDetails {
+  [fullDomain: string]: MBean[];
+}
+
+export interface MBean {
+  properties: Record<string, string>;
+  metrics: MBeanMetric[];
+  fullPath: string;
+}
+
+export interface MBeanMetric {
+  name: string;
+  numeric: boolean;
+}

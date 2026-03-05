@@ -18,6 +18,7 @@ import { EnvironmentCommandPrefix, GlobalCommand, ViewType, WorkspaceCommandPref
 import vscode from "vscode";
 import { getActivationSchemaActionProvider } from "./codeActions/activationSchema";
 import { getDiagnosticFixProvider } from "./codeActions/diagnosticFixProvider";
+import { getJMXActionProvider } from "./codeActions/jmxWizard";
 import { getPrometheusActionProvider } from "./codeActions/prometheus";
 import { getSnippetGenerator } from "./codeActions/snippetGenerator";
 import { getSnmpActionProvider } from "./codeActions/snmp";
@@ -227,6 +228,7 @@ const registerCodeActionsProviders = () => [
   registerCodeActionsProvider(getSnippetGenerator()),
   registerCodeActionsProvider(getSnmpActionProvider()),
   registerCodeActionsProvider(getPrometheusActionProvider()),
+  registerCodeActionsProvider(getJMXActionProvider()),
   registerCodeActionsProvider(getDiagnosticFixProvider()),
   registerCodeActionsProvider(getActivationSchemaActionProvider(), ACTIVATION_SCHEMA_DOC_SELECTOR),
 ];

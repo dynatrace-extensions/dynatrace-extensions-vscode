@@ -14,33 +14,15 @@
   limitations under the License.
  */
 
-import { readFileSync } from "fs";
-import { CodeLensCommand, UtilTypes } from "@common";
-import axios from "axios";
+import { CodeLensCommand } from "@common";
 import vscode from "vscode";
-import { getConnectedTenant } from "../treeViews/tenantsTreeView";
-import { getCachedPrometheusData, setCachedPrometheusData } from "../utils/caching";
+import { MBeanListDto } from "../dynatrace-api/interfaces/extensions";
+import { getDynatraceClient } from "../treeViews/tenantsTreeView";
+import { getCachedJMXData, setCachedJMXData } from "../utils/caching";
 import logger from "../utils/logging";
 import { createSingletonProvider } from "../utils/singleton";
 
-export type JMXData = string;
-
-type JMXProcessList = {
-  list: JMXProcess[];
-};
-
-type JMXProcess = {
-  name: string;
-  id: string;
-  agentVersion: string;
-  properties: JMXProperty;
-};
-
-type JMXProperty = {
-  TECHNOLOGIES: string[];
-  HOSTS: string[];
-  PROCESS_GROUPS: string[];
-};
+export type JMXData = Record<string, MBeanListDto>;
 
 export type jmxDataResponse = {
   jmxData: Record<string, domainData>;
@@ -57,16 +39,14 @@ type mbeanData = {
 };
 
 /**
- * Code Lens Provider implementation to facilitate loading Prometheus metrics and data
- * from an external endpoint and leveraging it in other parts of the extension.
+ * Code Lens Provider implementation to facilitate loading JMX metrics from the
+ * discovery APIs and leveraging it in other parts of the extension.
  */
 class JmxWizardCodeLensProvider implements vscode.CodeLensProvider {
   private readonly logTrace = ["codeLens", "jmxWizard", "JmxWizardCodeLensProvider"];
   private codeLenses: vscode.CodeLens[];
   private regex: RegExp;
   private lastScrape = "N/A";
-  private token: string | undefined;
-  private jmxCompleteProcessList: JMXProcessList | undefined;
   private jmxProcessListNames: string[] | undefined;
   private jmxProcessListIds: string[] | undefined;
   private processName: string | undefined;
@@ -85,11 +65,10 @@ class JmxWizardCodeLensProvider implements vscode.CodeLensProvider {
   }
 
   /**
-   * Provides the actual Code Lenses. Two lenses are created: one to allow endpoint
+   * Provides the actual Code Lenses. Two lenses are created: one to allow JMX data
    * detail collection and reading/processing data, the other to show when data was
    * last read and processed.
    * @param document document where provider was invoked
-   * @param token cancellation token
    * @returns list of Code Lenses
    */
   public provideCodeLenses(
@@ -110,9 +89,9 @@ class JmxWizardCodeLensProvider implements vscode.CodeLensProvider {
         // Action lens
         this.codeLenses.push(
           new vscode.CodeLens(range, {
-            title: "Scrape data",
+            title: "Navigate MBeans",
             tooltip:
-              "Connect to a Java process and navigate its MBeans, then use them in the Extension.",
+              "Connect to a Java process and capture its MBeans, then use them in the Extension.",
             command: CodeLensCommand.ScrapeMetrics,
             arguments: [],
           }),
@@ -122,24 +101,24 @@ class JmxWizardCodeLensProvider implements vscode.CodeLensProvider {
           this.codeLenses.push(
             new vscode.CodeLens(range, {
               title: "Edit config",
-              tooltip: "Make changes to the scraping configuration.",
+              tooltip: "Make changes to the JMX configuration.",
               command: CodeLensCommand.ScrapeMetrics,
               arguments: [true],
             }),
           );
         }
         // Status lens
-        const scrapedMetrics = Object.keys(getCachedPrometheusData()).length;
+        const scrapedMetrics = Object.keys(getCachedJMXData()[this.processName ?? ""] ?? {}).length;
         this.codeLenses.push(
           new vscode.CodeLens(range, {
             title:
               this.lastScrape === "N/A"
                 ? this.lastScrape
-                : `${scrapedMetrics} metrics (${this.lastScrape.substring(5)})`,
+                : `${scrapedMetrics} domains found (${this.lastScrape.substring(5)})`,
             tooltip:
               this.lastScrape === "N/A"
-                ? "Data has not been scraped yet."
-                : `${this.lastScrape}. Found ${scrapedMetrics} metrics.`,
+                ? "Data has not been captured yet."
+                : `${this.lastScrape}. Found ${scrapedMetrics} domains.`,
             command: "",
             arguments: [],
           }),
@@ -159,79 +138,49 @@ class JmxWizardCodeLensProvider implements vscode.CodeLensProvider {
   private async scrapeMetrics(changeConfig: boolean = false) {
     // Only collect details if none are available
     if (!this.processId || changeConfig) {
-      const details = await this.collectTokenDetails();
-      if (!details) {
-        return;
-      }
       // Clear cached data since we're now scraping a different process
-      // setCachedJmxWizardData({});
+      setCachedJMXData({});
     }
     const scrapeSuccess = await this.scrape();
     if (scrapeSuccess) {
-      this.lastScrape = `Last scraped at: ${new Date().toLocaleTimeString()}`;
+      this.lastScrape = `Last captured at: ${new Date().toLocaleTimeString()}`;
       this._onDidChangeCodeLenses.fire();
     }
   }
 
   /**
-   * Endpoint detail collection workflow. This workflow has been created to support
-   * all the authenticaiton schemes that Prometheus Extensions 2.0 support.
-   * @returns whether data collection was successful (i.e. mandatory details collected) or not
-   */
-  private async collectTokenDetails(): Promise<boolean> {
-    this.token = await vscode.window.showInputBox({
-      title: "Platform token",
-      placeHolder: "Enter a Dynatrace platform token with the extensions:jmx:read scope",
-      prompt: "Mandatory",
-      ignoreFocusOut: true,
-    });
-    if (!this.token) {
-      return false;
-    }
-    return true;
-  }
-
-  /**
-   * Scrapes prometheus metrics.
+   * Captures JMX metrics.
    * This involves connecting to the endpoint, reading the data, and processing it.
-   * @returns whether scraping was successful (any errors) or not
+   * @returns whether discovery was successful (any errors) or not
    */
   private async scrape() {
-    if (!this.token) {
-      return false;
-    }
     try {
-      const tenant = await getConnectedTenant();
-      const environmentURL = tenant?.url;
-      const javaProcessListURL =
-        environmentURL + "/platform/extensions/v1/discovery/jmx/processes/";
-      const config = {
-        headers: {
-          Authorization: "Bearer " + this.token,
-        },
-      };
-      logger.info("I did this " + javaProcessListURL);
-      await axios.get(javaProcessListURL, config).then(res => {
-        this.jmxCompleteProcessList = res.data as undefined;
-      });
+      const dtClient = await getDynatraceClient();
+      if (!dtClient) {
+        throw Error("Cannot continue without Dynatrace API client.");
+      }
+      const jmxCompleteProcessList = await dtClient.extensionsV2.listJMXProcesses();
+      if (!jmxCompleteProcessList) {
+        throw Error("No JMX-enabled processes found for this environment.");
+      }
       this.technologyList = new Set<string>();
       this.hostList = new Set<string>();
-      this.jmxCompleteProcessList.forEach(element => {
+      jmxCompleteProcessList.forEach(element => {
         element.properties.TECHNOLOGIES.forEach(tech => {
           this.technologyList?.add(tech);
         });
       });
       if (this.technologyList.size > 0) {
         this.technologyName = (await vscode.window.showQuickPick(Array.from(this.technologyList), {
-          title: "Scrape data - Choose your technology",
+          title: "Capture data - Choose your technology",
           placeHolder: "Select the technology to filter your processes",
           canPickMany: false,
           ignoreFocusOut: true,
         })) as string;
       }
-      this.jmxCompleteProcessList?.forEach(element => {
+      jmxCompleteProcessList.forEach(element => {
         if (
-          element.properties.TECHNOLOGIES.includes(this.technologyName) ||
+          element.properties.TECHNOLOGIES.includes(this.technologyName ?? "") ||
           this.technologyName === undefined
         )
           element.properties.HOSTS.forEach(host => {
@@ -240,7 +189,7 @@ class JmxWizardCodeLensProvider implements vscode.CodeLensProvider {
       });
       if (this.hostList.size > 0) {
         this.hostName = (await vscode.window.showQuickPick(Array.from(this.hostList), {
-          title: "Scrape data - Choose your host",
+          title: "Capture data - Choose your host",
           placeHolder: "Select the host to filter your processes",
           canPickMany: false,
           ignoreFocusOut: true,
@@ -248,10 +197,10 @@ class JmxWizardCodeLensProvider implements vscode.CodeLensProvider {
       }
       this.jmxProcessListIds = [];
       this.jmxProcessListNames = [];
-      this.jmxCompleteProcessList?.forEach(element => {
+      jmxCompleteProcessList.forEach(element => {
         if (
-          (element.properties.HOSTS.includes(this.hostName) || this.hostName === undefined) &&
-          (element.properties.TECHNOLOGIES.includes(this.technologyName) ||
+          (element.properties.HOSTS.includes(this.hostName ?? "") || this.hostName === undefined) &&
+          (element.properties.TECHNOLOGIES.includes(this.technologyName ?? "") ||
             this.technologyName === undefined)
         ) {
           this.jmxProcessListIds?.push(element.id);
@@ -259,16 +208,15 @@ class JmxWizardCodeLensProvider implements vscode.CodeLensProvider {
         }
       });
       this.processName = (await vscode.window.showQuickPick(this.jmxProcessListNames, {
-        title: "Scrape data - Choose your process",
-        placeHolder: "Select the process to scrape its MBeans",
+        title: "Capture data - Choose your process",
+        placeHolder: "Select the process to capture its MBeans",
         canPickMany: false,
         ignoreFocusOut: true,
       })) as string;
       const index = this.jmxProcessListNames.indexOf(this.processName);
       this.processId = this.jmxProcessListIds[index];
-      await axios.get(javaProcessListURL + this.processId, config).then(res => {
-        this.processJMXWizardData(res.data as jmxDataResponse);
-      });
+      const processDetails = await dtClient.extensionsV2.getJMXProcessDetails(this.processId);
+      this.processJMXWizardData(processDetails);
       return true;
     } catch (err) {
       logger.error(err);
@@ -280,11 +228,13 @@ class JmxWizardCodeLensProvider implements vscode.CodeLensProvider {
    * Processes raw Prometheus data line by line and extracts the details relevant
    * for Extensions 2.0. The data is cached with a cached data provider for access
    * in other parts of the VSCode extension.
-   * @param data raw data from a Prometheus Endpoint
+   * @param data raw data from a JMX process discovery API
    */
-  private processJMXWizardData(data: jmxDataResponse) {
-    //data.process_name = this.processName;
-    //this.cachedData.setJMXWizardData(data);
+  private processJMXWizardData(data: MBeanListDto) {
+    const jmxData: JMXData = {
+      [`${this.processName}`]: data,
+    };
+    setCachedJMXData(jmxData);
   }
 }
 
