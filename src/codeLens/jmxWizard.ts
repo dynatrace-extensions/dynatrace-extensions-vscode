@@ -16,7 +16,7 @@
 
 import { CodeLensCommand } from "@common";
 import vscode from "vscode";
-import { MBeanListDto } from "../dynatrace-api/interfaces/extensions";
+import { JMXProcess, MBeanListDto } from "../dynatrace-api/interfaces/extensions";
 import { getDynatraceClient } from "../treeViews/tenantsTreeView";
 import { getCachedJMXData, setCachedJMXData } from "../utils/caching";
 import logger from "../utils/logging";
@@ -24,135 +24,105 @@ import { createSingletonProvider } from "../utils/singleton";
 
 export type JMXData = Record<string, MBeanListDto>;
 
-export type jmxDataResponse = {
-  jmxData: Record<string, domainData>;
-};
-
-type domainData = {
-  mbean: Record<string, mbeanData>[];
-};
-
-type mbeanData = {
-  properties: Record<string, string>;
-  metrics: { name: string; numeric: boolean }[];
-  fullPath: string;
-};
+const JMX_REGEX = /^(jmx:)/gm;
+const ALL_TECHNOLOGIES = "All technologies";
+const ALL_HOSTS = "All hosts";
 
 /**
  * Code Lens Provider implementation to facilitate loading JMX metrics from the
  * discovery APIs and leveraging it in other parts of the extension.
  */
 class JmxWizardCodeLensProvider implements vscode.CodeLensProvider {
-  private readonly logTrace = ["codeLens", "jmxWizard", "JmxWizardCodeLensProvider"];
-  private codeLenses: vscode.CodeLens[];
-  private regex: RegExp;
   private lastScrape = "N/A";
   private isLoading = false;
-  private jmxProcessListNames: string[] | undefined;
-  private jmxProcessListIds: string[] | undefined;
   private processName: string | undefined;
   private processId: string | undefined;
-  private technologyList: Set<string> | undefined;
-  private hostList: Set<string> | undefined;
-  private technologyName: string | undefined;
-  private hostName: string | undefined;
-  private _onDidChangeCodeLenses: vscode.EventEmitter<void> = new vscode.EventEmitter<void>();
-  public readonly onDidChangeCodeLenses: vscode.Event<void> = this._onDidChangeCodeLenses.event;
+  private readonly _onDidChangeCodeLenses = new vscode.EventEmitter<void>();
+  public readonly onDidChangeCodeLenses = this._onDidChangeCodeLenses.event;
 
   constructor() {
-    this.codeLenses = [];
-    this.regex = /^(jmx:)/gm;
     vscode.commands.registerCommand(CodeLensCommand.ScrapeMetrics, this.scrapeMetrics.bind(this));
   }
 
   /**
-   * Provides the actual Code Lenses. Two lenses are created: one to allow JMX data
-   * detail collection and reading/processing data, the other to show when data was
-   * last read and processed.
+   * Provides Code Lenses for the JMX wizard. Two lenses are created: one to trigger
+   * MBean navigation, and one showing when data was last captured.
    * @param document document where provider was invoked
    * @returns list of Code Lenses
    */
   public provideCodeLenses(
     document: vscode.TextDocument,
   ): vscode.ProviderResult<vscode.CodeLens[]> {
-    this.codeLenses = [];
-    const regex = new RegExp(this.regex);
     const text = document.getText();
-
-    let matches;
-    while ((matches = regex.exec(text)) !== null) {
-      const line = document.lineAt(document.positionAt(matches.index).line);
-      const indexOf = line.text.indexOf(matches[0]);
-      const position = new vscode.Position(line.lineNumber, indexOf);
-      const range = document.getWordRangeAtPosition(position, new RegExp(this.regex));
-
-      if (range) {
-        // Action lens
-        this.codeLenses.push(
-          new vscode.CodeLens(range, {
-            title: "Navigate MBeans",
-            tooltip:
-              "Connect to a Java process and capture its MBeans, then use them in the Extension.",
-            command: CodeLensCommand.ScrapeMetrics,
-            arguments: [],
-          }),
-        );
-        if (this.isLoading) {
-          this.codeLenses.push(
-            new vscode.CodeLens(range, {
-              title: "Loading...",
-              tooltip: "Retrieving metrics from Dynatrace OneAgent...",
-              command: "",
-              arguments: [],
-            }),
-          );
-          return this.codeLenses;
-        }
-        // Status lens
-        const scrapedMetrics = Object.keys(getCachedJMXData()[this.processName ?? ""] ?? {}).length;
-        this.codeLenses.push(
-          new vscode.CodeLens(range, {
-            title:
-              this.lastScrape === "N/A"
-                ? this.lastScrape
-                : `${scrapedMetrics} domains found (${this.lastScrape.substring(5)})`,
-            tooltip:
-              this.lastScrape === "N/A"
-                ? "Data has not been captured yet."
-                : `${this.lastScrape}. Found ${scrapedMetrics} domains.`,
-            command: "",
-            arguments: [],
-          }),
-        );
-      }
+    const regex = new RegExp(JMX_REGEX);
+    const match = regex.exec(text);
+    if (!match) {
+      return [];
     }
 
-    return this.codeLenses;
+    const line = document.lineAt(document.positionAt(match.index).line);
+    const position = new vscode.Position(line.lineNumber, line.text.indexOf(match[0]));
+    const range = document.getWordRangeAtPosition(position, new RegExp(JMX_REGEX));
+    if (!range) {
+      return [];
+    }
+
+    const actionLens = new vscode.CodeLens(range, {
+      title: "Navigate MBeans",
+      tooltip: "Connect to a Java process and capture its MBeans, then use them in the Extension.",
+      command: CodeLensCommand.ScrapeMetrics,
+      arguments: [],
+    });
+
+    if (this.isLoading) {
+      return [
+        actionLens,
+        new vscode.CodeLens(range, {
+          title: "Loading...",
+          tooltip: "Retrieving metrics from Dynatrace OneAgent...",
+          command: "",
+          arguments: [],
+        }),
+      ];
+    }
+
+    const domainCount = Object.keys(getCachedJMXData()[this.processName ?? ""] ?? {}).length;
+    const statusLens = new vscode.CodeLens(range, {
+      title:
+        this.lastScrape === "N/A"
+          ? this.lastScrape
+          : `${domainCount} domains found (${this.lastScrape.substring(5)})`,
+      tooltip:
+        this.lastScrape === "N/A"
+          ? "Data has not been captured yet."
+          : `${this.lastScrape}. Found ${domainCount} domains.`,
+      command: "",
+      arguments: [],
+    });
+
+    return [actionLens, statusLens];
   }
 
   /**
-   * Metric scraping workflow. If no previous details are known, these are collected.
-   * Upon successful scraping and processing, timestamp is updated.
-   * @param changeConfig collect the details required for scraping, even if they exist already
-   * @returns void
+   * Metric scraping workflow. Clears cached data if needed, then scrapes
+   * and updates the timestamp on success.
+   * @param changeConfig re-collect process details even if they already exist
    */
   private async scrapeMetrics(changeConfig: boolean = false) {
-    // Only collect details if none are available
     if (!this.processId || changeConfig) {
-      // Clear cached data since we're now scraping a different process
       setCachedJMXData({});
     }
-    const scrapeSuccess = await this.scrape();
-    if (scrapeSuccess) {
+    const success = await this.scrape();
+    if (success) {
       this.lastScrape = `Last captured at: ${new Date().toLocaleTimeString()}`;
       this._onDidChangeCodeLenses.fire();
     }
   }
 
   /**
-   * Captures JMX metrics.
-   * This involves connecting to the endpoint, reading the data, and processing it.
-   * @returns whether discovery was successful (any errors) or not
+   * Captures JMX metrics by walking the user through technology, host, and process
+   * selection, then fetching MBean details for the chosen process.
+   * @returns whether discovery completed successfully
    */
   private async scrape() {
     try {
@@ -160,69 +130,55 @@ class JmxWizardCodeLensProvider implements vscode.CodeLensProvider {
       if (!dtClient) {
         throw Error("Cannot continue without Dynatrace API client.");
       }
-      const jmxCompleteProcessList = await dtClient.extensionsV2.listJMXProcesses();
-      if (!jmxCompleteProcessList) {
+
+      const processList = await dtClient.extensionsV2.listJMXProcesses();
+      if (!processList) {
         throw Error("No JMX-enabled processes found for this environment.");
       }
-      this.technologyList = new Set<string>(["All technologies"]);
-      this.hostList = new Set<string>(["All hosts"]);
-      jmxCompleteProcessList.forEach(element => {
-        element.properties.TECHNOLOGIES.forEach(tech => {
-          this.technologyList?.add(tech);
-        });
+
+      // Step 1: Pick a technology
+      const technologyName = await this.pickFromProcessProperty(
+        processList,
+        p => p.properties.TECHNOLOGIES,
+        ALL_TECHNOLOGIES,
+        "Capture data - Choose your technology",
+        "Select the technology to filter your processes",
+      );
+
+      // Step 2: Pick a host (filtered by chosen technology)
+      const techFiltered = this.filterProcesses(processList, technologyName, ALL_TECHNOLOGIES, {
+        matchFn: p => p.properties.TECHNOLOGIES,
       });
-      if (this.technologyList.size > 0) {
-        this.technologyName = (await vscode.window.showQuickPick(Array.from(this.technologyList), {
-          title: "Capture data - Choose your technology",
-          placeHolder: "Select the technology to filter your processes",
+      const hostName = await this.pickFromProcessProperty(
+        techFiltered,
+        p => p.properties.HOSTS,
+        ALL_HOSTS,
+        "Capture data - Choose your host",
+        "Select the host to filter your processes",
+      );
+
+      // Step 3: Pick a process (filtered by technology + host)
+      const fullyFiltered = this.filterProcesses(techFiltered, hostName, ALL_HOSTS, {
+        matchFn: p => p.properties.HOSTS,
+      });
+      this.processName = (await vscode.window.showQuickPick(
+        fullyFiltered.map(p => p.name),
+        {
+          title: "Capture data - Choose your process",
+          placeHolder: "Select the process to capture its MBeans",
           canPickMany: false,
           ignoreFocusOut: true,
-        })) as string;
-      }
-      jmxCompleteProcessList.forEach(element => {
-        if (
-          element.properties.TECHNOLOGIES.includes(this.technologyName ?? "") ||
-          this.technologyName === undefined ||
-          this.technologyName === "All technologies"
-        )
-          element.properties.HOSTS.forEach(host => {
-            this.hostList?.add(host);
-          });
-      });
-      if (this.hostList.size > 0) {
-        this.hostName = (await vscode.window.showQuickPick(Array.from(this.hostList), {
-          title: "Capture data - Choose your host",
-          placeHolder: "Select the host to filter your processes",
-          canPickMany: false,
-          ignoreFocusOut: true,
-        })) as string;
-      }
-      this.jmxProcessListIds = [];
-      this.jmxProcessListNames = [];
-      jmxCompleteProcessList.forEach(element => {
-        if (
-          (element.properties.HOSTS.includes(this.hostName ?? "") ||
-            this.hostName === undefined ||
-            this.hostName === "All hosts") &&
-          (element.properties.TECHNOLOGIES.includes(this.technologyName ?? "") ||
-            this.technologyName === undefined ||
-            this.technologyName === "All technologies")
-        ) {
-          this.jmxProcessListIds?.push(element.id);
-          this.jmxProcessListNames?.push(element.name);
-        }
-      });
-      this.processName = (await vscode.window.showQuickPick(this.jmxProcessListNames, {
-        title: "Capture data - Choose your process",
-        placeHolder: "Select the process to capture its MBeans",
-        canPickMany: false,
-        ignoreFocusOut: true,
-      })) as string;
-      const index = this.jmxProcessListNames.indexOf(this.processName);
-      this.processId = this.jmxProcessListIds[index];
+        },
+      )) as string;
+
+      const selected = fullyFiltered.find(p => p.name === this.processName);
+      this.processId = selected?.id;
+
+      // Step 4: Fetch MBean details
       this.isLoading = true;
+      this._onDidChangeCodeLenses.fire();
       const processDetails = await dtClient.extensionsV2.getJMXProcessDetails(this.processId);
-      this.processJMXWizardData(processDetails);
+      setCachedJMXData({ [this.processName]: processDetails });
       this.isLoading = false;
       return true;
     } catch (err) {
@@ -233,20 +189,51 @@ class JmxWizardCodeLensProvider implements vscode.CodeLensProvider {
   }
 
   /**
-   * Processes raw Prometheus data line by line and extracts the details relevant
-   * for Extensions 2.0. The data is cached with a cached data provider for access
-   * in other parts of the VSCode extension.
-   * @param data raw data from a JMX process discovery API
+   * Collects unique values from a process property and presents a quick pick.
+   * An "all" option is prepended as the first choice.
    */
-  private processJMXWizardData(data: MBeanListDto) {
-    const jmxData: JMXData = {
-      [`${this.processName}`]: data,
-    };
-    setCachedJMXData(jmxData);
+  private async pickFromProcessProperty(
+    processes: JMXProcess[],
+    extractFn: (p: JMXProcess) => string[],
+    allLabel: string,
+    title: string,
+    placeHolder: string,
+  ): Promise<string | undefined> {
+    const values = new Set<string>([allLabel]);
+    for (const p of processes) {
+      for (const v of extractFn(p)) {
+        values.add(v);
+      }
+    }
+    if (values.size <= 1) {
+      return allLabel;
+    }
+    return vscode.window.showQuickPick([...values], {
+      title,
+      placeHolder,
+      canPickMany: false,
+      ignoreFocusOut: true,
+    });
+  }
+
+  /**
+   * Filters a process list by a chosen value. If the value is undefined or
+   * equals the "all" label, returns the full list unfiltered.
+   */
+  private filterProcesses(
+    processes: JMXProcess[],
+    chosen: string | undefined,
+    allLabel: string,
+    { matchFn }: { matchFn: (p: JMXProcess) => string[] },
+  ): JMXProcess[] {
+    if (!chosen || chosen === allLabel) {
+      return processes;
+    }
+    return processes.filter(p => matchFn(p).includes(chosen));
   }
 }
 
 /**
- * Provides singleton access to the JmxWizardCodeLensProvider
+ * Provides singleton access to the JmxWizardCodeLensProvider.
  */
 export const getJmxWizardCodeLensProvider = createSingletonProvider(JmxWizardCodeLensProvider);
