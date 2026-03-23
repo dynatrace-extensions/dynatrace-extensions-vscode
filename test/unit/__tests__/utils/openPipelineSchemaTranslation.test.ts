@@ -75,6 +75,27 @@ describe("translatePrimitiveSchema", () => {
     expect(result.pattern).toBe("^[a-z]+$");
   });
 
+  it("uses allOf when multiple PATTERN constraints exist", () => {
+    const result = translatePrimitiveSchema("text", [
+      { type: "PATTERN", pattern: "^[a-z][a-z0-9._]{0,31}$" },
+      { type: "PATTERN", pattern: "^(?![Dd][Tt]\\.).*$" },
+    ]);
+    expect(result.pattern).toBeUndefined();
+    expect(result.allOf).toEqual([
+      { pattern: "^[a-z][a-z0-9._]{0,31}$" },
+      { pattern: "^(?![Dd][Tt]\\.).*$" },
+    ]);
+  });
+
+  it("uses allOf when NO_WHITESPACE and PATTERN are both present", () => {
+    const result = translatePrimitiveSchema("text", [
+      { type: "NO_WHITESPACE" },
+      { type: "PATTERN", pattern: "^(?![Dd][Tt]\\.).*$" },
+    ]);
+    expect(result.pattern).toBeUndefined();
+    expect(result.allOf).toEqual([{ pattern: "^\\S*$" }, { pattern: "^(?![Dd][Tt]\\.).*$" }]);
+  });
+
   it("falls back to string for unknown types", () => {
     expect(translatePrimitiveSchema("unknown_type", [])).toEqual({ type: "string" });
   });

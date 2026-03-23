@@ -41,6 +41,8 @@ export function translateRef(ref: string): string {
 }
 
 function applyStringConstraints(schema: JsonSchema, constraints: DtConstraint[]): void {
+  const patterns: string[] = [];
+
   for (const constraint of constraints) {
     switch (constraint.type) {
       case "LENGTH":
@@ -52,12 +54,18 @@ function applyStringConstraints(schema: JsonSchema, constraints: DtConstraint[])
         schema.minLength = Math.max(schema.minLength ?? 0, 1);
         break;
       case "NO_WHITESPACE":
-        schema.pattern = "^\\S*$";
+        patterns.push("^\\S*$");
         break;
       case "PATTERN":
-        if (constraint.pattern) schema.pattern = constraint.pattern;
+        if (constraint.pattern) patterns.push(constraint.pattern);
         break;
     }
+  }
+
+  if (patterns.length === 1) {
+    schema.pattern = patterns[0];
+  } else if (patterns.length > 1) {
+    schema.allOf = patterns.map(p => ({ pattern: p }));
   }
 }
 
