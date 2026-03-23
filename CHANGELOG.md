@@ -9,9 +9,6 @@
   - After selecting a Java process via the `code lens`, new `code actions` will be available at the `subgroups:` keyword level to generate working snippets of code for the detected MBeans.
 - Added a new configuration parameter to limit which platforms are included when building extensions.
   - Supporting both Python 3.10 and 3.14 requires bundling additional libraries, which increases the extension size. With this new option, you can target only the platforms you need, keeping the final extension within the size limits. This is especially useful when building extensions on MacOS systems.
-
-### 🚀 Improved in this version:
-
 - [OpenPipeline schema validation](https://github.com/dynatrace-extensions/dynatrace-extensions-vscode/issues/291)
 
 ---
