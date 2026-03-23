@@ -18,6 +18,7 @@ import { EnvironmentCommandPrefix, GlobalCommand, ViewType, WorkspaceCommandPref
 import vscode from "vscode";
 import { getActivationSchemaActionProvider } from "./codeActions/activationSchema";
 import { getDiagnosticFixProvider } from "./codeActions/diagnosticFixProvider";
+import { getJMXActionProvider } from "./codeActions/jmxWizard";
 import { getPrometheusActionProvider } from "./codeActions/prometheus";
 import { getSnippetGenerator } from "./codeActions/snippetGenerator";
 import { getSnmpActionProvider } from "./codeActions/snmp";
@@ -28,6 +29,7 @@ import { getPrometheusCompletionProvider } from "./codeCompletions/prometheus";
 import { getScreensCompletionProvider } from "./codeCompletions/screensMeta";
 import { getTopologyCompletionProvider } from "./codeCompletions/topology";
 import { getWmiCompletionProvider } from "./codeCompletions/wmi";
+import { getJmxWizardCodeLensProvider } from "./codeLens/jmxWizard";
 import { getPrometheusCodeLensProvider } from "./codeLens/prometheusScraper";
 import { getScreenLensProvider } from "./codeLens/screenCodeLens";
 import { getSelectorCodeLensProvider } from "./codeLens/selectorCodeLens";
@@ -226,6 +228,7 @@ const registerCodeActionsProviders = () => [
   registerCodeActionsProvider(getSnippetGenerator()),
   registerCodeActionsProvider(getSnmpActionProvider()),
   registerCodeActionsProvider(getPrometheusActionProvider()),
+  registerCodeActionsProvider(getJMXActionProvider()),
   registerCodeActionsProvider(getDiagnosticFixProvider()),
   registerCodeActionsProvider(getActivationSchemaActionProvider(), ACTIVATION_SCHEMA_DOC_SELECTOR),
 ];
@@ -238,6 +241,7 @@ const registerCodeActionsProvider = (
 
 const registerCodeLensProviders = () => [
   registerCodeLensProvider(getSimulatorLensProvider(simulatorManager)),
+  registerCodeLensProvider(getJmxWizardCodeLensProvider()),
   registerCodeLensProvider(getPrometheusCodeLensProvider()),
   registerCodeLensProvider(
     getSelectorCodeLensProvider("metricSelector:", "metricSelectorsCodeLens"),
