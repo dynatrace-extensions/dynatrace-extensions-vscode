@@ -1,5 +1,17 @@
 # Change Log
 
+## Version 2.11.0 (23.03.2026)
+
+### ✨ New in this version:
+
+- Added new feature for JMX Wizard
+  - When working with a JMX extension, a new `code lens` will appear allowing the user to navigate MBeans from the processes from the connected environment.
+  - After selecting a Java process via the `code lens`, new `code actions` will be available at the `subgroups:` keyword level to generate working snippets of code for the detected MBeans.
+- Added a new configuration parameter to limit which platforms are included when building extensions.
+  - Supporting both Python 3.10 and 3.14 requires bundling additional libraries, which increases the extension size. With this new option, you can target only the platforms you need, keeping the final extension within the size limits. This is especially useful when building extensions on MacOS systems.
+
+---
+
 ## Version 2.10.2 (05.03.2026)
 
 ### ✨ New in this version:

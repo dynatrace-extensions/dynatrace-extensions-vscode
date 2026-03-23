@@ -303,6 +303,7 @@ async function assemblePython(oc: vscode.OutputChannel, cancelToken: vscode.Canc
     if (!sdkAvailable) throw Error("Cannot continue without SDK");
 
     const platformsParam = getExtraPlatformsParameter();
+    const extraPlatformsOnly = getExtraPlatformsOnlyParameter();
     logger.debug(`Assembling for python with platform param "${platformsParam}"`, ...fnLogTrace);
     const workspaceStorage = getWorkspaceStorage();
     const certKeyPath = getDevCertKey();
@@ -324,7 +325,7 @@ async function assemblePython(oc: vscode.OutputChannel, cancelToken: vscode.Canc
     }
 
     await runCommand(
-      `dt-sdk build -k "${certKeyPath}" -t "${workspaceStorage}" ${platformsParam} ${pythonVersionsParam} "${setupPyDir}"`,
+      `dt-sdk build -k "${certKeyPath}" -t "${workspaceStorage}" ${platformsParam} ${extraPlatformsOnly} ${pythonVersionsParam} "${setupPyDir}"`,
       oc,
       cancelToken,
       envOptions,
@@ -383,6 +384,13 @@ const getExtraPlatformsParameter = () => {
   }
 
   return platformString;
+};
+
+const getExtraPlatformsOnlyParameter = () => {
+  const extraPlatformsOnly = vscode.workspace
+    .getConfiguration("dynatraceExtensions", null)
+    .get<boolean>("pythonExtraPlatformsOnly");
+  return extraPlatformsOnly ? "-o" : "";
 };
 
 const doesSDKSupportVersioning = (sdkVersionOutput: string): boolean => {
