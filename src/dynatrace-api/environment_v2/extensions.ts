@@ -21,6 +21,9 @@ import {
   MinimalExtension,
   SchemaFiles,
   SchemaList,
+  JMXProcessListDto,
+  JMXProcess,
+  MBeanListDto,
 } from "../interfaces/extensions";
 
 /**
@@ -29,6 +32,7 @@ import {
 export class ExtensionsServiceV2 {
   private readonly endpoint = "/api/v2/extensions";
   private readonly schemaEndpoint = "/api/v2/extensions/schemas";
+  private readonly discoveryEndpoint = "/api/v2/extensions/discovery/jmx/processes";
   private readonly httpClient: HttpClient;
 
   constructor(httpClient: HttpClient) {
@@ -317,5 +321,27 @@ export class ExtensionsServiceV2 {
       responseType: downloadPackage ? "arraybuffer" : "json",
       signal,
     });
+  }
+
+  /**
+   * Gets the list of JMX processes available on the cluster.
+   * @param signal cancellation signal
+   * @returns list of JMX processes
+   */
+  async listJMXProcesses(signal?: AbortSignal): Promise<JMXProcess[]> {
+    return this.httpClient
+      .makeRequest<JMXProcessListDto>({ path: this.discoveryEndpoint, signal })
+      .then(res => res.items);
+  }
+
+  /**
+   * Gets the list of MBeans of a JMX process available on the cluster.
+   * @param signal cancellation signal
+   * @returns list of MBeans
+   */
+  async getJMXProcessDetails(processId?: string, signal?: AbortSignal): Promise<MBeanListDto> {
+    return this.httpClient
+      .makeRequest<MBeanListDto>({ path: `${this.discoveryEndpoint}/${processId}`, signal })
+      .then(res => res);
   }
 }

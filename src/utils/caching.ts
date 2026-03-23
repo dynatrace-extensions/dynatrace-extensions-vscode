@@ -19,6 +19,7 @@ import { WmiQueryResult } from "@common";
 import axios from "axios";
 import { BehaviorSubject, Observable, Subscriber, delay, map, of, switchMap } from "rxjs";
 import vscode from "vscode";
+import { JMXData } from "../codeLens/jmxWizard";
 import { PromData } from "../codeLens/prometheusScraper";
 import { ValidationStatus } from "../codeLens/utils/selectorUtils";
 import { Entity, EntityType } from "../dynatrace-api/interfaces/monitoredEntities";
@@ -53,6 +54,7 @@ let parsedExtension = new BehaviorSubject<ExtensionStub | undefined | null>(unde
 let baristaIcons: string[] = [];
 let selectorStatuses = new Map<string, ValidationStatus>();
 let prometheusData: PromData = {};
+let jmxData: JMXData = {};
 let wmiQueryResults = new Map<string, WmiQueryResult>();
 let wmiQueryStatuses = new Map<string, ValidationStatus>();
 let snmpOIDs = new Map<string, OidInformation>();
@@ -253,6 +255,8 @@ export const getCachedWmiStatus = (query: string) => wmiQueryStatuses.get(query)
 
 export const getCachedPrometheusData = () => prometheusData;
 
+export const getCachedJMXData = () => jmxData;
+
 export const getCachedSelectorStatus = (selector: string) => selectorStatuses.get(selector);
 
 export const getCachedEntityInstances = (type: string) => entityInstances.get(type);
@@ -279,6 +283,10 @@ export const setCachedWmiQueryResult = (result: WmiQueryResult) => {
 
 export const setCachedPrometheusData = (data: PromData) => {
   prometheusData = data;
+};
+
+export const setCachedJMXData = (data: JMXData) => {
+  jmxData = data;
 };
 
 export const setCachedSelectorStatus = (selector: string, status: ValidationStatus) => {
