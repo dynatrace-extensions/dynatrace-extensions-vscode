@@ -9,6 +9,7 @@ const config = {
     "src/utils/cryptography.ts",
     "src/utils/general.ts",
     "src/utils/extensionParsing.ts",
+    "src/utils/openPipelineSchemaTranslation.ts",
   ],
   moduleNameMapper: {
     "@common": "<rootDir>/common",
