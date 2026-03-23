@@ -20,53 +20,54 @@ import axios from "axios";
 import vscode from "vscode";
 import { Dynatrace } from "../dynatrace-api/dynatrace";
 import { getActivationContext } from "../extension";
+import { OPENPIPELINE_SCHEMA_CONFIGS } from "../interfaces/openPipelineSchemas";
 import { getDynatraceClient } from "../treeViews/tenantsTreeView";
 import { checkTenantConnected } from "../utils/conditionCheckers";
 import { getExtensionFilePath } from "../utils/fileSystem";
 import logger from "../utils/logging";
+import { translateSchema } from "../utils/openPipelineSchemaTranslation";
 import { ConfirmOption, showQuickPick, showQuickPickConfirm } from "../utils/vscode";
 
 const logTrace = ["commandPalette", "loadSchemas"];
 
 /**
- * Configures JSON schemas for OpenPipeline files (*.pipeline.json and *.source.json)
- * These schemas are downloaded alongside the extension schema in the global storage
- * @param schemaLocation - The path to the schema version folder (e.g., globalStorage/1.900.0/)
+ * Compares two dot-separated version strings numerically.
+ * Returns a negative number if a < b, 0 if equal, positive if a > b.
+ */
+function compareVersions(a: string, b: string): number {
+  const partsA = a.split(".").map(Number);
+  const partsB = b.split(".").map(Number);
+  const length = Math.max(partsA.length, partsB.length);
+  for (let i = 0; i < length; i++) {
+    const diff = (partsA[i] ?? 0) - (partsB[i] ?? 0);
+    if (diff !== 0) return diff;
+  }
+  return 0;
+}
+
+/**
+ * Configures JSON schemas for OpenPipeline files by updating VSCode workspace settings.
+ * Maps each schema config's file pattern to its converted schema file on disk.
+ * @param schemaLocation - The path to the openpipeline schema folder in global storage
  */
 export const configureOpenPipelineJSONSchemas = (schemaLocation: string): void => {
   const fnLogTrace = [...logTrace, "configureOpenPipelineJSONSchemas"];
 
-  const pipelineSchemaPath = vscode.Uri.file(
-    path.join(schemaLocation, "openpipeline.pipeline.schema.json"),
-  ).toString();
-  const sourceSchemaPath = vscode.Uri.file(
-    path.join(schemaLocation, "openpipeline.source.schema.json"),
-  ).toString();
-
-  // Get existing json.schemas configuration
   const config = vscode.workspace.getConfiguration();
   const existingSchemas =
     config.get<Array<{ fileMatch: string[]; url: string }>>("json.schemas") || [];
 
-  // Remove any existing openpipeline schemas to avoid duplicates
+  // Remove any existing openpipeline schema entries to avoid duplicates
   const filteredSchemas = existingSchemas.filter(
-    schema =>
-      !schema.fileMatch.some(
-        match => match.endsWith(".pipeline.json") || match.endsWith(".source.json"),
-      ),
+    schema => !schema.fileMatch.some(match => match.includes("openpipeline")),
   );
 
-  // Add our openpipeline schemas
   const newSchemas = [
     ...filteredSchemas,
-    {
-      fileMatch: ["*.pipeline.json"],
-      url: pipelineSchemaPath,
-    },
-    {
-      fileMatch: ["*.source.json"],
-      url: sourceSchemaPath,
-    },
+    ...OPENPIPELINE_SCHEMA_CONFIGS.map(({ filePattern, outputFilename }) => ({
+      fileMatch: [filePattern],
+      url: vscode.Uri.file(path.join(schemaLocation, outputFilename)).toString(),
+    })),
   ];
 
   config
@@ -77,6 +78,38 @@ export const configureOpenPipelineJSONSchemas = (schemaLocation: string): void =
 
   logger.debug("OpenPipeline JSON schemas configured", ...fnLogTrace);
 };
+
+/**
+ * Downloads OpenPipeline schemas from Dynatrace, converts them to JSON Schema,
+ * and writes the converted files to the openpipeline folder in global storage.
+ * Individual download failures are logged as warnings but do not affect overall success.
+ */
+async function downloadAndConvertOpenPipelineSchemas(
+  dt: Dynatrace,
+  context: vscode.ExtensionContext,
+): Promise<void> {
+  const fnLogTrace = [...logTrace, "downloadAndConvertOpenPipelineSchemas"];
+  const openpipelineDir = path.join(context.globalStorageUri.fsPath, "openpipeline");
+  mkdirSync(openpipelineDir, { recursive: true });
+
+  for (const schemaConfig of OPENPIPELINE_SCHEMA_CONFIGS) {
+    try {
+      const rawSchema = await dt.settings.getSchema(schemaConfig.schemaId);
+      const converted = translateSchema(rawSchema);
+      const outputPath = path.join(openpipelineDir, schemaConfig.outputFilename);
+      writeFileSync(outputPath, JSON.stringify(converted, null, 2));
+      logger.debug(`Converted OpenPipeline schema: ${schemaConfig.schemaId}`, ...fnLogTrace);
+    } catch (err) {
+      logger.notify(
+        "WARN",
+        `Failed to download OpenPipeline schema ${schemaConfig.schemaId}: ${(err as Error).message}`,
+        ...fnLogTrace,
+      );
+    }
+  }
+
+  configureOpenPipelineJSONSchemas(openpipelineDir);
+}
 
 export const loadSchemasWorkflow = async () => {
   if (await checkTenantConnected()) {
@@ -153,7 +186,8 @@ export async function loadSchemas(dt: Dynatrace): Promise<boolean> {
   });
 
   // Configure JSON schemas for OpenPipeline files
-  configureOpenPipelineJSONSchemas(location);
+  const openpipelineDir = path.join(context.globalStorageUri.fsPath, "openpipeline");
+  configureOpenPipelineJSONSchemas(openpipelineDir);
 
   try {
     // If extension.yaml already exists, update the version there too
@@ -244,6 +278,13 @@ function downloadSchemaFiles(location: string, version: string, dt: Dynatrace) {
         .catch(async err => {
           logger.notify("ERROR", (err as Error).message, ...fnLogTrace);
         });
+
+      // Download and convert OpenPipeline schemas for versions >= 1.330.0
+      if (compareVersions(version, "1.330.0") >= 0) {
+        progress.report({ message: "Downloading OpenPipeline schemas" });
+        const context = getActivationContext();
+        await downloadAndConvertOpenPipelineSchemas(dt, context);
+      }
     },
   );
 }

@@ -86,6 +86,19 @@ export class SettingsService {
   }
 
   /**
+   * Fetches a single settings schema by its ID.
+   * @param schemaId The full schema ID (e.g., "builtin:openpipeline.metrics.pipelines")
+   * @param signal cancellation signal
+   * @returns the raw schema definition
+   */
+  async getSchema(schemaId: string, signal?: AbortSignal): Promise<unknown> {
+    return this.httpClient.makeRequest({
+      path: `${this.schemasEndpoint}/${schemaId}`,
+      signal,
+    });
+  }
+
+  /**
    * Creates a new settings object.
    * You can upload several objects at once. In that case each object returns its own response code.
    * @param payload Contains the settings objects to be created.
