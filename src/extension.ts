@@ -241,7 +241,7 @@ const registerCodeActionsProvider = (
 
 const registerCodeLensProviders = () => [
   registerCodeLensProvider(getSimulatorLensProvider(simulatorManager)),
-  registerCodeLensProvider(getJmxWizardCodeLensProvider(getTenantsTreeDataProvider())),
+  registerCodeLensProvider(getJmxWizardCodeLensProvider()),
   registerCodeLensProvider(getPrometheusCodeLensProvider()),
   registerCodeLensProvider(
     getSelectorCodeLensProvider("metricSelector:", "metricSelectorsCodeLens"),
