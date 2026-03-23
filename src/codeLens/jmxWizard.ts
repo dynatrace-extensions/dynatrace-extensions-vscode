@@ -47,6 +47,7 @@ class JmxWizardCodeLensProvider implements vscode.CodeLensProvider {
   private codeLenses: vscode.CodeLens[];
   private regex: RegExp;
   private lastScrape = "N/A";
+  private isLoading = false;
   private jmxProcessListNames: string[] | undefined;
   private jmxProcessListIds: string[] | undefined;
   private processName: string | undefined;
@@ -96,16 +97,16 @@ class JmxWizardCodeLensProvider implements vscode.CodeLensProvider {
             arguments: [],
           }),
         );
-        // Edit config lens
-        if (this.lastScrape !== "N/A") {
+        if (this.isLoading) {
           this.codeLenses.push(
             new vscode.CodeLens(range, {
-              title: "Edit config",
-              tooltip: "Make changes to the JMX configuration.",
-              command: CodeLensCommand.ScrapeMetrics,
-              arguments: [true],
+              title: "Loading...",
+              tooltip: "Retrieving metrics from Dynatrace OneAgent...",
+              command: "",
+              arguments: [],
             }),
           );
+          return this.codeLenses;
         }
         // Status lens
         const scrapedMetrics = Object.keys(getCachedJMXData()[this.processName ?? ""] ?? {}).length;
@@ -163,8 +164,8 @@ class JmxWizardCodeLensProvider implements vscode.CodeLensProvider {
       if (!jmxCompleteProcessList) {
         throw Error("No JMX-enabled processes found for this environment.");
       }
-      this.technologyList = new Set<string>();
-      this.hostList = new Set<string>();
+      this.technologyList = new Set<string>(["All technologies"]);
+      this.hostList = new Set<string>(["All hosts"]);
       jmxCompleteProcessList.forEach(element => {
         element.properties.TECHNOLOGIES.forEach(tech => {
           this.technologyList?.add(tech);
@@ -181,7 +182,8 @@ class JmxWizardCodeLensProvider implements vscode.CodeLensProvider {
       jmxCompleteProcessList.forEach(element => {
         if (
           element.properties.TECHNOLOGIES.includes(this.technologyName ?? "") ||
-          this.technologyName === undefined
+          this.technologyName === undefined ||
+          this.technologyName === "All technologies"
         )
           element.properties.HOSTS.forEach(host => {
             this.hostList?.add(host);
@@ -199,9 +201,12 @@ class JmxWizardCodeLensProvider implements vscode.CodeLensProvider {
       this.jmxProcessListNames = [];
       jmxCompleteProcessList.forEach(element => {
         if (
-          (element.properties.HOSTS.includes(this.hostName ?? "") || this.hostName === undefined) &&
+          (element.properties.HOSTS.includes(this.hostName ?? "") ||
+            this.hostName === undefined ||
+            this.hostName === "All hosts") &&
           (element.properties.TECHNOLOGIES.includes(this.technologyName ?? "") ||
-            this.technologyName === undefined)
+            this.technologyName === undefined ||
+            this.technologyName === "All technologies")
         ) {
           this.jmxProcessListIds?.push(element.id);
           this.jmxProcessListNames?.push(element.name);
@@ -215,11 +220,14 @@ class JmxWizardCodeLensProvider implements vscode.CodeLensProvider {
       })) as string;
       const index = this.jmxProcessListNames.indexOf(this.processName);
       this.processId = this.jmxProcessListIds[index];
+      this.isLoading = true;
       const processDetails = await dtClient.extensionsV2.getJMXProcessDetails(this.processId);
       this.processJMXWizardData(processDetails);
+      this.isLoading = false;
       return true;
     } catch (err) {
       logger.error(err);
+      this.isLoading = false;
       return false;
     }
   }
