@@ -66,7 +66,7 @@ const PROJECT_TYPE: Record<string, vscode.QuickPickItem> = {
   pythonExtension: {
     label: "Python Extension",
     iconPath: new vscode.ThemeIcon("terminal"),
-    detail: "Develop an Extension based on the Python datasource. Requires python 3.10",
+    detail: "Develop an Extension based on the Python datasource. Requires python 3.10 or 3.14",
   },
   jmxConversion: {
     label: "JMX 1.0 Conversion",

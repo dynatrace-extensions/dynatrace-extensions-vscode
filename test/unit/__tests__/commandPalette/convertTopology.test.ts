@@ -28,7 +28,7 @@ import {
   OpenPipelineIdComponent,
   OpenPipelineProcessor,
 } from "../../../../src/interfaces/extensionDocs";
-import { ExtensionStub } from "../../../../src/interfaces/extensionMeta";
+import { ExtensionStub, TopologyType } from "../../../../src/interfaces/extensionMeta";
 
 jest.mock("../../../../src/utils/logging");
 
@@ -108,6 +108,61 @@ describe("convertTopology", () => {
       expect(uniqueNodeTypes).toContain("CLOUDHUB_APP");
     });
 
+    it("should replace hyphens with underscores in suggested type names", async () => {
+      const typesWithHyphens: TopologyType[] = [
+        {
+          name: "dt.entity.cloud-application",
+          displayName: "Cloud Application",
+          rules: [
+            {
+              idPattern: "app_{app.id}",
+              instanceNamePattern: "{app.name}",
+              sources: [{ sourceType: "Metrics", condition: "$prefix(cloud.app)" }],
+              attributes: [],
+            },
+          ],
+        },
+      ];
+
+      const { metricsProcessors } = await createProcessorsFromTopology(
+        typesWithHyphens,
+        [{ key: "cloud.app.cpu", metadata: { displayName: "CPU" } }],
+        autoInputCallback,
+      );
+
+      expect(metricsProcessors.length).toBeGreaterThan(0);
+
+      metricsProcessors.forEach(processor => {
+        const nodeType = processor.smartscapeNode?.nodeType;
+        expect(nodeType).not.toContain("-");
+        expect(nodeType).toBe("DT.ENTITY.CLOUD_APPLICATION");
+      });
+    });
+
+    it("should use dt.smartscape.<type> format for nodeIdFieldName", async () => {
+      const { pipelineDocs } = await convertTopologyToOpenPipeline(extension, autoInputCallback);
+      const processors = pipelineDocs.metricPipeline?.smartscapeNodeExtraction?.processors || [];
+
+      processors.forEach((processor: OpenPipelineProcessor) => {
+        const nodeType = processor.smartscapeNode?.nodeType;
+        const nodeIdFieldName = processor.smartscapeNode?.nodeIdFieldName;
+        expect(nodeIdFieldName).toBe(`dt.smartscape.${nodeType?.toLowerCase()}`);
+      });
+    });
+
+    it("should use dt.smartscape.<type> format for edge sourceIdFieldName and targetIdFieldName", async () => {
+      const { pipelineDocs } = await convertTopologyToOpenPipeline(extension, autoInputCallback);
+      const edgeProcessors = pipelineDocs.metricPipeline?.smartscapeEdgeExtraction?.processors || [];
+
+      expect(edgeProcessors.length).toBeGreaterThan(0);
+
+      edgeProcessors.forEach((processor: OpenPipelineProcessor) => {
+        const edge = processor.smartscapeEdge;
+        expect(edge?.sourceIdFieldName).toBe(`dt.smartscape.${edge?.sourceType?.toLowerCase()}`);
+        expect(edge?.targetIdFieldName).toBe(`dt.smartscape.${edge?.targetType?.toLowerCase()}`);
+      });
+    });
+
     it("should handle custom input callback", async () => {
       const mockCallback: InputCallback = jest.fn(async (_prompt, suggestedValue) => {
         // Return custom value instead of suggested
@@ -182,7 +237,9 @@ describe("convertTopology", () => {
 
         const smartscapeNode = processor.smartscapeNode;
         expect(smartscapeNode).toHaveProperty("nodeType");
-        expect(smartscapeNode).toHaveProperty("nodeIdFieldName", "node_id");
+        expect(smartscapeNode).toHaveProperty("nodeIdFieldName");
+        // nodeIdFieldName should follow dt.smartscape.<type> format
+        expect(smartscapeNode?.nodeIdFieldName).toMatch(/^dt\.smartscape\..+/);
         expect(smartscapeNode).toHaveProperty("idComponents");
         expect(smartscapeNode).toHaveProperty("extractNode");
         expect(smartscapeNode).toHaveProperty("nodeName");
@@ -271,6 +328,39 @@ describe("convertTopology", () => {
             processor.matcher.includes("==") ||
             processor.matcher.includes("isNotNull"),
         ).toBe(true);
+      });
+    });
+
+    it("should not have duplicate idComponents", async () => {
+      // Craft a topology type with an idPattern that has duplicate field references
+      const typesWithDuplicateIdPattern: TopologyType[] = [
+        {
+          name: "custom:test_entity",
+          displayName: "Test Entity",
+          rules: [
+            {
+              idPattern: "test_{field1}_{field1}_{field2}_{field2}",
+              instanceNamePattern: "{field1}",
+              sources: [{ sourceType: "Metrics", condition: "$prefix(test.metric)" }],
+              attributes: [],
+            },
+          ],
+        },
+      ];
+
+      const { metricsProcessors } = await createProcessorsFromTopology(
+        typesWithDuplicateIdPattern,
+        [{ key: "test.metric.value", metadata: { displayName: "Test Metric" } }],
+        autoInputCallback,
+      );
+
+      expect(metricsProcessors.length).toBeGreaterThan(0);
+
+      metricsProcessors.forEach(processor => {
+        const idComponents = processor.smartscapeNode?.idComponents ?? [];
+        const idComponentNames = idComponents.map((c: OpenPipelineIdComponent) => c.idComponent);
+        const uniqueNames = [...new Set(idComponentNames)];
+        expect(idComponentNames).toEqual(uniqueNames);
       });
     });
 

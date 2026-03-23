@@ -493,10 +493,10 @@ const createSmartscapeEdgeProcessor = (
     description,
     smartscapeEdge: {
       sourceType,
-      sourceIdFieldName: "node_id",
+      sourceIdFieldName: `dt.smartscape.${sourceType.toLowerCase()}`,
       edgeType,
       targetType,
-      targetIdFieldName: "node_id",
+      targetIdFieldName: `dt.smartscape.${targetType.toLowerCase()}`,
     },
   };
 };
@@ -725,8 +725,8 @@ const processLogsSource = async (
 
 const suggestNewTypeName = (currentName: string): string => {
   // Entities names should be uppercase and separated by '_'
-  // Example: cloudhub:org becomes CLOUDHUB_ORG
-  return currentName.toUpperCase().replace(/:/g, "_");
+  // Example: cloudhub:org becomes CLOUDHUB_ORG, cloud-application becomes CLOUD_APPLICATION
+  return currentName.toUpperCase().replace(/[:-]/g, "_");
 };
 
 /**
@@ -970,6 +970,16 @@ const createSmartscapeNodeProcessor = (
     ];
   }
 
+  // Remove duplicate idComponents (by idComponent string), keeping the first occurrence
+  const seenIdComponents = new Set<string>();
+  idComponents = idComponents.filter(component => {
+    if (seenIdComponents.has(component.idComponent)) {
+      return false;
+    }
+    seenIdComponents.add(component.idComponent);
+    return true;
+  });
+
   // Build fields to extract from attributes, filtering out blocked fields
   const fieldsToExtract = (rule.attributes ?? [])
     .filter(attr => !BLOCKED_FIELDS.includes(attr.key))
@@ -994,7 +1004,7 @@ const createSmartscapeNodeProcessor = (
     description,
     smartscapeNode: {
       nodeType: newName,
-      nodeIdFieldName: "node_id",
+      nodeIdFieldName: `dt.smartscape.${newName.toLowerCase()}`,
       idComponents,
       extractNode,
       nodeName,

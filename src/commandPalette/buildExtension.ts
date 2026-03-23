@@ -53,7 +53,7 @@ import {
 import { loopSafeWait } from "../utils/general";
 import logger from "../utils/logging";
 import { getPythonVenvOpts } from "../utils/otherExtensions";
-import { runCommand } from "../utils/subprocesses";
+import { runCommand, runCommandWithOutput } from "../utils/subprocesses";
 import { ConfirmOption, showConfirmationInformationMessage } from "../utils/vscode";
 
 const logTrace = ["commandPalette", "buildExtension"];
@@ -307,9 +307,24 @@ async function assemblePython(oc: vscode.OutputChannel, cancelToken: vscode.Canc
     const workspaceStorage = getWorkspaceStorage();
     const certKeyPath = getDevCertKey();
     const setupPyDir = path.resolve(await getManifestDirPath(), "..");
+    const sdkVersionOutput = await runCommandWithOutput(
+      "dt-sdk version",
+      oc,
+      cancelToken,
+      envOptions,
+    );
+    const supportsBuildVersions = doesSDKSupportVersioning(sdkVersionOutput ?? "");
+    let pythonVersionsParam = "";
+    if (!supportsBuildVersions) {
+      void vscode.window.showWarningMessage(
+        `Your version of dt-sdk ${sdkVersionOutput} is below 1.8.0 and does not support specifying Python build versions. Building only for Python 3.10.`,
+      );
+    } else {
+      pythonVersionsParam = getPythonVersionsParameter();
+    }
 
     await runCommand(
-      `dt-sdk build -k "${certKeyPath}" -t "${workspaceStorage}" ${platformsParam} "${setupPyDir}"`,
+      `dt-sdk build -k "${certKeyPath}" -t "${workspaceStorage}" ${platformsParam} ${pythonVersionsParam} "${setupPyDir}"`,
       oc,
       cancelToken,
       envOptions,
@@ -368,6 +383,36 @@ const getExtraPlatformsParameter = () => {
   }
 
   return platformString;
+};
+
+const doesSDKSupportVersioning = (sdkVersionOutput: string): boolean => {
+  let response = false;
+  const versionSplit = sdkVersionOutput.split(" ");
+  const version = versionSplit[versionSplit.length - 1].trim();
+  version.split(".").forEach((num, index) => {
+    if (index === 0 && parseInt(num) > 1) {
+      response = true;
+    }
+    if (index === 1 && parseInt(num) > 7) {
+      response = true;
+    }
+  });
+  return response;
+};
+
+const getPythonVersionsParameter = () => {
+  const pythonBuildVersions = vscode.workspace
+    .getConfiguration("dynatraceExtensions", null)
+    .get<string>("pythonBuildVersions");
+  switch (pythonBuildVersions) {
+    case "3.10":
+      return "-p 3.10";
+    case "3.14":
+      return "-p 3.14";
+    case "3.10 + 3.14":
+    default:
+      return "-p 3.10 -p 3.14";
+  }
 };
 
 /**

@@ -24,23 +24,20 @@ import logger from "./logging";
 
 const logTrace = ["utils", "subprocesses"];
 
-/**
- * Executes the given command in a child process and wraps the whole thing in a Promise.
- * This way the execution is async but other code can await it.
- * On success, returns the exit code (if any). Will throw any error with the message
- * part of the stderr (the rest is included via output channel)
- * @param command the command to execute
- * @param oc JSON output channel to communicate error details
- * @param cancelToken cancellation token to cancel the process
- * @param envOptions options to pass to the child process
- * @returns exit code or `null`
- */
-export function runCommand(
+type CommandResultType = number | string | null;
+
+function runSubprocess<T extends CommandResultType>(
   command: string,
-  oc?: vscode.OutputChannel,
-  cancelToken?: vscode.CancellationToken,
-  envOptions?: ExecOptions,
-): Promise<number | null> {
+  oc: vscode.OutputChannel | undefined,
+  cancelToken: vscode.CancellationToken | undefined,
+  envOptions: ExecOptions | undefined,
+  resultSelector: (
+    code: number | null,
+    stdout: string,
+    stderr: string,
+    cancelToken?: vscode.CancellationToken,
+  ) => T,
+): Promise<T> {
   const fnLogTrace = [...logTrace, "runCommand"];
   logger.debug(`Running command "${command}"`, ...fnLogTrace);
 
@@ -59,7 +56,8 @@ export function runCommand(
     p.stderr?.on("data", (data: Buffer) => (stderr += data.toString()));
     p.on("exit", code => {
       if (cancelToken?.isCancellationRequested) {
-        return resolve(1);
+        resolve(resultSelector(code, stdout, stderr, cancelToken));
+        return;
       }
       if (code !== 0) {
         let [shortMessage, details] = [stderr, [""]];
@@ -80,9 +78,62 @@ export function runCommand(
           oc.show();
         }
         reject(Error(shortMessage));
+        return;
       }
       logger.debug(stdout, ...fnLogTrace);
-      return resolve(code);
+      resolve(resultSelector(code, stdout, stderr, cancelToken));
     });
   });
+}
+
+/**
+ * Executes the given command in a child process and wraps the whole thing in a Promise.
+ * This way the execution is async but other code can await it.
+ * On success, returns the exit code (if any). Will throw any error with the message
+ * part of the stderr (the rest is included via output channel)
+ * @param command the command to execute
+ * @param oc JSON output channel to communicate error details
+ * @param cancelToken cancellation token to cancel the process
+ * @param envOptions options to pass to the child process
+ * @returns exit code or `null`
+ */
+export function runCommand(
+  command: string,
+  oc?: vscode.OutputChannel,
+  cancelToken?: vscode.CancellationToken,
+  envOptions?: ExecOptions,
+): Promise<number | null> {
+  return runSubprocess<number | null>(
+    command,
+    oc,
+    cancelToken,
+    envOptions,
+    (code, _stdout, _stderr, token) => (token?.isCancellationRequested ? 1 : code),
+  );
+}
+
+/**
+ * Executes the given command in a child process and wraps the whole thing in a Promise.
+ * This way the execution is async but other code can await it.
+ * On success, returns the output (if any). Will throw any error with the message
+ * part of the stderr (the rest is included via output channel)
+ * @param command the command to execute
+ * @param oc JSON output channel to communicate error details
+ * @param cancelToken cancellation token to cancel the process
+ * @param envOptions options to pass to the child process
+ * @returns command output or `null`
+ */
+export function runCommandWithOutput(
+  command: string,
+  oc?: vscode.OutputChannel,
+  cancelToken?: vscode.CancellationToken,
+  envOptions?: ExecOptions,
+): Promise<string | null> {
+  return runSubprocess<string | null>(
+    command,
+    oc,
+    cancelToken,
+    envOptions,
+    (_code, stdout, _stderr, token) => (token?.isCancellationRequested ? "-" : stdout),
+  );
 }
