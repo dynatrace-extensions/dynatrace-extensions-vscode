@@ -137,7 +137,8 @@ export interface OpenPipelineProcessor {
   id: string;
   type: string;
   matcher: string;
-  description?: string;
+  description: string;
+  enabled: boolean;
   smartscapeNode?: OpenPipelineSmartscapeNode;
   smartscapeEdge?: OpenPipelineSmartscapeEdge;
 }
@@ -147,6 +148,7 @@ export interface OpenPipelineStage {
 }
 
 export interface OpenPipelinePipeline {
+  metadataList: unknown[];
   customId: string;
   displayName: string;
   processing?: OpenPipelineStage;
@@ -157,10 +159,15 @@ export interface OpenPipelinePipeline {
 }
 
 export interface OpenPipelineSource {
+  metadataList: unknown[];
   displayName: string;
+  sourceType: string;
+  source?: string;
+  enabled: boolean;
   defaultBucket?: string;
   processing?: OpenPipelineStage;
   staticRouting?: {
+    pipelineType: string;
     pipelineId: string;
   };
 }
