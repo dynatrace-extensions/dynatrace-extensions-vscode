@@ -206,6 +206,7 @@ export const convertTopologyToOpenPipeline = async (
     const customId = `${cleanedName}-metrics`;
     const displayName = `ext:${cleanedName}`;
     pipelineDocs.metricPipeline = {
+      metadataList: [],
       customId,
       displayName,
     };
@@ -241,6 +242,7 @@ export const convertTopologyToOpenPipeline = async (
     const customId = `${cleanedName}-logs`;
     const displayName = `ext:${cleanedName}`;
     pipelineDocs.logPipeline = {
+      metadataList: [],
       customId,
       displayName,
     };
@@ -491,6 +493,7 @@ const createSmartscapeEdgeProcessor = (
     type: "smartscapeEdge",
     matcher,
     description,
+    enabled: true,
     smartscapeEdge: {
       sourceType,
       sourceIdFieldName: `dt.smartscape.${sourceType.toLowerCase()}`,
@@ -1002,13 +1005,17 @@ const createSmartscapeNodeProcessor = (
     type: "smartscapeNode",
     matcher,
     description,
+    enabled: true,
     smartscapeNode: {
       nodeType: newName,
       nodeIdFieldName: `dt.smartscape.${newName.toLowerCase()}`,
       idComponents,
       extractNode,
       nodeName,
-      fieldsToExtract: fieldsToExtract.length > 0 ? fieldsToExtract : undefined,
+      ...(extractNode && {
+        fieldsToExtract,
+        staticEdgesToExtract: [],
+      }),
     },
   };
 };
@@ -1095,8 +1102,13 @@ export const writePipelineSourceToFile = (
     const scopeSuffix = scope === "logs" ? "-logs" : "-metrics";
     const cleanedName = cleanExtensionName(extension.name);
     const source = {
+      metadataList: [],
       displayName: `ext:${cleanedName}`,
+      sourceType: "extension",
+      source: extension.name,
+      enabled: true,
       staticRouting: {
+        pipelineType: "custom",
         pipelineId: `${cleanedName}${scopeSuffix}`,
       },
     };
