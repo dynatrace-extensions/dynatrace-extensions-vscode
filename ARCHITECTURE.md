@@ -21,6 +21,7 @@ For environment setup, testing, branching, and contribution rules, see [CONTRIBU
 - [Common Module](#common-module)
 - [Utility Layer](#utility-layer)
 - [Build & Bundling](#build--bundling)
+- [Logging and notifications](#logging-and-notifications)
 - [Key Design Patterns](#key-design-patterns)
 
 ---
@@ -91,6 +92,7 @@ graph TB
 **File:** `src/extension.ts`
 
 The `activate()` function is the VS Code-mandated entry point. It registers all features as disposables pushed to `context.subscriptions`.
+The extension activates automatically at editor start-up.
 
 ### Activation sequence
 
@@ -108,6 +110,30 @@ The `activate()` function is the VS Code-mandated entry point. It registers all 
    - **Status bar items** — Connection, fast mode
 5. Handle any pending workspace initialization from a previous session
 
+### Storage
+
+The extension leverages two levels of storage on the user filesystem:
+
+**Global storage**
+
+Used for storing general files used across multiple extension projects/workspaces:
+
+- Schema files: each version creates its own folder for storing the related schema files.
+- OpenPipeline schemas
+- MIBs: MIB files used in providing hover information for SNMP extensions
+- VSCode extension state files:
+  - `dynatraceEnvironments.json` - state about the registered nodes in the tenants tree view
+  - `extensionWorkspaces.json` - state about the registered nodes in the workspaces tree view
+  - `summaries.json` - summary information from extension simulator runs
+  - `targets.json` - state about registered remote simulator targets
+
+**Workspace storage**
+
+Used for content specific to a single extension project/workspace:
+
+- Temporary files, for example intermediary build files when creating an extension .zip package
+- Developer certificates, if these are specific to that one workspace
+
 ### Deactivation
 
 `deactivate()` cleans up simulator processes, logger channels, and temporary log files.
@@ -118,12 +144,12 @@ The `activate()` function is the VS Code-mandated entry point. It registers all 
 
 Providers implement VS Code API interfaces to deliver editor intelligence features. Each provider type lives in its own directory.
 
-| Directory | VS Code Interface | Purpose |
-|-----------|-------------------|---------|
-| `src/codeActions/` | `CodeActionProvider` | Quick fixes, snippet generation, schema wizards |
-| `src/codeCompletions/` | `CompletionItemProvider` | Context-aware auto-complete suggestions |
-| `src/codeLens/` | `CodeLensProvider` | Inline actionable buttons above code |
-| `src/hover/` | `HoverProvider` | Tooltip information on hover |
+| Directory              | VS Code Interface        | Purpose                                         |
+| ---------------------- | ------------------------ | ----------------------------------------------- |
+| `src/codeActions/`     | `CodeActionProvider`     | Quick fixes, snippet generation, schema wizards |
+| `src/codeCompletions/` | `CompletionItemProvider` | Context-aware auto-complete suggestions         |
+| `src/codeLens/`        | `CodeLensProvider`       | Inline actionable buttons above code            |
+| `src/hover/`           | `HoverProvider`          | Tooltip information on hover                    |
 
 ### Singleton pattern
 
@@ -150,6 +176,7 @@ Providers target specific files using selectors defined in `src/constants.ts`:
 ### Diagnostic codes
 
 A uniform catalog of diagnostic codes (DED001–DED021) is defined in `src/constants.ts`. These cover:
+
 - Extension name validation (required, length, format, custom prefix)
 - Metric key conventions (counter/gauge suffixes)
 - Screen/card relationship validation
@@ -195,7 +222,7 @@ Workflows are wrapped with logging and error handling before being pushed as com
 
 ```typescript
 context.subscriptions.push(
-  vscode.commands.registerCommand("dynatrace-extensions.buildExtension", buildExtensionWorkflow)
+  vscode.commands.registerCommand("dynatrace-extensions.buildExtension", buildExtensionWorkflow),
 );
 ```
 
@@ -227,16 +254,19 @@ graph LR
 ### Layers
 
 1. **`HttpClient`** (`http_client.ts`) — Axios-based HTTP transport
+
    - `makeRequest<T>()` — general-purpose request with authorization headers
    - `paginatedCall<T>()` — automatic multi-page iteration via `nextPageKey`
    - Error wrapping into `DynatraceAPIError`
    - Supports file uploads, response type overrides, and `AbortSignal` cancellation
 
 2. **`Dynatrace`** (`dynatrace.ts`) — Facade class that composes all service instances
+
    - Constructor takes `baseUrl` and `apiToken`
    - A single `HttpClient` is shared across all services
 
 3. **Service modules** (`environment_v2/`, `configuration_v1/`) — one file per API endpoint
+
    - Each service class receives the `HttpClient` and exposes typed methods
    - Examples: `ExtensionsServiceV2.upload()`, `EntityServiceV2.list()`, `MetricService.query()`
 
@@ -284,22 +314,23 @@ flowchart LR
 
 ### Cache categories
 
-| Cache | Type | Source |
-|-------|------|--------|
-| `parsedExtension` | `BehaviorSubject<ExtensionStub>` | YAML document changes |
-| `builtinEntityTypes` | `EntityType[]` | Dynatrace API on init |
-| `baristaIcons` | `string[]` | Barista icon CDN on init |
-| `selectorStatuses` | `Map<string, ValidationStatus>` | Code lens validation |
-| `prometheusData` | `PromData` | Prometheus scraper code lens |
-| `jmxData` | `JMXData` | JMX wizard code lens |
-| `wmiQueryResults` | `Map<string, WmiQueryResult>` | WMI code lens |
-| `snmpOIDs` | `Map<string, OidInformation>` | MIB file parsing |
-| `entityInstances` | `Map<string, Entity[]>` | API entity queries |
-| `localSnmpDatabase` | `OidInformation[]` | MIB file loading |
+| Cache                | Type                             | Source                       |
+| -------------------- | -------------------------------- | ---------------------------- |
+| `parsedExtension`    | `BehaviorSubject<ExtensionStub>` | YAML document changes        |
+| `builtinEntityTypes` | `EntityType[]`                   | Dynatrace API on init        |
+| `baristaIcons`       | `string[]`                       | Barista icon CDN on init     |
+| `selectorStatuses`   | `Map<string, ValidationStatus>`  | Code lens validation         |
+| `prometheusData`     | `PromData`                       | Prometheus scraper code lens |
+| `jmxData`            | `JMXData`                        | JMX wizard code lens         |
+| `wmiQueryResults`    | `Map<string, WmiQueryResult>`    | WMI code lens                |
+| `snmpOIDs`           | `Map<string, OidInformation>`    | MIB file parsing             |
+| `entityInstances`    | `Map<string, Entity[]>`          | API entity queries           |
+| `localSnmpDatabase`  | `OidInformation[]`               | MIB file loading             |
 
 ### Initialization
 
 `initializeCache()` is called during activation:
+
 1. Resets all caches to default values
 2. Creates the manifest processing pipeline with initial content
 3. Sets up document change listeners
@@ -335,7 +366,7 @@ Two tree views appear in the VS Code sidebar, each backed by a `TreeDataProvider
 
 **File:** `src/treeViews/workspacesTreeView.ts`
 
-- **Hierarchy:** Workspace → Extensions
+- **Hierarchy:** Extension → Manifest file
 - **Data source:** Filesystem only (discovers `extension/extension.yaml` via glob)
 - Parses YAML to extract `name` and `version`
 - Highlights the currently active workspace with a distinct icon
@@ -357,11 +388,11 @@ Environment URL validation supports SaaS (`.apps.dynatrace.com`), Managed (`/e/`
 
 Three status bar items provide persistent visibility into extension state.
 
-| Item | File | Purpose |
-|------|------|---------|
+| Item       | File            | Purpose                                                                                                                        |
+| ---------- | --------------- | ------------------------------------------------------------------------------------------------------------------------------ |
 | Connection | `connection.ts` | Shows current environment with reachability check. Polls every 5s when unreachable. Background color changes on warning/error. |
-| Fast Mode | `fastMode.ts` | Shows build status (version + ✅/❌). Toggled via `dynatraceExtensions.fastDevelopmentMode` configuration. |
-| Simulator | `simulator.ts` | State machine: `Unsupported` → `Ready` → `Checking` → `Running` → `NotReady`. Manages simulator process lifecycle and panel. |
+| Fast Mode  | `fastMode.ts`   | Shows build status (version + ✅/❌). Toggled via `dynatraceExtensions.fastDevelopmentMode` configuration.                     |
+| Simulator  | `simulator.ts`  | State machine: `Unsupported` → `Ready` → `Checking` → `Running` → `NotReady`. Manages simulator process lifecycle and panel.   |
 
 ---
 
@@ -416,11 +447,11 @@ sequenceDiagram
 
 The `common/panels/` module defines the panel registry:
 
-| Panel | `ViewType` | Data Type |
-|-------|-----------|-----------|
-| Metric Results | `dynatrace-extensions.MetricResults` | `MetricResultsPanelData` |
-| WMI Results | `dynatrace-extensions.WmiResults` | `WmiQueryResultPanelData` |
-| Extension Simulator | `dynatrace-extensions.SimulatorUI` | `SimulatorPanelData` |
+| Panel               | `ViewType`                           | Data Type                 |
+| ------------------- | ------------------------------------ | ------------------------- |
+| Metric Results      | `dynatrace-extensions.MetricResults` | `MetricResultsPanelData`  |
+| WMI Results         | `dynatrace-extensions.WmiResults`    | `WmiQueryResultPanelData` |
+| Extension Simulator | `dynatrace-extensions.SimulatorUI`   | `SimulatorPanelData`      |
 
 All panel data extends `PanelDataBase` with a `dataType` discriminator for type-safe routing.
 
@@ -467,26 +498,26 @@ Shared TypeScript utility types used across both projects.
 
 Utility modules grouped by concern. Each file is a category of related functions.
 
-| Module | Responsibility |
-|--------|---------------|
-| `caching.ts` | Reactive data cache (see [Caching & Reactive Data](#caching--reactive-data)) |
-| `logging.ts` | Multi-level logging (DEBUG/INFO/WARN/ERROR) to console, output channels, and rotating log files |
-| `fileSystem.ts` | File I/O, workspace/tenant metadata storage, extension manifest reading, MIB file management |
-| `conditionCheckers.ts` | Pre-flight checks for workflows (tenant connected, workspace open, certificates exist, URLs reachable, SDK present) |
-| `general.ts` | Wait conditions with timeout, HTTPS agent setup for cert validation |
-| `subprocesses.ts` | Command execution with configurable stdio handling and exit code validation |
-| `yamlParsing.ts` | YAML parsing with indentation tracking and parent block navigation |
-| `jsonParsing.ts` | JSON parsing, validation, and code action line filtering |
-| `diagnostics.ts` | Diagnostic collection creation and batch update |
-| `extensionParsing.ts` | Metadata extraction from parsed extensions (metrics, entities, selectors) |
-| `schemaParsing.ts` | JSON schema extraction and validation |
-| `snmp.ts` | MIB file parsing, OID validation, SNMP data fetching |
-| `dashboards.ts` | Template-based dashboard generation with tiles, variables, and metric queries |
-| `cryptography.ts` | Token encryption/decryption, certificate signing |
-| `otherExtensions.ts` | Python path detection, virtual environment configuration |
-| `singleton.ts` | Lazy singleton factory pattern (`createSingletonProvider()`) |
-| `vscode.ts` | VS Code API wrappers (quick picks, confirmations) |
-| `openPipelineSchemaTranslation.ts` | Dynatrace OpenPipeline schema to JSON Schema conversion |
+| Module                             | Responsibility                                                                                                      |
+| ---------------------------------- | ------------------------------------------------------------------------------------------------------------------- |
+| `caching.ts`                       | Reactive data cache (see [Caching & Reactive Data](#caching--reactive-data))                                        |
+| `logging.ts`                       | Multi-level logging (DEBUG/INFO/WARN/ERROR) to console, output channels, and rotating log files                     |
+| `fileSystem.ts`                    | File I/O, workspace/tenant metadata storage, extension manifest reading, MIB file management                        |
+| `conditionCheckers.ts`             | Pre-flight checks for workflows (tenant connected, workspace open, certificates exist, URLs reachable, SDK present) |
+| `general.ts`                       | Wait conditions with timeout, HTTPS agent setup for cert validation                                                 |
+| `subprocesses.ts`                  | Command execution with configurable stdio handling and exit code validation                                         |
+| `yamlParsing.ts`                   | YAML parsing with indentation tracking and parent block navigation                                                  |
+| `jsonParsing.ts`                   | JSON parsing, validation, and code action line filtering                                                            |
+| `diagnostics.ts`                   | Diagnostic collection creation and batch update                                                                     |
+| `extensionParsing.ts`              | Metadata extraction from parsed extensions (metrics, entities, selectors)                                           |
+| `schemaParsing.ts`                 | JSON schema extraction and validation                                                                               |
+| `snmp.ts`                          | MIB file parsing, OID validation, SNMP data fetching                                                                |
+| `dashboards.ts`                    | Template-based dashboard generation with tiles, variables, and metric queries                                       |
+| `cryptography.ts`                  | Token encryption/decryption, certificate signing                                                                    |
+| `otherExtensions.ts`               | Python path detection, virtual environment configuration                                                            |
+| `singleton.ts`                     | Lazy singleton factory pattern (`createSingletonProvider()`)                                                        |
+| `vscode.ts`                        | VS Code API wrappers (quick picks, confirmations)                                                                   |
+| `openPipelineSchemaTranslation.ts` | Dynatrace OpenPipeline schema to JSON Schema conversion                                                             |
 
 ---
 
@@ -494,10 +525,10 @@ Utility modules grouped by concern. Each file is a category of related functions
 
 ### Two build pipelines
 
-| Target | Tool | Entry | Output | Format |
-|--------|------|-------|--------|--------|
-| Extension | ESBuild | `src/extension.ts` | `out/main.js` | CommonJS (Node.js) |
-| Webview UI | Vite | `webview-ui/src/index.tsx` | `webview-ui/build/assets/` | IIFE (browser) |
+| Target     | Tool    | Entry                      | Output                     | Format             |
+| ---------- | ------- | -------------------------- | -------------------------- | ------------------ |
+| Extension  | ESBuild | `src/extension.ts`         | `out/main.js`              | CommonJS (Node.js) |
+| Webview UI | Vite    | `webview-ui/src/index.tsx` | `webview-ui/build/assets/` | IIFE (browser)     |
 
 ### Path alias
 
@@ -516,30 +547,42 @@ import { GlobalCommand, WebviewEventType } from "@common";
 
 ### Key npm scripts
 
-| Script | Purpose |
-|--------|---------|
-| `npm run install:all` | Install dependencies for both projects |
-| `npm run build:all` | Build webview UI then extension (production) |
-| `npm run esbuild-watch` | ESBuild in watch mode (development) |
-| `npm run build:webview` | Build only the webview UI |
-| `npm run test:unit` | Run unit test suite |
-| `npm run test:e2e` | Run e2e test suite |
-| `npm run test` | Run all tests |
-| `npm run pretest` | Lint + type-check |
+| Script                  | Purpose                                      |
+| ----------------------- | -------------------------------------------- |
+| `npm run install:all`   | Install dependencies for both projects       |
+| `npm run build:all`     | Build webview UI then extension (production) |
+| `npm run esbuild-watch` | ESBuild in watch mode (development)          |
+| `npm run build:webview` | Build only the webview UI                    |
+| `npm run test:unit`     | Run unit test suite                          |
+| `npm run test:e2e`      | Run e2e test suite                           |
+| `npm run test`          | Run all tests                                |
+| `npm run pretest`       | Lint + type-check                            |
+
+---
+
+## Logging and notifications
+
+All logging within the extension base code should be done via functions in [logging.ts](src/utils/logging.ts). These take
+an array of trace strings - they should be used to maintain a trace from module, to file, and down to function and sub-function; their
+purpose is to help understand the source of the message as the stack traces are unfortunately less helpful due to VSCode serving this
+as a minified JS file.
+
+The utility package also offers the helpful `notify` function for surfacing simple messages as notifications to the end user via
+the VSCode UI.
 
 ---
 
 ## Key Design Patterns
 
-| Pattern | Where | Purpose |
-|---------|-------|---------|
-| **Lazy Singleton** | All providers via `createSingletonProvider()` | One instance per provider class, created on first access |
-| **Workflow + Preconditions** | `commandPalette/*.ts` | Chain prerequisite checks before running command logic |
-| **Reactive Caching** | `utils/caching.ts` with RxJS | Debounced manifest re-parsing, observable data streams |
-| **Service Composition** | `Dynatrace` facade class | Single entry point to all API services |
-| **Typed Events** | `WebviewEvent` union types | Type-safe extension ↔ webview message passing |
-| **EventEmitter Refresh** | Tree views, code lens providers | UI re-renders without polling |
-| **DTO Layer** | `dynatrace-api/interfaces/` | Typed API contracts decoupled from transport |
-| **Document Selectors** | `constants.ts` | Target providers to specific file patterns |
-| **Error Wrapping** | `DynatraceAPIError` | Structured error propagation with API context |
-| **Token Encryption** | `utils/cryptography.ts` | Secure storage of environment credentials |
+| Pattern                      | Where                                         | Purpose                                                  |
+| ---------------------------- | --------------------------------------------- | -------------------------------------------------------- |
+| **Lazy Singleton**           | All providers via `createSingletonProvider()` | One instance per provider class, created on first access |
+| **Workflow + Preconditions** | `commandPalette/*.ts`                         | Chain prerequisite checks before running command logic   |
+| **Reactive Caching**         | `utils/caching.ts` with RxJS                  | Debounced manifest re-parsing, observable data streams   |
+| **Service Composition**      | `Dynatrace` facade class                      | Single entry point to all API services                   |
+| **Typed Events**             | `WebviewEvent` union types                    | Type-safe extension ↔ webview message passing           |
+| **EventEmitter Refresh**     | Tree views, code lens providers               | UI re-renders without polling                            |
+| **DTO Layer**                | `dynatrace-api/interfaces/`                   | Typed API contracts decoupled from transport             |
+| **Document Selectors**       | `constants.ts`                                | Target providers to specific file patterns               |
+| **Error Wrapping**           | `DynatraceAPIError`                           | Structured error propagation with API context            |
+| **Token Encryption**         | `utils/cryptography.ts`                       | Secure storage of environment credentials                |

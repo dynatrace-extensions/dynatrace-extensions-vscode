@@ -8,6 +8,7 @@ General:
 Required for coding activities:
 - [CONTRIBUTING.md](../CONTRIBUTING.md) - contributor guidelines, code structure and organization
 - [ARCHITECTURE.md](../ARCHITECTURE.md) - architectural overview, design principles, and key patterns used in the codebase
+- [dynatrace-api/README.md](../src/dynatrace-api/README.md) - implementation overview of the Dynatrace API client layer
 
 ## 2. ROLES AND RESPONSIBILITIES
 
