@@ -71,12 +71,7 @@ import { getWorkspacesTreeDataProvider } from "./treeViews/workspacesTreeView";
 import { initializeCache } from "./utils/caching";
 import { isExtensionsWorkspace } from "./utils/conditionCheckers";
 import { updateDiagnosticsCollection } from "./utils/diagnostics";
-import {
-  getAllTenants,
-  getAllWorkspaces,
-  initializeGlobalStorage,
-  migrateFromLegacyExtension,
-} from "./utils/fileSystem";
+import { getAllTenants, getAllWorkspaces, initializeGlobalStorage } from "./utils/fileSystem";
 import logger from "./utils/logging";
 import { getWebviewPanelManager } from "./webviews/webview-panel-manager";
 
@@ -97,11 +92,6 @@ export async function activate(context: vscode.ExtensionContext) {
 
   const extensionVersion = (context.extension.packageJSON as { version: string }).version;
   logger.info(`dynatrace-extensions (version ${extensionVersion}) is activating...`, ...fnLogTrace);
-
-  // TODO: Code soon to be removed from project
-  if (vscode.extensions.getExtension("DynatracePlatformExtensions.dt-ext-copilot")) {
-    await migrateFromLegacyExtension();
-  }
 
   // Set custom context properties for tree views
   setContextProperty("numWorkspaces", getAllWorkspaces().length);
