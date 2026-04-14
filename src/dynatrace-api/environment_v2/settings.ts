@@ -15,6 +15,7 @@
  */
 
 import { HttpClient } from "../http_client";
+import { SettingsServiceInterface } from "../interfaces/services";
 import {
   SchemaStub,
   SettingsObject,
@@ -25,7 +26,7 @@ import {
 /**
  * Implementation of the Settings 2.0 API
  */
-export class SettingsService {
+export class SettingsService implements SettingsServiceInterface {
   private readonly schemasEndpoint = "/api/v2/settings/schemas";
   private readonly objectsEndpoint = "/api/v2/settings/objects";
   private readonly httpClient: HttpClient;

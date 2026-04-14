@@ -17,9 +17,10 @@
 import path from "path";
 import { Utils } from "@common";
 import vscode from "vscode";
-import { Dynatrace } from "../dynatrace-api/dynatrace";
+import { DynatraceClient, createDynatraceClient } from "../dynatrace-api/dynatrace";
 import {
   DeployedExtension,
+  DeploymentModel,
   DynatraceTenant,
   MonitoringConfiguration,
   TenantsTreeDataProvider,
@@ -34,18 +35,18 @@ import { createSingletonProvider } from "../utils/singleton";
 const ICONS_PATH = path.join(__filename, "..", "..", "src", "assets", "icons");
 const ICONS = {
   DEPLOYED_EXTENSION: {
-    light: path.join(ICONS_PATH, "deployed_extension_light.png"),
-    dark: path.join(ICONS_PATH, "deployed_extension_dark.png"),
+    light: vscode.Uri.file(path.join(ICONS_PATH, "deployed_extension_light.png")),
+    dark: vscode.Uri.file(path.join(ICONS_PATH, "deployed_extension_dark.png")),
   },
   ENVIRONMENT: {
-    light: path.join(ICONS_PATH, "platform_light.png"),
-    dark: path.join(ICONS_PATH, "platform_dark.png"),
+    light: vscode.Uri.file(path.join(ICONS_PATH, "platform_light.png")),
+    dark: vscode.Uri.file(path.join(ICONS_PATH, "platform_dark.png")),
   },
   ENVIRONMENT_CURRENT: {
-    light: path.join(ICONS_PATH, "platform_current_light.png"),
-    dark: path.join(ICONS_PATH, "platform_current_dark.png"),
+    light: vscode.Uri.file(path.join(ICONS_PATH, "platform_current_light.png")),
+    dark: vscode.Uri.file(path.join(ICONS_PATH, "platform_current_dark.png")),
   },
-} satisfies Record<string, { light: string; dark: string }>;
+} satisfies Record<string, { light: vscode.Uri; dark: vscode.Uri }>;
 type ConfigStatus = "ERROR" | "OK" | "UNKNOWN";
 const CONFIG_STATUS_COLORS: Record<ConfigStatus, string> = {
   ERROR: "🔴",
@@ -197,11 +198,18 @@ class TenantsTreeDataProviderImpl implements TenantsTreeDataProvider {
 
     // If no item specified, grab all environments from global storage
     return getAllTenants().map(tenant => {
-      const { id, url, apiUrl, label, current, token } = tenant;
+      const { id, url, label, current, token, deploymentModel } = tenant;
       if (current) {
         showConnectedStatusBar(tenant).catch(Utils.noOp);
       }
-      return createDynatraceTenantTreeItem(url, decryptToken(token), id, label, current, apiUrl);
+      return createDynatraceTenantTreeItem(
+        url,
+        decryptToken(token),
+        id,
+        label,
+        current,
+        deploymentModel,
+      );
     });
   }
 }
@@ -221,6 +229,7 @@ export const getTenantsTreeDataProvider = createSingletonProvider<TenantsTreeDat
  * @param id the id of this tenant
  * @param label an optional label for displaying this tenant (defaults to id)
  * @param current whether this tenant should be used for API operations currently
+ * @param deploymentModel the deployment model of the tenant
  */
 const createDynatraceTenantTreeItem = (
   url: string,
@@ -228,17 +237,17 @@ const createDynatraceTenantTreeItem = (
   id: string,
   label?: string,
   current: boolean = false,
-  apiUrl?: string,
+  deploymentModel: DeploymentModel = "managed",
 ): DynatraceTenant =>
   ({
     ...new vscode.TreeItem(label ?? id, vscode.TreeItemCollapsibleState.Collapsed),
     url: url,
-    apiUrl: apiUrl ?? url,
     token: token,
     id: id,
-    dt: new Dynatrace(apiUrl ?? url, token),
+    dt: createDynatraceClient(url, token, deploymentModel),
     tooltip: id,
     current: current,
+    deploymentModel: deploymentModel,
     contextValue: current ? "currentDynatraceEnvironment" : "dynatraceEnvironment",
     iconPath: current ? ICONS.ENVIRONMENT_CURRENT : ICONS.ENVIRONMENT,
   }) as DynatraceTenant;
@@ -255,7 +264,7 @@ const createDeployedExtension = (
   collapsibleState: vscode.TreeItemCollapsibleState,
   extensionName: string,
   extensionVersion: string,
-  dt: Dynatrace,
+  dt: DynatraceClient,
   tenantUrl: string,
 ): DeployedExtension =>
   ({
@@ -284,7 +293,7 @@ const createMonitoringConfiguration = (
   description: string,
   extensionName: string,
   monitoringStatus: ConfigStatus,
-  dt: Dynatrace,
+  dt: DynatraceClient,
 ): MonitoringConfiguration =>
   ({
     ...new vscode.TreeItem(

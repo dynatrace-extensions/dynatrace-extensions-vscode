@@ -14,6 +14,7 @@
   limitations under the License.
  */
 
+import { DeploymentModel } from "../interfaces/treeViews";
 import { CredentialVaultService } from "./configuration_v1/credentialVault";
 import { DashboardService } from "./configuration_v1/dashboards";
 import { ExtensionsServiceV1 } from "./configuration_v1/extensions";
@@ -23,11 +24,37 @@ import { MetricService } from "./environment_v2/metrics";
 import { EntityServiceV2 } from "./environment_v2/monitoredEntities";
 import { SettingsService } from "./environment_v2/settings";
 import { HttpClient } from "./http_client";
+import {
+  ActiveGatesServiceInterface,
+  CredentialVaultServiceInterface,
+  DashboardServiceInterface,
+  EntityServiceV2Interface,
+  ExtensionsServiceV1Interface,
+  ExtensionsServiceV2Interface,
+  MetricServiceInterface,
+  SettingsServiceInterface,
+} from "./interfaces/services";
+import { SaaSDynatraceClient } from "./sdk/sdkDynatraceClient";
 
 /**
- * Implentation of a Dynatrace Client to facilitate calls to Dynatrace APIs
+ * Common interface for Dynatrace API clients, regardless of deployment model.
  */
-export class Dynatrace {
+export interface DynatraceClient {
+  readonly extensionsV2: ExtensionsServiceV2Interface;
+  readonly extensionsV1: ExtensionsServiceV1Interface;
+  readonly credentialVault: CredentialVaultServiceInterface;
+  readonly entitiesV2: EntityServiceV2Interface;
+  readonly metrics: MetricServiceInterface;
+  readonly settings: SettingsServiceInterface;
+  readonly dashboards: DashboardServiceInterface;
+  readonly activeGates: ActiveGatesServiceInterface;
+}
+
+/**
+ * Managed/on-prem implementation of the Dynatrace API client.
+ * Uses the existing HttpClient-based transport.
+ */
+export class ManagedDynatraceClient implements DynatraceClient {
   private readonly _httpClient: HttpClient;
   public readonly extensionsV2: ExtensionsServiceV2;
   public readonly extensionsV1: ExtensionsServiceV1;
@@ -38,10 +65,6 @@ export class Dynatrace {
   public readonly dashboards: DashboardService;
   public readonly activeGates: ActiveGatesService;
 
-  /**
-   * @param baseUrl URL to Dynatrace Environment
-   * @param apiToken API Token for this Environment
-   */
   constructor(baseUrl: string, apiToken: string) {
     this._httpClient = new HttpClient(baseUrl, apiToken);
     this.extensionsV2 = new ExtensionsServiceV2(this._httpClient);
@@ -54,3 +77,25 @@ export class Dynatrace {
     this.activeGates = new ActiveGatesService(this._httpClient);
   }
 }
+
+/**
+ * Creates a Dynatrace API client appropriate for the given deployment model.
+ * @param url base URL of the Dynatrace environment
+ * @param token API or platform token
+ * @param deploymentModel "managed" or "saas"
+ */
+export function createDynatraceClient(
+  url: string,
+  token: string,
+  deploymentModel: DeploymentModel,
+): DynatraceClient {
+  switch (deploymentModel) {
+    case "managed":
+      return new ManagedDynatraceClient(url, token);
+    case "saas":
+      return new SaaSDynatraceClient(url, token);
+  }
+}
+
+/** @deprecated Use DynatraceClient instead. Kept for backward compatibility. */
+export type Dynatrace = DynatraceClient;

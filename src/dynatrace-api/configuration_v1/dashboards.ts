@@ -16,11 +16,12 @@
 
 import { HttpClient } from "../http_client";
 import { Dashboard } from "../interfaces/dashboards";
+import { DashboardServiceInterface } from "../interfaces/services";
 
 /**
  * Implementation of the Dashboards API.
  */
-export class DashboardService {
+export class DashboardService implements DashboardServiceInterface {
   private readonly httpClient: HttpClient;
   private readonly endpoint = "/api/config/v1/dashboards";
 

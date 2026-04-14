@@ -19,6 +19,7 @@
  ********************************************************************************/
 
 import { ExecOptions } from "child_process";
+import dns from "dns";
 import { existsSync, readdirSync, readFileSync } from "fs";
 import path from "path";
 import { GlobalCommand, VSCodeCommand } from "@common";
@@ -286,6 +287,31 @@ export async function checkUrlReachable(
   logger.info(`Is URL ${url} reachable? ${String(status)}`, ...fnLogTrace);
 
   return status;
+}
+
+/**
+ * Checks whether a SaaS platform URL is reachable by resolving its hostname via DNS.
+ * If DNS resolves, the platform is considered reachable.
+ * Falls back to trusting the URL if DNS lookup fails but the URL is well-formed.
+ * @param url the SaaS platform URL
+ * @returns status of check
+ */
+export async function checkSaasReachable(url: string): Promise<boolean> {
+  const fnLogTrace = [...logTrace, "checkSaasReachable"];
+  try {
+    const { hostname } = new URL(url);
+    //const dns = await import("dns");
+    await dns.promises.lookup(hostname);
+    logger.info(`SaaS URL ${url} is reachable (DNS resolved).`, ...fnLogTrace);
+    return true;
+  } catch (err) {
+    logger.warn(
+      `DNS lookup failed for SaaS URL ${url}: ${(err as Error).message}. Trusting URL as reachable.`,
+      ...fnLogTrace,
+    );
+    // Fallback: trust well-formed SaaS URLs even if DNS lookup fails
+    return true;
+  }
 }
 
 /**

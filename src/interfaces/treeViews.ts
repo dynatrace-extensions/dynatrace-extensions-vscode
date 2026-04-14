@@ -17,6 +17,8 @@
 import vscode from "vscode";
 import { Dynatrace } from "../dynatrace-api/dynatrace";
 
+export type DeploymentModel = "saas" | "managed";
+
 export interface ExtensionWorkspaceDto {
   name: string;
   id: string;
@@ -32,10 +34,10 @@ export interface ExtensionWorkspace {
 export interface DynatraceTenantDto {
   id: string;
   url: string;
-  apiUrl: string;
   token: string;
   current: boolean;
   label: string;
+  deploymentModel: DeploymentModel;
 }
 
 type TenantsTreeContextValue =
@@ -53,9 +55,9 @@ export interface TenantsTreeItemBase extends vscode.TreeItem {
 
 export interface DynatraceTenant extends TenantsTreeItemBase {
   url: string;
-  apiUrl: string;
   token: string;
   current: boolean;
+  deploymentModel: DeploymentModel;
   contextValue: "currentDynatraceEnvironment" | "dynatraceEnvironment";
 }
 
