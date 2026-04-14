@@ -17,7 +17,7 @@
 import { EnvironmentCommand, Utils } from "@common";
 import vscode from "vscode";
 import { DynatraceTenantDto } from "../interfaces/treeViews";
-import { checkUrlReachable } from "../utils/conditionCheckers";
+import { checkSaasReachable, checkUrlReachable } from "../utils/conditionCheckers";
 
 /**
  * Creates a status bar item to reflect the connectivity status of the Dynatrace tenant used for
@@ -43,7 +43,10 @@ export const getConnectionStatusBar = (() => {
 export const showConnectedStatusBar = async (tenant: DynatraceTenantDto) => {
   const statusBar = getConnectionStatusBar();
   statusBar.text = `$(dt-platform) Using ${tenant.label}`;
-  const reachable = await checkUrlReachable(tenant.apiUrl, "/api/v1/time", false);
+  const reachable =
+    tenant.deploymentModel === "saas"
+      ? await checkSaasReachable(tenant.url)
+      : await checkUrlReachable(tenant.url, "/api/v1/time", false);
   if (reachable) {
     statusBar.tooltip = "Using this environment for API calls";
     statusBar.backgroundColor = undefined;

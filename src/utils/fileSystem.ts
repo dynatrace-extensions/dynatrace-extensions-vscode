@@ -35,7 +35,11 @@ import { glob } from "glob";
 import JSZip from "jszip";
 import vscode from "vscode";
 import { getActivationContext } from "../extension";
-import { DynatraceTenantDto, ExtensionWorkspaceDto } from "../interfaces/treeViews";
+import {
+  DeploymentModel,
+  DynatraceTenantDto,
+  ExtensionWorkspaceDto,
+} from "../interfaces/treeViews";
 import { parseJSON } from "./jsonParsing";
 import logger from "./logging";
 
@@ -201,28 +205,50 @@ export function findWorkspace(
 
 /**
  * Gets metadata of all Dynatrace tenants currently registered in the global storage.
+ * Performs backward-compatible migration: infers deploymentModel from URL if missing,
+ * and drops the legacy apiUrl field.
  */
 export function getAllTenants(): DynatraceTenantDto[] {
-  return parseJSON(readFileSync(getTenantsJsonPath()).toString());
+  const raw = parseJSON<Record<string, unknown>[]>(readFileSync(getTenantsJsonPath()).toString());
+  return raw.map(entry => {
+    const url = String(entry.url ?? "");
+    const deploymentModel: DeploymentModel =
+      (entry.deploymentModel as DeploymentModel) ?? (url.includes(".apps.") ? "saas" : "managed");
+    return {
+      id: String(entry.id ?? ""),
+      url,
+      token: String(entry.token ?? ""),
+      current: Boolean(entry.current),
+      label: String(entry.label ?? entry.id ?? ""),
+      deploymentModel,
+    };
+  });
 }
 
 /**
  * Saves the metadata of a tenant in the global storage. Previous values are overwritten.
- * @param url URL for browser pages of the tenant
- * @param apiUrl URL for API calls to the tenant
- * @param token API Token for Dynatrace API Calls. Note: must be encrypted already.
+ * @param url URL for the tenant (used for both display and API calls)
+ * @param token API/Platform Token for Dynatrace API Calls. Note: must be encrypted already.
  * @param name An optional name/label for this environment
  * @param current if true, this will be set as the currently used environment
+ * @param deploymentModel the deployment model of the tenant
  */
 export async function registerTenant(
   url: string,
-  apiUrl: string,
   token: string,
   name?: string,
   current: boolean = false,
+  deploymentModel: DeploymentModel = "managed",
 ) {
   const id = url.includes("/e/") ? url.split("/e/")[1] : url.split("https://")[1].substring(0, 8);
-  const tenant: DynatraceTenantDto = { id, url, apiUrl, token, current, label: name ?? id };
+  const tenant: DynatraceTenantDto = {
+    id,
+    url,
+    token,
+    current,
+    label: name ?? id,
+    deploymentModel,
+  };
 
   // If this will be the currently used environment, deactivate others
   let tenants = getAllTenants();

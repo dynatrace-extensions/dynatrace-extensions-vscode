@@ -36,3 +36,36 @@ export class DynatraceAPIError extends Error {
     return this._errorParams;
   }
 }
+
+/**
+ * Wraps an SDK error (or any unknown error) into a DynatraceAPIError so that
+ * upstream consumers see a uniform error type.
+ */
+export function wrapSdkError(err: unknown): DynatraceAPIError {
+  if (err instanceof DynatraceAPIError) {
+    return err;
+  }
+
+  const message =
+    err instanceof Error ? err.message : typeof err === "string" ? err : "Unknown SDK error";
+  const code = extractStatusCode(err);
+
+  return new DynatraceAPIError(message, {
+    constraintViolations: [],
+    message,
+    code,
+  });
+}
+
+function extractStatusCode(err: unknown): number {
+  if (err != null && typeof err === "object") {
+    // SDK errors often carry a `status` or `statusCode` property
+    if ("status" in err && typeof (err as Record<string, unknown>).status === "number") {
+      return (err as Record<string, unknown>).status as number;
+    }
+    if ("statusCode" in err && typeof (err as Record<string, unknown>).statusCode === "number") {
+      return (err as Record<string, unknown>).statusCode as number;
+    }
+  }
+  return 0;
+}

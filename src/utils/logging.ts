@@ -198,9 +198,9 @@ const getConfiguredLogLevel = (() => {
   return () => {
     logLevel =
       logLevel === undefined
-        ? vscode.workspace
+        ? (vscode.workspace
             .getConfiguration("dynatraceExtensions.logging", null)
-            .get<LogLevel>("level") ?? "INFO"
+            .get<LogLevel>("level") ?? "INFO")
         : logLevel;
     return logLevel;
   };
@@ -282,9 +282,9 @@ const getConfiguredMaxFileSize = (() => {
   return () => {
     maxFileSize =
       maxFileSize === undefined
-        ? vscode.workspace
+        ? (vscode.workspace
             .getConfiguration("dynatraceExtensions.logging", null)
-            .get<number>("maxFileSize") ?? 10
+            .get<number>("maxFileSize") ?? 10)
         : maxFileSize;
     return maxFileSize;
   };
@@ -304,9 +304,9 @@ const getConfiguredMaxFiles = (() => {
   return () => {
     maxFiles =
       maxFiles === undefined
-        ? vscode.workspace
+        ? (vscode.workspace
             .getConfiguration("dynatraceExtensions.logging", null)
-            .get<number>("maxFiles") ?? 10
+            .get<number>("maxFiles") ?? 10)
         : maxFiles;
     return maxFiles;
   };

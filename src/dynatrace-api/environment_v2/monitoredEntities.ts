@@ -16,11 +16,12 @@
 
 import { HttpClient } from "../http_client";
 import { Entity, EntityType } from "../interfaces/monitoredEntities";
+import { EntityServiceV2Interface } from "../interfaces/services";
 
 /**
  * Implementation of the Monitored Entities V2 API
  */
-export class EntityServiceV2 {
+export class EntityServiceV2 implements EntityServiceV2Interface {
   private readonly endpoint = "/api/v2/entities";
   private readonly typesEndpoint = "/api/v2/entityTypes";
   private readonly httpClient: HttpClient;

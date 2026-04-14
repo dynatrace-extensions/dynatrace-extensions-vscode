@@ -15,5 +15,12 @@
     "[typescript]": {
       "editor.defaultFormatter": "esbenp.prettier-vscode"
     },
-    "typescript.tsdk": "node_modules\\typescript\\lib"
+    "typescript.tsdk": "node_modules\\typescript\\lib",
+    "chat.tools.terminal.autoApprove": {
+      "npx eslint": true,
+      "npx prettier": true,
+      "npx jest": true,
+      "npm run test:unit": true
+    },
+    "chat.agent.maxRequests": 1000
 }
