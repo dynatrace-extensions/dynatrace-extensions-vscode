@@ -112,6 +112,8 @@ This project is structured as follows:
 	|   |-- codeCompletions/		# Main folder for Completion providers (see above for structure)
 	|   |-- codeLens/			# Main folder for Code Lens providers (see above for structure)
 	|   |-- commandPalette/			# Main folder for commands available in the Command Palette
+  |   |
+  |   |-- common/    # Folder for interfaces & types shared between the extension and webview ui app
 	|   |
 	|   |-- dynatrace-api/			# Client for Dynatrace API operations
 	|   |    |-- configuration_v1/		# All operations of Config v1 endpoint
@@ -144,11 +146,22 @@ This project is structured as follows:
 	|-- ******************************************************************************************************
 ```
 
+> For a deep-dive into how these pieces relate, layered architecture diagrams, data flows, design patterns, and internal mechanisms, see [ARCHITECTURE.md](ARCHITECTURE.md).
+
 **VSCode API Features**
 
 Each distinct feature is placed within its own folder. The files in the main folder contain direct implementations of that feature. Within this folder, utility functions are placed in the `utils` folder.
 For example, files inside `/src/codeLens` contain direct implementations of VSCode Code Lens Providers and utility functions that are useful to these providers are in the `/src/codeLens/utils` folder.
 You can look up any class and function of a feature [online](https://code.visualstudio.com/api/references/vscode-api).
+
+All providers are implemented as classes and instantiated as lazy singletons via `createSingletonProvider()` (from `/src/utils/singleton.ts`). They target specific files using the document selectors defined in `/src/constants.ts`.
+
+| Feature directory | VS Code interface | What it does |
+|---|---|---|
+| `/src/codeActions/` | `CodeActionProvider` | Quick fixes, snippet generation, schema wizards |
+| `/src/codeCompletions/` | `CompletionItemProvider` | Context-aware auto-complete suggestions |
+| `/src/codeLens/` | `CodeLensProvider` | Inline actionable buttons rendered above code |
+| `/src/hover/` | `HoverProvider` | Tooltip information on hover (e.g. SNMP OID details) |
 
 **Utilities**
 
@@ -158,10 +171,22 @@ Functionality that is generic enough to be used pretty much anywhere within the 
 
 These are the commands the user can directly invoke with `F1` and represent Dynatrace extension development workflows; they are implemented each in their own file inside `/src/commandPalette`. They are all registered within the `/src/extension.ts` file. Functions for checking various conditions are implemented in `/src/utils/conditionCheckers.ts`, and these conditions should be checked in the command's file, not during registration in `extension.ts`.
 
+Each command file exports an async workflow function that chains precondition checks before calling the core implementation:
+
+```typescript
+export const myCommandWorkflow = async () => {
+  if ((await checkWorkspaceOpen()) && (await checkTenantConnected())) {
+    await myCommand();
+  }
+};
+```
+
 **Dynatrace API Client**
 
 The project packages a very simplistic and rudimentary implementation of an HTTP Client wrapped around the Dynatrace API which is found in `/src/dynatrace-api`. This is to support API functions but does not aim to be a complete/standalone client (nor should it have to).
 Extending the client is done only if other features/functionality need to use operations that are not implemented. Each folder represents an API (e.g. configuration, environment) and each file within represents an API endpoint (e.g. monitored entities). Interfaces are shared and kept in the `/src/dynatrace-api/interfaces` folder and do not necessarily need to be 100% complete.
+
+For detailed guidance on extending the API client, see [src/dynatrace-api/README.md](src/dynatrace-api/README.md).
 
 **Extension Manifest**
 
@@ -180,21 +205,12 @@ Releases to VS Code marketplace are triggered on-demand using the [Marketplace r
 
 Releases are done from the `main` branch.
 
-There are two other branches kept in sync with `main`:
-
-- `release/current`
-  - Future facing work that is meant for the next release.
-  - All development work should be done here
-- `release/hotfix`
-  - Bug fixes only.
-  - This allows for quick changes to `main` for fixing bugs while leaving `release/current` intact for lengthier work items
-
 ## Make your first contribution
 
 A few rules for effective contributions:
 
 - Always create an issue before working on new Improvements, Features, or Bugs
-- Never work against `main` branch
+- Always fork or create a separate branch from `main` for your contribution. The `main` branch is protected against direct pushes but you will be able to create a pull request.
 - Assign issues to yourself to "reserve" or mark them as "in progress"
 - If a Pull Request is not ready for review, keep it in "draft" state
 - Make sure all tests are passing before opening the PR or requesting a review
