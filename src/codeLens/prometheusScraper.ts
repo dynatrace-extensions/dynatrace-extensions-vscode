@@ -73,7 +73,10 @@ class PrometheusCodeLensProvider implements vscode.CodeLensProvider {
   constructor() {
     this.codeLenses = [];
     this.regex = /^(prometheus:)/gm;
-    vscode.commands.registerCommand(CodeLensCommand.ScrapeMetrics, this.scrapeMetrics.bind(this));
+    vscode.commands.registerCommand(
+      CodeLensCommand.PrometheusScrapeMetrics,
+      this.scrapeMetrics.bind(this),
+    );
   }
 
   /**
@@ -105,7 +108,7 @@ class PrometheusCodeLensProvider implements vscode.CodeLensProvider {
             title: "Scrape data",
             tooltip:
               "Connect to an exporter or read a file and scrape metrics, then use them in the Extension.",
-            command: CodeLensCommand.ScrapeMetrics,
+            command: CodeLensCommand.PrometheusScrapeMetrics,
             arguments: [],
           }),
         );
@@ -115,7 +118,7 @@ class PrometheusCodeLensProvider implements vscode.CodeLensProvider {
             new vscode.CodeLens(range, {
               title: "Edit config",
               tooltip: "Make changes to the scraping configuration.",
-              command: CodeLensCommand.ScrapeMetrics,
+              command: CodeLensCommand.PrometheusScrapeMetrics,
               arguments: [true],
             }),
           );
