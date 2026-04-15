@@ -25,6 +25,7 @@ import {
   MetricServiceInterface,
   SettingsServiceInterface,
 } from "../interfaces/services";
+import { RateLimitConfig, RateLimitRetryHandler } from "../rateLimitHandler";
 import { SdkExtensionsServiceV2 } from "./extensionsAdapter";
 import { createSdkClients } from "./sdkClientFactory";
 import { SdkSettingsService } from "./settingsAdapter";
@@ -51,8 +52,9 @@ export class SaaSDynatraceClient implements DynatraceClient {
   public readonly dashboards: DashboardServiceInterface;
   public readonly activeGates: ActiveGatesServiceInterface;
 
-  constructor(baseUrl: string, platformToken: string) {
+  constructor(baseUrl: string, platformToken: string, rateLimitConfig?: Partial<RateLimitConfig>) {
     const clients = createSdkClients(baseUrl, platformToken);
+    const retryHandler = new RateLimitRetryHandler(rateLimitConfig);
 
     this.extensionsV2 = new SdkExtensionsServiceV2(
       clients.definitions,
@@ -60,8 +62,13 @@ export class SaaSDynatraceClient implements DynatraceClient {
       clients.schema,
       clients.environment,
       clients.discovery,
+      retryHandler,
     );
-    this.settings = new SdkSettingsService(clients.settingsObjects, clients.settingsSchemas);
+    this.settings = new SdkSettingsService(
+      clients.settingsObjects,
+      clients.settingsSchemas,
+      retryHandler,
+    );
 
     // Stubbed services — not yet supported on SaaS
     this.extensionsV1 = new StubbedExtensionsServiceV1();

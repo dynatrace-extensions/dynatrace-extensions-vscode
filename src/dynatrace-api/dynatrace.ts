@@ -34,6 +34,7 @@ import {
   MetricServiceInterface,
   SettingsServiceInterface,
 } from "./interfaces/services";
+import { RateLimitConfig } from "./rateLimitHandler";
 import { SaaSDynatraceClient } from "./sdk/sdkDynatraceClient";
 
 /**
@@ -88,12 +89,13 @@ export function createDynatraceClient(
   url: string,
   token: string,
   deploymentModel: DeploymentModel,
+  rateLimitConfig?: Partial<RateLimitConfig>,
 ): DynatraceClient {
   switch (deploymentModel) {
     case "managed":
       return new ManagedDynatraceClient(url, token);
     case "saas":
-      return new SaaSDynatraceClient(url, token);
+      return new SaaSDynatraceClient(url, token, rateLimitConfig);
   }
 }
 

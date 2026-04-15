@@ -84,7 +84,7 @@ export async function createMonitoringConfiguration(dt: Dynatrace) {
 
   // If the extension is deployed, create config template from live schema
   let initialConfig: { value: Record<string, unknown>; scope: string };
-  if (Object.keys(deployedExtension).length > 0) {
+  if (Object.keys(deployedExtension as Record<string, unknown>).length > 0) {
     logger.debug(
       "This extension is deployed. Parsing live schema to create base config object",
       ...fnLogTrace,

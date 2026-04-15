@@ -54,7 +54,9 @@ export function createSdkClients(baseUrl: string, platformToken: string): SdkCli
     schema: new SchemaClient(httpClient),
     environment: new EnvironmentClient(httpClient),
     discovery: new DiscoveryClient(httpClient),
-    settingsObjects: new SettingsObjectsClient(httpClient),
-    settingsSchemas: new SettingsSchemasClient(httpClient),
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any, @typescript-eslint/no-unsafe-argument -- version mismatch between SDK http-client packages
+    settingsObjects: new SettingsObjectsClient(httpClient as any),
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any, @typescript-eslint/no-unsafe-argument -- version mismatch between SDK http-client packages
+    settingsSchemas: new SettingsSchemasClient(httpClient as any),
   };
 }
