@@ -122,7 +122,7 @@ Used for storing general files used across multiple extension projects/workspace
 - OpenPipeline schemas
 - MIBs: MIB files used in providing hover information for SNMP extensions
 - VSCode extension state files:
-  - `dynatraceEnvironments.json` - state about the registered nodes in the tenants tree view
+  - `dynatraceEnvironments.json` - state about the registered tenants in the tenants tree view (includes URL, encrypted token, label, and deployment model)
   - `extensionWorkspaces.json` - state about the registered nodes in the workspaces tree view
   - `summaries.json` - summary information from extension simulator runs
   - `targets.json` - state about registered remote simulator targets
@@ -232,51 +232,108 @@ context.subscriptions.push(
 
 **Directory:** `src/dynatrace-api/`
 
-A layered HTTP client for interacting with Dynatrace environments.
+A dual-transport API client layer for interacting with Dynatrace environments. Supports two deployment models:
+- **Managed** — Uses the existing `HttpClient` (Axios-based) for Dynatrace Managed environments
+- **SaaS** — Uses Dynatrace SDK clients (`@dynatrace-internal/client-extensions`, `@dynatrace-sdk/client-environment-v2`) for the Dynatrace SaaS platform
+
+Both implementations conform to the `DynatraceClient` interface, so upstream consumers are deployment-model agnostic.
 
 ```mermaid
-graph LR
+graph TB
     subgraph "API Client Layer"
-        DT[Dynatrace Facade] --> SVC1[ExtensionsServiceV2]
-        DT --> SVC2[ExtensionsServiceV1]
-        DT --> SVC3[EntityServiceV2]
-        DT --> SVC4[MetricService]
-        DT --> SVC5[SettingsService]
-        DT --> SVC6[CredentialVaultService]
-        DT --> SVC7[DashboardService]
-        DT --> SVC8[ActiveGatesService]
-        SVC1 & SVC2 & SVC3 & SVC4 & SVC5 & SVC6 & SVC7 & SVC8 --> HC[HttpClient]
+        FACTORY["createDynatraceClient(url, token, model)"]
+
+        subgraph "Managed Path"
+            MC[ManagedDynatraceClient]
+            MC --> SVC1[ExtensionsServiceV2]
+            MC --> SVC2[ExtensionsServiceV1]
+            MC --> SVC3[EntityServiceV2]
+            MC --> SVC4[MetricService]
+            MC --> SVC5[SettingsService]
+            MC --> SVC6[CredentialVaultService]
+            MC --> SVC7[DashboardService]
+            MC --> SVC8[ActiveGatesService]
+            SVC1 & SVC2 & SVC3 & SVC4 & SVC5 & SVC6 & SVC7 & SVC8 --> HC[HttpClient]
+        end
+
+        subgraph "SaaS Path"
+            SC[SaaSDynatraceClient]
+            SC --> AEXT[SdkExtensionsServiceV2<br/>adapter]
+            SC --> ASET[SdkSettingsService<br/>adapter]
+            SC --> STUB[Stubs<br/>entities, metrics,<br/>credVault, v1, dashboards,<br/>activeGates]
+            AEXT & ASET --> SDKF[SDK Client Factory]
+        end
+
+        FACTORY -->|"managed"| MC
+        FACTORY -->|"saas"| SC
     end
 
-    HC -->|Axios| API[Dynatrace REST APIs]
+    HC -->|Axios| REST[Dynatrace REST APIs]
+    SDKF -->|PlatformHttpClient| SDKAPI[Dynatrace Platform APIs]
 ```
+
+### Deployment models
+
+A `DeploymentModel` discriminator (`"saas" | "managed"`) is stored on each tenant and determines which client implementation is used. The factory function `createDynatraceClient()` in `dynatrace.ts` routes accordingly.
 
 ### Layers
 
-1. **`HttpClient`** (`http_client.ts`) — Axios-based HTTP transport
+1. **`DynatraceClient` interface** (`dynatrace.ts`) — Common contract for all API clients
+
+   - Properties: `extensionsV2`, `extensionsV1`, `entitiesV2`, `metrics`, `settings`, `credentialVault`, `dashboards`, `activeGates`
+   - `createDynatraceClient(url, token, deploymentModel)` factory function
+
+2. **`ManagedDynatraceClient`** (`dynatrace.ts`) — Managed/on-prem implementation
+
+   - Wraps an `HttpClient` (Axios-based) and composes all `environment_v2/` and `configuration_v1/` service classes
+   - Unchanged from the original `Dynatrace` class
+
+3. **`SaaSDynatraceClient`** (`sdk/sdkDynatraceClient.ts`) — SaaS platform implementation
+
+   - Uses SDK clients via `createSdkClients()` for extensions and settings
+   - Entity, metric, credential vault, v1 extensions, dashboards, and ActiveGates services are **stubbed** (not yet supported on SaaS)
+
+4. **`HttpClient`** (`http_client.ts`) — Axios-based HTTP transport (Managed only)
 
    - `makeRequest<T>()` — general-purpose request with authorization headers
    - `paginatedCall<T>()` — automatic multi-page iteration via `nextPageKey`
    - Error wrapping into `DynatraceAPIError`
    - Supports file uploads, response type overrides, and `AbortSignal` cancellation
 
-2. **`Dynatrace`** (`dynatrace.ts`) — Facade class that composes all service instances
+5. **SDK client factory** (`sdk/sdkClientFactory.ts`) — Creates `PlatformHttpClient` and SDK client instances (SaaS only)
 
-   - Constructor takes `baseUrl` and `apiToken`
-   - A single `HttpClient` is shared across all services
+   - Injects Bearer token and user-agent into a shared `PlatformHttpClient`
+   - Returns typed clients: `DefinitionsClient`, `ConfigurationsClient`, `SchemaClient`, `EnvironmentClient`, `DiscoveryClient`, `SettingsObjectsClient`, `SettingsSchemasClient`
 
-3. **Service modules** (`environment_v2/`, `configuration_v1/`) — one file per API endpoint
+6. **SDK adapters** (`sdk/extensionsAdapter.ts`, `sdk/settingsAdapter.ts`) — Map SDK client responses to existing DTO types
+
+   - `SdkExtensionsServiceV2` — Adapts `@dynatrace-internal/client-extensions` to the `ExtensionsServiceV2Interface`
+   - `SdkSettingsService` — Adapts `@dynatrace-sdk/client-environment-v2` settings clients to `SettingsServiceInterface`
+
+7. **SDK stubs** (`sdk/stubs.ts`) — Placeholder implementations for services not yet available on SaaS
+
+   - Throw descriptive errors or return empty results
+   - Entity and metric services are deferred to a future DQL-based implementation
+
+8. **Service interfaces** (`interfaces/services.ts`) — Extracted TypeScript interfaces defining the contract for each API service
+
+   - All Managed service classes implement their corresponding interface
+   - SDK adapters implement the same interfaces, ensuring type compatibility
+
+9. **Service modules** (`environment_v2/`, `configuration_v1/`) — One file per API endpoint (Managed only)
 
    - Each service class receives the `HttpClient` and exposes typed methods
    - Examples: `ExtensionsServiceV2.upload()`, `EntityServiceV2.list()`, `MetricService.query()`
 
-4. **Interface/DTO layer** (`interfaces/`) — TypeScript types for API request/response contracts
-   - Domain-specific: `MinimalExtension`, `Entity`, `EntityType`, `SettingsObject`, `ActiveGate`, etc.
-   - Transport: `DynatraceRequestConfig`, `PaginatedResponse<T>`, `DynatraceError`
+10. **Interface/DTO layer** (`interfaces/`) — TypeScript types for API request/response contracts
+    - Domain-specific: `MinimalExtension`, `Entity`, `EntityType`, `SettingsObject`, `ActiveGate`, etc.
+    - Transport: `DynatraceRequestConfig`, `PaginatedResponse<T>`, `DynatraceError`
 
 ### Error handling
 
 `DynatraceAPIError` extends `Error` with structured fields (status code, constraint violations, error message) for downstream consumers to handle API failures with full context.
+
+For SDK clients, the `wrapSdkError()` function in `errors.ts` converts SDK exceptions into `DynatraceAPIError` instances, ensuring a uniform error type regardless of deployment model. SDK adapters catch errors internally and call `wrapSdkError()` before re-throwing.
 
 ### Access pattern
 
@@ -378,7 +435,9 @@ Two tree views appear in the VS Code sidebar, each backed by a `TreeDataProvider
 - `environments.ts` — Add/edit/delete environments, change connection, manage monitoring configs
 - `workspaces.ts` — Add/delete/open workspaces, toggle feature flags (Fast Mode, CodeLens, Diagnostics)
 
-Environment URL validation supports SaaS (`.apps.dynatrace.com`), Managed (`/e/`), and Cloud (`live.dynatrace.com`) variants.
+Environment URL validation supports SaaS Platform (`.apps.dynatrace.com`, `.apps.dynatracelabs.com`) and Managed (`/e/`) variants. Legacy SaaS URLs (`.live.dynatrace.com`) are rejected with a message guiding users to the platform URL format.
+
+The registration workflow derives a `DeploymentModel` from the validated URL, adapts token wording (platform token for SaaS, access token for Managed), and uses model-appropriate reachability checks.
 
 ---
 
@@ -388,11 +447,11 @@ Environment URL validation supports SaaS (`.apps.dynatrace.com`), Managed (`/e/`
 
 Three status bar items provide persistent visibility into extension state.
 
-| Item       | File            | Purpose                                                                                                                        |
-| ---------- | --------------- | ------------------------------------------------------------------------------------------------------------------------------ |
-| Connection | `connection.ts` | Shows current environment with reachability check. Polls every 5s when unreachable. Background color changes on warning/error. |
-| Fast Mode  | `fastMode.ts`   | Shows build status (version + ✅/❌). Toggled via `dynatraceExtensions.fastDevelopmentMode` configuration.                     |
-| Simulator  | `simulator.ts`  | State machine: `Unsupported` → `Ready` → `Checking` → `Running` → `NotReady`. Manages simulator process lifecycle and panel.   |
+| Item       | File            | Purpose                                                                                                                                                     |
+| ---------- | --------------- | ----------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| Connection | `connection.ts` | Shows current environment with model-aware reachability check (HTTP for Managed, DNS for SaaS). Polls every 5s when unreachable. Background color changes on warning/error. |
+| Fast Mode  | `fastMode.ts`   | Shows build status (version + ✅/❌). Toggled via `dynatraceExtensions.fastDevelopmentMode` configuration.                                                   |
+| Simulator  | `simulator.ts`  | State machine: `Unsupported` → `Ready` → `Checking` → `Running` → `NotReady`. Manages simulator process lifecycle and panel.                                |
 
 ---
 
@@ -503,7 +562,7 @@ Utility modules grouped by concern. Each file is a category of related functions
 | `caching.ts`                       | Reactive data cache (see [Caching & Reactive Data](#caching--reactive-data))                                        |
 | `logging.ts`                       | Multi-level logging (DEBUG/INFO/WARN/ERROR) to console, output channels, and rotating log files                     |
 | `fileSystem.ts`                    | File I/O, workspace/tenant metadata storage, extension manifest reading, MIB file management                        |
-| `conditionCheckers.ts`             | Pre-flight checks for workflows (tenant connected, workspace open, certificates exist, URLs reachable, SDK present) |
+| `conditionCheckers.ts`             | Pre-flight checks for workflows (tenant connected, workspace open, certificates exist, URLs reachable, SDK present). Includes model-aware reachability: HTTP-based for Managed, DNS-based for SaaS. |
 | `general.ts`                       | Wait conditions with timeout, HTTPS agent setup for cert validation                                                 |
 | `subprocesses.ts`                  | Command execution with configurable stdio handling and exit code validation                                         |
 | `yamlParsing.ts`                   | YAML parsing with indentation tracking and parent block navigation                                                  |
@@ -574,15 +633,16 @@ the VSCode UI.
 
 ## Key Design Patterns
 
-| Pattern                      | Where                                         | Purpose                                                  |
-| ---------------------------- | --------------------------------------------- | -------------------------------------------------------- |
-| **Lazy Singleton**           | All providers via `createSingletonProvider()` | One instance per provider class, created on first access |
-| **Workflow + Preconditions** | `commandPalette/*.ts`                         | Chain prerequisite checks before running command logic   |
-| **Reactive Caching**         | `utils/caching.ts` with RxJS                  | Debounced manifest re-parsing, observable data streams   |
-| **Service Composition**      | `Dynatrace` facade class                      | Single entry point to all API services                   |
-| **Typed Events**             | `WebviewEvent` union types                    | Type-safe extension ↔ webview message passing           |
-| **EventEmitter Refresh**     | Tree views, code lens providers               | UI re-renders without polling                            |
-| **DTO Layer**                | `dynatrace-api/interfaces/`                   | Typed API contracts decoupled from transport             |
-| **Document Selectors**       | `constants.ts`                                | Target providers to specific file patterns               |
-| **Error Wrapping**           | `DynatraceAPIError`                           | Structured error propagation with API context            |
-| **Token Encryption**         | `utils/cryptography.ts`                       | Secure storage of environment credentials                |
+| Pattern                      | Where                                         | Purpose                                                      |
+| ---------------------------- | --------------------------------------------- | ------------------------------------------------------------ |
+| **Lazy Singleton**           | All providers via `createSingletonProvider()` | One instance per provider class, created on first access     |
+| **Workflow + Preconditions** | `commandPalette/*.ts`                         | Chain prerequisite checks before running command logic        |
+| **Reactive Caching**         | `utils/caching.ts` with RxJS                  | Debounced manifest re-parsing, observable data streams        |
+| **Interface + Factory**      | `DynatraceClient` + `createDynatraceClient()` | Deployment-model-aware API client selection                   |
+| **Adapter**                  | `sdk/extensionsAdapter.ts`, `sdk/settingsAdapter.ts` | Map SDK client APIs to existing service interfaces     |
+| **Typed Events**             | `WebviewEvent` union types                    | Type-safe extension ↔ webview message passing               |
+| **EventEmitter Refresh**     | Tree views, code lens providers               | UI re-renders without polling                                |
+| **DTO Layer**                | `dynatrace-api/interfaces/`                   | Typed API contracts decoupled from transport                 |
+| **Document Selectors**       | `constants.ts`                                | Target providers to specific file patterns                   |
+| **Error Wrapping**           | `DynatraceAPIError`, `wrapSdkError()`         | Structured error propagation with uniform type across deployment models |
+| **Token Encryption**         | `utils/cryptography.ts`                       | Secure storage of environment credentials                    |
