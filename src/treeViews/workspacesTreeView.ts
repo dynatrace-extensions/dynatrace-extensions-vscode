@@ -29,7 +29,7 @@ import { createSingletonProvider } from "../utils/singleton";
 import { parseYAML } from "../utils/yamlParsing";
 
 const ICONS_PATH = path.join(__filename, "..", "..", "src", "assets", "icons");
-const ICONS: Record<string, { light: vscode.Uri; dark: vscode.Uri }> = {
+const ICONS: Record<string, vscode.IconPath> = {
   EXTENSION: {
     light: vscode.Uri.file(path.join(ICONS_PATH, "extension_light.png")),
     dark: vscode.Uri.file(path.join(ICONS_PATH, "extension_dark.png")),

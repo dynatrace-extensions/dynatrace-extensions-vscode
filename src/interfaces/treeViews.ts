@@ -15,7 +15,7 @@
  */
 
 import vscode from "vscode";
-import { Dynatrace } from "../dynatrace-api/dynatrace";
+import { DynatraceClient } from "../dynatrace-api/dynatrace";
 
 export type DeploymentModel = "saas" | "managed";
 
@@ -50,7 +50,8 @@ export interface TenantsTreeItemBase extends vscode.TreeItem {
   label: string;
   id: string;
   contextValue: TenantsTreeContextValue;
-  dt: Dynatrace;
+  dt: DynatraceClient;
+  deploymentModel: DeploymentModel;
 }
 
 export interface DynatraceTenant extends TenantsTreeItemBase {

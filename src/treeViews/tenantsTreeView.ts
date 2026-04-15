@@ -22,6 +22,7 @@ import {
   DeployedExtension,
   DeploymentModel,
   DynatraceTenant,
+  DynatraceTenantDto,
   MonitoringConfiguration,
   TenantsTreeDataProvider,
   TenantsTreeItem,
@@ -34,24 +35,59 @@ import { createSingletonProvider } from "../utils/singleton";
 
 const ICONS_PATH = path.join(__filename, "..", "..", "src", "assets", "icons");
 const ICONS = {
-  DEPLOYED_EXTENSION: {
-    light: vscode.Uri.file(path.join(ICONS_PATH, "deployed_extension_light.png")),
-    dark: vscode.Uri.file(path.join(ICONS_PATH, "deployed_extension_dark.png")),
+  DEPLOYED_EXTENSION_SAAS: vscode.Uri.file(path.join(ICONS_PATH, "deployed_extension_saas.png")),
+  DEPLOYED_EXTENSION_MANAGED: vscode.Uri.file(
+    path.join(ICONS_PATH, "deployed_extension_managed.png"),
+  ),
+  SAAS_TENANT: {
+    light: vscode.Uri.file(path.join(ICONS_PATH, "saas_light.png")),
+    dark: vscode.Uri.file(path.join(ICONS_PATH, "saas_dark.png")),
   },
-  ENVIRONMENT: {
-    light: vscode.Uri.file(path.join(ICONS_PATH, "platform_light.png")),
-    dark: vscode.Uri.file(path.join(ICONS_PATH, "platform_dark.png")),
+  MANAGED_TENANT: {
+    light: vscode.Uri.file(path.join(ICONS_PATH, "managed_light.png")),
+    dark: vscode.Uri.file(path.join(ICONS_PATH, "managed_dark.png")),
   },
-  ENVIRONMENT_CURRENT: {
-    light: vscode.Uri.file(path.join(ICONS_PATH, "platform_current_light.png")),
-    dark: vscode.Uri.file(path.join(ICONS_PATH, "platform_current_dark.png")),
+  SAAS_TENANT_CURRENT: {
+    light: vscode.Uri.file(path.join(ICONS_PATH, "saas_current_light.png")),
+    dark: vscode.Uri.file(path.join(ICONS_PATH, "saas_current_dark.png")),
   },
-} satisfies Record<string, { light: vscode.Uri; dark: vscode.Uri }>;
+  MANAGED_TENANT_CURRENT: {
+    light: vscode.Uri.file(path.join(ICONS_PATH, "managed_current_light.png")),
+    dark: vscode.Uri.file(path.join(ICONS_PATH, "managed_current_dark.png")),
+  },
+  SAAS_TENANT_INVALID: vscode.Uri.file(path.join(ICONS_PATH, "saas_invalid.png")),
+} satisfies Record<string, vscode.IconPath>;
 type ConfigStatus = "ERROR" | "OK" | "UNKNOWN";
 const CONFIG_STATUS_COLORS: Record<ConfigStatus, string> = {
   ERROR: "🔴",
   OK: "🟢",
   UNKNOWN: "⚫",
+};
+
+const getTenantIcon = (tenant: DynatraceTenantDto): vscode.IconPath => {
+  if (
+    tenant.url.includes("live.dynatrace.com") ||
+    tenant.url.includes("sprint.dynatracelabs.com") ||
+    tenant.url.includes("dev.dynatracelabs.com")
+  ) {
+    logger.notify(
+      "WARN",
+      `Tenant ${tenant.label} is using a legacy URL. Update it to a .apps domain and use a Platform Token`,
+    );
+    return ICONS.SAAS_TENANT_INVALID;
+  }
+  if (tenant.deploymentModel === "saas") {
+    const dtToken = decryptToken(tenant.token);
+    if (dtToken.startsWith("dt0c01") || dtToken.startsWith("dt0s01")) {
+      logger.notify(
+        "WARN",
+        `Tenant ${tenant.label} has a legacy token. Update it to a Platform Token`,
+      );
+      return ICONS.SAAS_TENANT_INVALID;
+    }
+    return tenant.current ? ICONS.SAAS_TENANT_CURRENT : ICONS.SAAS_TENANT;
+  }
+  return tenant.current ? ICONS.MANAGED_TENANT_CURRENT : ICONS.MANAGED_TENANT;
 };
 
 /**
@@ -160,6 +196,7 @@ class TenantsTreeDataProviderImpl implements TenantsTreeDataProvider {
                     extension.version,
                     element.dt,
                     element.url,
+                    element.deploymentModel,
                   ),
                 ),
               ),
@@ -183,6 +220,7 @@ class TenantsTreeDataProviderImpl implements TenantsTreeDataProvider {
                     element.id,
                     status.status,
                     element.dt,
+                    element.deploymentModel,
                   );
                 }),
               );
@@ -198,18 +236,10 @@ class TenantsTreeDataProviderImpl implements TenantsTreeDataProvider {
 
     // If no item specified, grab all environments from global storage
     return getAllTenants().map(tenant => {
-      const { id, url, label, current, token, deploymentModel } = tenant;
-      if (current) {
+      if (tenant.current) {
         showConnectedStatusBar(tenant).catch(Utils.noOp);
       }
-      return createDynatraceTenantTreeItem(
-        url,
-        decryptToken(token),
-        id,
-        label,
-        current,
-        deploymentModel,
-      );
+      return createDynatraceTenantTreeItem(tenant);
     });
   }
 }
@@ -224,32 +254,20 @@ export const getTenantsTreeDataProvider = createSingletonProvider<TenantsTreeDat
 /**
  * Creates a TreeItem object that represents a Dynatrace (SaaS, Managed, Platform) tenant registered
  * with the VSCode Extension.
- * @param url the URL to this tenant
- * @param token a Dynatrace API Token to use when authenticating with this tenant
- * @param id the id of this tenant
- * @param label an optional label for displaying this tenant (defaults to id)
- * @param current whether this tenant should be used for API operations currently
- * @param deploymentModel the deployment model of the tenant
+ * @param tenant the tenant object
  */
-const createDynatraceTenantTreeItem = (
-  url: string,
-  token: string,
-  id: string,
-  label?: string,
-  current: boolean = false,
-  deploymentModel: DeploymentModel = "managed",
-): DynatraceTenant =>
+const createDynatraceTenantTreeItem = (tenant: DynatraceTenantDto): DynatraceTenant =>
   ({
-    ...new vscode.TreeItem(label ?? id, vscode.TreeItemCollapsibleState.Collapsed),
-    url: url,
-    token: token,
-    id: id,
-    dt: createDynatraceClient(url, token, deploymentModel),
-    tooltip: id,
-    current: current,
-    deploymentModel: deploymentModel,
-    contextValue: current ? "currentDynatraceEnvironment" : "dynatraceEnvironment",
-    iconPath: current ? ICONS.ENVIRONMENT_CURRENT : ICONS.ENVIRONMENT,
+    ...new vscode.TreeItem(tenant.label ?? tenant.id, vscode.TreeItemCollapsibleState.Collapsed),
+    url: tenant.url,
+    token: decryptToken(tenant.token),
+    id: tenant.id,
+    dt: createDynatraceClient(tenant.url, tenant.token, tenant.deploymentModel),
+    tooltip: tenant.id,
+    current: tenant.current,
+    deploymentModel: tenant.deploymentModel,
+    contextValue: tenant.current ? "currentDynatraceEnvironment" : "dynatraceEnvironment",
+    iconPath: getTenantIcon(tenant),
   }) as DynatraceTenant;
 
 /**
@@ -266,6 +284,7 @@ const createDeployedExtension = (
   extensionVersion: string,
   dt: DynatraceClient,
   tenantUrl: string,
+  deploymentModel: DeploymentModel,
 ): DeployedExtension =>
   ({
     ...new vscode.TreeItem(`${extensionName} (${extensionVersion})`, collapsibleState),
@@ -274,7 +293,9 @@ const createDeployedExtension = (
     tenantUrl: tenantUrl,
     extensionVersion: extensionVersion,
     contextValue: "deployedExtension",
-    iconPath: ICONS.DEPLOYED_EXTENSION,
+    iconPath:
+      deploymentModel === "saas" ? ICONS.DEPLOYED_EXTENSION_SAAS : ICONS.DEPLOYED_EXTENSION_MANAGED,
+    deploymentModel,
   }) as DeployedExtension;
 
 /**
@@ -294,6 +315,7 @@ const createMonitoringConfiguration = (
   extensionName: string,
   monitoringStatus: ConfigStatus,
   dt: DynatraceClient,
+  deploymentModel: DeploymentModel,
 ): MonitoringConfiguration =>
   ({
     ...new vscode.TreeItem(
@@ -304,5 +326,6 @@ const createMonitoringConfiguration = (
     extensionName: extensionName,
     contextValue: "monitoringConfiguration",
     iconPath: new vscode.ThemeIcon("gear"),
-    dt: dt,
+    dt,
+    deploymentModel,
   }) as MonitoringConfiguration;
