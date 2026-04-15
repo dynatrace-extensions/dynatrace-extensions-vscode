@@ -18,7 +18,7 @@ import { existsSync, mkdirSync, readFileSync, writeFile, writeFileSync } from "f
 import path from "path";
 import axios from "axios";
 import vscode from "vscode";
-import { Dynatrace } from "../dynatrace-api/dynatrace";
+import { DynatraceClient } from "../dynatrace-api/dynatrace";
 import { getActivationContext } from "../extension";
 import { OPENPIPELINE_SCHEMA_CONFIGS } from "../interfaces/openPipelineSchemas";
 import { getDynatraceClient } from "../treeViews/tenantsTreeView";
@@ -85,7 +85,7 @@ export const configureOpenPipelineJSONSchemas = (schemaLocation: string): void =
  * Individual download failures are logged as warnings but do not affect overall success.
  */
 async function downloadAndConvertOpenPipelineSchemas(
-  dt: Dynatrace,
+  dt: DynatraceClient,
   context: vscode.ExtensionContext,
 ): Promise<void> {
   const fnLogTrace = [...logTrace, "downloadAndConvertOpenPipelineSchemas"];
@@ -128,7 +128,7 @@ export const loadSchemasWorkflow = async () => {
  * @param dt Dynatrace API Client
  * @returns boolean - the success of the command
  */
-export async function loadSchemas(dt: Dynatrace): Promise<boolean> {
+export async function loadSchemas(dt: DynatraceClient): Promise<boolean> {
   const context = getActivationContext();
   logger.info("Executing Load Schemas command", ...logTrace);
   // Fetch available schema versions from cluster
@@ -222,7 +222,7 @@ export async function loadSchemas(dt: Dynatrace): Promise<boolean> {
  * @param version version of schemas to download
  * @param dt Dynatrace API Client
  */
-function downloadSchemaFiles(location: string, version: string, dt: Dynatrace) {
+function downloadSchemaFiles(location: string, version: string, dt: DynatraceClient) {
   const fnLogTrace = [...logTrace, "downloadSchemaFiles"];
   mkdirSync(location, { recursive: true });
   return vscode.window.withProgress(
