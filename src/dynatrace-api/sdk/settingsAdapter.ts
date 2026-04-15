@@ -27,19 +27,29 @@ import {
   SettingsObjectCreate,
   SettingsObjectUpdate,
 } from "../interfaces/settings";
+import { RateLimitRetryHandler } from "../rateLimitHandler";
 
 /**
  * SaaS adapter for Settings 2.0 API — wraps SDK clients to match existing service interface.
  */
 export class SdkSettingsService implements SettingsServiceInterface {
+  private readonly retryHandler: RateLimitRetryHandler;
+
   constructor(
     private readonly objectsClient: SettingsObjectsClient,
     private readonly schemasClient: SettingsSchemasClient,
-  ) {}
+    retryHandler?: RateLimitRetryHandler,
+  ) {
+    this.retryHandler = retryHandler ?? new RateLimitRetryHandler();
+  }
 
   async listSchemas(signal?: AbortSignal): Promise<SchemaStub[]> {
     try {
-      const res = await this.schemasClient.getAvailableSchemaDefinitions(signal);
+      const res = await this.retryHandler.execute(
+        // eslint-disable-next-line @typescript-eslint/no-explicit-any, @typescript-eslint/no-unsafe-argument -- SDK AbortSignal type mismatch
+        () => this.schemasClient.getAvailableSchemaDefinitions(signal as any),
+        signal,
+      );
       return res.items;
     } catch (err) {
       throw wrapSdkError(err);
@@ -57,14 +67,20 @@ export class SdkSettingsService implements SettingsServiceInterface {
       const allItems: SdkSettingsObject[] = [];
       let nextPageKey: string | undefined;
       do {
-        const res = await this.objectsClient.getSettingsObjects({
-          schemaIds,
-          scopes,
-          fields,
-          pageSize,
-          nextPageKey,
-          abortSignal: signal,
-        });
+        const pageKey = nextPageKey;
+        const res = await this.retryHandler.execute(
+          () =>
+            this.objectsClient.getSettingsObjects({
+              schemaIds,
+              scopes,
+              fields,
+              pageSize,
+              nextPageKey: pageKey,
+              // eslint-disable-next-line @typescript-eslint/no-explicit-any, @typescript-eslint/no-unsafe-assignment -- SDK AbortSignal type mismatch
+              abortSignal: signal as any,
+            }),
+          signal,
+        );
         allItems.push(...res.items);
         nextPageKey = res.nextPageKey ?? undefined;
       } while (nextPageKey);
@@ -76,11 +92,16 @@ export class SdkSettingsService implements SettingsServiceInterface {
 
   async putObject(objectId: string, payload: SettingsObjectUpdate, signal?: AbortSignal) {
     try {
-      return await this.objectsClient.putSettingsObjectByObjectId({
-        objectId,
-        body: { value: payload.value as Record<string, unknown>, ...payload },
-        abortSignal: signal,
-      });
+      return await this.retryHandler.execute(
+        () =>
+          this.objectsClient.putSettingsObjectByObjectId({
+            objectId,
+            body: { ...payload, value: payload.value as Record<string, unknown> },
+            // eslint-disable-next-line @typescript-eslint/no-explicit-any, @typescript-eslint/no-unsafe-assignment -- SDK AbortSignal type mismatch
+            abortSignal: signal as any,
+          }),
+        signal,
+      );
     } catch (err) {
       throw wrapSdkError(err);
     }
@@ -88,10 +109,15 @@ export class SdkSettingsService implements SettingsServiceInterface {
 
   async getSchema(schemaId: string, signal?: AbortSignal): Promise<unknown> {
     try {
-      return await this.schemasClient.getSchemaDefinition({
-        schemaId,
-        abortSignal: signal,
-      });
+      return await this.retryHandler.execute(
+        () =>
+          this.schemasClient.getSchemaDefinition({
+            schemaId,
+            // eslint-disable-next-line @typescript-eslint/no-explicit-any, @typescript-eslint/no-unsafe-assignment -- SDK AbortSignal type mismatch
+            abortSignal: signal as any,
+          }),
+        signal,
+      );
     } catch (err) {
       throw wrapSdkError(err);
     }
@@ -103,18 +129,23 @@ export class SdkSettingsService implements SettingsServiceInterface {
     signal?: AbortSignal,
   ) {
     try {
-      return await this.objectsClient.postSettingsObjects({
-        body: payload.map(p => ({
-          schemaId: p.schemaId,
-          scope: p.scope,
-          schemaVersion: p.schemaVersion,
-          externalId: p.externalId,
-          insertAfter: p.insertAfter,
-          value: (p.value ?? {}) as Record<string, unknown>,
-        })),
-        validateOnly,
-        abortSignal: signal,
-      });
+      return await this.retryHandler.execute(
+        () =>
+          this.objectsClient.postSettingsObjects({
+            body: payload.map(p => ({
+              schemaId: p.schemaId,
+              scope: p.scope,
+              schemaVersion: p.schemaVersion,
+              externalId: p.externalId,
+              insertAfter: p.insertAfter,
+              value: (p.value ?? {}) as Record<string, unknown>,
+            })),
+            validateOnly,
+            // eslint-disable-next-line @typescript-eslint/no-explicit-any, @typescript-eslint/no-unsafe-assignment -- SDK AbortSignal type mismatch
+            abortSignal: signal as any,
+          }),
+        signal,
+      );
     } catch (err) {
       throw wrapSdkError(err);
     }

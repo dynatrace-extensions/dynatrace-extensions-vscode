@@ -153,3 +153,35 @@ All API errors are wrapped in `DynatraceAPIError` (from `errors.ts`), which prov
 For SDK clients, `wrapSdkError()` converts SDK exceptions into `DynatraceAPIError`, ensuring a uniform error type regardless of deployment model.
 
 Callers should `catch` and handle these for user-facing error reporting.
+
+## Rate limit retry (SaaS)
+
+The SaaS SDK path includes automatic retry handling for HTTP 429 (Too Many Requests) responses via `RateLimitRetryHandler` (from `rateLimitHandler.ts`).
+
+### Behaviour
+
+When an SDK call returns 429, the handler waits with exponential backoff before retrying:
+- **Delay formula**: `initialDelayMs × backoffMultiplier^attempt` (e.g. 1s, 2s, 4s with defaults)
+- **AbortSignal-aware**: cancels backoff sleep if the signal fires
+- **Non-429 errors pass through** unchanged
+
+### Default configuration
+
+| Parameter          | Default | Description                                    |
+| ------------------ | ------- | ---------------------------------------------- |
+| `initialDelayMs`   | 1000    | Delay before the first retry (ms)              |
+| `backoffMultiplier`| 2       | Multiplier applied per attempt                 |
+| `maxRetries`       | 3       | Maximum retry attempts (total calls = 1 + max) |
+
+### Custom configuration
+
+Pass a partial `RateLimitConfig` to `createDynatraceClient()`:
+
+```typescript
+const client = createDynatraceClient(url, token, "saas", {
+  initialDelayMs: 2000,
+  maxRetries: 5,
+});
+```
+
+The config is forwarded to `SaaSDynatraceClient`, which creates a single `RateLimitRetryHandler` shared by all SaaS adapters. The Managed path is not affected.

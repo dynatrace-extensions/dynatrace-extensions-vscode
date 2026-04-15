@@ -45,7 +45,7 @@ describe("validateEnvironmentUrl", () => {
 
       expect(result).not.toBeNull();
       expect(result).toContain("Legacy SaaS URLs");
-      expect(result).toContain(".apps.dynatrace.com");
+      expect(result).toContain("*.apps.*");
     });
   });
 

@@ -662,7 +662,7 @@ async function existingExtensionSetup(dt: Dynatrace, rootPath: string) {
     download.extension.version,
     true,
   );
-  await extractZip(await new JSZip().loadAsync(zipData), extensionDir);
+  await extractZip(await new JSZip().loadAsync(zipData as ArrayBuffer), extensionDir);
   rmSync(path.join(extensionDir, "extension.zip.sig"));
 
   // Additional extraction is needed for python extensions
