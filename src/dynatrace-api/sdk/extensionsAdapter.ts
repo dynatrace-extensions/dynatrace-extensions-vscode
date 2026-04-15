@@ -143,7 +143,7 @@ export class SdkExtensionsServiceV2 implements ExtensionsServiceV2Interface {
       const allExtensions: MinimalExtension[] = [];
       let nextPageKey: string | undefined;
       do {
-        const res = await this.definitions.listExtensions({
+        const res = await this.definitions.listExtensionInfos({
           name: name ?? undefined,
           nextPageKey,
           abortSignal: signal,

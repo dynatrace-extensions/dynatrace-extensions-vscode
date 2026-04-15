@@ -64,30 +64,27 @@ const CONFIG_STATUS_COLORS: Record<ConfigStatus, string> = {
   UNKNOWN: "⚫",
 };
 
-const getTenantIcon = (tenant: DynatraceTenantDto): vscode.IconPath => {
+const getTenantIconAndTooltip = (tenant: DynatraceTenantDto): [vscode.IconPath, string] => {
   if (
     tenant.url.includes("live.dynatrace.com") ||
     tenant.url.includes("sprint.dynatracelabs.com") ||
     tenant.url.includes("dev.dynatracelabs.com")
   ) {
-    logger.notify(
-      "WARN",
-      `Tenant ${tenant.label} is using a legacy URL. Update it to a .apps domain and use a Platform Token`,
-    );
-    return ICONS.SAAS_TENANT_INVALID;
+    const tooltip =
+      "Tenant is using a legacy URL. Update it to a .apps domain and use a Platform Token";
+    logger.notify("WARN", `${tenant.label}: ${tooltip}`);
+    return [ICONS.SAAS_TENANT_INVALID, tooltip];
   }
   if (tenant.deploymentModel === "saas") {
     const dtToken = decryptToken(tenant.token);
     if (dtToken.startsWith("dt0c01") || dtToken.startsWith("dt0s01")) {
-      logger.notify(
-        "WARN",
-        `Tenant ${tenant.label} has a legacy token. Update it to a Platform Token`,
-      );
-      return ICONS.SAAS_TENANT_INVALID;
+      const tooltip = "Tenant has a legacy token. Update it to a Platform Token";
+      logger.notify("WARN", `${tenant.label}: ${tooltip}`);
+      return [ICONS.SAAS_TENANT_INVALID, tooltip];
     }
-    return tenant.current ? ICONS.SAAS_TENANT_CURRENT : ICONS.SAAS_TENANT;
+    return [tenant.current ? ICONS.SAAS_TENANT_CURRENT : ICONS.SAAS_TENANT, tenant.id];
   }
-  return tenant.current ? ICONS.MANAGED_TENANT_CURRENT : ICONS.MANAGED_TENANT;
+  return [tenant.current ? ICONS.MANAGED_TENANT_CURRENT : ICONS.MANAGED_TENANT, tenant.id];
 };
 
 /**
@@ -256,19 +253,23 @@ export const getTenantsTreeDataProvider = createSingletonProvider<TenantsTreeDat
  * with the VSCode Extension.
  * @param tenant the tenant object
  */
-const createDynatraceTenantTreeItem = (tenant: DynatraceTenantDto): DynatraceTenant =>
-  ({
-    ...new vscode.TreeItem(tenant.label ?? tenant.id, vscode.TreeItemCollapsibleState.Collapsed),
-    url: tenant.url,
-    token: decryptToken(tenant.token),
-    id: tenant.id,
-    dt: createDynatraceClient(tenant.url, tenant.token, tenant.deploymentModel),
-    tooltip: tenant.id,
-    current: tenant.current,
-    deploymentModel: tenant.deploymentModel,
-    contextValue: tenant.current ? "currentDynatraceEnvironment" : "dynatraceEnvironment",
-    iconPath: getTenantIcon(tenant),
-  }) as DynatraceTenant;
+const createDynatraceTenantTreeItem = (tenant: DynatraceTenantDto): DynatraceTenant => {
+  const { label, id, url, token, deploymentModel, current } = tenant;
+  const dtToken = decryptToken(token);
+  const [iconPath, tooltip] = getTenantIconAndTooltip(tenant);
+  return {
+    ...new vscode.TreeItem(label ?? id, vscode.TreeItemCollapsibleState.Collapsed),
+    url,
+    token: dtToken,
+    id,
+    dt: createDynatraceClient(url, dtToken, deploymentModel),
+    tooltip,
+    current,
+    deploymentModel,
+    contextValue: current ? "currentDynatraceEnvironment" : "dynatraceEnvironment",
+    iconPath,
+  } as DynatraceTenant;
+};
 
 /**
  * Creates a TreeItem object that represents an Extension 2.0 that is deployed to the connected
