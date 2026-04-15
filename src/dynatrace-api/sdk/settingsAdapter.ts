@@ -14,12 +14,7 @@
   limitations under the License.
  */
 
-import {
-  SettingsObjectsClient,
-  SettingsSchemasClient,
-  SettingsObject as SdkSettingsObject,
-} from "@dynatrace-sdk/client-environment-v2";
-import { wrapSdkError } from "../errors";
+import { DynatraceAPIError, wrapSdkError } from "../errors";
 import { SettingsServiceInterface } from "../interfaces/services";
 import {
   SchemaStub,
@@ -28,16 +23,16 @@ import {
   SettingsObjectUpdate,
 } from "../interfaces/settings";
 import { RateLimitRetryHandler } from "../rateLimitHandler";
+import { SettingsClient } from "./settingsClient";
 
 /**
- * SaaS adapter for Settings 2.0 API — wraps SDK clients to match existing service interface.
+ * SaaS adapter for Settings 2.0 API — wraps a custom SettingsClient to match existing service interface.
  */
 export class SdkSettingsService implements SettingsServiceInterface {
   private readonly retryHandler: RateLimitRetryHandler;
 
   constructor(
-    private readonly objectsClient: SettingsObjectsClient,
-    private readonly schemasClient: SettingsSchemasClient,
+    private readonly settingsClient: SettingsClient,
     retryHandler?: RateLimitRetryHandler,
   ) {
     this.retryHandler = retryHandler ?? new RateLimitRetryHandler();
@@ -45,12 +40,7 @@ export class SdkSettingsService implements SettingsServiceInterface {
 
   async listSchemas(signal?: AbortSignal): Promise<SchemaStub[]> {
     try {
-      const res = await this.retryHandler.execute(
-        // eslint-disable-next-line @typescript-eslint/no-explicit-any, @typescript-eslint/no-unsafe-argument -- SDK AbortSignal type mismatch
-        () => this.schemasClient.getAvailableSchemaDefinitions(signal as any),
-        signal,
-      );
-      return res.items;
+      return await this.retryHandler.execute(() => this.settingsClient.listSchemas(signal), signal);
     } catch (err) {
       throw wrapSdkError(err);
     }
@@ -64,42 +54,8 @@ export class SdkSettingsService implements SettingsServiceInterface {
     signal?: AbortSignal,
   ): Promise<SettingsObject[]> {
     try {
-      const allItems: SdkSettingsObject[] = [];
-      let nextPageKey: string | undefined;
-      do {
-        const pageKey = nextPageKey;
-        const res = await this.retryHandler.execute(
-          () =>
-            this.objectsClient.getSettingsObjects({
-              schemaIds,
-              scopes,
-              fields,
-              pageSize,
-              nextPageKey: pageKey,
-              // eslint-disable-next-line @typescript-eslint/no-explicit-any, @typescript-eslint/no-unsafe-assignment -- SDK AbortSignal type mismatch
-              abortSignal: signal as any,
-            }),
-          signal,
-        );
-        allItems.push(...res.items);
-        nextPageKey = res.nextPageKey ?? undefined;
-      } while (nextPageKey);
-      return allItems.map(mapSdkSettingsObject);
-    } catch (err) {
-      throw wrapSdkError(err);
-    }
-  }
-
-  async putObject(objectId: string, payload: SettingsObjectUpdate, signal?: AbortSignal) {
-    try {
       return await this.retryHandler.execute(
-        () =>
-          this.objectsClient.putSettingsObjectByObjectId({
-            objectId,
-            body: { ...payload, value: payload.value as Record<string, unknown> },
-            // eslint-disable-next-line @typescript-eslint/no-explicit-any, @typescript-eslint/no-unsafe-assignment -- SDK AbortSignal type mismatch
-            abortSignal: signal as any,
-          }),
+        () => this.settingsClient.listObjects(schemaIds, scopes, fields, pageSize, signal),
         signal,
       );
     } catch (err) {
@@ -107,15 +63,22 @@ export class SdkSettingsService implements SettingsServiceInterface {
     }
   }
 
+  async putObject(
+    _objectId: string,
+    _payload: SettingsObjectUpdate,
+    _signal?: AbortSignal,
+  ): Promise<unknown> {
+    throw new DynatraceAPIError("putObject is not yet supported on the SaaS platform", {
+      code: 501,
+      constraintViolations: [],
+      message: "putObject is not yet supported on the SaaS platform",
+    });
+  }
+
   async getSchema(schemaId: string, signal?: AbortSignal): Promise<unknown> {
     try {
       return await this.retryHandler.execute(
-        () =>
-          this.schemasClient.getSchemaDefinition({
-            schemaId,
-            // eslint-disable-next-line @typescript-eslint/no-explicit-any, @typescript-eslint/no-unsafe-assignment -- SDK AbortSignal type mismatch
-            abortSignal: signal as any,
-          }),
+        () => this.settingsClient.getSchema(schemaId, signal),
         signal,
       );
     } catch (err) {
@@ -124,46 +87,14 @@ export class SdkSettingsService implements SettingsServiceInterface {
   }
 
   async postObject(
-    payload: SettingsObjectCreate[],
-    validateOnly: boolean = false,
-    signal?: AbortSignal,
-  ) {
-    try {
-      return await this.retryHandler.execute(
-        () =>
-          this.objectsClient.postSettingsObjects({
-            body: payload.map(p => ({
-              schemaId: p.schemaId,
-              scope: p.scope,
-              schemaVersion: p.schemaVersion,
-              externalId: p.externalId,
-              insertAfter: p.insertAfter,
-              value: (p.value ?? {}) as Record<string, unknown>,
-            })),
-            validateOnly,
-            // eslint-disable-next-line @typescript-eslint/no-explicit-any, @typescript-eslint/no-unsafe-assignment -- SDK AbortSignal type mismatch
-            abortSignal: signal as any,
-          }),
-        signal,
-      );
-    } catch (err) {
-      throw wrapSdkError(err);
-    }
+    _payload: SettingsObjectCreate[],
+    _validateOnly: boolean = false,
+    _signal?: AbortSignal,
+  ): Promise<unknown> {
+    throw new DynatraceAPIError("postObject is not yet supported on the SaaS platform", {
+      code: 501,
+      constraintViolations: [],
+      message: "postObject is not yet supported on the SaaS platform",
+    });
   }
-}
-
-function mapSdkSettingsObject(obj: SdkSettingsObject): SettingsObject {
-  return {
-    externalId: obj.externalId ?? "",
-    schemaId: obj.schemaId ?? "",
-    schemaVersion: obj.schemaVersion ?? "",
-    author: obj.author ?? "",
-    modified: obj.modified ?? 0,
-    updateToken: obj.updateToken ?? "",
-    objectId: obj.objectId ?? "",
-    scope: obj.scope ?? "",
-    value: obj.value,
-    summary: obj.summary ?? "",
-    created: obj.created ?? 0,
-  };
 }

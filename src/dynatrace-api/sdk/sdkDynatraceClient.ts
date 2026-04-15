@@ -29,6 +29,7 @@ import { RateLimitConfig, RateLimitRetryHandler } from "../rateLimitHandler";
 import { SdkExtensionsServiceV2 } from "./extensionsAdapter";
 import { createSdkClients } from "./sdkClientFactory";
 import { SdkSettingsService } from "./settingsAdapter";
+import { SettingsClient } from "./settingsClient";
 import {
   StubbedActiveGatesService,
   StubbedCredentialVaultService,
@@ -64,11 +65,7 @@ export class SaaSDynatraceClient implements DynatraceClient {
       clients.discovery,
       retryHandler,
     );
-    this.settings = new SdkSettingsService(
-      clients.settingsObjects,
-      clients.settingsSchemas,
-      retryHandler,
-    );
+    this.settings = new SdkSettingsService(new SettingsClient(clients.httpClient), retryHandler);
 
     // Stubbed services — not yet supported on SaaS
     this.extensionsV1 = new StubbedExtensionsServiceV1();

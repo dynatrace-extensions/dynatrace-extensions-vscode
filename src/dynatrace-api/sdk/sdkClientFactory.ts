@@ -21,7 +21,6 @@ import {
   EnvironmentClient,
   SchemaClient,
 } from "@dynatrace-internal/client-extensions";
-import { SettingsObjectsClient, SettingsSchemasClient } from "@dynatrace-sdk/client-environment-v2";
 import { PlatformHttpClient } from "@dynatrace-sdk/http-client";
 
 export interface SdkClients {
@@ -30,8 +29,7 @@ export interface SdkClients {
   schema: SchemaClient;
   environment: EnvironmentClient;
   discovery: DiscoveryClient;
-  settingsObjects: SettingsObjectsClient;
-  settingsSchemas: SettingsSchemasClient;
+  httpClient: PlatformHttpClient;
 }
 
 /**
@@ -54,9 +52,6 @@ export function createSdkClients(baseUrl: string, platformToken: string): SdkCli
     schema: new SchemaClient(httpClient),
     environment: new EnvironmentClient(httpClient),
     discovery: new DiscoveryClient(httpClient),
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any, @typescript-eslint/no-unsafe-argument -- version mismatch between SDK http-client packages
-    settingsObjects: new SettingsObjectsClient(httpClient as any),
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any, @typescript-eslint/no-unsafe-argument -- version mismatch between SDK http-client packages
-    settingsSchemas: new SettingsSchemasClient(httpClient as any),
+    httpClient,
   };
 }
