@@ -29,18 +29,18 @@ import { createSingletonProvider } from "../utils/singleton";
 import { parseYAML } from "../utils/yamlParsing";
 
 const ICONS_PATH = path.join(__filename, "..", "..", "src", "assets", "icons");
-const ICONS: Record<string, { light: string; dark: string }> = {
+const ICONS: Record<string, { light: vscode.Uri; dark: vscode.Uri }> = {
   EXTENSION: {
-    light: path.join(ICONS_PATH, "extension_light.png"),
-    dark: path.join(ICONS_PATH, "extension_dark.png"),
+    light: vscode.Uri.file(path.join(ICONS_PATH, "extension_light.png")),
+    dark: vscode.Uri.file(path.join(ICONS_PATH, "extension_dark.png")),
   },
   EXTENSION_CURRENT: {
-    light: path.join(ICONS_PATH, "extension_current_light.png"),
-    dark: path.join(ICONS_PATH, "extension_current_dark.png"),
+    light: vscode.Uri.file(path.join(ICONS_PATH, "extension_current_light.png")),
+    dark: vscode.Uri.file(path.join(ICONS_PATH, "extension_current_dark.png")),
   },
   EXTENSION_MANIFEST: {
-    light: path.join(ICONS_PATH, "manifest_light.png"),
-    dark: path.join(ICONS_PATH, "manifest_dark.png"),
+    light: vscode.Uri.file(path.join(ICONS_PATH, "manifest_light.png")),
+    dark: vscode.Uri.file(path.join(ICONS_PATH, "manifest_dark.png")),
   },
 };
 
@@ -62,11 +62,7 @@ const createWorkspacesTreeItem = (
   label: string,
   collapsibleState: vscode.TreeItemCollapsibleState,
   workspacePath: string,
-  icon:
-    | string
-    | vscode.Uri
-    | { light: string | vscode.Uri; dark: string | vscode.Uri }
-    | vscode.ThemeIcon,
+  icon: string | vscode.IconPath,
   contextValue: WorkspacesTreeContextValue,
   id: string,
   version?: string,
