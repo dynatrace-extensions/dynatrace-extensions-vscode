@@ -121,6 +121,9 @@ export async function activate(context: vscode.ExtensionContext) {
     }),
   );
 
+  // Check and notify on invalid legacy setups
+  getAllTenants().forEach(t => checkTenantSetup(t, true));
+
   await handlePendingInitialization();
 
   logger.info("Dynatrace Extensions is now activated.", ...fnLogTrace);
@@ -215,8 +218,6 @@ const registerTreeViews = (): vscode.Disposable[] => [
   vscode.window.registerTreeDataProvider(EnvironmentCommandPrefix, getTenantsTreeDataProvider()),
   ...registerTenantsViewCommands(),
 ];
-// Check and notify on invalid legacy setups
-getAllTenants().forEach(t => checkTenantSetup(t, true));
 
 const registerCodeActionsProviders = () => [
   registerCodeActionsProvider(getSnippetGenerator()),

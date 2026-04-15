@@ -94,6 +94,9 @@ function isRateLimitError(err: unknown): boolean {
   }
   if (err != null && typeof err === "object") {
     const record = err as Record<string, unknown>;
+    if ("code" in record && record.code === 429) {
+      return true;
+    }
     if ("status" in record && record.status === 429) {
       return true;
     }
