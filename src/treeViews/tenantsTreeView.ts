@@ -64,24 +64,36 @@ const CONFIG_STATUS_COLORS: Record<ConfigStatus, string> = {
   UNKNOWN: "⚫",
 };
 
-const getTenantIconAndTooltip = (tenant: DynatraceTenantDto): [vscode.IconPath, string] => {
+export const checkTenantSetup = (
+  tenant: DynatraceTenantDto,
+  notify: boolean = false,
+): string | null => {
+  let issue = null;
   if (
     tenant.url.includes("live.dynatrace.com") ||
     tenant.url.includes("sprint.dynatracelabs.com") ||
     tenant.url.includes("dev.dynatracelabs.com")
   ) {
-    const tooltip =
-      "Tenant is using a legacy URL. Update it to a .apps domain and use a Platform Token";
-    logger.notify("WARN", `${tenant.label}: ${tooltip}`);
-    return [ICONS.SAAS_TENANT_INVALID, tooltip];
-  }
-  if (tenant.deploymentModel === "saas") {
+    issue = "Tenant is using a legacy URL. Update it to a .apps domain and use a Platform Token";
+  } else if (tenant.deploymentModel === "saas") {
     const dtToken = decryptToken(tenant.token);
     if (dtToken.startsWith("dt0c01") || dtToken.startsWith("dt0s01")) {
-      const tooltip = "Tenant has a legacy token. Update it to a Platform Token";
-      logger.notify("WARN", `${tenant.label}: ${tooltip}`);
-      return [ICONS.SAAS_TENANT_INVALID, tooltip];
+      issue = "Tenant has a legacy token. Update it to a Platform Token";
     }
+  }
+  if (issue && notify) {
+    logger.notify("WARN", `${tenant.label}: ${issue}`);
+  }
+  return issue;
+};
+
+const getTenantIconAndTooltip = (tenant: DynatraceTenantDto): [vscode.IconPath, string] => {
+  const setupIssue = checkTenantSetup(tenant);
+
+  if (setupIssue) {
+    return [ICONS.SAAS_TENANT_INVALID, setupIssue];
+  }
+  if (tenant.deploymentModel === "saas") {
     return [tenant.current ? ICONS.SAAS_TENANT_CURRENT : ICONS.SAAS_TENANT, tenant.id];
   }
   return [tenant.current ? ICONS.MANAGED_TENANT_CURRENT : ICONS.MANAGED_TENANT, tenant.id];

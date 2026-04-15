@@ -66,7 +66,7 @@ import { getFastModeStatusBar } from "./statusBar/fastMode";
 import { SimulatorManager } from "./statusBar/simulator";
 import { registerTenantsViewCommands } from "./treeViews/commands/environments";
 import { registerWorkspaceViewCommands } from "./treeViews/commands/workspaces";
-import { getTenantsTreeDataProvider } from "./treeViews/tenantsTreeView";
+import { checkTenantSetup, getTenantsTreeDataProvider } from "./treeViews/tenantsTreeView";
 import { getWorkspacesTreeDataProvider } from "./treeViews/workspacesTreeView";
 import { initializeCache } from "./utils/caching";
 import { isExtensionsWorkspace } from "./utils/conditionCheckers";
@@ -215,6 +215,8 @@ const registerTreeViews = (): vscode.Disposable[] => [
   vscode.window.registerTreeDataProvider(EnvironmentCommandPrefix, getTenantsTreeDataProvider()),
   ...registerTenantsViewCommands(),
 ];
+// Check and notify on invalid legacy setups
+getAllTenants().forEach(t => checkTenantSetup(t, true));
 
 const registerCodeActionsProviders = () => [
   registerCodeActionsProvider(getSnippetGenerator()),

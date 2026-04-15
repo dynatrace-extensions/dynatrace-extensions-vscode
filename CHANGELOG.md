@@ -27,6 +27,18 @@
 - https://github.com/dynatrace-extensions/dynatrace-extensions-vscode/security/dependabot/115
 
 ---
+## Version 3.0.0 (unreleased)
+
+### ⚠️ Breaking changes
+
+- Existing SaaS Tenant connections will no longer work. These will show up in red, and you should edit each one adjusting the following details:
+  1. The URL must use a Platform domain (`*.apps.*`)
+  2. The token must be a [Platform Token](https://docs.dynatrace.com/docs/shortlink/platform-tokens) (`dt0s16.*`)
+
+### 🚀 Improved in this version:
+
+- SaaS and Managed environment connections are handled differently, with SaaS leveraging Platform SDKs and DQL queries
+- Icons have been updated from Dynatrace's latest set
 
 ## Version 2.11.0 (23.03.2026)
 
@@ -76,6 +88,7 @@
 - [JMX Conversion - array has too many actions error](https://github.com/dynatrace-extensions/dynatrace-extensions-vscode/issues/257)
 
 ### 🔒 Security patches:
+
 - [Lodash has Prototype Pollution Vulnerability in `_.unset` and `_.omit` functions](https://github.com/dynatrace-extensions/dynatrace-extensions-vscode/security/dependabot/77)
 - [React Router has unexpected external redirect via untrusted paths](https://github.com/dynatrace-extensions/dynatrace-extensions-vscode/security/dependabot/75)
 - [React Router vulnerable to XSS via Open Redirects](https://github.com/dynatrace-extensions/dynatrace-extensions-vscode/security/dependabot/74)
@@ -110,6 +123,7 @@
 - [New setting for disabling external calls](https://github.com/dynatrace-extensions/dynatrace-extensions-vscode/issues/275)
 
 ### 🚀 Improved in this version:
+
 - [Improvements to Prometheus scraping](https://github.com/dynatrace-extensions/dynatrace-extensions-vscode/issues/274)
 
 ---
@@ -137,10 +151,12 @@
 ## Version 2.8.0 (15.05.2025)
 
 ### 🪲 Fixed in this version:
-  - [#263 - Health cards diagnostics stopping build](https://github.com/dynatrace-extensions/dynatrace-extensions-vscode/issues/263)
+
+- [#263 - Health cards diagnostics stopping build](https://github.com/dynatrace-extensions/dynatrace-extensions-vscode/issues/263)
 
 ### ✨ New in this version:
-  - [#267 - Dashboard generation - Platform documents](https://github.com/dynatrace-extensions/dynatrace-extensions-vscode/pull/267)
+
+- [#267 - Dashboard generation - Platform documents](https://github.com/dynatrace-extensions/dynatrace-extensions-vscode/pull/267)
 
 ---
 
