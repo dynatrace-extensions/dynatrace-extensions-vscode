@@ -134,5 +134,13 @@
       }
     ]
   },
-  "ignorePatterns": ["out", "dist", "**/*.d.ts", "node_modules", "src/test", "jest*.config.js"]
+  "ignorePatterns": [
+    "out",
+    "dist",
+    "**/*.d.ts",
+    "node_modules",
+    "src/test",
+    "jest*.config.js",
+    "scripts"
+  ]
 }
