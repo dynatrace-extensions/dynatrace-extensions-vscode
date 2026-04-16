@@ -1,5 +1,33 @@
 # Change Log
 
+## Version 2.11.2 (16.04.2026)
+
+### 🔒 Security patches:
+
+- https://github.com/dynatrace-extensions/dynatrace-extensions-vscode/security/dependabot/130
+- https://github.com/dynatrace-extensions/dynatrace-extensions-vscode/security/dependabot/140
+- https://github.com/dynatrace-extensions/dynatrace-extensions-vscode/security/dependabot/132
+- https://github.com/dynatrace-extensions/dynatrace-extensions-vscode/security/dependabot/141
+- https://github.com/dynatrace-extensions/dynatrace-extensions-vscode/security/dependabot/131
+- https://github.com/dynatrace-extensions/dynatrace-extensions-vscode/security/dependabot/128
+- https://github.com/dynatrace-extensions/dynatrace-extensions-vscode/security/dependabot/117
+- https://github.com/dynatrace-extensions/dynatrace-extensions-vscode/security/dependabot/133
+- https://github.com/dynatrace-extensions/dynatrace-extensions-vscode/security/dependabot/125
+- https://github.com/dynatrace-extensions/dynatrace-extensions-vscode/security/dependabot/124
+- https://github.com/dynatrace-extensions/dynatrace-extensions-vscode/security/dependabot/126
+- https://github.com/dynatrace-extensions/dynatrace-extensions-vscode/security/dependabot/127
+- https://github.com/dynatrace-extensions/dynatrace-extensions-vscode/security/dependabot/137
+- https://github.com/dynatrace-extensions/dynatrace-extensions-vscode/security/dependabot/134
+- https://github.com/dynatrace-extensions/dynatrace-extensions-vscode/security/dependabot/129
+- https://github.com/dynatrace-extensions/dynatrace-extensions-vscode/security/dependabot/123
+- https://github.com/dynatrace-extensions/dynatrace-extensions-vscode/security/dependabot/121
+- https://github.com/dynatrace-extensions/dynatrace-extensions-vscode/security/dependabot/119
+- https://github.com/dynatrace-extensions/dynatrace-extensions-vscode/security/dependabot/118
+- https://github.com/dynatrace-extensions/dynatrace-extensions-vscode/security/dependabot/122
+- https://github.com/dynatrace-extensions/dynatrace-extensions-vscode/security/dependabot/115
+
+---
+
 ## Version 2.11.0 (23.03.2026)
 
 ### ✨ New in this version:
