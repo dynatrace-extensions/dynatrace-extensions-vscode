@@ -27,7 +27,7 @@
     "prettier": "^3.3.2",
     "typescript": "^5.5.3",
     "typescript-eslint": "^7.15.0",
-    "vite": "^7.2.7"
+    "vite": "^7.3.2"
   },
   "scripts": {
     "start": "vite",
@@ -79,6 +79,12 @@
     "wicg-inert": "^3.1.2"
   },
   "overrides": {
-     "@remix-run/router": ">=1.23.2"
+     "@remix-run/router": ">=1.23.2",
+     "axios": ">=1.15.0",
+     "lodash": ">=4.18.0",
+     "lodash-es": ">=4.18.0",
+     "picomatch": ">=4.0.4",
+     "yaml": ">=1.10.3",
+     "brace-expansion": ">=2.0.3"
   }
 }
