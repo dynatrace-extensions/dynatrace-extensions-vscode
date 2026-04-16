@@ -10,7 +10,6 @@
     "@typescript-eslint",
     "import",
     "functional",
-    "no-unsanitized",
     "no-secrets",
     "react",
     "@lwc/eslint-plugin-lwc",
@@ -117,8 +116,6 @@
     ],
 
     "@lwc/lwc/no-inner-html": "error",
-    "no-unsanitized/method": "error",
-    "no-unsanitized/property": "error",
     "no-secrets/no-secrets": [
       "error",
       {
