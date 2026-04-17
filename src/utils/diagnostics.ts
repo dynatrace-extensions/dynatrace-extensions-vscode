@@ -39,7 +39,6 @@ import {
   REFERENCED_VAR_NOT_DEFINED,
 } from "../constants";
 import { ExtensionStub } from "../interfaces/extensionMeta";
-import { diagnoseOpenPipeline } from "./openpipelineDiagnostics";
 import {
   getCachedOid,
   getCachedParsedExtension,
@@ -60,6 +59,7 @@ import {
   getNextElementIdx,
   isSameList,
 } from "../utils/yamlParsing";
+import { diagnoseOpenPipeline } from "./openpipelineDiagnostics";
 
 export interface ExtensionDiagnosticDto {
   code: string | number | { value: string | number; target: vscode.Uri } | undefined;
@@ -86,10 +86,7 @@ export const updateDiagnosticsCollection = async (document?: vscode.TextDocument
 
   // Bail early if needed
   const parsedExtension = getCachedParsedExtension();
-  if (
-    !parsedExtension ||
-    !config.get("diagnostics")
-  ) {
+  if (!parsedExtension || !config.get("diagnostics")) {
     getDiagnosticsCollection().set(document.uri, []);
     return;
   }
