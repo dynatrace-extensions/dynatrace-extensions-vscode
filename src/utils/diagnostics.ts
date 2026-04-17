@@ -39,6 +39,7 @@ import {
   REFERENCED_VAR_NOT_DEFINED,
 } from "../constants";
 import { ExtensionStub } from "../interfaces/extensionMeta";
+import { diagnoseOpenPipeline } from "./openpipelineDiagnostics";
 import {
   getCachedOid,
   getCachedParsedExtension,
@@ -70,13 +71,24 @@ export interface ExtensionDiagnosticDto {
  * Collects Extension 2.0 diagnostics and updates the collection managed by this module.
  */
 export const updateDiagnosticsCollection = async (document?: vscode.TextDocument) => {
-  if (!document?.fileName.endsWith("extension.yaml")) return;
+  if (!document) return;
+
+  const config = vscode.workspace.getConfiguration("dynatraceExtensions", null);
+
+  // Handle OpenPipeline pipeline files independently of extension.yaml diagnostics
+  if (document.fileName.endsWith(".pipeline.json")) {
+    const enabled = config.get<boolean>("diagnostics.all") ?? true;
+    getDiagnosticsCollection().set(document.uri, enabled ? diagnoseOpenPipeline(document) : []);
+    return;
+  }
+
+  if (!document.fileName.endsWith("extension.yaml")) return;
 
   // Bail early if needed
   const parsedExtension = getCachedParsedExtension();
   if (
     !parsedExtension ||
-    !vscode.workspace.getConfiguration("dynatraceExtensions", null).get("diagnostics")
+    !config.get("diagnostics")
   ) {
     getDiagnosticsCollection().set(document.uri, []);
     return;

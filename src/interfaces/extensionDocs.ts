@@ -93,8 +93,9 @@ interface AlertStrategy {
 }
 
 export interface OpenPipelineFieldsToExtract {
-  fieldName: string;
+  fieldName: string | null;
   referencedFieldName: string;
+  extractionStrategy?: string;
 }
 
 export interface OpenPipelineIdComponent {

@@ -162,3 +162,17 @@ export const REFERENCED_VAR_NOT_DEFINED: ExtensionDiagnosticDto = {
   severity: vscode.DiagnosticSeverity.Error,
   message: "A variable is referenced but is not defined.",
 };
+
+export const OPENPIPELINE_MISSING_TAGS_FIELD: ExtensionDiagnosticDto = {
+  code: "DED022",
+  severity: vscode.DiagnosticSeverity.Warning,
+  message:
+    'Node extraction processor is missing a "primary_tags." field extraction with STARTS_WITH strategy. ' +
+    "Tags will not be propagated to this entity type.",
+};
+
+export const OPENPIPELINE_MISSING_GRAIL_FIELD: ExtensionDiagnosticDto = {
+  code: "DED023",
+  severity: vscode.DiagnosticSeverity.Warning,
+  message: "Node extraction processor is missing a required Grail primary field extraction.",
+};

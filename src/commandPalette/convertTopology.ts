@@ -983,13 +983,41 @@ const createSmartscapeNodeProcessor = (
     return true;
   });
 
+  // Fields always extracted for cloud/platform context
+  const GRAIL_PRIMARY_FIELDS = [
+    "aws.account.id",
+    "aws.region",
+    "azure.location",
+    "azure.resource.group",
+    "azure.subscription",
+    "dt.host_group.id",
+    "gcp.project.id",
+    "gcp.region",
+    "k8s.cluster.name",
+    "k8s.namespace.name",
+  ];
+
   // Build fields to extract from attributes, filtering out blocked fields
-  const fieldsToExtract = (rule.attributes ?? [])
-    .filter(attr => !BLOCKED_FIELDS.includes(attr.key))
-    .map(attr => ({
-      fieldName: attr.key,
-      referencedFieldName: extractFieldNameFromPattern(attr.pattern),
-    }));
+  const fieldsToExtract = [
+    // Tag extraction using prefix strategy
+    {
+      fieldName: null,
+      referencedFieldName: "primary_tags.",
+      extractionStrategy: "STARTS_WITH",
+    },
+    // Standard platform/cloud context fields
+    ...GRAIL_PRIMARY_FIELDS.map(field => ({
+      fieldName: field,
+      referencedFieldName: field,
+    })),
+    // Fields from rule attributes, filtering out blocked fields
+    ...(rule.attributes ?? [])
+      .filter(attr => !BLOCKED_FIELDS.includes(attr.key))
+      .map(attr => ({
+        fieldName: attr.key,
+        referencedFieldName: extractFieldNameFromPattern(attr.pattern),
+      })),
+  ];
 
   const processorId = `${newName}_${extractNode ? "node" : "entity"}_${source.sourceType}_${counter}`;
 
