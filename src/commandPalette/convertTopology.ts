@@ -999,12 +999,6 @@ const createSmartscapeNodeProcessor = (
 
   // Build fields to extract from attributes, filtering out blocked fields
   const fieldsToExtract = [
-    // Tag extraction using prefix strategy
-    {
-      fieldName: null,
-      referencedFieldName: "primary_tags.",
-      extractionStrategy: "STARTS_WITH",
-    },
     // Standard platform/cloud context fields
     ...GRAIL_PRIMARY_FIELDS.map(field => ({
       fieldName: field,
@@ -1017,6 +1011,11 @@ const createSmartscapeNodeProcessor = (
         fieldName: attr.key,
         referencedFieldName: extractFieldNameFromPattern(attr.pattern),
       })),
+    // Tag extraction using prefix strategy
+    {
+      referencedFieldName: "primary_tags.",
+      strategy: "startsWith",
+    },
   ];
 
   const processorId = `${newName}_${extractNode ? "node" : "entity"}_${source.sourceType}_${counter}`;

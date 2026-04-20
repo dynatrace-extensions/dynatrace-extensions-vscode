@@ -167,7 +167,7 @@ export const OPENPIPELINE_MISSING_TAGS_FIELD: ExtensionDiagnosticDto = {
   code: "DED022",
   severity: vscode.DiagnosticSeverity.Warning,
   message:
-    'Node extraction processor is missing a "primary_tags." field extraction with STARTS_WITH strategy. ' +
+    'Node extraction processor is missing a "primary_tags." field extraction with startsWith strategy. ' +
     "Tags will not be propagated to this entity type.",
 };
 

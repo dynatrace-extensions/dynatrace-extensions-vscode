@@ -101,9 +101,9 @@ const diagnoseNodeProcessor = (
   const processorLine = findProcessorLine(lines, processor.id);
   const fieldsLine = findFieldsToExtractLine(lines, processorLine, nextProcessorLine);
 
-  // Check for primary_tags. STARTS_WITH entry
+  // Check for primary_tags. startsWith entry
   const hasTagsField = fieldsToExtract.some(
-    f => f.referencedFieldName === "primary_tags." && f.extractionStrategy === "STARTS_WITH",
+    f => f.referencedFieldName === "primary_tags." && f.strategy === "startsWith",
   );
   if (!hasTagsField) {
     diagnostics.push(
