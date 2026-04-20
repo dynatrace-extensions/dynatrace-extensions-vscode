@@ -532,6 +532,24 @@ export function getExtensionWorkspaceDir(): string | undefined {
 }
 
 /**
+ * Discovers and returns the paths of the OpenPipeline pipeline definition files in the extension folder, if any
+ * @returns Array of paths
+ */
+export const getPipelineFiles = (): string[] => {
+  const extensionDir = getExtensionWorkspaceDir();
+  if (!extensionDir) {
+    return [];
+  }
+  const pipelineDir = path.join(extensionDir, "openpipeline");
+  if (!existsSync(pipelineDir)) {
+    return [];
+  }
+  return readdirSync(pipelineDir)
+    .filter(file => file.endsWith(".pipeline.json"))
+    .map(file => path.join(pipelineDir, file));
+};
+
+/**
  * Resolves relative paths correctly. This is needed because VS Code extensions do not have
  * correct awareness of path relativity - they are all rooted in vscode installation directory
  * e.g. "C:\Program Files\Microsoft VS Code"
