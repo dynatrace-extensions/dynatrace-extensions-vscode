@@ -42,6 +42,7 @@ import { activateExtensionWorkflow } from "./commandPalette/activateExtension";
 import { buildExtensionWorkflow, fastModeBuildWorkflow } from "./commandPalette/buildExtension";
 import { convertJmxExtensionWorkflow } from "./commandPalette/convertJMXExtension";
 import { convertPythonExtensionWorkflow } from "./commandPalette/convertPythonExtension";
+import { convertScreensWorkflow } from "./commandPalette/convertScreens";
 import { createSmartscapeTopologyWorkflow } from "./commandPalette/convertTopology";
 import { createAlertWorkflow } from "./commandPalette/createAlert";
 import { createMonitoringConfigurationWorkflow } from "./commandPalette/createConfiguration";
@@ -168,6 +169,7 @@ const registerCommandPaletteWorkflows = (): vscode.Disposable[] => [
     createMonitoringConfigurationWorkflow,
   ),
   registerWorkflowCommand(GlobalCommand.CreateSmartscapeTopology, createSmartscapeTopologyWorkflow),
+  registerWorkflowCommand(GlobalCommand.ConvertScreens, convertScreensWorkflow),
   registerWorkflowCommand(GlobalCommand.DownloadSupportArchive, downloadSupportArchiveWorkflow),
 ];
 

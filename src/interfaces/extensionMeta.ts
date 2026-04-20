@@ -157,30 +157,54 @@ interface VarStub {
 }
 
 interface ListSettings {
+  staticContent?: {
+    showGlobalFilter?: boolean;
+    header?: LayoutHeader;
+    hideDefaultBreadcrumb?: boolean;
+    breadcrumbs?: Array<{ type: string; displayName?: string; entityType?: string }>;
+  };
   layout?: {
     autoGenerate?: boolean;
     cards?: ListScreenCard[];
   };
 }
 
-interface ListScreenCard {
+export interface ListScreenCard {
   key: string;
   entitySelectorTemplate?: string;
+  target?: string;
+  conditions?: string[];
   type: "ENTITIES_LIST" | "CHART_GROUP" | "MESSAGE" | "INJECTIONS";
 }
 
-interface DetailsScreenCard {
+export interface DetailsScreenCard {
   key: string;
   entitySelectorTemplate?: string;
   conditions?: string[];
+  target?: string;
   type: DetailInjectionCardType;
 }
 
 interface DetailsSettings {
+  target?: string;
+  staticContent?: {
+    showProblems?: boolean;
+    showProperties?: boolean;
+    showTags?: boolean;
+    showGlobalFilter?: boolean;
+    showAddTag?: boolean;
+    header?: LayoutHeader;
+    breadcrumbs?: Array<{ type: string; displayName?: string; entityType?: string }>;
+  };
   layout?: {
     autoGenerate?: boolean;
     cards?: DetailsScreenCard[];
   };
+}
+
+interface LayoutHeader {
+  title?: string;
+  description: string;
 }
 
 export interface ScreenStub {
@@ -194,13 +218,14 @@ export interface ScreenStub {
   entitiesListCards?: EntitiesListCardStub[];
   metricTableCards?: MetricTableCardStub[];
   chartsCards?: ChartsCardStub[];
-  messageCards?: MinimalCardStub[];
+  messageCards?: MessageCardStub[];
   logsCards?: MinimalCardStub[];
   eventsCards?: MinimalCardStub[];
+  dqlTableCards?: DqlTableCardStub[];
   actions?: Action[];
 }
 
-interface PropertiesCard {
+export interface PropertiesCard {
   displayOnlyConfigured: boolean;
   properties: Property[];
 }
@@ -212,6 +237,59 @@ type Column = AttributeProperty | RelationProperty | CustomColumn;
 interface MinimalCardStub {
   key: string;
   displayName?: string;
+}
+
+export interface MessageCardStub {
+  key: string;
+  displayName?: string;
+  target?: string;
+  type?: string;
+  conditions?: string[];
+  message?: {
+    text: string;
+    theme?: string;
+  };
+  card?: {
+    text: string;
+    theme?: string;
+    icon?: string;
+    displayName?: string;
+    buttons?: Array<{
+      actionExpression: string;
+      text: string;
+      color?: string;
+    }>;
+  };
+}
+
+export interface DqlTableCardStub {
+  key: string;
+  displayName?: string;
+  target?: string;
+  conditions?: string[];
+  query: {
+    query: string;
+    lookups?: Array<{
+      query: string;
+      sourceField: string;
+      lookupField: string;
+      fields: string[];
+    }>;
+    additionalCommands?: string;
+  };
+  columns?: DqlTableColumnStub[];
+}
+
+export interface DqlTableColumnStub {
+  field: string;
+  displayName?: string;
+  columnType?: string;
+  widthType?: string;
+  widthValue?: number;
+  defaultColumn?: boolean;
+  resizable?: boolean;
+  sortable?: boolean;
+  formatter?: string;
 }
 
 interface Filtering {
@@ -295,6 +373,8 @@ export interface MetricTableCardStub {
 export interface HealthCardStub {
   key: string;
   tiles: TileStub[];
+  target?: string;
+  conditions?: string[];
 }
 
 export interface TileStub {
@@ -313,9 +393,12 @@ export interface ChartsCardStub {
   displayName?: string;
   numberOfVisibleCharts?: number;
   chartsInRow?: number;
-  mode?: string;
+  mode?: "NORMAL" | "COMPACT";
   hideEmptyCharts?: boolean;
   charts: ChartStub[];
+  target?: string;
+  conditions?: string[];
+  description?: string;
 }
 
 export interface ChartStub {
@@ -332,12 +415,14 @@ export interface ChartMetricVisualization {
   displayName?: string;
   themeColor?: string;
   seriesType?: MetricVisualizationType;
+  colorOverride?: ColorOverride[];
 }
 
 export interface ChartMetric {
   metricSelector: string;
   metricSelectorDetailed?: string;
   metricSelectorSort?: string;
+  dqlQuery?: string;
   visualization?: ChartMetricVisualization;
   yAxisKey?: string;
 }
@@ -350,11 +435,24 @@ export interface GraphConfigStub {
     key: string;
     position: "RIGHT" | "LEFT";
     visible: boolean;
+    min?: string;
+    max?: string;
   }[];
 }
 
-interface SingleMetricConfig {
-  metric: { metricSelector: string };
+export interface SingleMetricConfig {
+  metric: { metricSelector: string; dqlQuery?: string; overrideUnit?: string };
+  foldTransformation?: string;
+  showTrend?: boolean;
+  showSparkline?: boolean;
+  displayName?: string;
+  colorOverride?: ColorOverride[];
+  showLegend?: boolean;
+}
+
+export interface ColorOverride {
+  color: string;
+  seriesName: string;
 }
 
 export interface DocumentDashboard {
@@ -366,6 +464,7 @@ export interface ExtensionStub {
   name: string;
   version: string;
   minDynatraceVersion: string;
+  keywords?: string[];
   author: {
     name: string;
   };
