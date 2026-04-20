@@ -18,6 +18,12 @@ export const ACTIVATION_SCHEMA_DOC_SELECTOR: vscode.DocumentSelector = {
   pattern: "**/extension/activationSchema.json",
 };
 
+// Document selector for OpenPipeline pipeline JSON files
+export const OPENPIPELINE_DOC_SELECTOR: vscode.DocumentSelector = {
+  language: "json",
+  pattern: "**/openpipeline/*.pipeline.json",
+};
+
 export const QUICK_FIX_PROVIDER_METADATA: vscode.CodeActionProviderMetadata = {
   providedCodeActionKinds: [vscode.CodeActionKind.QuickFix],
 };
