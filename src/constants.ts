@@ -18,6 +18,12 @@ export const ACTIVATION_SCHEMA_DOC_SELECTOR: vscode.DocumentSelector = {
   pattern: "**/extension/activationSchema.json",
 };
 
+// Document selector for OpenPipeline pipeline JSON files
+export const OPENPIPELINE_DOC_SELECTOR: vscode.DocumentSelector = {
+  language: "json",
+  pattern: "**/openpipeline/*.pipeline.json",
+};
+
 export const QUICK_FIX_PROVIDER_METADATA: vscode.CodeActionProviderMetadata = {
   providedCodeActionKinds: [vscode.CodeActionKind.QuickFix],
 };
@@ -161,4 +167,18 @@ export const REFERENCED_VAR_NOT_DEFINED: ExtensionDiagnosticDto = {
   code: "DED021",
   severity: vscode.DiagnosticSeverity.Error,
   message: "A variable is referenced but is not defined.",
+};
+
+export const OPENPIPELINE_MISSING_TAGS_FIELD: ExtensionDiagnosticDto = {
+  code: "DED022",
+  severity: vscode.DiagnosticSeverity.Warning,
+  message:
+    'Node extraction processor is missing a "primary_tags." field extraction with startsWith strategy. ' +
+    "Tags will not be propagated to this entity type.",
+};
+
+export const OPENPIPELINE_MISSING_GRAIL_FIELD: ExtensionDiagnosticDto = {
+  code: "DED023",
+  severity: vscode.DiagnosticSeverity.Warning,
+  message: "Node extraction processor is missing a required Grail primary field extraction.",
 };

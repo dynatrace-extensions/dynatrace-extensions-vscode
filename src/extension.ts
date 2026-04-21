@@ -19,6 +19,7 @@ import vscode from "vscode";
 import { getActivationSchemaActionProvider } from "./codeActions/activationSchema";
 import { getDiagnosticFixProvider } from "./codeActions/diagnosticFixProvider";
 import { getJMXActionProvider } from "./codeActions/jmxWizard";
+import { getOpenPipelineFixProvider } from "./codeActions/openpipelineFixes";
 import { getPrometheusActionProvider } from "./codeActions/prometheus";
 import { getSnippetGenerator } from "./codeActions/snippetGenerator";
 import { getSnmpActionProvider } from "./codeActions/snmp";
@@ -55,6 +56,7 @@ import { uploadExtensionWorkflow } from "./commandPalette/uploadExtension";
 import {
   ACTIVATION_SCHEMA_DOC_SELECTOR,
   MANIFEST_DOC_SELECTOR,
+  OPENPIPELINE_DOC_SELECTOR,
   QUICK_FIX_PROVIDER_METADATA,
   TEMP_CONFIG_DOC_SELECTOR,
 } from "./constants";
@@ -231,6 +233,7 @@ const registerCodeActionsProviders = () => [
   registerCodeActionsProvider(getJMXActionProvider()),
   registerCodeActionsProvider(getDiagnosticFixProvider()),
   registerCodeActionsProvider(getActivationSchemaActionProvider(), ACTIVATION_SCHEMA_DOC_SELECTOR),
+  registerCodeActionsProvider(getOpenPipelineFixProvider(), OPENPIPELINE_DOC_SELECTOR),
 ];
 
 const registerCodeActionsProvider = (

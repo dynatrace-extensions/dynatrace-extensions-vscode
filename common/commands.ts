@@ -12,7 +12,8 @@ function createCommands<T extends string, U extends Record<string, string>>(
 }
 
 export const CodeLensCommand = createCommands("dynatrace-extensions.codelens", {
-  ScrapeMetrics: "scrapeMetrics",
+  JmxScrapeMetrics: "jmx.scrapeMetrics",
+  PrometheusScrapeMetrics: "prometheus.scrapeMetrics",
   ImportMib: "importMib",
   RunWMIQuery: "runWMIQuery",
   ValidateSelector: "validateSelector",

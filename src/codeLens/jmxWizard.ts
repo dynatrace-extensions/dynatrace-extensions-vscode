@@ -41,7 +41,10 @@ class JmxWizardCodeLensProvider implements vscode.CodeLensProvider {
   public readonly onDidChangeCodeLenses = this._onDidChangeCodeLenses.event;
 
   constructor() {
-    vscode.commands.registerCommand(CodeLensCommand.ScrapeMetrics, this.scrapeMetrics.bind(this));
+    vscode.commands.registerCommand(
+      CodeLensCommand.JmxScrapeMetrics,
+      this.scrapeMetrics.bind(this),
+    );
   }
 
   /**
@@ -70,7 +73,7 @@ class JmxWizardCodeLensProvider implements vscode.CodeLensProvider {
     const actionLens = new vscode.CodeLens(range, {
       title: "Navigate MBeans",
       tooltip: "Connect to a Java process and capture its MBeans, then use them in the Extension.",
-      command: CodeLensCommand.ScrapeMetrics,
+      command: CodeLensCommand.JmxScrapeMetrics,
       arguments: [],
     });
 
