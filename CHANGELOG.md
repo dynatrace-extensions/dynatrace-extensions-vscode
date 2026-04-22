@@ -1,5 +1,24 @@
 # Change Log
 
+## Version 3.0.0 (unreleased)
+
+### ⚠️ Breaking changes
+
+- Existing SaaS Tenant connections will no longer work. These will show up in red, and you should edit each one adjusting the following details:
+  1. The URL must use a Platform domain (`*.apps.*`)
+  2. The token must be a [Platform Token](https://docs.dynatrace.com/docs/shortlink/platform-tokens) (`dt0s16.*`)
+
+### 🚀 Improved in this version:
+
+- SaaS and Managed environment connections are handled differently, with SaaS leveraging Platform SDKs and DQL queries
+- Icons have been updated to reflect Dynatrace's latest branding
+
+### ✨ New in this version:
+
+- Command to convert unified analysis screens; this generates documents within the extension folder but requires topology to have been converted first.
+
+---
+
 ## Version 2.11.2 (16.04.2026)
 
 ### 🔒 Security patches:
@@ -27,18 +46,6 @@
 - https://github.com/dynatrace-extensions/dynatrace-extensions-vscode/security/dependabot/115
 
 ---
-## Version 3.0.0 (unreleased)
-
-### ⚠️ Breaking changes
-
-- Existing SaaS Tenant connections will no longer work. These will show up in red, and you should edit each one adjusting the following details:
-  1. The URL must use a Platform domain (`*.apps.*`)
-  2. The token must be a [Platform Token](https://docs.dynatrace.com/docs/shortlink/platform-tokens) (`dt0s16.*`)
-
-### 🚀 Improved in this version:
-
-- SaaS and Managed environment connections are handled differently, with SaaS leveraging Platform SDKs and DQL queries
-- Icons have been updated from Dynatrace's latest set
 
 ## Version 2.11.0 (23.03.2026)
 
