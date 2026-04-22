@@ -74,18 +74,19 @@ export function generateConversionReport(
   warnings: ConversionWarning[],
 ): string {
   const lines: string[] = [
-    `# Conversion Report: ${context.entityType}`,
+    "",
+    `## ${context.entityType}`,
     "",
     `**Node type:** ${context.nodeType}`,
     "",
-    "## Files Generated",
+    "### Files Generated",
     "",
-    ...filesWritten.filter(f => !f.endsWith(".conversion-report.md")).map(f => `- \`${f}\``),
+    ...(filesWritten.length === 0 ? ["None"] : filesWritten.map(f => `- \`${f}\``)),
     "",
   ];
 
   if (warnings.length > 0) {
-    lines.push("## Warnings", "");
+    lines.push("### Warnings", "");
 
     const grouped = new Map<string, ConversionWarning[]>();
     for (const w of warnings) {
@@ -95,7 +96,7 @@ export function generateConversionReport(
     }
 
     for (const [category, categoryWarnings] of grouped) {
-      lines.push(`### ${formatCategoryTitle(category)}`, "");
+      lines.push(`#### ${formatCategoryTitle(category)}`, "");
       for (const w of categoryWarnings) {
         lines.push(`- ${w.message}`);
       }
