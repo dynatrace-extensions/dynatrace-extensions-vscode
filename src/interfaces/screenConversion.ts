@@ -74,9 +74,9 @@ export type WarningCategory =
 
 /** Result of converting a single screen entity type */
 export interface ScreenConversionResult {
-  entityType: string;
   filesWritten: string[];
   warnings: ConversionWarning[];
+  conversionReport: string;
 }
 
 /** The output JSON document wrapper — written to disk as-is */

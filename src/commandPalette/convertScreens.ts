@@ -33,7 +33,6 @@ import { ScreenStub } from "../interfaces/extensionMeta";
 import {
   ConversionWarning,
   EntityToNodeMap,
-  FullySupportedElements,
   OutputDocument,
   ScreenConversionContext,
   ScreenConversionResult,
@@ -174,8 +173,13 @@ async function convertScreens() {
   const message =
     totalFiles > 0
       ? `Converted ${results.length} screen(s): ${totalFiles} file(s) created.` +
-        (totalWarnings > 0 ? ` ${totalWarnings} warning(s) — see conversion reports.` : "")
+        (totalWarnings > 0 ? ` ${totalWarnings} warning(s) — see conversion report.` : "")
       : "No files were generated. Check the conversion reports for details.";
+
+  const fullReport =
+    "# Conversion Report\n\n" + results.map(r => r.conversionReport).join("\n---\n");
+  const reportFilePath = join(screensDir, "conversion-report.md");
+  writeFileSync(reportFilePath, fullReport);
 
   logger.notify("INFO", message, ...logTrace);
 }
@@ -222,7 +226,7 @@ function convertSingleScreen(
   const warnings: ConversionWarning[] = [];
   const documents: OutputDocument[] = [];
 
-  const { screen, fileNamePrefix } = context;
+  const { screen } = context;
 
   // 4.1 detailsSettings → EntityDetailsDefinitionDocument
   if (screen.detailsSettings) {
@@ -258,14 +262,9 @@ function convertSingleScreen(
   }
 
   // Write conversion report
-  if (warnings.length > 0 || filesWritten.length > 0) {
-    const reportFileName = `${fileNamePrefix}.conversion-report.md`;
-    const report = generateConversionReport(context, filesWritten, warnings);
-    writeFileSync(join(screensDir, reportFileName), report);
-    filesWritten.push(reportFileName);
-  }
+  const conversionReport = generateConversionReport(context, filesWritten, warnings);
 
-  return { entityType: context.entityType, filesWritten, warnings };
+  return { filesWritten, warnings, conversionReport };
 }
 
 // ---------------------------------------------------------------------------
