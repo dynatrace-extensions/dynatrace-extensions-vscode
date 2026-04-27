@@ -29,7 +29,7 @@ import {
 } from "@dynatrace/unified-analysis/documents";
 import * as vscode from "vscode";
 import { OpenPipelinePipeline } from "../interfaces/extensionDocs";
-import { ScreenStub } from "../interfaces/extensionMeta";
+import { DetailsSettings, ScreenStub } from "../interfaces/extensionMeta";
 import {
   ConversionWarning,
   EntityToNodeMap,
@@ -44,6 +44,7 @@ import { getExtensionFilePath, getPipelineFiles } from "../utils/fileSystem";
 import logger from "../utils/logging";
 import {
   addWarning,
+  adjustAllDql,
   buildDefaultDqlTable,
   convertChartsCard,
   convertConditions,
@@ -113,8 +114,8 @@ async function convertScreens() {
     });
     return;
   }
-  const entityToNodeTypeMap = createEntityToNodeTypeMap(pipelineFiles);
-  const validEntityTypes = Object.keys(entityToNodeTypeMap).filter(et =>
+  const entityToNodeMap = createEntityToNodeTypeMap(pipelineFiles);
+  const validEntityTypes = Object.keys(entityToNodeMap).filter(et =>
     entitiesWithScreens.includes(et),
   );
   if (validEntityTypes.length === 0) {
@@ -153,7 +154,7 @@ async function convertScreens() {
   for (const screen of extension.screens) {
     if (!selectedEntityTypes.has(screen.entityType)) continue;
 
-    const resolvedNode = entityToNodeTypeMap[screen.entityType];
+    const resolvedNode = entityToNodeMap[screen.entityType];
     const context: ScreenConversionContext = {
       ...resolvedNode,
       extensionName: extension.name,
@@ -161,6 +162,7 @@ async function convertScreens() {
       fileNamePrefix: resolvedNode.nodeType,
       screen,
       keywords: extension.keywords ?? [],
+      entityToNodeMap,
     };
     const result = convertSingleScreen(context, screensDir);
     results.push(result);
@@ -201,7 +203,7 @@ const createEntityToNodeTypeMap = (pipelineFiles: string[]): EntityToNodeMap => 
             if (field.fieldName === "id_classic") {
               nodes[nodeType].idClassic = field.referencedFieldName;
             }
-            nodes[nodeType].fields.add(field.fieldName);
+            nodes[nodeType].fields.add(field.fieldName ?? field.referencedFieldName);
           });
         }
       }
@@ -226,7 +228,7 @@ function convertSingleScreen(
   const warnings: ConversionWarning[] = [];
   const documents: OutputDocument[] = [];
 
-  const { screen } = context;
+  const { screen, entityToNodeMap } = context;
 
   // 4.1 detailsSettings → EntityDetailsDefinitionDocument
   if (screen.detailsSettings) {
@@ -256,7 +258,8 @@ function convertSingleScreen(
   const filesWritten: string[] = [];
   for (const doc of documents) {
     const filePath = join(screensDir, doc.fileName);
-    writeFileSync(filePath, JSON.stringify(doc.content, null, 2));
+    const content = adjustAllDql(JSON.stringify(doc.content, null, 2), entityToNodeMap, warnings);
+    writeFileSync(filePath, content);
     filesWritten.push(doc.fileName);
     logger.info(`Wrote ${doc.fileName}`, ...logTrace);
   }
@@ -281,8 +284,15 @@ function buildEntityDetailsDefinition(
   warnings: ConversionWarning[],
 ): OutputDocument | null {
   const { nodeType, fileNamePrefix, screen, entityType } = context;
-  const settings = screen.detailsSettings;
-  if (!settings) return null;
+  const settingsDef = screen.detailsSettings;
+  if (!settingsDef) return null;
+
+  let settings: DetailsSettings;
+  if (Array.isArray(settingsDef)) {
+    settings = settingsDef.filter(s => s.target !== "CLASSIC")[0];
+  } else {
+    settings = settingsDef;
+  }
 
   if (shouldSkipByTarget(settings.target)) {
     addWarning(warnings, "skipped-classic", "detailsSettings skipped (target: CLASSIC)");
@@ -304,7 +314,7 @@ function buildEntityDetailsDefinition(
   }
 
   // Resolve cards into tabs
-  const tabs = resolveDetailsCards(context, warnings);
+  const tabs = resolveDetailsCards(context, settings, warnings);
 
   // Properties card → metadata element added as first tab
   if (screen.propertiesCard && settings.staticContent?.showProperties !== false) {
@@ -524,10 +534,10 @@ const SKIPPED_CARD_TYPES = new Set(["INJECTIONS", "BREAK_LINE", "ENTITIES_LIST",
  */
 function resolveDetailsCards(
   context: ScreenConversionContext,
+  settings: DetailsSettings,
   warnings: ConversionWarning[],
 ): Tab[] {
   const { screen } = context;
-  const settings = screen.detailsSettings;
 
   const cardRefs = settings?.layout?.cards ?? [];
   const tabs: Tab[] = [];

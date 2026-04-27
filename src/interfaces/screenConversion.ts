@@ -42,6 +42,8 @@ export interface ScreenConversionContext extends NodeContext {
   screen: ScreenStub;
   /** Root-level keywords from extension.yaml (used for action mapping) */
   keywords?: string[];
+  /** Mapping of entity types to node contexts */
+  entityToNodeMap: EntityToNodeMap;
 }
 
 export interface EntityToNodeMap {
@@ -70,7 +72,8 @@ export type WarningCategory =
   | "breadcrumbs"
   | "actions"
   | "relation-properties"
-  | "multi-metric-partial";
+  | "multi-metric-partial"
+  | "dql-conversion";
 
 /** Result of converting a single screen entity type */
 export interface ScreenConversionResult {
