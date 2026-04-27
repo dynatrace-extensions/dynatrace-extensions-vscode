@@ -6,7 +6,12 @@ coverage
 
 .github/plans/*
 !.github/plans/.gitkeep
+.ai/plans/*
+!.ai/plans/.gitkeep
 .DS_Store
 
 samples
 conversions
+graphify-out
+
+.claude/settings*
