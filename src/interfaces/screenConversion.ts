@@ -53,8 +53,10 @@ export interface EntityToNodeMap {
 export interface NodeContext {
   /** The resolved node type for the new format (e.g. "EXT_NETWORK_DEVICE") */
   nodeType: string;
-  /** The fields available on this node type */
-  fields: Set<string>;
+  /** Node field mapping to gen2 attribute key */
+  fieldMap: Record<string, string>;
+  /** Static edges ({edge_type}.{node_type}) available on this node type */
+  staticEdges: string[];
 }
 
 /** A single warning emitted during conversion */

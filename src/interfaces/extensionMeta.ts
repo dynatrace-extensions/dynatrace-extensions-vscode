@@ -42,7 +42,7 @@ export const DetailInjectionCardType = {
 // eslint-disable-next-line @typescript-eslint/no-redeclare
 export type DetailInjectionCardType = UtilTypes.ObjectValues<typeof DetailInjectionCardType>;
 
-interface TopologyStub {
+export interface TopologyStub {
   types?: TopologyType[];
   relationships?: RelationshipStub[];
 }
