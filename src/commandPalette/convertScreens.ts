@@ -159,7 +159,7 @@ async function convertScreens() {
       ...resolvedNode,
       extensionName: extension.name,
       entityType: screen.entityType,
-      fileNamePrefix: resolvedNode.nodeType,
+      fileNamePrefix: resolvedNode.nodeType.toLowerCase(),
       screen,
       keywords: extension.keywords ?? [],
       entityToNodeMap,

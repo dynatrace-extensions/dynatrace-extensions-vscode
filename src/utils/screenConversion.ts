@@ -37,12 +37,6 @@ import {
   Message,
   Metadata,
 } from "@dynatrace/unified-analysis/documents";
-// Internal path used because no public subpath exposes this function without browser-only deps.
-// health.constants.js (same package) imports react/jsx-runtime + strato packages at eval time.
-// esbuild aliases in package.json redirect those to stubs so the extension host bundle stays clean.
-// If @dynatrace/unified-analysis ever exposes a browser-free subpath for DQL utilities, remove
-// this deep import and the alias stubs in scripts/stubs/.
-import { getIndicatorsLookup } from "@dynatrace/unified-analysis/src/shared/utils/health/dql/getIndicatorsLookup";
 import {
   AttributeProperty,
   ChartsCardStub,
@@ -60,6 +54,8 @@ import {
 } from "../interfaces/extensionMeta";
 import {
   ConversionWarning,
+  DqlParseResult,
+  DqlQueryInfo,
   DqlTableColumnType,
   DqlTableColumnWidthType,
   EntityToNodeMap,
@@ -268,29 +264,233 @@ function convertGraphChart(
   };
 }
 
+// ---------------------------------------------------------------------------
+// DQL query parsing — extracts metric fields and named args
+// ---------------------------------------------------------------------------
+
 /**
- * Extracts the metric alias from a DQL query line.
+ * Parses a full DQL query string and returns the metric field names it exposes
+ * plus any trailing named args (by:, filter:, etc.).
  *
- * Priority:
- *  1. Assignment keyword from `|summarize` clause, if present  (keyword=... → "keyword")
- *  2. Explicit alias from `timeseries` clause                  (alias=func(...) → "alias")
- *  3. Full function token when no alias is assigned            (func(metric.key) → "func(metric.key)")
+ * - If the query ends with a `summarize` pipe stage, that stage determines the fields.
+ * - Otherwise, the leading `timeseries` command determines the fields.
+ * - Returns `{ metricFields: [] }` for unrecognised patterns.
  */
-export function extractMetricField(dqlQuery: string): string | undefined {
-  const summarizePattern = /\|\s*summarize\s+\{?([a-zA-Z0-9._-]+)\s*=/;
-  const timeseriesPattern = /timeseries\s+\{?([a-zA-Z_]\w*\([a-zA-Z0-9._:-]+\))/;
-  const timeseriesAssignmentPattern = /timeseries\s+\{?([a-zA-Z0-9._-]+)=[a-zA-Z_]\w*\(/;
+export function parseDqlQuery(dqlQuery: string): DqlQueryInfo {
+  const segments = splitDqlPipes(dqlQuery);
 
-  const summarize = dqlQuery.match(summarizePattern);
-  if (summarize) return summarize[1];
+  const lastSummarize = [...segments].reverse().find(s => /^summarize\b/i.test(s.trimStart()));
+  if (lastSummarize) return { dqlQuery, ...parseSummarizeSegment(lastSummarize.trimStart()) };
 
-  const assigned = dqlQuery.match(timeseriesAssignmentPattern);
-  if (assigned) return assigned[1];
+  const firstSegment = segments[0]?.trimStart() ?? "";
+  if (/^timeseries\b/i.test(firstSegment))
+    return { dqlQuery, ...parseTimeseriesSegment(firstSegment) };
 
-  const bare = dqlQuery.match(timeseriesPattern);
-  if (bare) return bare[1];
+  return { dqlQuery, metricFields: [], seriesText: "" };
+}
 
-  return undefined;
+/**
+ * Splits a DQL query on pipe characters (`|`) while respecting:
+ * - brace nesting `{ }`
+ * - parenthesis nesting `( )`
+ * - backtick-quoted identifiers
+ */
+function splitDqlPipes(query: string): string[] {
+  const segments: string[] = [];
+  let current = "";
+  let depth = 0;
+  let inBacktick = false;
+
+  for (let i = 0; i < query.length; i++) {
+    const ch = query[i];
+    if (ch === "`") {
+      inBacktick = !inBacktick;
+      current += ch;
+    } else if (inBacktick) {
+      current += ch;
+    } else if (ch === "{" || ch === "(") {
+      depth++;
+      current += ch;
+    } else if (ch === "}" || ch === ")") {
+      depth--;
+      current += ch;
+    } else if (ch === "|" && depth === 0) {
+      segments.push(current);
+      current = "";
+    } else {
+      current += ch;
+    }
+  }
+  segments.push(current);
+  return segments;
+}
+
+/**
+ * Parses a `timeseries` pipe segment.
+ * Handles both single-metric (`timeseries alias=func(m)`) and
+ * multi-metric braced forms (`timeseries { alias=func(m), ... }`).
+ */
+function parseTimeseriesSegment(segment: string): DqlParseResult {
+  const body = segment.replace(/^timeseries\s*/i, "");
+  return parseMetricBody(body);
+}
+
+/**
+ * Parses a `summarize` pipe segment.
+ * Handles both single-metric (`summarize alias=expr`) and
+ * braced forms (`summarize { alias=expr, ... }`).
+ */
+function parseSummarizeSegment(segment: string): DqlParseResult {
+  const body = segment.replace(/^summarize\s*/i, "");
+  return parseMetricBody(body);
+}
+
+/**
+ * Parses a metric body — the part of a command after the keyword.
+ * Separates the metric series (braced or single) from trailing named args.
+ */
+function parseMetricBody(body: string): DqlParseResult {
+  const trimmed = body.trim();
+
+  if (trimmed.startsWith("{")) {
+    return parseBodyWithBracedSeries(trimmed);
+  }
+  return parseBodyWithSingleSeries(trimmed);
+}
+
+/**
+ * Handles bodies where the metric series is a `{ ... }` block.
+ * Named args follow after the closing `}`.
+ */
+function parseBodyWithBracedSeries(body: string): DqlParseResult {
+  let depth = 0;
+  let closeIdx = -1;
+
+  for (let i = 0; i < body.length; i++) {
+    const ch = body[i];
+    if (ch === "{") depth++;
+    else if (ch === "}") {
+      depth--;
+      if (depth === 0) {
+        closeIdx = i;
+        break;
+      }
+    }
+  }
+
+  if (closeIdx === -1) return { metricFields: [], seriesText: "" };
+
+  const seriesBlock = body.slice(1, closeIdx);
+  const remainder = body
+    .slice(closeIdx + 1)
+    .replace(/^\s*,\s*/, "")
+    .trim();
+
+  return {
+    metricFields: extractMetricNames(seriesBlock),
+    seriesText: seriesBlock.trim(),
+    args: remainder || undefined,
+  };
+}
+
+/**
+ * Handles bodies where the metric series is a single expression (no outer braces).
+ * Named args are identified by the first `,` followed by `<word>:`.
+ */
+function parseBodyWithSingleSeries(body: string): DqlParseResult {
+  // Find a comma that introduces a named arg (word:) at depth 0
+  let depth = 0;
+  let inBacktick = false;
+  let splitAt = -1;
+
+  for (let i = 0; i < body.length; i++) {
+    const ch = body[i];
+    if (ch === "`") {
+      inBacktick = !inBacktick;
+    } else if (inBacktick) {
+      // skip
+    } else if (ch === "{" || ch === "(") {
+      depth++;
+    } else if (ch === "}" || ch === ")") {
+      depth--;
+    } else if (ch === "," && depth === 0) {
+      // Check if what follows is a named arg: optional whitespace, identifier, colon
+      const after = body.slice(i + 1).trimStart();
+      if (/^\w+\s*:/.test(after)) {
+        splitAt = i;
+        break;
+      }
+    }
+  }
+
+  if (splitAt === -1) {
+    return { metricFields: extractMetricNames(body), seriesText: body.trim() };
+  }
+
+  const seriesBlock = body.slice(0, splitAt);
+  const args = body.slice(splitAt + 1).trim();
+
+  return {
+    metricFields: extractMetricNames(seriesBlock),
+    seriesText: seriesBlock.trim(),
+    args: args || undefined,
+  };
+}
+
+/**
+ * Extracts metric names from a comma-separated series string.
+ * - `alias=func(...)` → `"alias"`
+ * - `func(metric.name)` → `"func(metric.name)"`
+ *
+ * Respects parenthesis/brace nesting and backtick quoting when splitting.
+ */
+function extractMetricNames(series: string): string[] {
+  const tokens = splitByComma(series);
+  return tokens
+    .map(token => {
+      const t = token.trim();
+      // Find `=` that appears before the first `(` — that is an alias assignment
+      const eqIdx = t.indexOf("=");
+      const parenIdx = t.indexOf("(");
+      if (eqIdx !== -1 && (parenIdx === -1 || eqIdx < parenIdx)) {
+        return t.slice(0, eqIdx).trim();
+      }
+      return t;
+    })
+    .filter(name => name.length > 0);
+}
+
+/**
+ * Splits a string by commas at depth 0 (respecting nesting and backticks).
+ */
+function splitByComma(s: string): string[] {
+  const parts: string[] = [];
+  let current = "";
+  let depth = 0;
+  let inBacktick = false;
+
+  for (let i = 0; i < s.length; i++) {
+    const ch = s[i];
+    if (ch === "`") {
+      inBacktick = !inBacktick;
+      current += ch;
+    } else if (inBacktick) {
+      current += ch;
+    } else if (ch === "{" || ch === "(") {
+      depth++;
+      current += ch;
+    } else if (ch === "}" || ch === ")") {
+      depth--;
+      current += ch;
+    } else if (ch === "," && depth === 0) {
+      parts.push(current);
+      current = "";
+    } else {
+      current += ch;
+    }
+  }
+  parts.push(current);
+  return parts;
 }
 
 // Resolves a theme color name to a Strato CSS variable, defaulting to blue
@@ -316,10 +516,12 @@ const graphChartMetricsToDqlInfo = (metrics: ChartMetric[]): TimeseriesDqlInfo[]
   return metrics
     .filter(m => m.dqlQuery)
     .map(m => {
-      const name = extractMetricField(m.dqlQuery ?? "");
+      const { metricFields, seriesText, args } = parseDqlQuery(m.dqlQuery ?? "");
       return {
-        name,
+        name: metricFields[0],
         dqlQuery: m.dqlQuery ?? "",
+        seriesText,
+        args,
         visualization: m.visualization
           ? {
               seriesType: m.visualization.seriesType
@@ -339,18 +541,25 @@ const graphChartMetricsToDqlInfo = (metrics: ChartMetric[]): TimeseriesDqlInfo[]
 };
 
 /**
- * Combines multiple ChartMetric dqlQuery values into a single query string.
- * If only one metric, returns its dqlQuery directly.
- * If multiple, they are assumed to be individual timeseries queries that get combined.
+ * Combines multiple per-metric DQL queries into a single timeseries command.
+ *
+ * Single metric: returns its dqlQuery unchanged.
+ * Multiple metrics: builds `timeseries { series1, series2, ... }` with common args
+ * taken from the first metric that has them (args are expected to be identical across
+ * metrics on the same chart).
  */
 function combineDqlQueries(metrics: TimeseriesDqlInfo[]): string {
-  if (metrics.length === 1) {
-    return metrics[0].dqlQuery ?? "";
+  if (metrics.length === 1) return metrics[0].dqlQuery ?? "";
+
+  const seriesParts = metrics.map(m => m.seriesText).filter((s): s is string => !!s);
+
+  if (seriesParts.length === 0) {
+    return "";
   }
 
-  // TODO: This is not good enough; should be grouped into 1 timeseries command
-  // Multiple metrics: return them joined with a separator comment for user review
-  return metrics.map(m => m.dqlQuery ?? "").join("\n// ---\n");
+  const combined = `timeseries {\n  ${seriesParts.join(",\n  ")}\n}`;
+  const commonArgs = metrics.find(m => m.args)?.args;
+  return commonArgs ? `${combined},\n${commonArgs}` : combined;
 }
 
 function convertPieChart(
