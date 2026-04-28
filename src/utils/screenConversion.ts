@@ -295,7 +295,7 @@ export function parseDqlQuery(dqlQuery: string): DqlQueryInfo {
  * - parenthesis nesting `( )`
  * - backtick-quoted identifiers
  */
-function splitDqlPipes(query: string): string[] {
+export function splitDqlPipes(query: string): string[] {
   const segments: string[] = [];
   let current = "";
   let depth = 0;
@@ -636,9 +636,66 @@ function mapSeriesType(type?: MetricVisualizationType): "line" | "area" | "bar" 
 // DQL table card converter (dqlTableCards → dql-table)
 // ---------------------------------------------------------------------------
 
+/**
+ * Updates structural field references in a DqlTable (column accessors and lookup
+ * field names) after DQL field conversion. DQL query strings are handled separately
+ * by adjustAllDql; this covers non-DQL field name references.
+ */
+function adjustDqlTableFields(
+  table: DqlTable,
+  mainInverseFieldMap: Record<string, string>,
+  entityToNodeMap: EntityToNodeMap,
+): DqlTable {
+  const columns = table.columns?.map(col => {
+    if (!("field" in col)) return col; // BuiltInColumn — skip
+    const newField = mainInverseFieldMap[col.field];
+    if (!newField) return col;
+    return { ...col, field: newField, id: newField };
+  });
+
+  const lookups = table.dqlQuery.lookups?.map(lookup => {
+    if (!("query" in lookup)) return lookup; // AlertLookup — skip
+    const dqlLookup = lookup as {
+      query: string;
+      sourceField: string;
+      lookupField: string;
+      fields: string[];
+    };
+
+    // sourceField references the main query → use main entity's inverseFieldMap
+    const newSourceField = mainInverseFieldMap[dqlLookup.sourceField] ?? dqlLookup.sourceField;
+
+    // lookupField and fields[] reference the lookup query → use lookup entity's inverseFieldMap
+    const lookupEntityMatch = dqlLookup.query.match(/fetch\s+`dt\.entity\.(.+?)`/i);
+    let lookupInverseMap = mainInverseFieldMap;
+    if (lookupEntityMatch) {
+      const lookupEntityType = lookupEntityMatch[1];
+      const lookupNodeCtx = entityToNodeMap[lookupEntityType as keyof EntityToNodeMap];
+      if (lookupNodeCtx) {
+        lookupInverseMap = invertFieldMap(lookupNodeCtx.fieldMap);
+      }
+    }
+
+    return {
+      ...dqlLookup,
+      sourceField: newSourceField,
+      lookupField: lookupInverseMap[dqlLookup.lookupField] ?? dqlLookup.lookupField,
+      fields: dqlLookup.fields.map(f => lookupInverseMap[f] ?? f),
+    };
+  });
+
+  return {
+    ...table,
+    ...(columns && { columns }),
+    dqlQuery: { ...table.dqlQuery, ...(lookups && { lookups }) },
+  };
+}
+
 export function convertDqlTableCard(
   card: DqlTableCardStub,
   warnings: ConversionWarning[],
+  nodeContext?: NodeContext,
+  entityToNodeMap?: EntityToNodeMap,
 ): DqlTable | null {
   if (shouldSkipByTarget(card.target)) {
     addWarning(warnings, "skipped-classic", `dqlTableCard "${card.key}" skipped (target: CLASSIC)`);
@@ -664,6 +721,9 @@ export function convertDqlTableCard(
   };
   if (card.conditions) element.conditions = convertConditions(card.conditions, warnings);
 
+  if (nodeContext && entityToNodeMap) {
+    return adjustDqlTableFields(element, invertFieldMap(nodeContext.fieldMap), entityToNodeMap);
+  }
   return element;
 }
 
@@ -973,10 +1033,36 @@ export function convertHealthCard(
 // Properties card converter (propertiesCard → metadata)
 // ---------------------------------------------------------------------------
 
+/**
+ * Updates overrideMetadataRegistry keys from entity field names (gen2) to node
+ * field names (gen3). The DQL query is handled separately by adjustAllDql.
+ */
+function adjustMetadataFields(
+  metadata: Metadata,
+  inverseFieldMap: Record<string, string>,
+  warnings: ConversionWarning[],
+): Metadata {
+  if (!metadata.overrideMetadataRegistry) return metadata;
+  const updatedRegistry: NonNullable<Metadata["overrideMetadataRegistry"]> = {};
+  for (const [key, value] of Object.entries(metadata.overrideMetadataRegistry)) {
+    const newKey = inverseFieldMap[key];
+    if (!newKey) {
+      addWarning(
+        warnings,
+        "dql-conversion",
+        `Entity attribute "${key}" has no gen3 node field equivalent; left as-is in DQL query and metadata registry`,
+      );
+    }
+    updatedRegistry[newKey ?? key] = value;
+  }
+  return { ...metadata, overrideMetadataRegistry: updatedRegistry };
+}
+
 export function convertPropertiesCard(
   propertiesCard: PropertiesCard,
   entityType: string,
   warnings: ConversionWarning[],
+  nodeContext?: NodeContext,
 ): Metadata | null {
   // TODO:
   // Detect all node fields from pipeline, write a dql query to fetch all
@@ -1009,12 +1095,17 @@ export function convertPropertiesCard(
     };
   }
 
-  return {
+  const metadata: Metadata = {
     type: "metadata",
     id: `${entityType}-properties`,
     dqlQuery,
     overrideMetadataRegistry,
   };
+
+  if (nodeContext) {
+    return adjustMetadataFields(metadata, invertFieldMap(nodeContext.fieldMap), warnings);
+  }
+  return metadata;
 }
 
 // ---------------------------------------------------------------------------
@@ -1045,40 +1136,132 @@ export function convertConditions(
 
 // General
 
+function invertFieldMap(fieldMap: Record<string, string>): Record<string, string> {
+  return Object.fromEntries(Object.entries(fieldMap).map(([k, v]) => [v, k]));
+}
+
+/**
+ * Applies field name and edge reference replacements to a single pipe segment
+ * that has already been confirmed to be one of the targeted commands
+ * (fieldsAdd, fields, summarize, filter).
+ */
+function adjustPipeSegmentContent(
+  segment: string,
+  inverseFieldMap: Record<string, string>,
+  nodeContext: NodeContext,
+  entityToNodeMap: EntityToNodeMap,
+  warnings: ConversionWarning[],
+): string {
+  let result = segment;
+
+  // Field replacement: entity field name → node field name (backtick-quoted and plain forms)
+  for (const [entityField, nodeField] of Object.entries(inverseFieldMap)) {
+    const escaped = entityField.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
+    result = result.replace(new RegExp("`" + escaped + "`", "g"), nodeField);
+    result = result.replace(new RegExp("\\b" + escaped + "\\b", "g"), nodeField);
+  }
+
+  // Edge replacement: {relation_type}[`dt.entity.{entityType}`] → references[{relation_type}.{nodeType}]
+  result = result.replace(/(\w+)\[`dt\.entity\.(.+?)`\]/g, (match, relationType, entityType) => {
+    if (!Object.prototype.hasOwnProperty.call(entityToNodeMap, entityType)) {
+      addWarning(
+        warnings,
+        "dql-conversion",
+        `Edge target entity type "${entityType}" is external to extension; edge reference left as-is: "${match}"`,
+      );
+      return match;
+    }
+    const { nodeType } = entityToNodeMap[entityType as keyof EntityToNodeMap];
+    const candidate = `${relationType}.${nodeType.toLowerCase()}`;
+    if (!nodeContext.staticEdges.includes(candidate)) {
+      addWarning(
+        warnings,
+        "dql-conversion",
+        `No static edge found for relation "${relationType}" → "${nodeType}"; edge reference left as-is: "${match}"`,
+      );
+      return match;
+    }
+    return `references[${candidate}]`;
+  });
+
+  return result;
+}
+
+/**
+ * Processes a complete DQL query string for a fetch-entity query:
+ * converts the entity type to a smartscapeNodes command, then replaces
+ * entity field names and edge references in the targeted pipe stages.
+ */
+export function adjustEntityFetchDqlQuery(
+  dqlQuery: string,
+  entityToNodeMap: EntityToNodeMap,
+  warnings: ConversionWarning[],
+): string {
+  if (!/^fetch\s+`dt\.entity\./i.test(dqlQuery.trimStart())) return dqlQuery;
+
+  const entityTypeMatch = dqlQuery.trimStart().match(/^fetch\s+`dt\.entity\.(.+?)`/i);
+  if (!entityTypeMatch) return dqlQuery;
+  const entityType = entityTypeMatch[1];
+
+  let nodeContext: NodeContext | null = null;
+  let convertedFetch: string;
+
+  if (Object.prototype.hasOwnProperty.call(entityToNodeMap, entityType)) {
+    nodeContext = entityToNodeMap[entityType as keyof EntityToNodeMap];
+    convertedFetch = `smartscapeNodes ${nodeContext.nodeType.toUpperCase()}`;
+  } else {
+    addWarning(
+      warnings,
+      "dql-conversion",
+      `Entity type "${entityType}" in DQL query is external to extension; conversion may be inaccurate`,
+    );
+    convertedFetch = `smartscapeNodes ${String(entityType).toUpperCase()}`;
+  }
+
+  const segments = splitDqlPipes(dqlQuery);
+  segments[0] = convertedFetch;
+
+  if (nodeContext !== null) {
+    const inverseFieldMap = invertFieldMap(nodeContext.fieldMap);
+    const targetedCommands = /^(fieldsAdd|fields|summarize|filter)\b/i;
+    for (let i = 1; i < segments.length; i++) {
+      if (targetedCommands.test(segments[i].trimStart())) {
+        segments[i] = adjustPipeSegmentContent(
+          segments[i],
+          inverseFieldMap,
+          nodeContext,
+          entityToNodeMap,
+          warnings,
+        );
+      }
+    }
+  }
+
+  return segments.map(s => s.trim()).join("\n| ");
+}
+
 export const adjustAllDql = (
   content: string,
   entityToNodeMap: EntityToNodeMap,
   warnings: ConversionWarning[],
 ): string => {
-  // Change the command
-  // fetch `dt.entity.someType`  →  smartscapeNodes SOMETYPE
   let adjustedContent = content;
-  adjustedContent = adjustedContent.replace(/fetch\s+`dt\.entity\.(.+?)`/g, (match, entityType) => {
-    if (!entityType) return match; // No entity type captured, return original
-    if (Object.keys(entityToNodeMap).includes(String(entityType))) {
-      const { nodeType } = entityToNodeMap[entityType as keyof EntityToNodeMap];
-      if (nodeType) {
-        return `smartscapeNodes ${nodeType.toUpperCase()}`;
-      } else {
-        addWarning(
-          warnings,
-          "dql-conversion",
-          `No node type mapping found for entity type "${entityType}" in DQL query: "${match}"`,
-        );
-        return match; // No mapping found, return original
-      }
+
+  // Pass 1: find JSON string values containing fetch-entity DQL queries and process them fully
+  // (entity type conversion + field replacement + edge replacement in targeted pipe stages)
+  adjustedContent = adjustedContent.replace(/"((?:[^"\\]|\\.)*)"/g, match => {
+    let dql: unknown;
+    try {
+      dql = JSON.parse(match);
+    } catch {
+      return match;
     }
-    // Try optimistic conversion
-    addWarning(
-      warnings,
-      "dql-conversion",
-      `Entity type "${entityType}" in DQL query is external to extension; conversion may be inaccurate: "${match}"`,
-    );
-    return `smartscapeNodes ${String(entityType).toUpperCase()}`;
+    if (typeof dql !== "string" || !dql.includes("fetch `dt.entity.")) return match;
+    return JSON.stringify(adjustEntityFetchDqlQuery(dql, entityToNodeMap, warnings));
   });
 
-  // Change all dimension values
-  // dt.entity.someType  →  dt.smartscape.someType
+  // Pass 2: change all remaining dimension values (e.g. in timeseries by:/filter: args)
+  // dt.entity.someType`  →  dt.smartscape.someType`
   adjustedContent = adjustedContent.replace(/dt\.entity\.(.+?)`/g, (match, entityType) => {
     if (!entityType) return match; // No entity type captured, return original
     if (Object.keys(entityToNodeMap).includes(String(entityType))) {

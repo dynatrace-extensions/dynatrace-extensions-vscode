@@ -372,7 +372,7 @@ function buildEntityDetailsDefinition(
 
   // Properties card → metadata element added as first tab
   if (screen.propertiesCard && settings.staticContent?.showProperties !== false) {
-    const metadata = convertPropertiesCard(screen.propertiesCard, entityType, warnings);
+    const metadata = convertPropertiesCard(screen.propertiesCard, entityType, warnings, context);
     if (metadata) {
       tabs.unshift({
         type: "tab",
@@ -706,7 +706,7 @@ function resolveCardByRef(
         );
         return null;
       }
-      return convertDqlTableCard(card, warnings);
+      return convertDqlTableCard(card, warnings, context, context.entityToNodeMap);
     }
 
     case "MESSAGE": {
