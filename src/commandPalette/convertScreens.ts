@@ -30,7 +30,7 @@ import {
 } from "@dynatrace/unified-analysis/documents";
 import * as vscode from "vscode";
 import { OpenPipelinePipeline } from "../interfaces/extensionDocs";
-import { DetailsSettings, ScreenStub } from "../interfaces/extensionMeta";
+import { DetailsSettings, ScreenStub, TopologyStub } from "../interfaces/extensionMeta";
 import {
   ConversionWarning,
   EntityToNodeMap,
@@ -88,6 +88,7 @@ async function convertScreens() {
   }
 
   if (
+    !extension.topology ||
     !extension.topology?.types ||
     extension.topology?.types.length === 0 ||
     !extension.screens ||
@@ -113,7 +114,8 @@ async function convertScreens() {
     });
     return;
   }
-  const entityToNodeMap = createEntityToNodeTypeMap(pipelineFiles);
+  const gen2FieldMap = createGen2FieldMap(extension.topology);
+  const entityToNodeMap = createEntityToNodeTypeMap(pipelineFiles, gen2FieldMap);
   const validEntityTypes = Object.keys(entityToNodeMap).filter(et =>
     entitiesWithScreens.includes(et),
   );
@@ -185,33 +187,86 @@ async function convertScreens() {
   logger.notify("INFO", message, ...logTrace);
 }
 
-const createEntityToNodeTypeMap = (pipelineFiles: string[]): EntityToNodeMap => {
-  const nodes: Record<string, { nodeType: string; idClassic?: string; fields: Set<string> }> = {};
-  const entityToNodeMap: EntityToNodeMap = {};
-  for (const file of pipelineFiles) {
-    const pipeline = JSON.parse(String(readFileSync(file))) as OpenPipelinePipeline;
-    if (pipeline.smartscapeNodeExtraction) {
-      for (const processor of pipeline.smartscapeNodeExtraction.processors) {
-        if (processor.smartscapeNode && processor.smartscapeNode.extractNode) {
-          const nodeType = processor.smartscapeNode.nodeType;
-          if (!Object.keys(nodes).includes(nodeType)) {
-            nodes[nodeType] = { nodeType, fields: new Set() };
-          }
-          const fields = processor.smartscapeNode.fieldsToExtract ?? [];
-          fields.forEach(field => {
-            if (field.fieldName === "id_classic") {
-              nodes[nodeType].idClassic = field.referencedFieldName;
-            }
-            nodes[nodeType].fields.add(field.fieldName ?? field.referencedFieldName);
-          });
+// Map out for each gen2 entity type, which attribute is extracted from which data field
+// entityType: { dataField: attributeKey }
+const createGen2FieldMap = (topology: TopologyStub): Record<string, Record<string, string>> => {
+  const fieldMap: Record<string, Record<string, string>> = {};
+  (topology.types ?? []).forEach(t => {
+    if (!Object.keys(fieldMap).includes(t.name)) {
+      fieldMap[t.name] = {};
+    }
+    t.rules.forEach(r => {
+      r.attributes.forEach(a => {
+        const dataField = a.pattern.replace("{", "").replace("}", "").trim();
+        if (!Object.keys(fieldMap[t.name]).includes(dataField)) {
+          fieldMap[t.name][dataField] = a.key;
         }
+      });
+    });
+  });
+
+  return fieldMap;
+};
+
+const createEntityToNodeTypeMap = (
+  pipelineFiles: string[],
+  gen2FieldMap: Record<string, Record<string, string>>,
+): EntityToNodeMap => {
+  const nodes: Record<
+    string,
+    {
+      nodeType: string;
+      idClassic?: string;
+      gen3FieldMap: Record<string, string>;
+      staticEdges: string[];
+    }
+  > = {};
+  const entityToNodeMap: EntityToNodeMap = {};
+  pipelineFiles.forEach(file => {
+    const pipeline = JSON.parse(String(readFileSync(file))) as OpenPipelinePipeline;
+    if (!pipeline.smartscapeNodeExtraction) return;
+    pipeline.smartscapeNodeExtraction.processors.forEach(processor => {
+      if (!processor.smartscapeNode || !processor.smartscapeNode.extractNode) return;
+      const nodeType = processor.smartscapeNode.nodeType;
+      if (!Object.keys(nodes).includes(nodeType)) {
+        nodes[nodeType] = { nodeType, gen3FieldMap: {}, staticEdges: [] };
       }
-    }
-  }
-  Object.values(nodes).forEach(({ nodeType, idClassic, fields }) => {
-    if (idClassic) {
-      entityToNodeMap[idClassic] = { nodeType, fields };
-    }
+      // Extract dataField -> nodeField mapping
+      (processor.smartscapeNode.fieldsToExtract ?? []).forEach(field => {
+        if (field.fieldName === "id_classic") {
+          nodes[nodeType].idClassic = field.referencedFieldName.replace("dt.entity.", "");
+        }
+        if (
+          field.fieldName &&
+          !Object.keys(nodes[nodeType].gen3FieldMap).includes(field.referencedFieldName)
+        ) {
+          nodes[nodeType].gen3FieldMap[field.referencedFieldName] = field.fieldName;
+        }
+      });
+      // Extract static edge references
+      (processor.smartscapeNode.staticEdgesToExtract ?? []).forEach(edge => {
+        const edgeRef = `${edge.edgeType.toLowerCase()}.${edge.targetType.toLowerCase()}`;
+        if (!nodes[nodeType].staticEdges.includes(edgeRef)) {
+          nodes[nodeType].staticEdges.push(edgeRef);
+        }
+      });
+    });
+  });
+
+  // A second pass is needed for the final field map, because at the time of processing individual fields
+  // the idClassic may not yet be known
+  Object.values(nodes).forEach(({ nodeType, idClassic, gen3FieldMap, staticEdges }) => {
+    if (!idClassic) return;
+    const fieldMap: Record<string, string> = {};
+    Object.entries(gen3FieldMap).forEach(([dataField, gen3Field]) => {
+      if (
+        Object.keys(gen2FieldMap).includes(idClassic) &&
+        Object.keys(gen2FieldMap[idClassic]).includes(dataField)
+      ) {
+        fieldMap[gen3Field] = gen2FieldMap[idClassic][dataField];
+      }
+    });
+    entityToNodeMap[idClassic] = { nodeType, fieldMap, staticEdges };
   });
   return entityToNodeMap;
 };

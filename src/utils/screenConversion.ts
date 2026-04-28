@@ -711,9 +711,10 @@ function parseFormatter(formatter?: string): CellRenderer | undefined {
  * the IO App Technologies SDK.
  */
 export const buildDefaultDqlTable = (
-  { nodeType, fields }: NodeContext,
+  { nodeType, fieldMap }: NodeContext,
   extensionName: string,
 ): DqlTable => {
+  const fields = new Set(Object.keys(fieldMap));
   return {
     type: "dql-table",
     id: `${nodeType}-default-table`,
@@ -745,7 +746,12 @@ export const buildDefaultDqlTable = (
     dqlQuery: {
       idField: "id",
       query: `smartscapeNodes ${nodeType}\n| fieldsAdd ${Array.from(fields).join(", ")}`,
-      lookups: [],
+      lookups: [
+        {
+          builtInLookup: "ALERTS_LOOKUP",
+          filterExpression: `in(smartscape.affected_entity_types, "${nodeType}")`,
+        },
+      ],
       additionalCommands: [],
     },
     columns: createDefaultDqlTableColumns(fields),
@@ -761,10 +767,6 @@ export const buildDefaultDqlTable = (
         description: "All attributes available for this node type",
       },
     ],
-    alertLookupParams: {
-      lookupField: "id",
-      filterExpression: `in(affected_entity_types, "${nodeType}")`,
-    },
     alertGroups: [
       {
         groupName: "Metric alerts",
@@ -1072,7 +1074,7 @@ export const adjustAllDql = (
       "dql-conversion",
       `Entity type "${entityType}" in DQL query is external to extension; conversion may be inaccurate: "${match}"`,
     );
-    return `smartscapeNodes ${String(entityType).toUpperCase()}`; // Entity type not in mapping, return original
+    return `smartscapeNodes ${String(entityType).toUpperCase()}`;
   });
 
   // Change all dimension values
@@ -1098,7 +1100,7 @@ export const adjustAllDql = (
       "dql-conversion",
       `Entity type "${entityType}" in DQL query is external to extension; conversion may be inaccurate: "${match}"`,
     );
-    return `dt.smartscape.${String(entityType).toLowerCase()}${match.endsWith("`") ? "`" : ""}`; // Entity type not in mapping, return original
+    return `dt.smartscape.${String(entityType).toLowerCase()}${match.endsWith("`") ? "`" : ""}`;
   });
 
   return adjustedContent;
