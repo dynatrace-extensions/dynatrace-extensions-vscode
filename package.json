@@ -1040,7 +1040,7 @@
   "dependencies": {
     "@dynatrace-internal/client-extensions": "^0.8.0",
     "@dynatrace-sdk/http-client": "^1.4.0",
-    "@dynatrace/unified-analysis": "^1.0.0-rc-1775548636367",
+    "@dynatrace/unified-analysis": "^1.0.0",
     "axios": "^1.15.0",
     "chalk": "^4.1.2",
     "form-data": "^4.0.4",

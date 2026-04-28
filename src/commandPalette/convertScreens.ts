@@ -26,6 +26,7 @@ import {
   LayoutElement,
   Message,
   Tab,
+  VERSION,
 } from "@dynatrace/unified-analysis/documents";
 import * as vscode from "vscode";
 import { OpenPipelinePipeline } from "../interfaces/extensionDocs";
@@ -56,8 +57,6 @@ import {
   shouldSkipByTarget,
 } from "../utils/screenConversion";
 import { ConfirmOption, showConfirmationInformationMessage } from "../utils/vscode";
-
-const DOCUMENT_VERSION = "0.35.0";
 
 /**
  * Workflow entry point for the "Convert Screens" command.
@@ -330,7 +329,7 @@ function buildEntityDetailsDefinition(
   }
 
   const content: EntityDetailsDefinitionDocument = {
-    version: DOCUMENT_VERSION,
+    version: VERSION,
     type: "EntityDetailsDefinition",
     target: { app: "*", nodeType },
     content: {
@@ -378,7 +377,7 @@ function buildInvExDefinition(
   }
 
   const content: InvExDefinitionDocument = {
-    version: DOCUMENT_VERSION,
+    version: VERSION,
     type: "InvExTypeDefinition",
     target: { app: "*" },
     content: {
@@ -444,7 +443,7 @@ function buildDetailsInjections(
     }
 
     const content: EntityDetailsInjectionDocument = {
-      version: DOCUMENT_VERSION,
+      version: VERSION,
       type: "EntityDetailsInjection",
       target: {
         app: "*",
@@ -503,7 +502,7 @@ function buildListInjections(
     // }
 
     const content: InvExInjectionDocument = {
-      version: DOCUMENT_VERSION,
+      version: VERSION,
       type: "InvExInjection",
       target: {
         app: "*",
