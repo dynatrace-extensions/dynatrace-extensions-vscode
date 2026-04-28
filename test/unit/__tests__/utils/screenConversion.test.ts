@@ -14,11 +14,9 @@
   limitations under the License.
  */
 
-import * as fs from "fs";
 import {
   ChartsCardStub,
   DqlTableCardStub,
-  ExtensionStub,
   HealthCardStub,
   MessageCardStub,
   PropertiesCard,
@@ -35,17 +33,13 @@ import {
   convertHealthCard,
   convertMessageCard,
   convertPropertiesCard,
-  extractKeywords,
   generateConversionReport,
-  resolveNodeType,
-  sanitizeEntityTypeForFileName,
+  parseDqlQuery,
   shouldSkipByTarget,
 } from "../../../../src/utils/screenConversion";
 
 jest.mock("fs");
 jest.mock("../../../../src/utils/logging");
-
-const mockFs = fs as jest.Mocked<typeof fs>;
 
 /** Asserts value is non-null/undefined and returns it with a narrowed type. */
 function defined<T>(value: T | null | undefined): T {
@@ -56,102 +50,6 @@ function defined<T>(value: T | null | undefined): T {
 describe("Screen Conversion Utils", () => {
   beforeEach(() => {
     jest.restoreAllMocks();
-  });
-
-  // -----------------------------------------------------------------------
-  // resolveNodeType
-  // -----------------------------------------------------------------------
-  describe("resolveNodeType", () => {
-    it("resolves entity type from OpenPipeline pipeline file", () => {
-      mockFs.existsSync.mockReturnValue(true);
-      mockFs.readdirSync.mockReturnValue(["metrics.pipeline.json"] as unknown as fs.Dirent[]);
-      mockFs.readFileSync.mockReturnValue(
-        JSON.stringify({
-          smartscapeNodeExtraction: {
-            processors: [
-              {
-                nodeType: "EXT_NETWORK_DEVICE",
-                extractNode: true,
-                fieldsToExtract: [{ fieldName: "id_classic", referencedFieldName: "f5:instance" }],
-              },
-            ],
-          },
-        }),
-      );
-
-      const result = resolveNodeType("f5:instance", "/ext");
-
-      expect(result).toBe("EXT_NETWORK_DEVICE");
-    });
-
-    it("returns fallback when no openpipeline directory exists", () => {
-      mockFs.existsSync.mockReturnValue(false);
-
-      const result = resolveNodeType("f5:instance", "/ext");
-
-      expect(result).toBe("F5_INSTANCE");
-    });
-
-    it("returns fallback when no matching processor found", () => {
-      mockFs.existsSync.mockReturnValue(true);
-      mockFs.readdirSync.mockReturnValue(["metrics.pipeline.json"] as unknown as fs.Dirent[]);
-      mockFs.readFileSync.mockReturnValue(
-        JSON.stringify({
-          smartscapeNodeExtraction: {
-            processors: [
-              {
-                nodeType: "OTHER_TYPE",
-                extractNode: true,
-                fieldsToExtract: [{ fieldName: "id_classic", referencedFieldName: "other:type" }],
-              },
-            ],
-          },
-        }),
-      );
-
-      const result = resolveNodeType("f5:instance", "/ext");
-
-      expect(result).toBe("F5_INSTANCE");
-    });
-
-    it("handles read errors gracefully", () => {
-      mockFs.existsSync.mockReturnValue(true);
-      mockFs.readdirSync.mockImplementation(() => {
-        throw new Error("Permission denied");
-      });
-
-      const result = resolveNodeType("f5:instance", "/ext");
-
-      expect(result).toBe("F5_INSTANCE");
-    });
-  });
-
-  // -----------------------------------------------------------------------
-  // extractKeywords
-  // -----------------------------------------------------------------------
-  describe("extractKeywords", () => {
-    it("returns keywords when present", () => {
-      const ext = { keywords: ["title:F5 BIG-IP", "network"] } as unknown as ExtensionStub;
-      expect(extractKeywords(ext)).toEqual(["title:F5 BIG-IP", "network"]);
-    });
-
-    it("returns undefined when no keywords", () => {
-      const ext = { name: "test" } as unknown as ExtensionStub;
-      expect(extractKeywords(ext)).toBeUndefined();
-    });
-  });
-
-  // -----------------------------------------------------------------------
-  // sanitizeEntityTypeForFileName
-  // -----------------------------------------------------------------------
-  describe("sanitizeEntityTypeForFileName", () => {
-    test.each([
-      ["f5:instance", "f5_instance"],
-      ["f5:gtm:pool", "f5_gtm_pool"],
-      ["simple", "simple"],
-    ])('sanitizes "%s" to "%s"', (input, expected) => {
-      expect(sanitizeEntityTypeForFileName(input)).toBe(expected);
-    });
   });
 
   // -----------------------------------------------------------------------
@@ -270,8 +168,9 @@ describe("Screen Conversion Utils", () => {
 
       expect(result).not.toBeNull();
       const chart0 = (defined(result).charts as Record<string, unknown>[])[0];
-      expect(chart0.dqlQuery).toContain("timeseries avg(metric.one)");
-      expect(chart0.dqlQuery).toContain("timeseries avg(metric.two)");
+      expect(chart0.dqlQuery).toContain("timeseries {");
+      expect(chart0.dqlQuery).toContain("avg(metric.one)");
+      expect(chart0.dqlQuery).toContain("avg(metric.two)");
     });
 
     it("warns and skips metrics without DQL in mixed charts", () => {
@@ -438,7 +337,11 @@ describe("Screen Conversion Utils", () => {
       expect(columns[0].type).toBe("text");
       expect(columns[0].widthType).toBe("ratio");
 
-      expect(columns[1].cellRenderer).toEqual({ type: "unit", unit: "units.data.byte" });
+      expect(columns[1].cellRenderer).toEqual({
+        type: "unitRenderer",
+        unit: "units.data.byte",
+        minimumFractionDigits: 2,
+      });
     });
 
     it("skips CLASSIC target", () => {
@@ -525,12 +428,10 @@ describe("Screen Conversion Utils", () => {
       expect(content.title).toBe("Getting Started");
       expect(content.icon).toBe("f5");
 
-      const actions = content.actions as Record<string, unknown>;
-      const items = actions.items as Record<string, unknown>[];
-      expect(items).toHaveLength(1);
-      expect(items[0].type).toBe("intent");
-      expect(items[0].appId).toBe("dynatrace.hub");
-      expect((items[0].payload as Record<string, unknown>).searchTerm).toBe("F5 BIG-IP");
+      const actions = content.actions as Array<Record<string, unknown>>;
+      expect(actions).toHaveLength(1);
+      expect(actions[0].appId).toBe("dynatrace.hub");
+      expect((actions[0].intentPayload as Record<string, unknown>).searchTerm).toBe("F5 BIG-IP");
     });
 
     it("warns on seaOtterLink actions", () => {
@@ -726,6 +627,11 @@ describe("Screen Conversion Utils", () => {
         entityType: "f5:instance",
         nodeType: "EXT_NETWORK_DEVICE",
         fileNamePrefix: "f5_instance",
+        extensionName: "com.dynatrace.test.extension",
+        fields: new Set(["field1", "field2"]),
+        entityToNodeMap: {
+          "f5:instance": { nodeType: "EXT_NETWORK_DEVICE", fields: new Set(["field1", "field2"]) },
+        },
         screen: { entityType: "f5:instance" } as ScreenConversionContext["screen"],
       };
       const filesWritten = ["f5_instance.entitydetails.json", "f5_instance.inventory.json"];
@@ -737,27 +643,152 @@ describe("Screen Conversion Utils", () => {
 
       const report = generateConversionReport(context, filesWritten, warnings);
 
-      expect(report).toContain("# Conversion Report: f5:instance");
+      expect(report).toContain("## f5:instance");
       expect(report).toContain("EXT_NETWORK_DEVICE");
       expect(report).toContain("f5_instance.entitydetails.json");
       expect(report).toContain("f5_instance.inventory.json");
-      expect(report).toContain("### No Dql");
+      expect(report).toContain("#### No Dql");
       expect(report).toContain("Chart X has no DQL");
-      expect(report).toContain("### Breadcrumbs");
+      expect(report).toContain("#### Breadcrumbs");
     });
 
     it("generates a report without warnings section when none exist", () => {
       const context: ScreenConversionContext = {
         entityType: "test:entity",
         nodeType: "TEST_ENTITY",
+        fields: new Set(["field1", "field2"]),
+        entityToNodeMap: {
+          "test:entity": { nodeType: "test_entity", fields: new Set(["field1", "field2"]) },
+        },
         fileNamePrefix: "test_entity",
+        extensionName: "com.dynatrace.test.extension",
         screen: { entityType: "test:entity" } as ScreenConversionContext["screen"],
       };
 
       const report = generateConversionReport(context, ["test.json"], []);
 
-      expect(report).toContain("# Conversion Report: test:entity");
-      expect(report).not.toContain("## Warnings");
+      expect(report).toContain("## test:entity");
+      expect(report).not.toContain("### Warnings");
+    });
+  });
+
+  // -----------------------------------------------------------------------
+  // parseDqlQuery
+  // -----------------------------------------------------------------------
+  describe("parseDqlQuery", () => {
+    it("simple bare metric — no alias, no args", () => {
+      const result = parseDqlQuery("timeseries avg(my.metric)");
+      expect(result.metricFields).toEqual(["avg(my.metric)"]);
+      expect(result.seriesText).toBe("avg(my.metric)");
+      expect(result.args).toBeUndefined();
+    });
+
+    it("single metric with alias and named args", () => {
+      const result = parseDqlQuery(
+        "timeseries myMetric=avg(my.metric), filter:{ isNotNull(someField) }",
+      );
+      expect(result.metricFields).toEqual(["myMetric"]);
+      expect(result.seriesText).toBe("myMetric=avg(my.metric)");
+      expect(result.args).toBe("filter:{ isNotNull(someField) }");
+    });
+
+    it("fetch + summarize — last pipe stage wins", () => {
+      const result = parseDqlQuery(
+        'fetch logs\n| filter level == "ERROR"\n| summarize ErrorCount=count(), by:{ severity }',
+      );
+      expect(result.metricFields).toEqual(["ErrorCount"]);
+      expect(result.args).toBe("by:{ severity }");
+    });
+
+    it("multi-metric braced timeseries with by and filter", () => {
+      const query = [
+        "timeseries {",
+        "    used=avg(com.dynatrace.extension.f5.bigip.sys.host.memory.used),",
+        "    total=avg(com.dynatrace.extension.f5.bigip.sys.host.memory.total)",
+        "  },",
+        "  by:{failover.state,device.address,sync.state,`dt.entity.network:device`},",
+        '  filter:{`dt.entity.f5:instance`==""}',
+      ].join("\n");
+      const result = parseDqlQuery(query);
+      expect(result.metricFields).toEqual(["used", "total"]);
+      expect(result.args).toContain("by:{failover.state");
+      expect(result.args).toContain("filter:{");
+    });
+
+    it("multi-metric timeseries followed by summarize — summarize wins", () => {
+      const query = [
+        "timeseries {",
+        "    used=avg(com.dynatrace.extension.f5.bigip.sys.host.memory.used),",
+        "    total=avg(com.dynatrace.extension.f5.bigip.sys.host.memory.total)",
+        "  },",
+        "  by:{failover.state,device.address,sync.state,`dt.entity.network:device`},",
+        '  filter:{`dt.entity.f5:instance`==""}',
+        "| summarize {percent=sum((used[]/total[])*100)},by:{`dt.entity.f5:instance`,interval,timeframe}",
+      ].join("\n");
+      const result = parseDqlQuery(query);
+      expect(result.metricFields).toEqual(["percent"]);
+      expect(result.args).toContain("by:{`dt.entity.f5:instance`");
+    });
+
+    it("unrecognised pattern returns empty fields", () => {
+      const result = parseDqlQuery('fetch logs | filter level == "ERROR"');
+      expect(result.metricFields).toEqual([]);
+      expect(result.seriesText).toBe("");
+      expect(result.args).toBeUndefined();
+    });
+
+    it("empty string returns empty fields", () => {
+      const result = parseDqlQuery("");
+      expect(result.metricFields).toEqual([]);
+      expect(result.seriesText).toBe("");
+    });
+
+    it("backtick-quoted identifier with colon in by: arg", () => {
+      const result = parseDqlQuery(
+        "timeseries val=avg(my.metric), by:{`dt.entity.network:device`}",
+      );
+      expect(result.metricFields).toEqual(["val"]);
+      expect(result.args).toBe("by:{`dt.entity.network:device`}");
+    });
+  });
+
+  // -----------------------------------------------------------------------
+  // combineDqlQueries (via convertChartsCard multi-metric path)
+  // -----------------------------------------------------------------------
+  describe("convertChartsCard — multi-metric combines into single timeseries", () => {
+    it("two metrics produce a braced timeseries command with common args", () => {
+      const card: ChartsCardStub = {
+        key: "mem-card",
+        charts: [
+          {
+            visualizationType: "GRAPH_CHART",
+            graphChartConfig: {
+              metrics: [
+                {
+                  metricSelector: "",
+                  dqlQuery:
+                    "timeseries used=avg(memory.used), by:{host.name}, filter:{isNotNull(host.name)}",
+                },
+                {
+                  metricSelector: "",
+                  dqlQuery:
+                    "timeseries total=avg(memory.total), by:{host.name}, filter:{isNotNull(host.name)}",
+                },
+              ],
+            },
+          },
+        ],
+      };
+
+      const warnings: ConversionWarning[] = [];
+      const group = defined(convertChartsCard(card, warnings));
+
+      expect(warnings).toHaveLength(0);
+      const chart = group.charts[0];
+      expect(chart.dqlQuery).toMatch(/^timeseries \{/);
+      expect(chart.dqlQuery).toContain("used=avg(memory.used)");
+      expect(chart.dqlQuery).toContain("total=avg(memory.total)");
+      expect(chart.dqlQuery).toContain("by:{host.name}");
     });
   });
 });

@@ -463,7 +463,7 @@ export function uploadComponentCert(certPath: string, component: "OneAgent" | "A
       ...logTrace,
       "uploadComponentCert",
     );
-    writeFileSync(uploadPath, readFileSync(certPath));
+    writeFileSync(uploadPath, readFileSync(certPath) as unknown as Uint8Array);
   }
 }
 
@@ -779,7 +779,7 @@ export const bundleFolder = (zip: JSZip, folderPath: string, prev: string = ""):
     } else {
       const zipPath = `${prev}${entryName}`;
       const content = readFileSync(entryPath);
-      zip.file(zipPath, content, { unixPermissions: "644" });
+      zip.file(zipPath, content as unknown as Uint8Array, { unixPermissions: "644" });
     }
   });
   return zip;
@@ -808,14 +808,14 @@ export const extractZip = async (zip: JSZip, destPath: string) => {
         const fileContent = await file.async("nodebuffer");
 
         if (relativePath.endsWith(".zip")) {
-          const innerZip = await JSZip.loadAsync(fileContent);
+          const innerZip = await JSZip.loadAsync(fileContent as unknown as Uint8Array);
           await extractZip(innerZip, destPath);
         } else {
           const basePath = filePath.split(path.sep).slice(0, -1).join(path.sep);
           if (!existsSync(basePath)) {
             mkdirSync(basePath, { recursive: true });
           }
-          writeFileSync(filePath, fileContent);
+          writeFileSync(filePath, fileContent as unknown as Uint8Array);
         }
       }
     }

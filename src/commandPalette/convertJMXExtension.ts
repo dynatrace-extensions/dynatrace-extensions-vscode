@@ -151,7 +151,7 @@ export const convertJmxExtensionWorkflow = async (outputPath?: string) => {
 async function extractPluginJSONFromZip(
   binaryData: Buffer | Uint8Array,
 ): Promise<[ExtensionV1 | undefined, string]> {
-  const zip = await jszip.loadAsync(binaryData);
+  const zip = await jszip.loadAsync(binaryData as unknown as Uint8Array);
 
   // Find the first ocurrence of plugin.json in the files in the zip
   const pluginJSONFile = Object.keys(zip.files).find(file => file.endsWith("plugin.json"));

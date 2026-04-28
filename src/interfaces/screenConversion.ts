@@ -106,10 +106,27 @@ export type FoldTransformation =
   | "SUM"
   | "VALUE";
 
+export interface DqlQueryInfo extends DqlParseResult {
+  /** Original query processed */
+  dqlQuery: string;
+}
+
+/** Parsed metric fields and named args extracted from a DQL query */
+export interface DqlParseResult {
+  /** Metric field names exposed by the query (aliases or full function calls) */
+  metricFields: string[];
+  /** Raw series text extracted from the query (comma-separated, without keyword or named args) */
+  seriesText: string;
+  /** Named args after the metric series (e.g. `by:{...}, filter:{...}`), trimmed */
+  args?: string;
+}
+
 /** DQL info for a timeseries chart metric */
 export interface TimeseriesDqlInfo {
   dqlQuery: string;
   name?: string;
+  seriesText?: string;
+  args?: string;
   visualization?: ChartTimeseriesMetricVisualization;
 }
 
