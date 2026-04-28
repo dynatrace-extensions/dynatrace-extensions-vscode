@@ -75,7 +75,9 @@ export async function uploadExtension(dt: Dynatrace, tenantUrl: string) {
   logger.debug(`Zip file for upload is ${extensionZip}`, ...fnLogTrace);
 
   // Browse extension archive and extract the extension name and version
-  const zip = await new JSZip().loadAsync(readFileSync(path.join(distDir, extensionZip)) as unknown as Uint8Array);
+  const zip = await new JSZip().loadAsync(
+    readFileSync(path.join(distDir, extensionZip)) as unknown as Uint8Array,
+  );
   const innerZipFile = await zip.file("extension.zip")?.async("nodebuffer");
   if (!innerZipFile) {
     logger.notify("ERROR", "Latest archive is invalid: no extension.zip", ...fnLogTrace);

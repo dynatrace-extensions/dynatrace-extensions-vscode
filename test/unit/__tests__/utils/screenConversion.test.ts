@@ -27,6 +27,8 @@ import {
 } from "../../../../src/interfaces/screenConversion";
 import {
   addWarning,
+  adjustAllDql,
+  adjustEntityFetchDqlQuery,
   convertChartsCard,
   convertConditions,
   convertDqlTableCard,
@@ -37,6 +39,7 @@ import {
   parseDqlQuery,
   shouldSkipByTarget,
 } from "../../../../src/utils/screenConversion";
+import { EntityToNodeMap, NodeContext } from "../../../../src/interfaces/screenConversion";
 
 jest.mock("fs");
 jest.mock("../../../../src/utils/logging");
@@ -628,9 +631,10 @@ describe("Screen Conversion Utils", () => {
         nodeType: "EXT_NETWORK_DEVICE",
         fileNamePrefix: "f5_instance",
         extensionName: "com.dynatrace.test.extension",
-        fields: new Set(["field1", "field2"]),
+        fieldMap: {},
+        staticEdges: [],
         entityToNodeMap: {
-          "f5:instance": { nodeType: "EXT_NETWORK_DEVICE", fields: new Set(["field1", "field2"]) },
+          "f5:instance": { nodeType: "EXT_NETWORK_DEVICE", fieldMap: {}, staticEdges: [] },
         },
         screen: { entityType: "f5:instance" } as ScreenConversionContext["screen"],
       };
@@ -656,9 +660,10 @@ describe("Screen Conversion Utils", () => {
       const context: ScreenConversionContext = {
         entityType: "test:entity",
         nodeType: "TEST_ENTITY",
-        fields: new Set(["field1", "field2"]),
+        fieldMap: {},
+        staticEdges: [],
         entityToNodeMap: {
-          "test:entity": { nodeType: "test_entity", fields: new Set(["field1", "field2"]) },
+          "test:entity": { nodeType: "test_entity", fieldMap: {}, staticEdges: [] },
         },
         fileNamePrefix: "test_entity",
         extensionName: "com.dynatrace.test.extension",
@@ -790,5 +795,311 @@ describe("Screen Conversion Utils", () => {
       expect(chart.dqlQuery).toContain("total=avg(memory.total)");
       expect(chart.dqlQuery).toContain("by:{host.name}");
     });
+  });
+});
+
+// =============================================================================
+// DQL field & edge conversion
+// =============================================================================
+
+const testEntityToNodeMap: EntityToNodeMap = {
+  "f5:pool:member": {
+    nodeType: "F5_LTM_POOL_MEMBER",
+    fieldMap: {
+      cpu: "cpu_usage",
+      memory: "mem_bytes",
+    },
+    staticEdges: ["child_of.f5_ltm_pool"],
+  },
+  "f5:pool": {
+    nodeType: "F5_LTM_POOL",
+    fieldMap: {
+      poolStatus: "pool_status",
+    },
+    staticEdges: [],
+  },
+};
+
+const memberContext: NodeContext = testEntityToNodeMap["f5:pool:member"];
+
+describe("adjustEntityFetchDqlQuery", () => {
+  it("returns non-fetch query unchanged", () => {
+    const result = adjustEntityFetchDqlQuery("timeseries avg(cpu)", testEntityToNodeMap, []);
+    expect(result).toBe("timeseries avg(cpu)");
+  });
+
+  it("converts unknown entity optimistically and emits warning, skips field processing", () => {
+    const warnings: ConversionWarning[] = [];
+    const result = adjustEntityFetchDqlQuery(
+      "fetch `dt.entity.unknown:type` | fieldsAdd cpu_usage",
+      testEntityToNodeMap,
+      warnings,
+    );
+    expect(result).toBe("smartscapeNodes UNKNOWN:TYPE\n| fieldsAdd cpu_usage");
+    expect(warnings).toHaveLength(1);
+    expect(warnings[0].category).toBe("dql-conversion");
+  });
+
+  it("converts entity type and replaces plain field names in fieldsAdd", () => {
+    const result = adjustEntityFetchDqlQuery(
+      "fetch `dt.entity.f5:pool:member` | fieldsAdd cpu_usage, mem_bytes",
+      testEntityToNodeMap,
+      [],
+    );
+    expect(result).toBe("smartscapeNodes F5_LTM_POOL_MEMBER\n| fieldsAdd cpu, memory");
+  });
+
+  it("replaces backtick-quoted field names in fields command", () => {
+    const result = adjustEntityFetchDqlQuery(
+      "fetch `dt.entity.f5:pool:member` | fields `cpu_usage`, `mem_bytes`",
+      testEntityToNodeMap,
+      [],
+    );
+    expect(result).toBe("smartscapeNodes F5_LTM_POOL_MEMBER\n| fields cpu, memory");
+  });
+
+  it("replaces field names in summarize command", () => {
+    const result = adjustEntityFetchDqlQuery(
+      "fetch `dt.entity.f5:pool:member` | summarize avg_cpu=avg(cpu_usage)",
+      testEntityToNodeMap,
+      [],
+    );
+    expect(result).toBe("smartscapeNodes F5_LTM_POOL_MEMBER\n| summarize avg_cpu=avg(cpu)");
+  });
+
+  it("replaces field names in filter command", () => {
+    const result = adjustEntityFetchDqlQuery(
+      "fetch `dt.entity.f5:pool:member` | filter cpu_usage > 80",
+      testEntityToNodeMap,
+      [],
+    );
+    expect(result).toBe("smartscapeNodes F5_LTM_POOL_MEMBER\n| filter cpu > 80");
+  });
+
+  it("does not replace field names in non-targeted pipe commands", () => {
+    const result = adjustEntityFetchDqlQuery(
+      "fetch `dt.entity.f5:pool:member` | sort cpu_usage desc",
+      testEntityToNodeMap,
+      [],
+    );
+    expect(result).toBe("smartscapeNodes F5_LTM_POOL_MEMBER\n| sort cpu_usage desc");
+  });
+
+  it("leaves fields not in the map unchanged without warning", () => {
+    const warnings: ConversionWarning[] = [];
+    const result = adjustEntityFetchDqlQuery(
+      "fetch `dt.entity.f5:pool:member` | fieldsAdd unknown_field",
+      testEntityToNodeMap,
+      warnings,
+    );
+    expect(result).toContain("fieldsAdd unknown_field");
+    expect(warnings).toHaveLength(0);
+  });
+
+  it("warns and leaves edge as-is when target entity is external", () => {
+    const warnings: ConversionWarning[] = [];
+    const result = adjustEntityFetchDqlQuery(
+      "fetch `dt.entity.f5:pool:member` | fieldsAdd child_of[`dt.entity.external:type`]",
+      testEntityToNodeMap,
+      warnings,
+    );
+    expect(result).toContain("child_of[`dt.entity.external:type`]");
+    expect(warnings).toHaveLength(1);
+    expect(warnings[0].category).toBe("dql-conversion");
+  });
+
+  it("warns and leaves edge as-is when relation not in staticEdges", () => {
+    const warnings: ConversionWarning[] = [];
+    const result = adjustEntityFetchDqlQuery(
+      "fetch `dt.entity.f5:pool:member` | fieldsAdd runs_on[`dt.entity.f5:pool`]",
+      testEntityToNodeMap,
+      warnings,
+    );
+    expect(result).toContain("runs_on[`dt.entity.f5:pool`]");
+    expect(warnings).toHaveLength(1);
+    expect(warnings[0].category).toBe("dql-conversion");
+  });
+
+  it("replaces edge reference when entity and staticEdge both match", () => {
+    const result = adjustEntityFetchDqlQuery(
+      "fetch `dt.entity.f5:pool:member` | fieldsAdd child_of[`dt.entity.f5:pool`]",
+      testEntityToNodeMap,
+      [],
+    );
+    expect(result).toBe(
+      "smartscapeNodes F5_LTM_POOL_MEMBER\n| fieldsAdd references[child_of.f5_ltm_pool]",
+    );
+  });
+
+  it("replaces both fields and edges in the same query", () => {
+    const result = adjustEntityFetchDqlQuery(
+      "fetch `dt.entity.f5:pool:member` | fieldsAdd cpu_usage, child_of[`dt.entity.f5:pool`]",
+      testEntityToNodeMap,
+      [],
+    );
+    expect(result).toBe(
+      "smartscapeNodes F5_LTM_POOL_MEMBER\n| fieldsAdd cpu, references[child_of.f5_ltm_pool]",
+    );
+  });
+});
+
+describe("adjustAllDql — fetch-entity DQL integration", () => {
+  it("converts fetch DQL inside JSON string value including pipe stage fields", () => {
+    const json = JSON.stringify({
+      dqlQuery: { query: "fetch `dt.entity.f5:pool:member` | fieldsAdd cpu_usage" },
+    });
+    const result = adjustAllDql(json, testEntityToNodeMap, []);
+    const parsed = JSON.parse(result) as { dqlQuery: { query: string } };
+    expect(parsed.dqlQuery.query).toBe("smartscapeNodes F5_LTM_POOL_MEMBER\n| fieldsAdd cpu");
+  });
+
+  it("leaves timeseries DQL untouched while converting fetch DQL in the same content", () => {
+    const json = JSON.stringify({
+      tsQuery: "timeseries avg(cpu)",
+      fetchQuery: "fetch `dt.entity.f5:pool:member` | fieldsAdd cpu_usage",
+    });
+    const result = adjustAllDql(json, testEntityToNodeMap, []);
+    const parsed = JSON.parse(result) as { tsQuery: string; fetchQuery: string };
+    expect(parsed.tsQuery).toBe("timeseries avg(cpu)");
+    expect(parsed.fetchQuery).toBe("smartscapeNodes F5_LTM_POOL_MEMBER\n| fieldsAdd cpu");
+  });
+
+  it("converts a lookup query string inside a DqlTable JSON", () => {
+    const json = JSON.stringify({
+      dqlQuery: {
+        query: "smartscapeNodes F5_LTM_POOL_MEMBER | fieldsAdd cpu",
+        lookups: [
+          {
+            query: "fetch `dt.entity.f5:pool` | fields pool_status",
+            sourceField: "id",
+            lookupField: "pool_status",
+            fields: ["pool_status"],
+          },
+        ],
+      },
+    });
+    const result = adjustAllDql(json, testEntityToNodeMap, []);
+    const parsed = JSON.parse(result) as {
+      dqlQuery: { lookups: Array<{ query: string }> };
+    };
+    expect(parsed.dqlQuery.lookups[0].query).toContain("smartscapeNodes F5_LTM_POOL");
+    expect(parsed.dqlQuery.lookups[0].query).toContain("poolStatus");
+  });
+});
+
+describe("convertDqlTableCard — structural field adjustment", () => {
+  it("updates column field and id when nodeContext is provided", () => {
+    const card: DqlTableCardStub = {
+      key: "test-table",
+      query: { query: "fetch `dt.entity.f5:pool:member` | fieldsAdd cpu_usage" },
+      columns: [{ field: "cpu_usage", displayName: "CPU" }],
+    };
+    const table = defined(convertDqlTableCard(card, [], memberContext, testEntityToNodeMap));
+    expect(table.columns?.[0]).toMatchObject({ field: "cpu", id: "cpu" });
+  });
+
+  it("leaves column unchanged when field is not in the fieldMap", () => {
+    const card: DqlTableCardStub = {
+      key: "test-table",
+      query: { query: "smartscapeNodes F5_LTM_POOL_MEMBER | fieldsAdd cpu" },
+      columns: [{ field: "unknown_field", displayName: "Unknown" }],
+    };
+    const table = defined(convertDqlTableCard(card, [], memberContext, testEntityToNodeMap));
+    expect(table.columns?.[0]).toMatchObject({ field: "unknown_field" });
+  });
+
+  it("updates lookup sourceField using main entity fieldMap", () => {
+    const card: DqlTableCardStub = {
+      key: "test-table",
+      query: {
+        query: "fetch `dt.entity.f5:pool:member` | fieldsAdd cpu_usage",
+        lookups: [
+          {
+            query: "fetch `dt.entity.f5:pool` | fields pool_status",
+            sourceField: "cpu_usage",
+            lookupField: "pool_status",
+            fields: ["pool_status"],
+          },
+        ],
+      },
+      columns: [],
+    };
+    const table = defined(convertDqlTableCard(card, [], memberContext, testEntityToNodeMap));
+    const lookup = table.dqlQuery.lookups?.[0] as {
+      sourceField: string;
+      lookupField: string;
+      fields: string[];
+    };
+    expect(lookup.sourceField).toBe("cpu");
+  });
+
+  it("updates lookup lookupField and fields[] using lookup entity fieldMap", () => {
+    const card: DqlTableCardStub = {
+      key: "test-table",
+      query: {
+        query: "fetch `dt.entity.f5:pool:member` | fieldsAdd cpu_usage",
+        lookups: [
+          {
+            query: "fetch `dt.entity.f5:pool` | fields pool_status",
+            sourceField: "id",
+            lookupField: "pool_status",
+            fields: ["pool_status"],
+          },
+        ],
+      },
+      columns: [],
+    };
+    const table = defined(convertDqlTableCard(card, [], memberContext, testEntityToNodeMap));
+    const lookup = table.dqlQuery.lookups?.[0] as {
+      lookupField: string;
+      fields: string[];
+    };
+    expect(lookup.lookupField).toBe("poolStatus");
+    expect(lookup.fields).toContain("poolStatus");
+  });
+});
+
+describe("convertPropertiesCard — registry key adjustment", () => {
+  it("renames overrideMetadataRegistry keys to node field names", () => {
+    const card: PropertiesCard = {
+      displayOnlyConfigured: false,
+      properties: [
+        { type: "ATTRIBUTE", attribute: { key: "cpu_usage", displayName: "CPU Usage" } },
+        { type: "ATTRIBUTE", attribute: { key: "mem_bytes", displayName: "Memory" } },
+      ],
+    };
+    const metadata = defined(convertPropertiesCard(card, "f5:pool:member", [], memberContext));
+    const registry = metadata.overrideMetadataRegistry ?? {};
+    expect(registry).toHaveProperty("cpu");
+    expect(registry).toHaveProperty("memory");
+    expect(registry).not.toHaveProperty("cpu_usage");
+    expect(registry).not.toHaveProperty("mem_bytes");
+    expect((registry["cpu"] as Record<string, unknown>).displayName).toBe("CPU Usage");
+  });
+
+  it("leaves registry keys unchanged when not in fieldMap and emits warning", () => {
+    const warnings: ConversionWarning[] = [];
+    const card: PropertiesCard = {
+      displayOnlyConfigured: false,
+      properties: [
+        { type: "ATTRIBUTE", attribute: { key: "unknown_field", displayName: "Unknown" } },
+      ],
+    };
+    const metadata = defined(convertPropertiesCard(card, "f5:pool:member", warnings, memberContext));
+    expect(metadata.overrideMetadataRegistry).toHaveProperty("unknown_field");
+    expect(warnings).toHaveLength(1);
+    expect(warnings[0].category).toBe("dql-conversion");
+    expect(warnings[0].message).toContain("unknown_field");
+  });
+
+  it("produces same result as before when nodeContext is omitted", () => {
+    const card: PropertiesCard = {
+      displayOnlyConfigured: false,
+      properties: [
+        { type: "ATTRIBUTE", attribute: { key: "cpu_usage", displayName: "CPU Usage" } },
+      ],
+    };
+    const metadata = defined(convertPropertiesCard(card, "f5:pool:member", []));
+    expect(metadata.overrideMetadataRegistry).toHaveProperty("cpu_usage");
   });
 });
