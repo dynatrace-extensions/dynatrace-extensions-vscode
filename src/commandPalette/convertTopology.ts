@@ -764,6 +764,12 @@ const convertRequiredDimensionsToMatcher = (
         continue;
       }
 
+      // Handle $exists() function - field must be non-null
+      if (dim.valuePattern.includes("$exists()")) {
+        conditions.push(`isNotNull(${dim.key})`);
+        continue;
+      }
+
       // Default: exact match
       conditions.push(`${dim.key} == "${dim.valuePattern}"`);
     } else {
