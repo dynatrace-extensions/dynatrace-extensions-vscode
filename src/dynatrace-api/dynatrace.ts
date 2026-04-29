@@ -28,6 +28,7 @@ import {
   ActiveGatesServiceInterface,
   CredentialVaultServiceInterface,
   DashboardServiceInterface,
+  DqlServiceInterface,
   EntityServiceV2Interface,
   ExtensionsServiceV1Interface,
   ExtensionsServiceV2Interface,
@@ -36,6 +37,7 @@ import {
 } from "./interfaces/services";
 import { RateLimitConfig } from "./rateLimitHandler";
 import { SaaSDynatraceClient } from "./sdk/sdkDynatraceClient";
+import { StubbedDqlService } from "./sdk/stubs";
 
 /**
  * Common interface for Dynatrace API clients, regardless of deployment model.
@@ -49,6 +51,7 @@ export interface DynatraceClient {
   readonly settings: SettingsServiceInterface;
   readonly dashboards: DashboardServiceInterface;
   readonly activeGates: ActiveGatesServiceInterface;
+  readonly dql: DqlServiceInterface;
 }
 
 /**
@@ -65,6 +68,7 @@ export class ManagedDynatraceClient implements DynatraceClient {
   public readonly settings: SettingsService;
   public readonly dashboards: DashboardService;
   public readonly activeGates: ActiveGatesService;
+  public readonly dql: DqlServiceInterface;
 
   constructor(baseUrl: string, apiToken: string) {
     this._httpClient = new HttpClient(baseUrl, apiToken);
@@ -76,6 +80,7 @@ export class ManagedDynatraceClient implements DynatraceClient {
     this.dashboards = new DashboardService(this._httpClient);
     this.extensionsV1 = new ExtensionsServiceV1(this._httpClient);
     this.activeGates = new ActiveGatesService(this._httpClient);
+    this.dql = new StubbedDqlService();
   }
 }
 

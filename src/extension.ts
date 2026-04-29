@@ -30,12 +30,14 @@ import { getPrometheusCompletionProvider } from "./codeCompletions/prometheus";
 import { getScreensCompletionProvider } from "./codeCompletions/screensMeta";
 import { getTopologyCompletionProvider } from "./codeCompletions/topology";
 import { getWmiCompletionProvider } from "./codeCompletions/wmi";
+import { getDqlCodeLensProvider } from "./codeLens/dqlCodeLens";
 import { getJmxWizardCodeLensProvider } from "./codeLens/jmxWizard";
 import { getPrometheusCodeLensProvider } from "./codeLens/prometheusScraper";
 import { getScreenLensProvider } from "./codeLens/screenCodeLens";
 import { getSelectorCodeLensProvider } from "./codeLens/selectorCodeLens";
 import { getSimulatorLensProvider } from "./codeLens/simulatorCodeLens";
 import { getSnmpCodeLensProvider } from "./codeLens/snmpCodeLens";
+import { registerDqlCommands } from "./codeLens/utils/dqlUtils";
 import { registerSelectorCommands } from "./codeLens/utils/selectorUtils";
 import { getWmiCodeLensProvider } from "./codeLens/wmiCodeLens";
 import { activateExtensionWorkflow } from "./commandPalette/activateExtension";
@@ -59,6 +61,7 @@ import {
   MANIFEST_DOC_SELECTOR,
   OPENPIPELINE_DOC_SELECTOR,
   QUICK_FIX_PROVIDER_METADATA,
+  SCREENS_DOC_SELECTOR,
   TEMP_CONFIG_DOC_SELECTOR,
 } from "./constants";
 import { getSnmpHoverProvider } from "./hover/snmpHover";
@@ -111,6 +114,7 @@ export async function activate(context: vscode.ExtensionContext) {
     ...registerTreeViews(),
     ...registerCodeActionsProviders(),
     ...registerSelectorCommands(),
+    ...registerDqlCommands(),
     ...registerCodeLensProviders(),
     ...registerDiagnosticsEventListeners(),
     ...registerSerializersForPanels([ViewType.MetricResults, ViewType.WmiQueryResults]),
@@ -250,6 +254,7 @@ const registerCodeLensProviders = () => [
   registerCodeLensProvider(getScreenLensProvider()),
   registerCodeLensProvider(getWmiCodeLensProvider()),
   registerCodeLensProvider(getSnmpCodeLensProvider()),
+  registerCodeLensProvider(getDqlCodeLensProvider(), SCREENS_DOC_SELECTOR),
 ];
 
 const registerCodeLensProvider = (

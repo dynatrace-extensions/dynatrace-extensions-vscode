@@ -78,4 +78,5 @@ export interface MetricSeriesCollection {
 export interface MetricResultsPanelData extends PanelDataBase {
   dataType: typeof PanelDataType.MetricResults;
   data: MetricSeriesCollection[];
+  sourceType?: "metric" | "dql";
 }

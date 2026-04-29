@@ -29,6 +29,7 @@ import { MetricSeriesCollection, MetricSeries } from "@common";
 
 interface MetricResultsPanelProps {
   data: MetricSeriesCollection[];
+  sourceType?: "metric" | "dql";
 }
 
 const toTimeseriesData = (metricSeries: MetricSeries[], metricId: string): Timeseries[] => {
@@ -42,14 +43,15 @@ const toTimeseriesData = (metricSeries: MetricSeries[], metricId: string): Times
   }));
 };
 
-export const MetricResultsPanel = ({ data }: MetricResultsPanelProps) => {
+export const MetricResultsPanel = ({ data, sourceType = "metric" }: MetricResultsPanelProps) => {
   const { metricId, data: series, warnings } = data[0];
+  const isDql = sourceType === "dql";
 
   return (
     <Flex flexDirection='column' gap={16}>
-      <Heading level={1}>Metric selector results</Heading>
+      <Heading level={1}>{isDql ? "DQL query results" : "Metric selector results"}</Heading>
       <Flex flexDirection='column' paddingTop={20}>
-        <Text>Metric selector: </Text>
+        <Text>{isDql ? "DQL query:" : "Metric selector: "}</Text>
         <CodeSnippet showLineNumbers={false} language='sql'>
           {metricId}
         </CodeSnippet>

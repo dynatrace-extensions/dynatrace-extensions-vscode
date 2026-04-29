@@ -1044,13 +1044,27 @@ function adjustMetadataFields(
 ): Metadata {
   if (!metadata.overrideMetadataRegistry) return metadata;
   const updatedRegistry: NonNullable<Metadata["overrideMetadataRegistry"]> = {};
+  const defaultFields: Record<string, string> = {
+    "dt.ip_addresses": "ip",
+    "dt.listen_ports": "port",
+    "entity.name": "name",
+  };
+
   for (const [key, value] of Object.entries(metadata.overrideMetadataRegistry)) {
-    const newKey = inverseFieldMap[key];
+    let newKey = inverseFieldMap[key];
+    if (!newKey && Object.keys(defaultFields).includes(key)) {
+      newKey = defaultFields[key];
+      addWarning(
+        warnings,
+        "dql-conversion",
+        `Entity attribute "${key}" could not be mapped based on data; optimistically mapped to "${newKey}"`,
+      );
+    }
     if (!newKey) {
       addWarning(
         warnings,
         "dql-conversion",
-        `Entity attribute "${key}" has no gen3 node field equivalent; left as-is in DQL query and metadata registry`,
+        `Entity attribute "${key}" could not be mapped to a node field based on data`,
       );
     }
     updatedRegistry[newKey ?? key] = value;

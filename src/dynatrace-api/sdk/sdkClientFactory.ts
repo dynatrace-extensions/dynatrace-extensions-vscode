@@ -21,6 +21,7 @@ import {
   EnvironmentClient,
   SchemaClient,
 } from "@dynatrace-internal/client-extensions";
+import { QueryAssistanceClient, QueryExecutionClient } from "@dynatrace-sdk/client-query";
 import { PlatformHttpClient } from "@dynatrace-sdk/http-client";
 
 export interface SdkClients {
@@ -29,6 +30,8 @@ export interface SdkClients {
   schema: SchemaClient;
   environment: EnvironmentClient;
   discovery: DiscoveryClient;
+  queryAssistance: QueryAssistanceClient;
+  queryExecution: QueryExecutionClient;
   httpClient: PlatformHttpClient;
 }
 
@@ -52,6 +55,8 @@ export function createSdkClients(baseUrl: string, platformToken: string): SdkCli
     schema: new SchemaClient(httpClient),
     environment: new EnvironmentClient(httpClient),
     discovery: new DiscoveryClient(httpClient),
+    queryAssistance: new QueryAssistanceClient(httpClient),
+    queryExecution: new QueryExecutionClient(httpClient),
     httpClient,
   };
 }

@@ -17,6 +17,7 @@
 import { CodeLensCommand } from "@common";
 import vscode from "vscode";
 import { ExtensionStub } from "../interfaces/extensionMeta";
+import { isConnectedToSaaS } from "../treeViews/tenantsTreeView";
 import {
   getCachedParsedExtension,
   getCachedSelectorStatus,
@@ -89,7 +90,8 @@ class SelectorCodeLensProvider implements vscode.CodeLensProvider {
     // Bail early if needed
     if (
       !parsedExtension ||
-      !vscode.workspace.getConfiguration("dynatraceExtensions", null).get(this.controlSetting)
+      !vscode.workspace.getConfiguration("dynatraceExtensions", null).get(this.controlSetting) ||
+      (await isConnectedToSaaS())
     ) {
       return [];
     }

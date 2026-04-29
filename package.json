@@ -321,6 +321,13 @@
             "scope": "resource",
             "default": true
           },
+          "dynatraceExtensions.dqlQueriesCodeLens": {
+            "type": "boolean",
+            "description": "Enable Code Lens functionality around DQL queries in extension screen JSON files (SaaS only)",
+            "order": 5,
+            "scope": "resource",
+            "default": true
+          },
           "dynatraceExtensions.fastDevelopmentMode": {
             "type": "boolean",
             "description": "When enabled, static extension assets are sent to Dynatrace on every Save, and when you build an extension it will automatically get uploaded and activated immediately.",
@@ -1039,6 +1046,7 @@
   },
   "dependencies": {
     "@dynatrace-internal/client-extensions": "^0.8.0",
+    "@dynatrace-sdk/client-query": "^1.24.0",
     "@dynatrace-sdk/http-client": "^1.4.0",
     "@dynatrace/unified-analysis": "^1.0.0",
     "axios": "^1.15.0",
