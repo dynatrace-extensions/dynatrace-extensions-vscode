@@ -138,6 +138,16 @@ export const refreshTenantsTreeView = () => {
   getTenantsTreeDataProvider().refresh();
 };
 
+export const isConnectedToSaaS = async (): Promise<boolean> => {
+  const tenant = await getConnectedTenant();
+  return tenant?.deploymentModel === "saas";
+};
+
+export const isConnectedToManaged = async (): Promise<boolean> => {
+  const tenant = await getConnectedTenant();
+  return tenant?.deploymentModel === "managed";
+};
+
 /**
  * A tree data provider that renders all Dynatrace Environments that have been registered
  * with the VSCode Extension. Extensions available in the environment, as well as their

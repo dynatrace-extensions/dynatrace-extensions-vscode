@@ -23,7 +23,7 @@ import { ExtensionSimulator } from "./components/panels/ExtensionSimulator";
 import { MetricResultsPanel } from "./components/panels/MetricResultsPanel";
 import { WmiResultPanel } from "./components/panels/WmiResultPanel";
 import { NotFound } from "./components/NotFound";
-import { PanelData, PanelDataType, WebviewEvent, WebviewEventType } from "@common";
+import { MetricResultsPanelData, PanelData, PanelDataType, WebviewEvent, WebviewEventType } from "@common";
 
 interface AppProps {
   vscode: WebviewApi<PanelData>;
@@ -40,8 +40,10 @@ const WebviewPanel = ({ panelData }: { panelData: PanelData }) => {
   switch (dataType) {
     case PanelDataType.Empty:
       return <NotFound />;
-    case PanelDataType.MetricResults:
-      return <MetricResultsPanel data={data} />;
+    case PanelDataType.MetricResults: {
+      const metricData = panelData as MetricResultsPanelData;
+      return <MetricResultsPanel data={metricData.data} sourceType={metricData.sourceType} />;
+    }
     case PanelDataType.WmiQueryResults:
       return <WmiResultPanel data={data} />;
     case PanelDataType.ExtensionSimulator:

@@ -19,6 +19,7 @@ import {
   ActiveGatesServiceInterface,
   CredentialVaultServiceInterface,
   DashboardServiceInterface,
+  DqlServiceInterface,
   EntityServiceV2Interface,
   ExtensionsServiceV1Interface,
   ExtensionsServiceV2Interface,
@@ -26,6 +27,7 @@ import {
   SettingsServiceInterface,
 } from "../interfaces/services";
 import { RateLimitConfig, RateLimitRetryHandler } from "../rateLimitHandler";
+import { SdkDqlService } from "./dqlAdapter";
 import { SdkExtensionsServiceV2 } from "./extensionsAdapter";
 import { createSdkClients } from "./sdkClientFactory";
 import { SdkSettingsService } from "./settingsAdapter";
@@ -52,6 +54,7 @@ export class SaaSDynatraceClient implements DynatraceClient {
   public readonly settings: SettingsServiceInterface;
   public readonly dashboards: DashboardServiceInterface;
   public readonly activeGates: ActiveGatesServiceInterface;
+  public readonly dql: DqlServiceInterface;
 
   constructor(baseUrl: string, platformToken: string, rateLimitConfig?: Partial<RateLimitConfig>) {
     const clients = createSdkClients(baseUrl, platformToken);
@@ -66,6 +69,7 @@ export class SaaSDynatraceClient implements DynatraceClient {
       retryHandler,
     );
     this.settings = new SdkSettingsService(new SettingsClient(clients.httpClient), retryHandler);
+    this.dql = new SdkDqlService(clients.queryAssistance, clients.queryExecution);
 
     // Stubbed services — not yet supported on SaaS
     this.extensionsV1 = new StubbedExtensionsServiceV1();

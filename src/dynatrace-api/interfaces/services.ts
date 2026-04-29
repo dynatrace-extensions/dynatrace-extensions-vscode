@@ -18,6 +18,7 @@ import { MetricSeriesCollection } from "@common";
 import { ActiveGate } from "./activegates";
 import { CredentialsResponseElement } from "./credentialVault";
 import { Dashboard } from "./dashboards";
+import { DqlQueryResult, DqlVerifyResult } from "./dql";
 import {
   ExtensionMonitoringConfiguration,
   ExtensionStatusDto,
@@ -175,4 +176,9 @@ export interface DashboardServiceInterface {
 
 export interface ActiveGatesServiceInterface {
   list(params?: Record<string, unknown>, signal?: AbortSignal): Promise<ActiveGate[]>;
+}
+
+export interface DqlServiceInterface {
+  verify(query: string, signal?: AbortSignal): Promise<DqlVerifyResult>;
+  execute(query: string, signal?: AbortSignal): Promise<DqlQueryResult>;
 }

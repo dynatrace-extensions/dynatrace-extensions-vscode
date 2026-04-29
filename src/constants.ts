@@ -24,6 +24,12 @@ export const OPENPIPELINE_DOC_SELECTOR: vscode.DocumentSelector = {
   pattern: "**/openpipeline/*.pipeline.json",
 };
 
+// Document selector for extension screen JSON files
+export const SCREENS_DOC_SELECTOR: vscode.DocumentSelector = {
+  language: "json",
+  pattern: "**/extension/screens/*.json",
+};
+
 export const QUICK_FIX_PROVIDER_METADATA: vscode.CodeActionProviderMetadata = {
   providedCodeActionKinds: [vscode.CodeActionKind.QuickFix],
 };

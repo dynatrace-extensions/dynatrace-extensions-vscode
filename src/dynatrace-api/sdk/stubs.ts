@@ -19,12 +19,14 @@ import logger from "../../utils/logging";
 import { ActiveGate } from "../interfaces/activegates";
 import { CredentialsResponseElement } from "../interfaces/credentialVault";
 import { Dashboard } from "../interfaces/dashboards";
+import { DqlQueryResult, DqlVerifyResult } from "../interfaces/dql";
 import { ExtensionV1DTO } from "../interfaces/extensions";
 import { Entity, EntityType } from "../interfaces/monitoredEntities";
 import {
   ActiveGatesServiceInterface,
   CredentialVaultServiceInterface,
   DashboardServiceInterface,
+  DqlServiceInterface,
   EntityServiceV2Interface,
   ExtensionsServiceV1Interface,
   MetricServiceInterface,
@@ -146,5 +148,18 @@ export class StubbedDashboardService implements DashboardServiceInterface {
 export class StubbedActiveGatesService implements ActiveGatesServiceInterface {
   async list(_params?: Record<string, unknown>, _signal?: AbortSignal): Promise<ActiveGate[]> {
     notSupported("ActiveGates API");
+  }
+}
+
+/**
+ * Stub: DQL is not supported on Managed environments.
+ */
+export class StubbedDqlService implements DqlServiceInterface {
+  async verify(_query: string): Promise<DqlVerifyResult> {
+    notSupported("DQL queries");
+  }
+
+  async execute(_query: string): Promise<DqlQueryResult> {
+    notSupported("DQL queries");
   }
 }

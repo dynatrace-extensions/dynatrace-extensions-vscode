@@ -195,8 +195,8 @@ const createGen2FieldMap = (topology: TopologyStub): Record<string, Record<strin
     if (!Object.keys(fieldMap).includes(t.name)) {
       fieldMap[t.name] = {};
     }
-    t.rules.forEach(r => {
-      r.attributes.forEach(a => {
+    (t.rules ?? []).forEach(r => {
+      (r.attributes ?? []).forEach(a => {
         const dataField = a.pattern.replace("{", "").replace("}", "").trim();
         if (!Object.keys(fieldMap[t.name]).includes(dataField)) {
           fieldMap[t.name][dataField] = a.key;
