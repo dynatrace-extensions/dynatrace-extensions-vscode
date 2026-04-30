@@ -15,6 +15,7 @@
  */
 
 import { UtilTypes } from "@common";
+import { DqlTableAdditionalCommand } from "@dynatrace/unified-analysis/documents";
 
 export type DatasourceName =
   | "snmp"
@@ -275,7 +276,7 @@ export interface DqlTableCardStub {
       lookupField: string;
       fields: string[];
     }>;
-    additionalCommands?: string;
+    additionalCommands?: DqlTableAdditionalCommand[];
   };
   columns?: DqlTableColumnStub[];
 }

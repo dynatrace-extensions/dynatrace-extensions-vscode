@@ -6,16 +6,19 @@
 
 - Existing SaaS Tenant connections will no longer work. These will show up in red, and you should edit each one adjusting the following details:
   1. The URL must use a Platform domain (`*.apps.*`)
-  2. The token must be a [Platform Token](https://docs.dynatrace.com/docs/shortlink/platform-tokens) (`dt0s16.*`)
+  2. The token must be a [Platform Token](https://docs.dynatrace.com/docs/shortlink/platform-tokens) (`dt0s16.*`) with the following scopes: `storage:buckets:read`, `storage:metrics:read`, `storage:entities:read`, `storage:logs:read`, `storage:smartscape:read`, `extensions:definitions:read`, `extensions:definitions:write`, `extensions:configurations:read`, `extensions:configurations:write`, `extensions:discovery.jmx:read`, `settings:objects:read`, `settings:schemas:read`
 
 ### 🚀 Improved in this version:
 
 - SaaS and Managed environment connections are handled differently, with SaaS leveraging Platform SDKs and DQL queries
 - Icons have been updated to reflect Dynatrace's latest branding
+- Data querying code lenses (metric selectors, entity selectors, DQL queries) require a specific tenant connection: switch to a Managed connection to test your selectors and to a SaaS one to test your DQL
 
 ### ✨ New in this version:
 
 - Command to convert unified analysis screens; this generates documents within the extension folder but requires topology to have been converted first.
+- Schema-based validation for Unified Analysis platform documents
+- DQL Code Lenses - validate and execute your DQL queries (from Unified Analysis platform documents) against the tenant's data
 
 ---
 

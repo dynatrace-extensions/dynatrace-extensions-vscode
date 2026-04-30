@@ -35,15 +35,80 @@ import { DqlSyntaxErrorPosition, ValidationStatus } from "./selectorUtils";
 const logTrace = ["codeLens", "utils", "dqlUtils"];
 
 /**
+ * Extracts the JSON object substring starting at `start` (which must be `{`)
+ * by tracking bracket depth while respecting JSON string literals.
+ */
+function extractJsonObjectText(text: string, start: number): string | null {
+  if (text[start] !== "{") return null;
+  let depth = 0;
+  let i = start;
+  while (i < text.length) {
+    const ch = text[i];
+    if (ch === '"') {
+      i++;
+      while (i < text.length) {
+        if (text[i] === "\\") {
+          i += 2;
+        } else if (text[i] === '"') {
+          i++;
+          break;
+        } else {
+          i++;
+        }
+      }
+      continue;
+    }
+    if (ch === "{" || ch === "[") depth++;
+    else if (ch === "}" || ch === "]") {
+      depth--;
+      if (depth === 0) return text.slice(start, i + 1);
+    }
+    i++;
+  }
+  return null;
+}
+
+type DqlObjectForm = {
+  query: string;
+  lookups?: Array<
+    | { query: string; sourceField: string; lookupField: string; fields: string[] }
+    | { builtInLookup: string; filterExpression?: string }
+  >;
+  additionalCommands?: Array<{ query: string }>;
+};
+
+/**
+ * Composes an executable DQL string from an object-form dqlQuery, assembling
+ * lookup sub-queries and additional commands into a single piped query.
+ *
+ * AlertLookup entries (builtInLookup) have no DQL representation and are skipped.
+ */
+function assembleObjectFormDql(obj: DqlObjectForm): string {
+  const parts: string[] = [obj.query];
+
+  for (const lookup of obj.lookups ?? []) {
+    if (!("query" in lookup)) continue; // AlertLookup — no DQL form
+    parts.push(
+      `| lookup [ ${lookup.query} ], sourceField: ${lookup.sourceField}, lookupField: ${lookup.lookupField}, fields: { ${lookup.fields.join(", ")} }`,
+    );
+  }
+
+  for (const cmd of obj.additionalCommands ?? []) {
+    parts.push(`| ${cmd.query}`);
+  }
+
+  return parts.join("\n");
+}
+
+/**
  * Extracts the DQL query string from a "dqlQuery" occurrence in JSON document text.
  *
  * Handles two forms:
  *   - String:  "dqlQuery": "fetch logs | ..."
- *   - Object:  "dqlQuery": { "idField": "...", "query": "fetch logs | ..." }
+ *   - Object:  "dqlQuery": { "idField": "...", "query": "...", "lookups": [...], "additionalCommands": [...] }
  *
+ * For the object form the full query is assembled: base query + lookup pipes + additional commands.
  * Returns null if the DQL string cannot be determined.
- * Note: the full query-building logic for object form (combining query, lookups,
- * additionalCommands) is deferred — currently only the base "query" field is used.
  */
 export function prepareDqlQuery(text: string, matchIndex: number): string | null {
   const fragment = text.slice(matchIndex, matchIndex + 4096);
@@ -54,9 +119,21 @@ export function prepareDqlQuery(text: string, matchIndex: number): string | null
     return stringMatch[1];
   }
 
-  // Object form: "dqlQuery": { ... "query": "..." ... }
+  // Object form: "dqlQuery": { ... }
   const objectStart = fragment.indexOf("{");
   if (objectStart !== -1) {
+    const objectText = extractJsonObjectText(fragment, objectStart);
+    if (objectText) {
+      try {
+        const obj = JSON.parse(objectText) as DqlObjectForm;
+        if (typeof obj.query === "string") {
+          return assembleObjectFormDql(obj);
+        }
+      } catch {
+        // Fallback: extract "query" field via regex
+      }
+    }
+    // Fallback for malformed JSON: grab the "query" field directly
     const objectFragment = fragment.slice(objectStart, objectStart + 4096);
     const queryMatch = objectFragment.match(/"query"\s*:\s*"((?:[^"\\]|\\.)*)"/);
     if (queryMatch) {
@@ -135,26 +212,30 @@ export function normalizeDqlTimeseriesResult(
 }
 
 /**
- * Resolves the $entityId template variable by fetching the first available
- * entity ID for the node type declared in the screen document.
+ * Resolves the $(entityId) template variable by fetching the first available
+ * entity ID for the node type derived from the screen document's filename.
  *
- * Looks for "nodeType": "<type>" in the document text, then executes a DQL
- * query against smartscapeNodes to retrieve the first matching entity ID.
- * Returns null if the node type cannot be found or no entities exist.
+ * The filename convention for generated screen files is `NODE_TYPE.*.json`,
+ * so the first dot-separated segment is always the node type.
+ * Returns null if the node type cannot be derived or no entities exist.
  */
 export async function resolveEntityId(
   document: vscode.TextDocument,
   dtClient: DynatraceClient,
 ): Promise<string | null> {
-  const nodeTypeMatch = document.getText().match(/"nodeType"\s*:\s*"([^"]+)"/);
-  if (!nodeTypeMatch) {
-    logger.warn("Cannot resolve $entityId: no nodeType found in screen document.", ...logTrace);
+  const fileName = document.fileName.replace(/\\/g, "/").split("/").pop() ?? "";
+  const nodeType = fileName.split(".")[0];
+
+  if (!nodeType) {
+    logger.warn(
+      "Cannot resolve $(entityId): could not derive node type from filename.",
+      ...logTrace,
+    );
     return null;
   }
 
-  const nodeType = nodeTypeMatch[1];
   const result = await dtClient.dql
-    .execute(`fetch smartscapeNodes | filter type == "${nodeType}" | fields id | limit 1`)
+    .execute(`smartscapeNodes ${nodeType.toUpperCase()} | limit 1`)
     .catch(() => null);
 
   const id = result?.records[0]?.id;
@@ -263,17 +344,17 @@ export async function runDql(
 ): Promise<void> {
   let dqlQuery = rawDqlQuery;
 
-  if (dqlQuery.includes("$entityId")) {
+  if (dqlQuery.includes("$(entityId)")) {
     const entityId = await resolveEntityId(document, dtClient);
     if (!entityId) {
       logger.notify(
         "WARN",
-        "Could not resolve $entityId: no entities found for the screen's node type.",
+        "Could not resolve $(entityId): no entities found for the screen's node type.",
         ...logTrace,
       );
       return;
     }
-    dqlQuery = dqlQuery.replace(/\$entityId/g, entityId);
+    dqlQuery = dqlQuery.replace(/\$\(entityId\)/g, `"${entityId}"`);
   }
 
   try {
@@ -324,7 +405,24 @@ export const registerDqlCommands = (): vscode.Disposable[] => {
       if (!dtClient) return;
 
       updateDqlValidationStatus(dqlQuery, { status: "loading" });
-      const status = await validateDql(sanitizeDqlQuery(dqlQuery), dtClient);
+
+      let sanitized = sanitizeDqlQuery(dqlQuery);
+      if (sanitized.includes("$(entityId)")) {
+        const document = vscode.window.activeTextEditor?.document;
+        const entityId = document ? await resolveEntityId(document, dtClient) : null;
+        if (!entityId) {
+          updateDqlValidationStatus(dqlQuery, { status: "unknown" });
+          logger.notify(
+            "WARN",
+            "Could not resolve $(entityId): no entities found for the screen's node type.",
+            ...logTrace,
+          );
+          return;
+        }
+        sanitized = sanitized.replace(/\$\(entityId\)/g, `"${entityId}"`);
+      }
+
+      const status = await validateDql(sanitized, dtClient);
       updateDqlValidationStatus(dqlQuery, status);
     }),
     vscode.commands.registerCommand(CodeLensCommand.RunDqlQuery, async (dqlQuery: string) => {
