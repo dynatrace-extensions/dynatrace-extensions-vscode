@@ -986,6 +986,24 @@
         "when": "dynatrace-extensions.numEnvironments == 0"
       }
     ],
+    "jsonValidation": [
+      {
+        "fileMatch": "**/extension/screens/*.entitydetails.json",
+        "url": "./src/assets/jsonSchemas/screens/entityDetailsDefinition.schema.json"
+      },
+      {
+        "fileMatch": "**/extension/screens/*.detailsinjection.json",
+        "url": "./src/assets/jsonSchemas/screens/entityDetailsInjection.schema.json"
+      },
+      {
+        "fileMatch": "**/extension/screens/*.inventory.json",
+        "url": "./src/assets/jsonSchemas/screens/invExDefinition.schema.json"
+      },
+      {
+        "fileMatch": "**/extension/screens/*.inventoryinjection.json",
+        "url": "./src/assets/jsonSchemas/screens/invExInjection.schema.json"
+      }
+    ],
     "icons": {
       "dt-platform": {
         "description": "Dynatrace platform",
@@ -1008,7 +1026,8 @@
     "test": "jest --runInBand",
     "test:e2e": "jest --selectProjects=E2E --runInBand",
     "test:unit": "jest --selectProjects=Unit --runInBand",
-    "build": "npm run pretest && npm run vscode:prepublish",
+    "generate:schemas": "node scripts/generate-screen-schemas.js",
+    "build": "npm run generate:schemas && npm run pretest && npm run vscode:prepublish",
     "install:all": "npm install && cd webview-ui && npm install",
     "build:webview": "cd webview-ui && npm run build",
     "build:all": "npm run build:webview && npm run build"
@@ -1042,6 +1061,7 @@
     "jest-runner-vscode": "^3.0.1",
     "prettier": "^3.3.2",
     "ts-jest": "^29.1.5",
+    "ts-json-schema-generator": "^2.9.0",
     "typescript": "^5.5.3"
   },
   "dependencies": {
