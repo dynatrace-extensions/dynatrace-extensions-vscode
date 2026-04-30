@@ -118,22 +118,38 @@ function formatCategoryTitle(category: string): string {
 
 /**
  * Helper to push a warning into a warnings array.
+ * When a hint is provided it is prepended as a location prefix: "[screenType.cardKey.element] message".
  */
 export function addWarning(
   warnings: ConversionWarning[],
   category: WarningCategory,
   message: string,
+  hint?: string,
 ): void {
-  warnings.push({ category, message });
+  warnings.push({ category, message: hint ? `[${hint}] ${message}` : message });
 }
 
 // ---------------------------------------------------------------------------
 // Target filtering
 // ---------------------------------------------------------------------------
 
-/** Returns true if the item should be skipped (CLASSIC-only target). */
+/**
+ * Returns true if the item should be skipped.
+ * Omitted target defaults to CLASSIC (the platform-native format never carries classic-only items).
+ */
 export function shouldSkipByTarget(target?: string): boolean {
-  return target === "CLASSIC";
+  return target === undefined || target === "CLASSIC";
+}
+
+/**
+ * Resolves the effective target for a child element: the child's own value takes precedence;
+ * if absent, the parent's value is inherited.
+ */
+export function resolveTarget(
+  own: string | undefined,
+  parent: string | undefined,
+): string | undefined {
+  return own ?? parent;
 }
 
 // ---------------------------------------------------------------------------
@@ -143,20 +159,29 @@ export function shouldSkipByTarget(target?: string): boolean {
 export function convertChartsCard(
   card: ChartsCardStub,
   warnings: ConversionWarning[],
+  parentTarget?: string,
+  hint?: string,
 ): ChartGroup | null {
-  if (shouldSkipByTarget(card.target)) {
-    addWarning(warnings, "skipped-classic", `chartsCard "${card.key}" skipped (target: CLASSIC)`);
+  const effectiveTarget = resolveTarget(card.target, parentTarget);
+  if (shouldSkipByTarget(effectiveTarget)) {
+    addWarning(
+      warnings,
+      "skipped-classic",
+      `chartsCard "${card.key}" skipped (target: CLASSIC)`,
+      hint,
+    );
     return null;
   }
 
   const charts: Chart[] = [];
   for (let i = 0; i < card.charts.length; i++) {
-    const converted = convertChart(card.charts[i], `${card.key}-chart-${i}`, warnings);
+    const chartHint = hint ? `${hint}.chart-${i}` : undefined;
+    const converted = convertChart(card.charts[i], `${card.key}-chart-${i}`, warnings, chartHint);
     if (converted) charts.push(converted);
   }
 
   if (charts.length === 0) {
-    addWarning(warnings, "no-dql", `chartsCard "${card.key}" produced no convertible charts`);
+    addWarning(warnings, "no-dql", `chartsCard "${card.key}" produced no convertible charts`, hint);
     return null;
   }
 
@@ -182,19 +207,21 @@ function convertChart(
   chart: ChartStub,
   chartId: string,
   warnings: ConversionWarning[],
+  hint?: string,
 ): Chart | null {
   switch (chart.visualizationType) {
     case "GRAPH_CHART":
-      return convertGraphChart(chart, chartId, warnings);
+      return convertGraphChart(chart, chartId, warnings, hint);
     case "PIE_CHART":
-      return convertPieChart(chart, chartId, warnings);
+      return convertPieChart(chart, chartId, warnings, hint);
     case "SINGLE_VALUE":
-      return convertSingleValueChart(chart, chartId, warnings);
+      return convertSingleValueChart(chart, chartId, warnings, hint);
     default:
       addWarning(
         warnings,
         "skipped-out-of-scope",
         `Unknown visualization type "${chart.visualizationType}" in chart "${chartId}"`,
+        hint,
       );
       return null;
   }
@@ -208,6 +235,7 @@ function convertGraphChart(
   chart: ChartStub,
   chartId: string,
   warnings: ConversionWarning[],
+  hint?: string,
 ): Chart | null {
   const config = chart.graphChartConfig;
   if (!config?.metrics || config.metrics.length === 0) return null;
@@ -222,9 +250,10 @@ function convertGraphChart(
         warnings,
         "multi-metric-partial",
         `Chart "${chartId}": ${nonDqlMetrics.length} metric(s) skipped (no dqlQuery): ${skippedNames.join(", ")}`,
+        hint,
       );
     } else {
-      addWarning(warnings, "no-dql", `Chart "${chartId}" skipped — no metrics have dqlQuery`);
+      addWarning(warnings, "no-dql", `Chart "${chartId}" skipped — no metrics have dqlQuery`, hint);
       return null;
     }
   }
@@ -566,13 +595,14 @@ function convertPieChart(
   chart: ChartStub,
   chartId: string,
   warnings: ConversionWarning[],
+  hint?: string,
 ): Chart | null {
   const config = chart.pieChartConfig;
   if (!config) return null;
 
   const dqlQuery = config.metric.dqlQuery;
   if (!dqlQuery) {
-    addWarning(warnings, "no-dql", `PIE_CHART "${chartId}" skipped — no dqlQuery`);
+    addWarning(warnings, "no-dql", `PIE_CHART "${chartId}" skipped — no dqlQuery`, hint);
     return null;
   }
 
@@ -599,13 +629,14 @@ function convertSingleValueChart(
   chart: ChartStub,
   chartId: string,
   warnings: ConversionWarning[],
+  hint?: string,
 ): Chart | null {
   const config = chart.singleValueConfig;
   if (!config) return null;
 
   const dqlQuery = config.metric.dqlQuery;
   if (!dqlQuery) {
-    addWarning(warnings, "no-dql", `SINGLE_VALUE "${chartId}" skipped — no dqlQuery`);
+    addWarning(warnings, "no-dql", `SINGLE_VALUE "${chartId}" skipped — no dqlQuery`, hint);
     return null;
   }
 
@@ -696,9 +727,17 @@ export function convertDqlTableCard(
   warnings: ConversionWarning[],
   nodeContext?: NodeContext,
   entityToNodeMap?: EntityToNodeMap,
+  parentTarget?: string,
+  hint?: string,
 ): DqlTable | null {
-  if (shouldSkipByTarget(card.target)) {
-    addWarning(warnings, "skipped-classic", `dqlTableCard "${card.key}" skipped (target: CLASSIC)`);
+  const effectiveTarget = resolveTarget(card.target, parentTarget);
+  if (shouldSkipByTarget(effectiveTarget)) {
+    addWarning(
+      warnings,
+      "skipped-classic",
+      `dqlTableCard "${card.key}" skipped (target: CLASSIC)`,
+      hint,
+    );
     return null;
   }
 
@@ -882,9 +921,17 @@ export function convertMessageCard(
   card: MessageCardStub,
   keywords: string[] | undefined,
   warnings: ConversionWarning[],
+  parentTarget?: string,
+  hint?: string,
 ): Message | null {
-  if (shouldSkipByTarget(card.target)) {
-    addWarning(warnings, "skipped-classic", `messageCard "${card.key}" skipped (target: CLASSIC)`);
+  const effectiveTarget = resolveTarget(card.target, parentTarget);
+  if (shouldSkipByTarget(effectiveTarget)) {
+    addWarning(
+      warnings,
+      "skipped-classic",
+      `messageCard "${card.key}" skipped (target: CLASSIC)`,
+      hint,
+    );
     return null;
   }
 
@@ -920,6 +967,7 @@ export function convertMessageCard(
     warnings,
     "skipped-out-of-scope",
     `messageCard "${card.key}" has unknown type "${card.type ?? "undefined"}"`,
+    hint,
   );
   return null;
 }
@@ -993,21 +1041,31 @@ function convertActionExpression(
 export function convertHealthCard(
   card: HealthCardStub,
   warnings: ConversionWarning[],
+  parentTarget?: string,
+  hint?: string,
 ): ChartGroup | null {
-  if (shouldSkipByTarget(card.target)) {
-    addWarning(warnings, "skipped-classic", `healthCard "${card.key}" skipped (target: CLASSIC)`);
+  const effectiveTarget = resolveTarget(card.target, parentTarget);
+  if (shouldSkipByTarget(effectiveTarget)) {
+    addWarning(
+      warnings,
+      "skipped-classic",
+      `healthCard "${card.key}" skipped (target: CLASSIC)`,
+      hint,
+    );
     return null;
   }
 
   const charts: Chart[] = [];
   for (let i = 0; i < card.tiles.length; i++) {
     const tile = card.tiles[i];
+    const tileHint = hint ? `${hint}.tile-${i}` : undefined;
 
     // Health cards use metricSelector — no DQL equivalent available
     addWarning(
       warnings,
       "no-dql",
       `healthCard "${card.key}" tile "${tile.displayName ?? i}" uses metricSelector only — manual DQL conversion needed`,
+      tileHint,
     );
 
     charts.push({
@@ -1213,7 +1271,9 @@ export function adjustEntityFetchDqlQuery(
 ): string {
   if (!/^fetch\s+`dt\.entity\./i.test(dqlQuery.trimStart())) return dqlQuery;
 
-  const entityTypeMatch = dqlQuery.trimStart().match(/^fetch\s+`dt\.entity\.(.+?)`/i);
+  const entityTypeMatch = dqlQuery
+    .trimStart()
+    .match(/^fetch\s+`dt\.entity\.([a-zA-Z](?:[a-zA-Z0-9_\-:]*[a-zA-Z0-9])?)`/i);
   if (!entityTypeMatch) return dqlQuery;
   const entityType = entityTypeMatch[1];
 
@@ -1274,31 +1334,44 @@ export const adjustAllDql = (
     return JSON.stringify(adjustEntityFetchDqlQuery(dql, entityToNodeMap, warnings));
   });
 
-  // Pass 2: change all remaining dimension values (e.g. in timeseries by:/filter: args)
-  // dt.entity.someType`  →  dt.smartscape.someType`
-  adjustedContent = adjustedContent.replace(/dt\.entity\.(.+?)`/g, (match, entityType) => {
-    if (!entityType) return match; // No entity type captured, return original
-    if (Object.keys(entityToNodeMap).includes(String(entityType))) {
-      const { nodeType } = entityToNodeMap[entityType as keyof EntityToNodeMap];
-      if (nodeType) {
-        return `dt.smartscape.${nodeType.toLowerCase()}${match.endsWith("`") ? "`" : ""}`;
-      } else {
-        addWarning(
-          warnings,
-          "dql-conversion",
-          `No node type mapping found for entity type "${entityType}" in DQL query: "${match}"`,
-        );
-        return match; // No mapping found, return original
-      }
-    }
-    // Try optimistic conversion
+  // Warn if any DQL still references classicEntitySelector — that must be converted manually
+  if (content.includes("classicEntitySelector")) {
     addWarning(
       warnings,
       "dql-conversion",
-      `Entity type "${entityType}" in DQL query is external to extension; conversion may be inaccurate: "${match}"`,
+      "DQL query contains 'classicEntitySelector' which must be converted manually",
     );
-    return `dt.smartscape.${String(entityType).toLowerCase()}${match.endsWith("`") ? "`" : ""}`;
-  });
+  }
+
+  // Pass 2: change all remaining dimension values (e.g. in timeseries by:/filter: args)
+  // dt.entity.<type>`  →  dt.smartscape.<type>` where type starts with a letter, contains only
+  // [a-zA-Z0-9_-:], and ends with a letter or digit.
+  adjustedContent = adjustedContent.replace(
+    /dt\.entity\.([a-zA-Z](?:[a-zA-Z0-9_\-:]*[a-zA-Z0-9])?)`/g,
+    (match, entityType) => {
+      if (!entityType) return match;
+      if (Object.keys(entityToNodeMap).includes(String(entityType))) {
+        const { nodeType } = entityToNodeMap[entityType as keyof EntityToNodeMap];
+        if (nodeType) {
+          return `dt.smartscape.${nodeType.toLowerCase()}${match.endsWith("`") ? "`" : ""}`;
+        } else {
+          addWarning(
+            warnings,
+            "dql-conversion",
+            `No node type mapping found for entity type "${entityType}" in DQL query: "${match}"`,
+          );
+          return match;
+        }
+      }
+      // Try optimistic conversion
+      addWarning(
+        warnings,
+        "dql-conversion",
+        `Entity type "${entityType}" in DQL query is external to extension; conversion may be inaccurate: "${match}"`,
+      );
+      return `dt.smartscape.${String(entityType).toLowerCase()}${match.endsWith("`") ? "`" : ""}`;
+    },
+  );
 
   return adjustedContent;
 };
