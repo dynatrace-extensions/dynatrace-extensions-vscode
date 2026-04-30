@@ -322,6 +322,7 @@ export function parseDqlQuery(dqlQuery: string): DqlQueryInfo {
  * Splits a DQL query on pipe characters (`|`) while respecting:
  * - brace nesting `{ }`
  * - parenthesis nesting `( )`
+ * - bracket nesting `[ ]` (sub-query blocks for append/join/lookup)
  * - backtick-quoted identifiers
  */
 export function splitDqlPipes(query: string): string[] {
@@ -337,10 +338,10 @@ export function splitDqlPipes(query: string): string[] {
       current += ch;
     } else if (inBacktick) {
       current += ch;
-    } else if (ch === "{" || ch === "(") {
+    } else if (ch === "{" || ch === "(" || ch === "[") {
       depth++;
       current += ch;
-    } else if (ch === "}" || ch === ")") {
+    } else if (ch === "}" || ch === ")" || ch === "]") {
       depth--;
       current += ch;
     } else if (ch === "|" && depth === 0) {
@@ -749,7 +750,7 @@ export function convertDqlTableCard(
     query: card.query.query,
   };
   if (card.query.lookups) dqlQuery.lookups = card.query.lookups;
-  // TODO: Check if needed
+  if (card.query.additionalCommands) dqlQuery.additionalCommands = card.query.additionalCommands;
 
   const element: DqlTable = {
     type: "dql-table",
@@ -1260,9 +1261,56 @@ function adjustPipeSegmentContent(
 }
 
 /**
+ * Extracts a sub-query from the first `[...]` block in a pipe segment.
+ * Tracks bracket depth and respects backtick-quoted identifiers.
+ * Returns null if no bracket pair is found.
+ */
+function extractBracketedSubquery(
+  segment: string,
+): { prefix: string; subquery: string; suffix: string } | null {
+  let bracketStart = -1;
+  let inBacktick = false;
+
+  for (let i = 0; i < segment.length; i++) {
+    if (segment[i] === "`") {
+      inBacktick = !inBacktick;
+    } else if (!inBacktick && segment[i] === "[") {
+      bracketStart = i;
+      break;
+    }
+  }
+
+  if (bracketStart === -1) return null;
+
+  let depth = 0;
+  inBacktick = false;
+  for (let i = bracketStart; i < segment.length; i++) {
+    const ch = segment[i];
+    if (ch === "`") {
+      inBacktick = !inBacktick;
+    } else if (!inBacktick) {
+      if (ch === "[") depth++;
+      else if (ch === "]") {
+        depth--;
+        if (depth === 0) {
+          return {
+            prefix: segment.slice(0, bracketStart + 1),
+            subquery: segment.slice(bracketStart + 1, i),
+            suffix: segment.slice(i),
+          };
+        }
+      }
+    }
+  }
+
+  return null;
+}
+
+/**
  * Processes a complete DQL query string for a fetch-entity query:
  * converts the entity type to a smartscapeNodes command, then replaces
  * entity field names and edge references in the targeted pipe stages.
+ * Sub-queries within append/join/lookup brackets are converted recursively.
  */
 export function adjustEntityFetchDqlQuery(
   dqlQuery: string,
@@ -1295,19 +1343,33 @@ export function adjustEntityFetchDqlQuery(
   const segments = splitDqlPipes(dqlQuery);
   segments[0] = convertedFetch;
 
-  if (nodeContext !== null) {
-    const inverseFieldMap = invertFieldMap(nodeContext.fieldMap);
-    const targetedCommands = /^(fieldsAdd|fields|summarize|filter)\b/i;
-    for (let i = 1; i < segments.length; i++) {
-      if (targetedCommands.test(segments[i].trimStart())) {
-        segments[i] = adjustPipeSegmentContent(
-          segments[i],
-          inverseFieldMap,
-          nodeContext,
+  const subQueryCommands = /^(append|join|lookup)\b/i;
+  const targetedCommands = /^(fieldsAdd|fields|summarize|filter)\b/i;
+
+  for (let i = 1; i < segments.length; i++) {
+    const trimmed = segments[i].trimStart();
+
+    if (subQueryCommands.test(trimmed)) {
+      // Recursively convert entity fetch queries within sub-query brackets.
+      // Sub-queries are at most one level deep (no further nesting).
+      const parts = extractBracketedSubquery(trimmed);
+      if (parts) {
+        const convertedSubquery = adjustEntityFetchDqlQuery(
+          parts.subquery.trim(),
           entityToNodeMap,
           warnings,
         );
+        segments[i] = parts.prefix + convertedSubquery + parts.suffix;
       }
+    } else if (nodeContext !== null && targetedCommands.test(trimmed)) {
+      const inverseFieldMap = invertFieldMap(nodeContext.fieldMap);
+      segments[i] = adjustPipeSegmentContent(
+        segments[i],
+        inverseFieldMap,
+        nodeContext,
+        entityToNodeMap,
+        warnings,
+      );
     }
   }
 

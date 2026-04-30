@@ -38,6 +38,7 @@ import {
   generateConversionReport,
   parseDqlQuery,
   shouldSkipByTarget,
+  splitDqlPipes,
 } from "../../../../src/utils/screenConversion";
 import { EntityToNodeMap, NodeContext } from "../../../../src/interfaces/screenConversion";
 
@@ -984,6 +985,77 @@ describe("adjustAllDql — fetch-entity DQL integration", () => {
     };
     expect(parsed.dqlQuery.lookups[0].query).toContain("smartscapeNodes F5_LTM_POOL");
     expect(parsed.dqlQuery.lookups[0].query).toContain("poolStatus");
+  });
+});
+
+describe("splitDqlPipes — bracket tracking", () => {
+  it("splits a simple piped query", () => {
+    const result = splitDqlPipes("fetch logs | filter level == 'ERROR' | limit 10");
+    expect(result).toHaveLength(3);
+  });
+
+  it("does not split on pipe inside braces", () => {
+    const result = splitDqlPipes("timeseries avg(cpu), by:{host | datacenter}");
+    expect(result).toHaveLength(1);
+  });
+
+  it("does not split on pipe inside square brackets (sub-query)", () => {
+    const result = splitDqlPipes(
+      "fetch `dt.entity.f5:pool:member` | append [ fetch `dt.entity.f5:pool` | fields pool_status ]",
+    );
+    expect(result).toHaveLength(2);
+    expect(result[1]).toContain("append [");
+    expect(result[1]).toContain("| fields pool_status");
+  });
+
+  it("does not split on pipe inside nested brackets", () => {
+    const result = splitDqlPipes(
+      "fetch `dt.entity.f5:pool:member` | join [ fetch `dt.entity.f5:pool` | filter pool_status == 'active' ], on:{id}",
+    );
+    expect(result).toHaveLength(2);
+  });
+});
+
+describe("adjustEntityFetchDqlQuery — sub-query conversion", () => {
+  it("converts fetch dt.entity sub-query inside append brackets", () => {
+    const result = adjustEntityFetchDqlQuery(
+      "fetch `dt.entity.f5:pool:member` | append [ fetch `dt.entity.f5:pool` | fields pool_status ]",
+      testEntityToNodeMap,
+      [],
+    );
+    expect(result).toContain("smartscapeNodes F5_LTM_POOL_MEMBER");
+    expect(result).toContain("append [");
+    expect(result).toContain("smartscapeNodes F5_LTM_POOL");
+    expect(result).not.toContain("dt.entity.f5:pool");
+  });
+
+  it("converts fetch dt.entity sub-query inside join brackets", () => {
+    const result = adjustEntityFetchDqlQuery(
+      "fetch `dt.entity.f5:pool:member` | join [ fetch `dt.entity.f5:pool` | fields pool_status ], on:{id}",
+      testEntityToNodeMap,
+      [],
+    );
+    expect(result).toContain("smartscapeNodes F5_LTM_POOL");
+    expect(result).not.toContain("dt.entity.f5:pool`");
+  });
+
+  it("converts fetch dt.entity sub-query inside lookup brackets", () => {
+    const result = adjustEntityFetchDqlQuery(
+      "fetch `dt.entity.f5:pool:member` | lookup [ fetch `dt.entity.f5:pool` | fields poolId ], sourceField: id, lookupField: poolId",
+      testEntityToNodeMap,
+      [],
+    );
+    expect(result).toContain("smartscapeNodes F5_LTM_POOL");
+  });
+
+  it("leaves non-entity sub-queries unchanged", () => {
+    const result = adjustEntityFetchDqlQuery(
+      "fetch `dt.entity.f5:pool:member` | append [ fetch logs | filter level == 'ERROR' ]",
+      testEntityToNodeMap,
+      [],
+    );
+    expect(result).toContain("fetch logs");
+    expect(result).not.toContain("dt.entity");
   });
 });
 

@@ -31,7 +31,7 @@ You do **not**:
 
 You leverage sub-agents as needed to assist with specific tasks and not saturate your context window.
 
-## 3. CLARIFICATION AND COMMUNIATION
+## 3. CLARIFICATION AND COMMUNICATION
 
 - **Always ask clarifying questions** before starting work until the requirements are crystal clear and no doubts remain. Do not assume ambiguous details - ask.
 - **Ask questions during work** whenever new uncertainties arise. Do not proceed with guesses when decisions are needed.
