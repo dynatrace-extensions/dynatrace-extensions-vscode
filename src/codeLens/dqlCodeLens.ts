@@ -19,7 +19,11 @@ import vscode from "vscode";
 import { isConnectedToSaaS } from "../treeViews/tenantsTreeView";
 import { getCachedDqlStatus, setCachedDqlStatus } from "../utils/caching";
 import { createSingletonProvider } from "../utils/singleton";
-import { prepareDqlQuery } from "./utils/dqlUtils";
+import {
+  mapQueryIndexToDocumentPosition,
+  parseSyntaxErrorPosition,
+  prepareDqlQuery,
+} from "./utils/dqlUtils";
 import { ValidationStatus } from "./utils/selectorUtils";
 
 const DQL_KEY_REGEX = /"dqlQuery"\s*:/g;
@@ -44,6 +48,8 @@ class DqlCodeLensProvider implements vscode.CodeLensProvider {
   private codeLenses: vscode.CodeLens[] = [];
   private _onDidChangeCodeLenses = new vscode.EventEmitter<void>();
   public readonly onDidChangeCodeLenses = this._onDidChangeCodeLenses.event;
+  private readonly diagnosticCollection =
+    vscode.languages.createDiagnosticCollection("DynatraceExtensions.dql");
 
   public async provideCodeLenses(document: vscode.TextDocument): Promise<vscode.CodeLens[]> {
     this.codeLenses = [];
@@ -52,18 +58,18 @@ class DqlCodeLensProvider implements vscode.CodeLensProvider {
       !vscode.workspace.getConfiguration("dynatraceExtensions", null).get("dqlQueriesCodeLens") ||
       !(await isConnectedToSaaS())
     ) {
+      this.diagnosticCollection.delete(document.uri);
       return [];
     }
 
     const text = document.getText();
+    const diagnostics: vscode.Diagnostic[] = [];
 
     for (const match of text.matchAll(new RegExp(DQL_KEY_REGEX))) {
       if (match.index === undefined) continue;
 
       const dqlQuery = prepareDqlQuery(text, match.index);
-      if (!dqlQuery) {
-        continue;
-      }
+      if (!dqlQuery) continue;
 
       const lineNumber = document.positionAt(match.index).line;
       const line = document.lineAt(lineNumber);
@@ -80,8 +86,36 @@ class DqlCodeLensProvider implements vscode.CodeLensProvider {
         new DqlValidationLens(range, dqlQuery),
         new DqlValidationStatusLens(range, dqlQuery, cachedStatus),
       );
+
+      // Build diagnostic for invalid queries that carry a syntax error position
+      if (cachedStatus.status === "invalid" && cachedStatus.error) {
+        const syntaxPos = parseSyntaxErrorPosition(cachedStatus.error.message);
+        if (syntaxPos) {
+          const startPos = mapQueryIndexToDocumentPosition(
+            document,
+            match.index,
+            syntaxPos.start.index,
+          );
+          const endPos = mapQueryIndexToDocumentPosition(
+            document,
+            match.index,
+            syntaxPos.end.index,
+          );
+          if (startPos) {
+            const diagRange = new vscode.Range(startPos, endPos ?? startPos);
+            const diagnostic = new vscode.Diagnostic(
+              diagRange,
+              cachedStatus.error.message,
+              vscode.DiagnosticSeverity.Error,
+            );
+            diagnostic.source = "DQL";
+            diagnostics.push(diagnostic);
+          }
+        }
+      }
     }
 
+    this.diagnosticCollection.set(document.uri, diagnostics);
     return this.codeLenses;
   }
 

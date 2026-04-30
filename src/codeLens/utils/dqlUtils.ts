@@ -30,7 +30,7 @@ import { checkTenantConnected } from "../../utils/conditionCheckers";
 import logger from "../../utils/logging";
 import { renderPanel } from "../../webviews/webview-utils";
 import { updateDqlValidationStatus } from "../dqlCodeLens";
-import { ValidationStatus } from "./selectorUtils";
+import { DqlSyntaxErrorPosition, ValidationStatus } from "./selectorUtils";
 
 const logTrace = ["codeLens", "utils", "dqlUtils"];
 
@@ -65,6 +65,24 @@ export function prepareDqlQuery(text: string, matchIndex: number): string | null
   }
 
   return null;
+}
+
+/**
+ * Converts JSON string escape sequences in a raw DQL query to their actual characters
+ * so that the DQL engine receives the unescaped string (it does not understand JSON escapes).
+ * Order matters: backslash-backslash must be handled last to avoid double-processing.
+ */
+export function sanitizeDqlQuery(raw: string): string {
+  return raw
+    .replace(/\\u([0-9a-fA-F]{4})/g, (_, hex: string) => String.fromCharCode(parseInt(hex, 16)))
+    .replace(/\\n/g, "\n")
+    .replace(/\\r/g, "\r")
+    .replace(/\\t/g, "\t")
+    .replace(/\\b/g, "\b")
+    .replace(/\\f/g, "\f")
+    .replace(/\\\//g, "/")
+    .replace(/\\"/g, '"')
+    .replace(/\\\\/g, "\\");
 }
 
 /**
@@ -141,6 +159,63 @@ export async function resolveEntityId(
 
   const id = result?.records[0]?.id;
   return typeof id === "string" ? id : null;
+}
+
+/**
+ * Attempts to parse `syntaxErrorPosition` from a DQL API error message string.
+ * The API embeds position info as JSON within the plain-text message.
+ */
+export function parseSyntaxErrorPosition(message: string): DqlSyntaxErrorPosition | null {
+  const match = message.match(/syntaxErrorPosition:\s*(\{.+\})/);
+  if (!match) return null;
+  try {
+    const parsed: unknown = JSON.parse(match[1]);
+    if (parsed !== null && typeof parsed === "object" && "start" in parsed && "end" in parsed) {
+      return parsed as DqlSyntaxErrorPosition;
+    }
+    return null;
+  } catch {
+    return null;
+  }
+}
+
+/**
+ * Maps a character index within a sanitized (unescaped) DQL query back to a VSCode Position
+ * in the source document, accounting for JSON escape sequences in the raw string value.
+ *
+ * The document contains the DQL as a JSON string (escape sequences intact). We walk the raw
+ * JSON value character-by-character, counting both raw and unescaped offsets, until we reach
+ * the target unescaped index, then convert the raw document offset to a Position.
+ */
+export function mapQueryIndexToDocumentPosition(
+  document: vscode.TextDocument,
+  matchIndex: number,
+  queryCharIndex: number,
+): vscode.Position | null {
+  const text = document.getText();
+
+  // Find the opening quote of the string value after "dqlQuery":
+  const fragment = text.slice(matchIndex, matchIndex + 4096);
+  const valueQuoteOffset = fragment.indexOf('"', fragment.indexOf(":") + 1);
+  if (valueQuoteOffset === -1) return null;
+
+  const valueStart = matchIndex + valueQuoteOffset + 1; // first char inside the string
+  let rawOffset = 0;
+  let unescapedOffset = 0;
+
+  while (unescapedOffset < queryCharIndex && valueStart + rawOffset < text.length) {
+    const ch = text[valueStart + rawOffset];
+    if (ch === "\\") {
+      // Escape sequence: counts as 1 unescaped char regardless of raw length
+      const next = text[valueStart + rawOffset + 1];
+      rawOffset += next === "u" ? 6 : 2; // \uXXXX = 6 raw chars; others = 2
+    } else {
+      rawOffset++;
+    }
+    unescapedOffset++;
+  }
+
+  return document.positionAt(valueStart + rawOffset);
 }
 
 /**
@@ -249,7 +324,7 @@ export const registerDqlCommands = (): vscode.Disposable[] => {
       if (!dtClient) return;
 
       updateDqlValidationStatus(dqlQuery, { status: "loading" });
-      const status = await validateDql(dqlQuery, dtClient);
+      const status = await validateDql(sanitizeDqlQuery(dqlQuery), dtClient);
       updateDqlValidationStatus(dqlQuery, status);
     }),
     vscode.commands.registerCommand(CodeLensCommand.RunDqlQuery, async (dqlQuery: string) => {
@@ -263,11 +338,15 @@ export const registerDqlCommands = (): vscode.Disposable[] => {
       const statusCallback = (query: string, status: ValidationStatus) =>
         updateDqlValidationStatus(query, status);
 
-      runDql(dqlQuery, document, dtClient, logger.getGenericChannel(), statusCallback).catch(
-        err => {
-          logger.info(`Running DQL query failed unexpectedly. ${(err as Error).message}`);
-        },
-      );
+      runDql(
+        sanitizeDqlQuery(dqlQuery),
+        document,
+        dtClient,
+        logger.getGenericChannel(),
+        statusCallback,
+      ).catch(err => {
+        logger.info(`Running DQL query failed unexpectedly. ${(err as Error).message}`);
+      });
     }),
   ];
 };

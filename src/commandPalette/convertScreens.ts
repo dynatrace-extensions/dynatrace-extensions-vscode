@@ -54,6 +54,7 @@ import {
   convertMessageCard,
   convertPropertiesCard,
   generateConversionReport,
+  resolveTarget,
   shouldSkipByTarget,
 } from "../utils/screenConversion";
 import { ConfirmOption, showConfirmationInformationMessage } from "../utils/vscode";
@@ -364,11 +365,16 @@ function buildEntityDetailsDefinition(
 
   // Breadcrumbs warning
   if (settings.staticContent?.breadcrumbs) {
-    addWarning(warnings, "breadcrumbs", "Breadcrumbs are dropped (no equivalent in new format)");
+    addWarning(
+      warnings,
+      "breadcrumbs",
+      "Breadcrumbs are dropped (no equivalent in new format)",
+      "detailsSettings",
+    );
   }
 
-  // Resolve cards into tabs
-  const tabs = resolveDetailsCards(context, settings, warnings);
+  // Resolve cards into tabs — propagate settings-level target so cards inherit it
+  const tabs = resolveDetailsCards(context, settings, warnings, settings.target, "detailsSettings");
 
   // Properties card → metadata element added as first tab
   if (screen.propertiesCard && settings.staticContent?.showProperties !== false) {
@@ -420,7 +426,12 @@ function buildInvExDefinition(
 
   // Breadcrumbs warning
   if (settings.staticContent?.breadcrumbs) {
-    addWarning(warnings, "breadcrumbs", "Breadcrumbs are dropped (no equivalent in new format)");
+    addWarning(
+      warnings,
+      "breadcrumbs",
+      "Breadcrumbs are dropped (no equivalent in new format)",
+      "listSettings",
+    );
   }
 
   // Resolve cards into layout items
@@ -465,16 +476,24 @@ function buildDetailsInjections(
 
   const documents: OutputDocument[] = [];
   for (const injection of screen.detailsInjections) {
+    const injectionHint = `detailsInjections.${injection.key}`;
     if (shouldSkipByTarget(injection.target)) {
       addWarning(
         warnings,
         "skipped-classic",
         `detailsInjection "${injection.key}" skipped (target: CLASSIC)`,
+        injectionHint,
       );
       continue;
     }
 
-    const cardElement = resolveCardByRef(injection, context, warnings);
+    const cardElement = resolveCardByRef(
+      injection,
+      context,
+      warnings,
+      injection.target,
+      injectionHint,
+    );
     if (!cardElement) continue;
 
     // Resolve target nodeType from entitySelectorTemplate
@@ -484,6 +503,7 @@ function buildDetailsInjections(
         warnings,
         "entity-selector",
         `detailsInjection "${injection.key}": could not extract target entity type from entitySelectorTemplate`,
+        injectionHint,
       );
     }
 
@@ -529,16 +549,24 @@ function buildListInjections(
 
   const documents: OutputDocument[] = [];
   for (const injection of screen.listInjections) {
+    const injectionHint = `listInjections.${injection.key}`;
     if (shouldSkipByTarget(injection.target)) {
       addWarning(
         warnings,
         "skipped-classic",
         `listInjection "${injection.key}" skipped (target: CLASSIC)`,
+        injectionHint,
       );
       continue;
     }
 
-    const cardElement = resolveCardByRef(injection, context, warnings);
+    const cardElement = resolveCardByRef(
+      injection,
+      context,
+      warnings,
+      injection.target,
+      injectionHint,
+    );
     if (!cardElement) continue;
 
     const targetNodeType = extractEntityTypeFromSelector(injection.entitySelectorTemplate);
@@ -547,6 +575,7 @@ function buildListInjections(
         warnings,
         "entity-selector",
         `listInjection "${injection.key}": could not extract target entity type from entitySelectorTemplate`,
+        injectionHint,
       );
     }
 
@@ -590,6 +619,8 @@ function resolveDetailsCards(
   context: ScreenConversionContext,
   settings: DetailsSettings,
   warnings: ConversionWarning[],
+  settingsTarget?: string,
+  hint?: string,
 ): Tab[] {
   const { screen } = context;
 
@@ -604,12 +635,15 @@ function resolveDetailsCards(
           warnings,
           "skipped-out-of-scope",
           `Card type "${ref.type}" (key: "${ref.key}") skipped`,
+          hint,
         );
       }
       continue;
     }
 
-    const element = resolveCardByRef(ref, context, warnings);
+    const cardRefTarget = resolveTarget(ref.target, settingsTarget);
+    const cardHint = hint ? `${hint}.${ref.key}` : ref.key;
+    const element = resolveCardByRef(ref, context, warnings, cardRefTarget, cardHint);
     if (!element) continue;
 
     // Message cards are aggregated
@@ -653,18 +687,20 @@ function resolveListCards(
   const items: LayoutElement[] = [];
 
   for (const ref of cardRefs) {
+    const cardHint = `listSettings.${ref.key}`;
     if (SKIPPED_CARD_TYPES.has(ref.type)) {
       if (ref.type !== "INJECTIONS") {
         addWarning(
           warnings,
           "skipped-out-of-scope",
           `Card type "${ref.type}" (key: "${ref.key}") skipped`,
+          cardHint,
         );
       }
       continue;
     }
 
-    const element = resolveCardByRef(ref, context, warnings);
+    const element = resolveCardByRef(ref, context, warnings, ref.target, cardHint);
     if (element) items.push(element);
   }
 
@@ -679,6 +715,8 @@ function resolveCardByRef(
   ref: { key: string; type: string },
   context: ScreenConversionContext,
   warnings: ConversionWarning[],
+  parentTarget?: string,
+  hint?: string,
 ): TabsLayoutElement | null {
   const { screen } = context;
 
@@ -690,10 +728,11 @@ function resolveCardByRef(
           warnings,
           "skipped-out-of-scope",
           `chartsCard "${ref.key}" not found in screen definition`,
+          hint,
         );
         return null;
       }
-      return convertChartsCard(card, warnings);
+      return convertChartsCard(card, warnings, parentTarget, hint);
     }
 
     case "DQL_TABLE": {
@@ -703,10 +742,18 @@ function resolveCardByRef(
           warnings,
           "skipped-out-of-scope",
           `dqlTableCard "${ref.key}" not found in screen definition`,
+          hint,
         );
         return null;
       }
-      return convertDqlTableCard(card, warnings, context, context.entityToNodeMap);
+      return convertDqlTableCard(
+        card,
+        warnings,
+        context,
+        context.entityToNodeMap,
+        parentTarget,
+        hint,
+      );
     }
 
     case "MESSAGE": {
@@ -716,10 +763,11 @@ function resolveCardByRef(
           warnings,
           "skipped-out-of-scope",
           `messageCard "${ref.key}" not found in screen definition`,
+          hint,
         );
         return null;
       }
-      return convertMessageCard(card, context.keywords, warnings);
+      return convertMessageCard(card, context.keywords, warnings, parentTarget, hint);
     }
 
     // TODO: Are we actually using this??
@@ -730,10 +778,11 @@ function resolveCardByRef(
           warnings,
           "skipped-out-of-scope",
           `healthCard "${ref.key}" not found in screen definition`,
+          hint,
         );
         return null;
       }
-      return convertHealthCard(card, warnings);
+      return convertHealthCard(card, warnings, parentTarget, hint);
     }
 
     case "EVENTS":
@@ -743,6 +792,7 @@ function resolveCardByRef(
         warnings,
         "skipped-out-of-scope",
         `Card type "${ref.type}" (key: "${ref.key}") is out of scope`,
+        hint,
       );
       return null;
 
@@ -751,6 +801,7 @@ function resolveCardByRef(
         warnings,
         "skipped-out-of-scope",
         `Unknown card type "${ref.type}" (key: "${ref.key}")`,
+        hint,
       );
       return null;
   }

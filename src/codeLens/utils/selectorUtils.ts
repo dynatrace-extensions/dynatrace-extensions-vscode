@@ -27,6 +27,11 @@ import { getBlockItemIndexAtLine, getParentBlocks } from "../../utils/yamlParsin
 import { renderPanel } from "../../webviews/webview-utils";
 import { updateSelectorValidationStatus } from "../selectorCodeLens";
 
+export interface DqlSyntaxErrorPosition {
+  start: { line: number; column: number; index: number };
+  end: { line: number; column: number; index: number };
+}
+
 export interface ValidationStatus {
   status: "valid" | "invalid" | "unknown" | "loading";
   error?: {

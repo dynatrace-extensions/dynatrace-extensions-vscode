@@ -35,9 +35,21 @@ import {
   MetricServiceInterface,
   SettingsServiceInterface,
 } from "./interfaces/services";
-import { RateLimitConfig } from "./rateLimitHandler";
-import { SaaSDynatraceClient } from "./sdk/sdkDynatraceClient";
-import { StubbedDqlService } from "./sdk/stubs";
+import { RateLimitConfig, RateLimitRetryHandler } from "./rateLimitHandler";
+import { SdkDqlService } from "./sdk/dqlAdapter";
+import { SdkExtensionsServiceV2 } from "./sdk/extensionsAdapter";
+import { createSdkClients } from "./sdk/sdkClientFactory";
+import { SdkSettingsService } from "./sdk/settingsAdapter";
+import { SettingsClient } from "./sdk/settingsClient";
+import {
+  StubbedActiveGatesService,
+  StubbedCredentialVaultService,
+  StubbedDashboardService,
+  StubbedDqlService,
+  StubbedEntityServiceV2,
+  StubbedExtensionsServiceV1,
+  StubbedMetricService,
+} from "./sdk/stubs";
 
 /**
  * Common interface for Dynatrace API clients, regardless of deployment model.
@@ -81,6 +93,46 @@ export class ManagedDynatraceClient implements DynatraceClient {
     this.extensionsV1 = new ExtensionsServiceV1(this._httpClient);
     this.activeGates = new ActiveGatesService(this._httpClient);
     this.dql = new StubbedDqlService();
+  }
+}
+
+/**
+ * SaaS platform implementation of the Dynatrace API client.
+ * Uses SDK clients for extensions and settings, stubs for everything else.
+ */
+export class SaaSDynatraceClient implements DynatraceClient {
+  public readonly extensionsV2: ExtensionsServiceV2Interface;
+  public readonly extensionsV1: ExtensionsServiceV1Interface;
+  public readonly credentialVault: CredentialVaultServiceInterface;
+  public readonly entitiesV2: EntityServiceV2Interface;
+  public readonly metrics: MetricServiceInterface;
+  public readonly settings: SettingsServiceInterface;
+  public readonly dashboards: DashboardServiceInterface;
+  public readonly activeGates: ActiveGatesServiceInterface;
+  public readonly dql: DqlServiceInterface;
+
+  constructor(baseUrl: string, platformToken: string, rateLimitConfig?: Partial<RateLimitConfig>) {
+    const clients = createSdkClients(baseUrl, platformToken);
+    const retryHandler = new RateLimitRetryHandler(rateLimitConfig);
+
+    this.extensionsV2 = new SdkExtensionsServiceV2(
+      clients.definitions,
+      clients.configurations,
+      clients.schema,
+      clients.environment,
+      clients.discovery,
+      retryHandler,
+    );
+    this.settings = new SdkSettingsService(new SettingsClient(clients.httpClient), retryHandler);
+    this.dql = new SdkDqlService(clients.queryAssistance, clients.queryExecution);
+
+    // Stubbed services — not yet supported on SaaS
+    this.extensionsV1 = new StubbedExtensionsServiceV1();
+    this.credentialVault = new StubbedCredentialVaultService();
+    this.entitiesV2 = new StubbedEntityServiceV2();
+    this.metrics = new StubbedMetricService();
+    this.dashboards = new StubbedDashboardService();
+    this.activeGates = new StubbedActiveGatesService();
   }
 }
 
