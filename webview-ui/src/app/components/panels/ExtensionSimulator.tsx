@@ -14,9 +14,9 @@
   limitations under the License.
  */
 
-import React, { useState } from "react";
-import { AppHeader } from "@dynatrace/strato-components-preview/layouts";
 import { SimulatorData, UtilTypes } from "@common";
+import { AppHeader } from "@dynatrace/strato-components-preview/layouts";
+import React, { useState } from "react";
 import { SimulatorExecutions } from "../extensionSimulator/SimulatorExecutions";
 import { SimulatorTargets } from "../extensionSimulator/SimulatorTargets";
 
@@ -24,14 +24,14 @@ const PageType = {
   Executions: "executions",
   Targets: "targets",
 } as const;
-type PageType = UtilTypes.ObjectValues<typeof PageType>;
+type PageTypeValue = UtilTypes.ObjectValues<typeof PageType>;
 
 interface ExtensionSimulatorProps {
   data: SimulatorData;
 }
 
 export const ExtensionSimulator = ({ data }: ExtensionSimulatorProps) => {
-  const [page, setPage] = useState<PageType>(PageType.Executions);
+  const [page, setPage] = useState<PageTypeValue>(PageType.Executions);
   const { targets } = data;
 
   return (

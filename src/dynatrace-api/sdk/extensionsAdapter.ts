@@ -95,7 +95,7 @@ export class SdkExtensionsServiceV2 implements ExtensionsServiceV2Interface {
           }),
         signal,
       );
-      return res as Record<string, unknown>;
+      return res;
     } catch (err) {
       throw wrapSdkError(err);
     }
@@ -419,7 +419,7 @@ export class SdkExtensionsServiceV2 implements ExtensionsServiceV2Interface {
           }),
         signal,
       );
-      return res as MBeanListDto;
+      return res;
     } catch (err) {
       throw wrapSdkError(err);
     }

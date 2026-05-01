@@ -369,7 +369,7 @@ export async function runDql(
       isTimeseries: timeseries,
       ...(timeseries
         ? { timeseriesData: normalizeDqlTimeseriesResult(rawDqlQuery, result.records) }
-        : { records: result.records as Record<string, unknown>[] }),
+        : { records: result.records }),
     };
     renderPanel(ViewType.DqlQueryResults, "DQL Query Results", panelData);
   } catch (err: unknown) {

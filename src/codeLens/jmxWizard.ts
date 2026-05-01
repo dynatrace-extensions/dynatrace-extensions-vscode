@@ -164,7 +164,7 @@ class JmxWizardCodeLensProvider implements vscode.CodeLensProvider {
       const fullyFiltered = this.filterProcesses(techFiltered, hostName, ALL_HOSTS, {
         matchFn: p => p.properties.HOSTS,
       });
-      this.processName = (await vscode.window.showQuickPick(
+      this.processName = await vscode.window.showQuickPick(
         fullyFiltered.map(p => p.name),
         {
           title: "Capture data - Choose your process",
@@ -172,7 +172,7 @@ class JmxWizardCodeLensProvider implements vscode.CodeLensProvider {
           canPickMany: false,
           ignoreFocusOut: true,
         },
-      )) as string;
+      );
 
       const selected = fullyFiltered.find(p => p.name === this.processName);
       this.processId = selected?.id;

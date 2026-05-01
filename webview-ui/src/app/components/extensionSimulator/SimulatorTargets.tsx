@@ -14,21 +14,21 @@
   limitations under the License.
  */
 
-import React, { useMemo, useState } from "react";
+import { SimulatorCommand, RemoteTarget, EecType } from "@common";
+import { Button } from "@dynatrace/strato-components/buttons";
 import { Container, Flex } from "@dynatrace/strato-components/layouts";
 import { Heading } from "@dynatrace/strato-components/typography";
-import { Button } from "@dynatrace/strato-components/buttons";
+import { EmptyState } from "@dynatrace/strato-components-preview/content";
 import { TitleBar } from "@dynatrace/strato-components-preview/layouts";
+import { Menu } from "@dynatrace/strato-components-preview/navigation";
 import {
   DataTableV2,
   type DataTableV2ColumnDef,
 } from "@dynatrace/strato-components-preview/tables";
-import { Menu } from "@dynatrace/strato-components-preview/navigation";
-import { EmptyState } from "@dynatrace/strato-components-preview/content";
 import { PlusIcon, EditIcon, DeleteIcon, ConnectorIcon } from "@dynatrace/strato-icons";
+import React, { useMemo, useState } from "react";
 import { triggerCommand } from "../../utils/app-utils";
 import { TargetRegistrationForm } from "./TargetRegistrationForm";
-import { SimulatorCommand, RemoteTarget, EecType } from "@common";
 
 interface SimulatorTargetsProps {
   targets: RemoteTarget[];

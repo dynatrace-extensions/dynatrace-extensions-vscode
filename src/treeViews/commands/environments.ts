@@ -224,7 +224,7 @@ export async function getConfigurationDetailsViaFile(
         rmSync(tempConfigFile);
         // Resolve or reject the promise
         if (newDetails === defaultDetails && rejectNoChanges) {
-          reject("No changes.");
+          reject(new Error("No changes."));
         } else {
           resolve(newDetails);
         }

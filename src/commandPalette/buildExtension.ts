@@ -441,7 +441,7 @@ async function assembleStandard(manifestFileContent: string, extensionVersion: s
     bundleFolder(innerZip, await getManifestDirPath());
     const innerZipPath = path.resolve(workspaceStorage, "extension.zip");
     const innerZipArchive = await innerZip.generateAsync({ type: "nodebuffer", platform: "UNIX" });
-    writeFileSync(innerZipPath, innerZipArchive as unknown as Uint8Array);
+    writeFileSync(innerZipPath, innerZipArchive);
     logger.info(`Built the inner archive: ${innerZipPath}`, ...fnLogTrace);
 
     // Sign the inner .zip archive and write the signature file
@@ -453,10 +453,10 @@ async function assembleStandard(manifestFileContent: string, extensionVersion: s
     // Build the outer .zip that includes the inner .zip and the signature file
     const outerZip = new JSZip();
     const outerZipPath = path.resolve(workspaceStorage, zipFileName);
-    outerZip.file("extension.zip", innerZipArchive as unknown as Uint8Array);
+    outerZip.file("extension.zip", innerZipArchive);
     outerZip.file("extension.zip.sig", signature);
     const outerZipArchive = await outerZip.generateAsync({ type: "nodebuffer", platform: "UNIX" });
-    writeFileSync(outerZipPath, outerZipArchive as unknown as Uint8Array);
+    writeFileSync(outerZipPath, outerZipArchive);
     logger.info(`Wrote initial outer zip at: ${outerZipPath}`, ...fnLogTrace);
   } catch (err) {
     throw Error(`Error during standard build phase: ${(err as Error).message}`);

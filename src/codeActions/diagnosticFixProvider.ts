@@ -124,7 +124,11 @@ class DiagnosticFixProvider implements vscode.CodeActionProvider {
     diagnostics
       .filter(diagnostic => diagnostic.range.start.line === range.start.line)
       .forEach(diagnostic => {
-        switch (diagnostic.code?.toString()) {
+        switch (
+          typeof diagnostic.code === "object"
+            ? diagnostic.code.value
+            : String(diagnostic.code ?? "")
+        ) {
           case COUNT_METRIC_KEY_SUFFIX.code:
             fixActions.push(
               this.createFixAction(

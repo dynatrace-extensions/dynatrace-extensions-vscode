@@ -689,7 +689,7 @@ class MibParser {
                       "",
                       Symbols[i - 2],
                       "",
-                      /* eslint-disable-next-line @typescript-eslint/no-loop-func */
+
                       function (ID, OD) {
                         snmpObject[Symbols[i - 2]].OID = ID;
                         snmpObject[Symbols[i - 2]].NameSpace = OD;
@@ -856,7 +856,7 @@ class MibParser {
                       "",
                       Symbols[r - 1],
                       "",
-                      /* eslint-disable-next-line @typescript-eslint/no-loop-func */
+
                       function (ID, OD) {
                         snmpObject[Symbols[r - 1]].OID = ID;
                         snmpObject[Symbols[r - 1]].NameSpace = OD;

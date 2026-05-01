@@ -14,16 +14,16 @@
   limitations under the License.
  */
 
-import React, { useMemo } from "react";
+import { WmiQueryResult } from "@common";
+import { Flex } from "@dynatrace/strato-components/layouts";
+import { Text, Heading } from "@dynatrace/strato-components/typography";
 import { CodeSnippet } from "@dynatrace/strato-components-preview/content";
 import {
   DataTableV2,
   type DataTableV2ColumnDef,
 } from "@dynatrace/strato-components-preview/tables";
-import { Flex } from "@dynatrace/strato-components/layouts";
-import { Text, Heading } from "@dynatrace/strato-components/typography";
+import React, { useMemo } from "react";
 import { format as sqlFormat } from "sql-formatter";
-import { WmiQueryResult } from "@common";
 
 interface WmiResultPanelProps {
   data: WmiQueryResult;

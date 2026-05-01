@@ -33,7 +33,7 @@ export type DtRuntime = {
 /**
  * Mock the dtRuntime object which AppRoot will expect to be present.
  */
-export const mockDtRuntime = async (): Promise<void> => {
+export const mockDtRuntime = (): void => {
   // Defaults already prepared by the extension panel manager.
   const {
     appId,

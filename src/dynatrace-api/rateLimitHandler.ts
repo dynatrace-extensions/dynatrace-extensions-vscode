@@ -114,7 +114,7 @@ function isRateLimitError(err: unknown): boolean {
 function abortableSleep(ms: number, signal?: AbortSignal): Promise<void> {
   return new Promise<void>((resolve, reject) => {
     if (signal?.aborted) {
-      reject(signal.reason);
+      reject(signal.reason instanceof Error ? signal.reason : new Error(String(signal.reason)));
       return;
     }
 

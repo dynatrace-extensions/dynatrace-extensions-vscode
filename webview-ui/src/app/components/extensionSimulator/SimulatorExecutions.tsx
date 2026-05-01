@@ -14,11 +14,17 @@
   limitations under the License.
  */
 
-import React, { useCallback, useEffect, useMemo, useState } from "react";
+import {
+  SimulationConfig,
+  SimulatorData,
+  SimulatorStatus,
+  SimulatorCommand,
+  ExecutionSummary,
+} from "@common";
+import { Button } from "@dynatrace/strato-components/buttons";
+import { ProgressBar } from "@dynatrace/strato-components/content";
 import { Container, Flex } from "@dynatrace/strato-components/layouts";
 import { Heading } from "@dynatrace/strato-components/typography";
-import { ProgressBar } from "@dynatrace/strato-components/content";
-import { Button } from "@dynatrace/strato-components/buttons";
 import { TitleBar } from "@dynatrace/strato-components-preview/layouts";
 import {
   DataTableV2,
@@ -26,12 +32,11 @@ import {
 } from "@dynatrace/strato-components-preview/tables";
 import Colors from "@dynatrace/strato-design-tokens/colors";
 import { ActionIcon, DescriptionIcon, EpicIcon } from "@dynatrace/strato-icons";
-import { SimulationConfig, SimulatorData, SimulatorStatus } from "@common";
+import React, { useCallback, useEffect, useMemo, useState } from "react";
 import { triggerCommand } from "../../utils/app-utils";
 import { MandatoryCheckModal } from "./MandatoryCheckModal";
 import { SettingsForm } from "./SettingsForm";
 import { StateButton, SettingsButton } from "./SimulatorButtons";
-import { SimulatorCommand, ExecutionSummary } from "@common";
 
 export const SimulatorExecutions = ({
   summaries,
@@ -114,7 +119,7 @@ export const SimulatorExecutions = ({
   );
 
   const tableData = useMemo<ExecutionSummary[]>(
-    () => summaries.sort(sortByTimestamp),
+    () => summaries.toSorted(sortByTimestamp),
     [summaries, sortByTimestamp],
   );
 
