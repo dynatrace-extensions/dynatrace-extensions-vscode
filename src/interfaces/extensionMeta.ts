@@ -15,7 +15,7 @@
  */
 
 import { UtilTypes } from "@common";
-import { DqlTableAdditionalCommand } from "@dynatrace/unified-analysis/documents";
+import { DqlTableAdditionalCommand, DqlTableQuery } from "@dynatrace/unified-analysis/documents";
 
 export type DatasourceName =
   | "snmp"
@@ -227,11 +227,13 @@ export interface ScreenStub {
 }
 
 export interface PropertiesCard {
+  target?: string;
   displayOnlyConfigured: boolean;
   properties: Property[];
+  dqlQuery?: DqlTableQuery;
 }
 
-export type Property = AttributeProperty | RelationProperty;
+export type Property = AttributeProperty | RelationProperty | DqlProperty;
 
 type Column = AttributeProperty | RelationProperty | CustomColumn;
 
@@ -328,6 +330,14 @@ interface EntitiesListCardStub {
   charts?: ChartStub[];
 }
 
+export interface DqlProperty {
+  type: "DQL";
+  dql: {
+    field: string;
+    displayName: string;
+  };
+}
+
 export interface AttributeProperty {
   type: "ATTRIBUTE";
   conditions?: string[];
@@ -350,6 +360,7 @@ export const isAttributeProperty = (prop: Property | Column): prop is AttributeP
   prop.type === "ATTRIBUTE";
 export const isRelationProperty = (prop: Property | Column): prop is RelationProperty =>
   prop.type === "RELATION";
+export const isDqlProperty = (prop: Property | Column): prop is DqlProperty => prop.type === "DQL";
 
 interface CustomColumn {
   type: "CUSTOM";

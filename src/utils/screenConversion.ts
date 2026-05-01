@@ -36,9 +36,9 @@ import {
   IntentAction,
   Message,
   Metadata,
+  MetadataFieldConfig,
 } from "@dynatrace/unified-analysis/documents";
 import {
-  AttributeProperty,
   ChartsCardStub,
   ChartMetric,
   ChartStub,
@@ -46,7 +46,6 @@ import {
   DqlTableColumnStub,
   HealthCardStub,
   isAttributeProperty,
-  isRelationProperty,
   MessageCardStub,
   MetricVisualizationType,
   PropertiesCard,
@@ -665,6 +664,35 @@ function mapSeriesType(type?: MetricVisualizationType): "line" | "area" | "bar" 
 }
 
 // ---------------------------------------------------------------------------
+// DQL query object → string assembly
+// ---------------------------------------------------------------------------
+
+/**
+ * Converts a DqlTableQuery object to an executable DQL string by assembling
+ * the base query, lookup sub-queries, and additional commands into a single
+ * piped query. AlertLookup entries (builtInLookup) are skipped — no DQL form.
+ */
+function assembleDqlQueryToString(dqlQuery: DqlTableQuery): string {
+  const parts: string[] = [dqlQuery.query];
+  for (const lookup of dqlQuery.lookups ?? []) {
+    if (!("query" in lookup)) continue; // AlertLookup — no DQL form
+    const dqlLookup = lookup as {
+      query: string;
+      sourceField: string;
+      lookupField: string;
+      fields: string[];
+    };
+    parts.push(
+      `| lookup [ ${dqlLookup.query} ], sourceField: ${dqlLookup.sourceField}, lookupField: ${dqlLookup.lookupField}, fields: { ${dqlLookup.fields.join(", ")} }`,
+    );
+  }
+  for (const cmd of dqlQuery.additionalCommands ?? []) {
+    parts.push(`| ${cmd.query}`);
+  }
+  return parts.join("\n");
+}
+
+// ---------------------------------------------------------------------------
 // DQL table card converter (dqlTableCards → dql-table)
 // ---------------------------------------------------------------------------
 
@@ -1092,94 +1120,57 @@ export function convertHealthCard(
 // Properties card converter (propertiesCard → metadata)
 // ---------------------------------------------------------------------------
 
-/**
- * Updates overrideMetadataRegistry keys from entity field names (gen2) to node
- * field names (gen3). The DQL query is handled separately by adjustAllDql.
- */
-function adjustMetadataFields(
-  metadata: Metadata,
-  inverseFieldMap: Record<string, string>,
-  warnings: ConversionWarning[],
-): Metadata {
-  if (!metadata.overrideMetadataRegistry) return metadata;
-  const updatedRegistry: NonNullable<Metadata["overrideMetadataRegistry"]> = {};
-  const defaultFields: Record<string, string> = {
-    "dt.ip_addresses": "ip",
-    "dt.listen_ports": "port",
-    "entity.name": "name",
-  };
-
-  for (const [key, value] of Object.entries(metadata.overrideMetadataRegistry)) {
-    let newKey = inverseFieldMap[key];
-    if (!newKey && Object.keys(defaultFields).includes(key)) {
-      newKey = defaultFields[key];
-      addWarning(
-        warnings,
-        "dql-conversion",
-        `Entity attribute "${key}" could not be mapped based on data; optimistically mapped to "${newKey}"`,
-      );
-    }
-    if (!newKey) {
-      addWarning(
-        warnings,
-        "dql-conversion",
-        `Entity attribute "${key}" could not be mapped to a node field based on data`,
-      );
-    }
-    updatedRegistry[newKey ?? key] = value;
-  }
-  return { ...metadata, overrideMetadataRegistry: updatedRegistry };
-}
-
 export function convertPropertiesCard(
   propertiesCard: PropertiesCard,
   entityType: string,
   warnings: ConversionWarning[],
-  nodeContext?: NodeContext,
+  nodeContext: NodeContext,
 ): Metadata | null {
-  // TODO:
-  // Detect all node fields from pipeline, write a dql query to fetch all
-  // relations could be added via static edges (references) while dynamic ones would be lookups
-  //   - check how to render as link the related nodes
-  // attributeProps should be parsed for hiding and removed from fields clause of dql query
+  const effectiveTarget = resolveTarget(propertiesCard.target, undefined);
+  if (shouldSkipByTarget(effectiveTarget) || !propertiesCard.dqlQuery) {
+    addWarning(
+      warnings,
+      "default-card",
+      "card not gen3-enabled; creating default",
+      "propertiesCard",
+    );
+    return createDefaultMetadataCard(propertiesCard, entityType, nodeContext);
+  }
 
-  const attributeProps = propertiesCard.properties.filter(isAttributeProperty);
-  const relationProps = propertiesCard.properties.filter(isRelationProperty);
+  return {
+    type: "metadata",
+    id: `${entityType}-properties`,
+    dqlQuery: assembleDqlQueryToString(propertiesCard.dqlQuery),
+  };
+}
 
-  if (relationProps.length > 0) {
-    for (const rel of relationProps) {
-      addWarning(
-        warnings,
-        "relation-properties",
-        `Property "${rel.relation.displayName}" (RELATION) needs manual DQL conversion — entity selector: ${rel.relation.entitySelectorTemplate}`,
-      );
+const createDefaultMetadataCard = (
+  propertiesCard: PropertiesCard,
+  entityType: string,
+  nodeContext: NodeContext,
+): Metadata => {
+  const inverseFieldMap = invertFieldMap(nodeContext.fieldMap);
+  const overrideMetadataRegistry: Record<string, MetadataFieldConfig> = {};
+
+  for (const prop of propertiesCard.properties) {
+    if (isAttributeProperty(prop)) {
+      const nodeField = inverseFieldMap[prop.attribute.key];
+      if (nodeField) {
+        overrideMetadataRegistry[nodeField] = { displayName: prop.attribute.displayName };
+      }
     }
   }
 
-  if (attributeProps.length === 0) return null;
-
-  const fields = attributeProps.map((p: AttributeProperty) => p.attribute.key);
-  const dqlQuery = `fetch \`dt.entity.${entityType}\` | fields ${fields.map(f => `\`${f}\``).join(", ")}`;
-
-  const overrideMetadataRegistry: Record<string, Record<string, unknown>> = {};
-  for (const prop of attributeProps) {
-    overrideMetadataRegistry[prop.attribute.key] = {
-      displayName: prop.attribute.displayName,
-    };
-  }
-
-  const metadata: Metadata = {
+  const result: Metadata = {
     type: "metadata",
     id: `${entityType}-properties`,
-    dqlQuery,
-    overrideMetadataRegistry,
+    dqlQuery: `smartscapeNodes ${nodeContext.nodeType} | filter id == $(entityId) | fieldsFlatten references | fieldsRemove id, lifetime, type, references`,
   };
-
-  if (nodeContext) {
-    return adjustMetadataFields(metadata, invertFieldMap(nodeContext.fieldMap), warnings);
+  if (Object.keys(overrideMetadataRegistry).length > 0) {
+    result.overrideMetadataRegistry = overrideMetadataRegistry;
   }
-  return metadata;
-}
+  return result;
+};
 
 // ---------------------------------------------------------------------------
 // Conditions converter — stub (deferred to separate iteration)
@@ -1213,6 +1204,13 @@ function invertFieldMap(fieldMap: Record<string, string>): Record<string, string
   return Object.fromEntries(Object.entries(fieldMap).map(([k, v]) => [v, k]));
 }
 
+/** Standard entity fields with well-known gen3 node field equivalents used as fallbacks */
+const DEFAULT_FIELD_FALLBACKS: Record<string, string> = {
+  "dt.ip_addresses": "ip",
+  "dt.listen_ports": "port",
+  "entity.name": "name",
+};
+
 /**
  * Applies field name and edge reference replacements to a single pipe segment
  * that has already been confirmed to be one of the targeted commands
@@ -1227,8 +1225,11 @@ function adjustPipeSegmentContent(
 ): string {
   let result = segment;
 
+  // Merge default fallbacks; inverseFieldMap takes priority for explicitly mapped fields
+  const effectiveFieldMap = { ...DEFAULT_FIELD_FALLBACKS, ...inverseFieldMap };
+
   // Field replacement: entity field name → node field name (backtick-quoted and plain forms)
-  for (const [entityField, nodeField] of Object.entries(inverseFieldMap)) {
+  for (const [entityField, nodeField] of Object.entries(effectiveFieldMap)) {
     const escaped = entityField.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
     result = result.replace(new RegExp("`" + escaped + "`", "g"), nodeField);
     result = result.replace(new RegExp("\\b" + escaped + "\\b", "g"), nodeField);
