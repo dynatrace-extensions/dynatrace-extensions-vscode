@@ -19,11 +19,12 @@ import { CodeSnippet } from "@dynatrace/strato-components-preview/content";
 import { showToast } from "@dynatrace/strato-components-preview/notifications";
 import { Modal } from "@dynatrace/strato-components-preview/overlays";
 import { Page } from "@dynatrace/strato-components-preview/layouts";
+import { DqlResultsPanel } from "./components/panels/DqlResultsPanel";
 import { ExtensionSimulator } from "./components/panels/ExtensionSimulator";
 import { MetricResultsPanel } from "./components/panels/MetricResultsPanel";
 import { WmiResultPanel } from "./components/panels/WmiResultPanel";
 import { NotFound } from "./components/NotFound";
-import { MetricResultsPanelData, PanelData, PanelDataType, WebviewEvent, WebviewEventType } from "@common";
+import { DqlResultsPanelData, MetricResultsPanelData, PanelData, PanelDataType, WebviewEvent, WebviewEventType } from "@common";
 
 interface AppProps {
   vscode: WebviewApi<PanelData>;
@@ -42,8 +43,10 @@ const WebviewPanel = ({ panelData }: { panelData: PanelData }) => {
       return <NotFound />;
     case PanelDataType.MetricResults: {
       const metricData = panelData as MetricResultsPanelData;
-      return <MetricResultsPanel data={metricData.data} sourceType={metricData.sourceType} />;
+      return <MetricResultsPanel data={metricData.data} />;
     }
+    case PanelDataType.DqlResults:
+      return <DqlResultsPanel data={panelData as DqlResultsPanelData} />;
     case PanelDataType.WmiQueryResults:
       return <WmiResultPanel data={data} />;
     case PanelDataType.ExtensionSimulator:

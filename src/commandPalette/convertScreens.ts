@@ -63,9 +63,9 @@ import { ConfirmOption, showConfirmationInformationMessage } from "../utils/vsco
  * Workflow entry point for the "Convert Screens" command.
  * Validates preconditions, then runs the core conversion logic.
  */
-export const convertScreensWorkflow = async () => {
+export const convertScreensWorkflow = async (options?: { skipInteractive?: boolean }) => {
   if ((await checkWorkspaceOpen()) && (await isExtensionsWorkspace())) {
-    await convertScreens();
+    await convertScreens(options);
   }
 };
 
@@ -73,7 +73,7 @@ export const convertScreensWorkflow = async () => {
  * Core conversion logic: parses the extension manifest, lets the user select
  * entity types, resolves node types, and produces JSON document files.
  */
-async function convertScreens() {
+async function convertScreens(options: { skipInteractive?: boolean } = {}) {
   const logTrace = ["commandPalette", "convertScreens"];
   logger.info("Starting screen conversion", ...logTrace);
 
@@ -129,19 +129,23 @@ async function convertScreens() {
     return;
   }
 
-  // Let the user pick which entity types to convert
-  const selected = await vscode.window.showQuickPick(
-    validEntityTypes.map(et => ({ label: et })),
-    {
-      canPickMany: true,
-      placeHolder: "Select entity types to convert screens for",
-      title: "Convert Screens",
-    },
-  );
-
-  if (!selected || selected.length === 0) {
-    logger.info("User cancelled entity type selection", ...logTrace);
-    return;
+  let selected: { label: string }[];
+  if (options.skipInteractive) {
+    selected = validEntityTypes.map(et => ({ label: et }));
+  } else {
+    const picked = await vscode.window.showQuickPick(
+      validEntityTypes.map(et => ({ label: et })),
+      {
+        canPickMany: true,
+        placeHolder: "Select entity types to convert screens for",
+        title: "Convert Screens",
+      },
+    );
+    if (!picked || picked.length === 0) {
+      logger.info("User cancelled entity type selection", ...logTrace);
+      return;
+    }
+    selected = picked;
   }
 
   const extensionDir = dirname(extensionFilePath);

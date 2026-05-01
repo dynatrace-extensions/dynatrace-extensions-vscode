@@ -117,7 +117,11 @@ export async function activate(context: vscode.ExtensionContext) {
     ...registerDqlCommands(),
     ...registerCodeLensProviders(),
     ...registerDiagnosticsEventListeners(),
-    ...registerSerializersForPanels([ViewType.MetricResults, ViewType.WmiQueryResults]),
+    ...registerSerializersForPanels([
+      ViewType.MetricResults,
+      ViewType.WmiQueryResults,
+      ViewType.DqlQueryResults,
+    ]),
     getFastModeStatusBar(),
     getConnectionStatusBar(),
     vscode.languages.registerHoverProvider(MANIFEST_DOC_SELECTOR, getSnmpHoverProvider()),

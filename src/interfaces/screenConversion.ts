@@ -66,6 +66,7 @@ export interface ConversionWarning {
 }
 
 export type WarningCategory =
+  | "default-card"
   | "skipped-classic"
   | "skipped-out-of-scope"
   | "no-dql"

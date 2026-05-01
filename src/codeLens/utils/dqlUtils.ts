@@ -20,6 +20,7 @@ import {
   MetricSeries,
   PanelDataType,
   ViewType,
+  DqlResultsPanelData,
 } from "@common";
 import vscode from "vscode";
 import { DynatraceClient } from "../../dynatrace-api/dynatrace";
@@ -361,17 +362,16 @@ export async function runDql(
     const result = await dtClient.dql.execute(dqlQuery);
     statusCallback(rawDqlQuery, { status: "valid" });
 
-    if (isTimeseriesQuery(dqlQuery)) {
-      renderPanel(ViewType.MetricResults, "DQL query results", {
-        dataType: PanelDataType.MetricResults,
-        sourceType: "dql",
-        data: normalizeDqlTimeseriesResult(rawDqlQuery, result.records),
-      });
-    } else {
-      oc.clear();
-      oc.appendLine(JSON.stringify({ query: rawDqlQuery, records: result.records }, null, 2));
-      oc.show();
-    }
+    const timeseries = isTimeseriesQuery(dqlQuery);
+    const panelData: DqlResultsPanelData = {
+      dataType: PanelDataType.DqlResults,
+      dqlQuery: rawDqlQuery,
+      isTimeseries: timeseries,
+      ...(timeseries
+        ? { timeseriesData: normalizeDqlTimeseriesResult(rawDqlQuery, result.records) }
+        : { records: result.records as Record<string, unknown>[] }),
+    };
+    renderPanel(ViewType.DqlQueryResults, "DQL Query Results", panelData);
   } catch (err: unknown) {
     const errorParams = (err as DynatraceAPIError).errorParams;
     statusCallback(rawDqlQuery, {
