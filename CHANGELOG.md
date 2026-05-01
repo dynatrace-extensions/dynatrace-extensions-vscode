@@ -1,5 +1,21 @@
 # Change Log
 
+## Version 2.12.1 (01.05.2026)
+
+### 🪲 Fixed in this version:
+
+- [Handle $exists() valuePattern for log fields when converting to smartscape 2.0 matchers](https://github.com/dynatrace-extensions/dynatrace-extensions-vscode/pull/299)
+
+---
+
+## Version 2.12.0 (21.04.2026)
+
+### 🚀 Improved in this version:
+
+- [Smartscape - add primary tags, primary fields and code lens for it](https://github.com/dynatrace-extensions/dynatrace-extensions-vscode/pull/298)
+
+---
+
 ## Version 2.11.2 (16.04.2026)
 
 ### 🔒 Security patches:
