@@ -14,14 +14,14 @@
   limitations under the License.
  */
 
+import { PanelData } from "@common";
+import { AppRoot } from "@dynatrace/strato-components";
+import { ToastContainer } from "@dynatrace/strato-components-preview";
 import React from "react";
 import ReactDOM from "react-dom/client";
 import { createGlobalStyle } from "styled-components";
 import App from "./app/App";
-import { PanelData } from "@common";
 import { mockDtRuntime } from "./mock-dt-runtime";
-import { AppRoot } from "@dynatrace/strato-components";
-import { ToastContainer } from "@dynatrace/strato-components-preview";
 
 // A map of Dynatrace theme variables to equivalent VSCode ones.
 const THEME_VARIABLES: { dtVar: string; vsVar: string }[] = [
@@ -48,8 +48,10 @@ const GlobalStyle = createGlobalStyle(
 );
 
 const vscode = window.acquireVsCodeApi<PanelData>();
-mockDtRuntime().then(() => {
-  ReactDOM.createRoot(document.getElementById("root")!).render(
+mockDtRuntime();
+const rootElement = document.getElementById("root");
+if (rootElement) {
+  ReactDOM.createRoot(rootElement).render(
     <>
       <GlobalStyle />
       <AppRoot>
@@ -58,4 +60,4 @@ mockDtRuntime().then(() => {
       </AppRoot>
     </>,
   );
-});
+}

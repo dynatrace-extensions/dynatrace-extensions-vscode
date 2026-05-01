@@ -15,6 +15,15 @@
  */
 
 import {
+  EecType,
+  RemoteTarget,
+  SimulationConfig,
+  SimulationLocation,
+  SimulationSpecs,
+  SimulatorStatus,
+} from "@common";
+import { Flex, Container, Text, Button } from "@dynatrace/strato-components";
+import {
   Modal,
   showToast,
   FieldSet,
@@ -25,18 +34,9 @@ import {
   SelectV2,
   Label,
 } from "@dynatrace/strato-components-preview";
-import { Flex, Container, Text, Button } from "@dynatrace/strato-components";
 import { WarningIcon } from "@dynatrace/strato-icons";
 import React, { useEffect, useState } from "react";
 import { UseFormRegister, useForm } from "react-hook-form";
-import {
-  EecType,
-  RemoteTarget,
-  SimulationConfig,
-  SimulationLocation,
-  SimulationSpecs,
-  SimulatorStatus,
-} from "@common";
 
 interface RemoteTargetsFieldSetProps {
   targets: RemoteTarget[];

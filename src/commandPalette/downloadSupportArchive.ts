@@ -37,5 +37,5 @@ export async function downloadSupportArchive(logsDir: string) {
   }
 
   const zipContent = await zip.generateAsync({ type: "nodebuffer", platform: "UNIX" });
-  writeFileSync(saveDestination, zipContent as unknown as Uint8Array);
+  writeFileSync(saveDestination, zipContent);
 }

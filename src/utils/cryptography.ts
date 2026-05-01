@@ -18,7 +18,7 @@
  * UTILITIES RELATED TO CRYPTOGRAPHIC FUNCTIONS AND HELPERS
  ********************************************************************************/
 
-import crypto, { type BinaryLike, type CipherKey } from "crypto";
+import crypto from "crypto";
 import fs from "fs";
 import forge from "node-forge";
 import logger from "./logging";
@@ -38,11 +38,7 @@ const algorithm = "aes-256-cbc";
 export function encryptToken(token: string): string {
   const key = crypto.randomBytes(32);
   const iv = crypto.randomBytes(16);
-  const cipher = crypto.createCipheriv(
-    algorithm,
-    key as unknown as CipherKey,
-    iv as unknown as BinaryLike,
-  );
+  const cipher = crypto.createCipheriv(algorithm, key, iv);
 
   let encryptedToken = cipher.update(token, "utf-8", "hex");
   encryptedToken += cipher.final("hex");
@@ -61,11 +57,7 @@ export function decryptToken(token: string): string {
   const parts = token.split(".");
   const iv = Buffer.from(parts[0], "hex");
   const key = Buffer.from(parts[1], "hex");
-  const decipher = crypto.createDecipheriv(
-    algorithm,
-    key as unknown as CipherKey,
-    iv as unknown as BinaryLike,
-  );
+  const decipher = crypto.createDecipheriv(algorithm, key, iv);
 
   let decryptedToken = decipher.update(parts[2], "hex", "utf-8");
   decryptedToken += decipher.final("utf-8");

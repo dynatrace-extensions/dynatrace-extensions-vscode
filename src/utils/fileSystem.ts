@@ -210,15 +210,20 @@ export function findWorkspace(
 export function getAllTenants(): DynatraceTenantDto[] {
   const raw = parseJSON<Record<string, unknown>[]>(readFileSync(getTenantsJsonPath()).toString());
   return raw.map(entry => {
-    const url = String(entry.url ?? "");
+    const url = typeof entry.url === "string" ? entry.url : "";
     const deploymentModel: DeploymentModel =
       (entry.deploymentModel as DeploymentModel) ?? (url.includes(".apps.") ? "saas" : "managed");
     return {
-      id: String(entry.id ?? ""),
+      id: typeof entry.id === "string" ? entry.id : "",
       url,
-      token: String(entry.token ?? ""),
+      token: typeof entry.token === "string" ? entry.token : "",
       current: Boolean(entry.current),
-      label: String(entry.label ?? entry.id ?? ""),
+      label:
+        typeof entry.label === "string"
+          ? entry.label
+          : typeof entry.id === "string"
+            ? entry.id
+            : "",
       deploymentModel,
     };
   });
@@ -463,7 +468,7 @@ export function uploadComponentCert(certPath: string, component: "OneAgent" | "A
       ...logTrace,
       "uploadComponentCert",
     );
-    writeFileSync(uploadPath, readFileSync(certPath) as unknown as Uint8Array);
+    writeFileSync(uploadPath, readFileSync(certPath));
   }
 }
 
@@ -808,14 +813,14 @@ export const extractZip = async (zip: JSZip, destPath: string) => {
         const fileContent = await file.async("nodebuffer");
 
         if (relativePath.endsWith(".zip")) {
-          const innerZip = await JSZip.loadAsync(fileContent as unknown as Uint8Array);
+          const innerZip = await JSZip.loadAsync(fileContent);
           await extractZip(innerZip, destPath);
         } else {
           const basePath = filePath.split(path.sep).slice(0, -1).join(path.sep);
           if (!existsSync(basePath)) {
             mkdirSync(basePath, { recursive: true });
           }
-          writeFileSync(filePath, fileContent as unknown as Uint8Array);
+          writeFileSync(filePath, fileContent);
         }
       }
     }

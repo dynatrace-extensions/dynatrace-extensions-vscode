@@ -209,7 +209,7 @@ function extractTypeObj(schema: MinimalSchema, typeName: string): unknown {
     // Remove circular references
     delete subSchema.types?.[typeName];
     // Parse as if new schema
-    // eslint-disable-next-line @typescript-eslint/no-use-before-define
+
     return createObjectFromSchema(subSchema);
   }
   return null;

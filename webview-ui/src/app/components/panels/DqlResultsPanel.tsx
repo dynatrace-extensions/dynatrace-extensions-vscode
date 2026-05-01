@@ -14,7 +14,9 @@
   limitations under the License.
  */
 
-import React, { useMemo } from "react";
+import { DqlResultsPanelData, MetricSeries } from "@common";
+import { Flex } from "@dynatrace/strato-components/layouts";
+import { Heading, Text } from "@dynatrace/strato-components/typography";
 import {
   TimeseriesChart,
   Timeseries,
@@ -25,9 +27,7 @@ import {
   DataTableV2,
   type DataTableV2ColumnDef,
 } from "@dynatrace/strato-components-preview/tables";
-import { Heading, Text } from "@dynatrace/strato-components/typography";
-import { Flex } from "@dynatrace/strato-components/layouts";
-import { DqlResultsPanelData, MetricSeries } from "@common";
+import React, { useMemo } from "react";
 
 interface DqlResultsPanelProps {
   data: DqlResultsPanelData;
@@ -77,21 +77,17 @@ export const DqlResultsPanel = ({ data }: DqlResultsPanelProps) => {
           </EmptyState.Visual>
           <EmptyState.Title>This query returned no results.</EmptyState.Title>
         </EmptyState>
-      ) : isTimeseries ? (
+      ) : null}
+      {!isEmpty && isTimeseries ? (
         <Flex flexDirection='column'>
           <Text>Timeseries data:</Text>
           <TimeseriesChartConfig value={{ legend: { position: "bottom" } }}>
-            <TimeseriesChart
-              data={toTimeseriesData(timeseriesData![0].data, dqlQuery)}
-            />
+            <TimeseriesChart data={toTimeseriesData(timeseriesData?.[0].data ?? [], dqlQuery)} />
           </TimeseriesChartConfig>
         </Flex>
-      ) : (
-        <DataTableV2
-          columns={tableColumns}
-          data={records ?? []}
-          fullWidth
-        />
+      ) : null}
+      {!isEmpty && !isTimeseries && (
+        <DataTableV2 columns={tableColumns} data={records ?? []} fullWidth />
       )}
     </Flex>
   );

@@ -676,14 +676,8 @@ function assembleDqlQueryToString(dqlQuery: DqlTableQuery): string {
   const parts: string[] = [dqlQuery.query];
   for (const lookup of dqlQuery.lookups ?? []) {
     if (!("query" in lookup)) continue; // AlertLookup — no DQL form
-    const dqlLookup = lookup as {
-      query: string;
-      sourceField: string;
-      lookupField: string;
-      fields: string[];
-    };
     parts.push(
-      `| lookup [ ${dqlLookup.query} ], sourceField: ${dqlLookup.sourceField}, lookupField: ${dqlLookup.lookupField}, fields: { ${dqlLookup.fields.join(", ")} }`,
+      `| lookup [ ${lookup.query} ], sourceField: ${lookup.sourceField}, lookupField: ${lookup.lookupField}, fields: { ${lookup.fields.join(", ")} }`,
     );
   }
   for (const cmd of dqlQuery.additionalCommands ?? []) {
@@ -715,18 +709,12 @@ function adjustDqlTableFields(
 
   const lookups = table.dqlQuery.lookups?.map(lookup => {
     if (!("query" in lookup)) return lookup; // AlertLookup — skip
-    const dqlLookup = lookup as {
-      query: string;
-      sourceField: string;
-      lookupField: string;
-      fields: string[];
-    };
 
     // sourceField references the main query → use main entity's inverseFieldMap
-    const newSourceField = mainInverseFieldMap[dqlLookup.sourceField] ?? dqlLookup.sourceField;
+    const newSourceField = mainInverseFieldMap[lookup.sourceField] ?? lookup.sourceField;
 
     // lookupField and fields[] reference the lookup query → use lookup entity's inverseFieldMap
-    const lookupEntityMatch = dqlLookup.query.match(/fetch\s+`dt\.entity\.(.+?)`/i);
+    const lookupEntityMatch = lookup.query.match(/fetch\s+`dt\.entity\.(.+?)`/i);
     let lookupInverseMap = mainInverseFieldMap;
     if (lookupEntityMatch) {
       const lookupEntityType = lookupEntityMatch[1];
@@ -737,10 +725,10 @@ function adjustDqlTableFields(
     }
 
     return {
-      ...dqlLookup,
+      ...lookup,
       sourceField: newSourceField,
-      lookupField: lookupInverseMap[dqlLookup.lookupField] ?? dqlLookup.lookupField,
-      fields: dqlLookup.fields.map(f => lookupInverseMap[f] ?? f),
+      lookupField: lookupInverseMap[lookup.lookupField] ?? lookup.lookupField,
+      fields: lookup.fields.map(f => lookupInverseMap[f] ?? f),
     };
   });
 

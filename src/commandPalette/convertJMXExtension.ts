@@ -151,7 +151,7 @@ export const convertJmxExtensionWorkflow = async (outputPath?: string) => {
 async function extractPluginJSONFromZip(
   binaryData: Buffer | Uint8Array,
 ): Promise<[ExtensionV1 | undefined, string]> {
-  const zip = await jszip.loadAsync(binaryData as unknown as Uint8Array);
+  const zip = await jszip.loadAsync(binaryData);
 
   // Find the first ocurrence of plugin.json in the files in the zip
   const pluginJSONFile = Object.keys(zip.files).find(file => file.endsWith("plugin.json"));
@@ -498,7 +498,7 @@ async function convertV1UiToScreens(
             title: `${elem.title}`,
             description: `${elem.description}`,
             series: newSeries,
-          } as ChartDto);
+          });
         }
         return newElem;
       } else {
@@ -511,9 +511,8 @@ async function convertV1UiToScreens(
   if (technology !== "UNKNOWN") {
     // Prepare conditions
     const injectionConditions: string[] = [
-      // eslint-disable-next-line no-secrets/no-secrets
       `metricAvailable|metric=dsfm:extension.status:filter(and(eq("dt.extension.name","custom:${extensionName}"),in("dt.entity.host", entitySelector("type(host),toRelationships.isProcessOf(entityId($(entityId)))"))))|lastWrittenWithinDays=5`,
-      // eslint-disable-next-line no-secrets/no-secrets
+
       `entityAttribute|softwareTechnologies=${technology}`,
     ];
 
@@ -856,7 +855,6 @@ export async function convertJMXExtension(dt?: Dynatrace, outputPath?: string) {
       saveLabel: "Save",
       title: "Save JMX v2 extension.yaml",
       filters: {
-        // eslint-disable-next-line @typescript-eslint/naming-convention
         "JMX v2 extension": ["yaml"],
       },
       defaultUri: vscode.Uri.file(`${slugify(jmxV2Extension.name)}.yaml`),
