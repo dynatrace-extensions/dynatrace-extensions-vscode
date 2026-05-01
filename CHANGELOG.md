@@ -19,6 +19,19 @@
 - Command to convert unified analysis screens; this generates documents within the extension folder but requires topology to have been converted first.
 - Schema-based validation for Unified Analysis platform documents
 - DQL Code Lenses - validate and execute your DQL queries (from Unified Analysis platform documents) against the tenant's data
+## Version 2.12.1 (01.05.2026)
+
+### 🪲 Fixed in this version:
+
+- [Handle $exists() valuePattern for log fields when converting to smartscape 2.0 matchers](https://github.com/dynatrace-extensions/dynatrace-extensions-vscode/pull/299)
+
+---
+
+## Version 2.12.0 (21.04.2026)
+
+### 🚀 Improved in this version:
+
+- [Smartscape - add primary tags, primary fields and code lens for it](https://github.com/dynatrace-extensions/dynatrace-extensions-vscode/pull/298)
 
 ---
 
