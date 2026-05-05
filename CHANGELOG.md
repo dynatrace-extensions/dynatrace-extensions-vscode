@@ -1,5 +1,13 @@
 # Change Log
 
+## Version 2.12.2 (05.05.2026)
+
+### 🪲 Fixed in this version:
+
+- [Generating certificates command results in an invalid dev certificate](https://github.com/dynatrace-extensions/dynatrace-extensions-vscode/issues/300)
+
+---
+
 ## Version 2.12.1 (01.05.2026)
 
 ### 🪲 Fixed in this version:
