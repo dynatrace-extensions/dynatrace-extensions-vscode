@@ -205,7 +205,7 @@ export async function generateCerts(): Promise<boolean> {
         devCert.setIssuer(caCert.subject.attributes);
         devCert.publicKey = devKey.publicKey;
         devCert.validity.notBefore = new Date();
-        devCert.validity.notBefore.setDate(caCert.validity.notBefore.getDate() - 1);
+        devCert.validity.notBefore.setDate(devCert.validity.notBefore.getDate() - 1);
         devCert.validity.notAfter = new Date();
         devCert.validity.notAfter.setFullYear(caCert.validity.notAfter.getFullYear() + 3);
         devCert.setExtensions([
