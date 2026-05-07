@@ -27,6 +27,12 @@ const logTrace = ["utils", "cryptography"];
 
 const algorithm = "aes-256-cbc";
 
+// Creates a simple ID hash using 32 bits
+export const createIdHash = (input: string): string => {
+  const hex = crypto.createHash("sha1").update(input, "utf-8").digest("hex");
+  return parseInt(hex.slice(0, 8), 16).toString(36);
+};
+
 /**
  * Encrypts a token using AES-256-CBC algorithm and provides a string comprised
  * of the initialization vector, key, and token in hex format. This is not

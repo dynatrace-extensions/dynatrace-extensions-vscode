@@ -343,6 +343,11 @@
           "$ref": "#/definitions/ExpandableContentLayoutElement",
           "description": "Schema of card in expandable row."
         },
+        "expandOnClick": {
+          "type": "boolean",
+          "description": "When true, clicking a row will expand/collapse its expandable content instead of activating it. Only takes effect when `expandableRowSchema` or an `ExpandableContent` slot is provided.",
+          "default": false
+        },
         "alwaysRequiredFields": {
           "type": "array",
           "items": {
@@ -834,10 +839,6 @@
           "type": "string",
           "description": "Custom Dql for sorting complex types e.g. coalesce(arraySize(tags), -1). It overrides default sorting based on the  {@link  type  } . NOTE: Remember to make comparison case-insensitive - e.g. lower(myField)."
         },
-        "dqlSortLimit": {
-          "type": "number",
-          "description": "Limit for server side sorting for a column. If table shows more rows, column is blocked from sorting with message to filter down. default: 10_000 or inherited from tables' generateDqlOptions"
-        },
         "customSortField": {
           "type": "string",
           "description": "Custom sorting field used to find lookup serving the value to sort. It's useful if lookup for data is expensive, and you can provide another lookup - optimized for sorting only. Example: lookup that reads last 6 hours for micro chart vs lookup that reads last value for that metric. It must match with field used in  {@link  customSortDql  } . By default  {@link  field  } is used. We wrap that field in lower(toString(myField)) to make comparison case-insensitive."
@@ -845,10 +846,6 @@
         "showLineWrap": {
           "type": "boolean",
           "description": "Enable/Disable Line wrap option in column header. Default: false"
-        },
-        "customColumnActions": {
-          "$ref": "#/definitions/DqlTableColumnActions",
-          "description": "Custom column actions."
         },
         "sortDescFirst": {
           "type": "boolean",
@@ -1407,58 +1404,14 @@
       ],
       "description": "Serializable version of BuiltinCellRenderersPropsMapping + BuiltinRenderer. Each variant is a discriminated union by `type` key. TODO ai magic - automate"
     },
-    "DqlTableColumnActions": {
-      "$ref": "#/definitions/Actions"
-    },
-    "Actions": {
-      "type": "array",
-      "items": {
-        "$ref": "#/definitions/IntentAction"
-      }
-    },
-    "IntentAction": {
-      "type": "object",
-      "additionalProperties": false,
-      "properties": {
-        "conditions": {
-          "type": "array",
-          "items": {
-            "$ref": "#/definitions/Condition"
-          },
-          "description": "If provided, the element is only rendered when ALL conditions are met."
-        },
-        "displayName": {
-          "type": "string",
-          "description": "Display name of the action button."
-        },
-        "appId": {
-          "type": "string",
-          "description": "Target application ID."
-        },
-        "intentId": {
-          "type": "string",
-          "description": "Intent ID to invoke."
-        },
-        "intentPayload": {
-          "$ref": "#/definitions/Record%3Cstring%2Cstring%3E",
-          "description": "Optional intent payload key-value pairs."
-        }
-      },
-      "required": [
-        "displayName"
-      ]
-    },
-    "Record<string,string>": {
-      "type": "object",
-      "additionalProperties": {
-        "type": "string"
-      }
-    },
     "BuiltInColumn": {
       "type": "object",
       "properties": {
         "builtInColumn": {
           "$ref": "#/definitions/BuiltInColumnType"
+        },
+        "overrides": {
+          "$ref": "#/definitions/Partial%3CPick%3CDqlTableColumn%2C(%22displayName%22%7C%22perspectives%22%7C%22defaultColumn%22%7C%22widthType%22%7C%22widthValue%22)%3E%3E"
         }
       },
       "required": [
@@ -1474,6 +1427,40 @@
         "CUSTOM_ALERTS_COLUMN"
       ],
       "description": "A string literal union of built-in column identifiers. Each value maps to a pre-configured runtime DqlTableColumn resolved during document-to-UI-schema mapping."
+    },
+    "Partial<Pick<DqlTableColumn,(\"displayName\"|\"perspectives\"|\"defaultColumn\"|\"widthType\"|\"widthValue\")>>": {
+      "type": "object",
+      "properties": {
+        "displayName": {
+          "type": "string",
+          "description": "The column's display name."
+        },
+        "perspectives": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          },
+          "description": "The perspectives in which this column is visible."
+        },
+        "defaultColumn": {
+          "type": "boolean",
+          "description": "Default columns cannot be hidden by the \"Configure visible columns\" menu. Defaults to `true`."
+        },
+        "widthType": {
+          "type": "string",
+          "enum": [
+            "pixels",
+            "auto",
+            "ratio"
+          ],
+          "description": "The column width type."
+        },
+        "widthValue": {
+          "type": "number",
+          "description": "The value of the column width."
+        }
+      },
+      "additionalProperties": false
     },
     "DqlTablePerspective": {
       "type": "object",
@@ -1605,6 +1592,44 @@
         "DOWNLOAD_SELECTED",
         "DOWNLOAD_ALL"
       ]
+    },
+    "IntentAction": {
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "conditions": {
+          "type": "array",
+          "items": {
+            "$ref": "#/definitions/Condition"
+          },
+          "description": "If provided, the element is only rendered when ALL conditions are met."
+        },
+        "displayName": {
+          "type": "string",
+          "description": "Display name of the action button."
+        },
+        "appId": {
+          "type": "string",
+          "description": "Target application ID."
+        },
+        "intentId": {
+          "type": "string",
+          "description": "Intent ID to invoke."
+        },
+        "intentPayload": {
+          "$ref": "#/definitions/Record%3Cstring%2Cstring%3E",
+          "description": "Optional intent payload key-value pairs."
+        }
+      },
+      "required": [
+        "displayName"
+      ]
+    },
+    "Record<string,string>": {
+      "type": "object",
+      "additionalProperties": {
+        "type": "string"
+      }
     },
     "RowThreshold": {
       "anyOf": [
@@ -1917,6 +1942,12 @@
     "DqlTableRowActions": {
       "$ref": "#/definitions/Actions"
     },
+    "Actions": {
+      "type": "array",
+      "items": {
+        "$ref": "#/definitions/IntentAction"
+      }
+    },
     "DqlTableGroupingConfig": {
       "type": "object",
       "properties": {
@@ -2155,7 +2186,7 @@
         },
         "groupTitle": {
           "type": "string",
-          "description": "Group title (shown in quick filter accordion)."
+          "description": "Group title (shown in quick filter accordion). Resolved automatically if `semDictKey` is provided."
         },
         "defaultFilter": {
           "type": "boolean",
@@ -2164,17 +2195,23 @@
         },
         "quickFilter": {
           "type": "boolean",
-          "description": "If 'true', this filter is also shown in quick filter bar.",
+          "description": "If 'true', this filter is also shown in Facets.",
           "default": false
+        },
+        "quickFilterExpanded": {
+          "type": "boolean",
+          "description": "If 'true', the filter is expanded (and therefore data is loaded) by default. If 'false', the filter is collapsed and data is not loaded until user expands it. User choice is persisted in local storage (resets on new app version).",
+          "default": true
+        },
+        "quickFilterVisible": {
+          "type": "boolean",
+          "description": "If 'true', this filter is visible by default in Facets. If 'false', user needs to use Visibility settings modal to show it. User choice is persisted in local storage (resets on new app version).",
+          "default": true
         },
         "inlineMetricFilter": {
           "type": "boolean",
           "description": "If 'true', this filter's DQL expression is placed at the `$(inlineMetricFilter)` variable position in the query as a comma-prefixed inline expression (e.g. `, matchesValue(status, \"ERROR\")`). The query must contain a `$(inlineMetricFilter)` placeholder for the expression to be injected. When no inline metric filters are selected, the placeholder is replaced with an empty string.",
           "default": false
-        },
-        "quickFilterExpanded": {
-          "type": "boolean",
-          "description": "If 'true', the filter is expanded (and therefore data is loaded) by default."
         },
         "fieldIds": {
           "anyOf": [
@@ -2194,6 +2231,13 @@
           "type": "boolean",
           "description": "If 'true', the filter value will be masked in tracking.",
           "default": false
+        },
+        "allowedOperators": {
+          "type": "array",
+          "items": {
+            "$ref": "#/definitions/FilterFieldComparisonOperators"
+          },
+          "description": "Specifies which comparison operators are available for this filter. When provided, overrides the default operators determined by filter type and query configuration. Keep in mind that some operators can be filtered out if they are not supported by given filter type."
         }
       },
       "required": [
@@ -2299,6 +2343,30 @@
       "additionalProperties": false,
       "description": "Content of this file is autogenerated by `tooling/documents/generate-document-types.mjs` script. Please rerun this script in case of any changes in related UI schema. Source file: `lib/src/shared/types/dql-filters/DqlFilterPredefinedValue.ts`. Schema name: `DqlFilterPredefinedValue`."
     },
+    "FilterFieldComparisonOperators": {
+      "type": "string",
+      "enum": [
+        "equals",
+        "not-equals",
+        "less-than",
+        "less-or-equal",
+        "greater-than",
+        "greater-or-equal",
+        "exists",
+        "not-exists",
+        "in",
+        "not in",
+        "starts-with",
+        "ends-with",
+        "contains",
+        "not-starts-with",
+        "not-ends-with",
+        "not-contains",
+        "matches-phrase",
+        "not-matches-phrase",
+        "search"
+      ]
+    },
     "DqlNumericFilter": {
       "type": "object",
       "additionalProperties": false,
@@ -2340,7 +2408,7 @@
         },
         "groupTitle": {
           "type": "string",
-          "description": "Group title (shown in quick filter accordion)."
+          "description": "Group title (shown in quick filter accordion). Resolved automatically if `semDictKey` is provided."
         },
         "defaultFilter": {
           "type": "boolean",
@@ -2349,17 +2417,23 @@
         },
         "quickFilter": {
           "type": "boolean",
-          "description": "If 'true', this filter is also shown in quick filter bar.",
+          "description": "If 'true', this filter is also shown in Facets.",
           "default": false
+        },
+        "quickFilterExpanded": {
+          "type": "boolean",
+          "description": "If 'true', the filter is expanded (and therefore data is loaded) by default. If 'false', the filter is collapsed and data is not loaded until user expands it. User choice is persisted in local storage (resets on new app version).",
+          "default": true
+        },
+        "quickFilterVisible": {
+          "type": "boolean",
+          "description": "If 'true', this filter is visible by default in Facets. If 'false', user needs to use Visibility settings modal to show it. User choice is persisted in local storage (resets on new app version).",
+          "default": true
         },
         "inlineMetricFilter": {
           "type": "boolean",
           "description": "If 'true', this filter's DQL expression is placed at the `$(inlineMetricFilter)` variable position in the query as a comma-prefixed inline expression (e.g. `, matchesValue(status, \"ERROR\")`). The query must contain a `$(inlineMetricFilter)` placeholder for the expression to be injected. When no inline metric filters are selected, the placeholder is replaced with an empty string.",
           "default": false
-        },
-        "quickFilterExpanded": {
-          "type": "boolean",
-          "description": "If 'true', the filter is expanded (and therefore data is loaded) by default."
         },
         "fieldIds": {
           "anyOf": [
@@ -2379,6 +2453,13 @@
           "type": "boolean",
           "description": "If 'true', the filter value will be masked in tracking.",
           "default": false
+        },
+        "allowedOperators": {
+          "type": "array",
+          "items": {
+            "$ref": "#/definitions/FilterFieldComparisonOperators"
+          },
+          "description": "Specifies which comparison operators are available for this filter. When provided, overrides the default operators determined by filter type and query configuration. Keep in mind that some operators can be filtered out if they are not supported by given filter type."
         }
       },
       "required": [
@@ -4412,7 +4493,7 @@
     },
     "Version": {
       "type": "string",
-      "const": "1.0.0"
+      "const": "1.1.0"
     },
     "DqlConditionsContext": {
       "type": "object",
