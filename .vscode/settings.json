@@ -22,5 +22,6 @@
       "npx jest": true,
       "npm run test:unit": true
     },
-    "chat.agent.maxRequests": 1000
+    "chat.agent.maxRequests": 1000,
+    "python-envs.defaultEnvManager": "ms-python.python:pyenv"
 }

@@ -30,7 +30,12 @@ import {
 } from "@dynatrace/unified-analysis/documents";
 import * as vscode from "vscode";
 import { OpenPipelinePipeline } from "../interfaces/extensionDocs";
-import { DetailsSettings, ScreenStub, TopologyStub } from "../interfaces/extensionMeta";
+import {
+  DetailsSettings,
+  PropertiesCard,
+  ScreenStub,
+  TopologyStub,
+} from "../interfaces/extensionMeta";
 import {
   ConversionWarning,
   EntityToNodeMap,
@@ -53,6 +58,8 @@ import {
   convertHealthCard,
   convertMessageCard,
   convertPropertiesCard,
+  createConditionContext,
+  extractConditions,
   generateConversionReport,
   resolveTarget,
   shouldSkipByTarget,
@@ -161,6 +168,7 @@ async function convertScreens(options: { skipInteractive?: boolean } = {}) {
     if (!selectedEntityTypes.has(screen.entityType)) continue;
 
     const resolvedNode = entityToNodeMap[screen.entityType];
+    const conditions = extractConditions(resolvedNode, JSON.stringify(screen, undefined, 2));
     const context: ScreenConversionContext = {
       ...resolvedNode,
       extensionName: extension.name,
@@ -169,6 +177,7 @@ async function convertScreens(options: { skipInteractive?: boolean } = {}) {
       screen,
       keywords: extension.keywords ?? [],
       entityToNodeMap,
+      conditions: Object.fromEntries(conditions.map(c => [c.id, c])),
     };
     const result = convertSingleScreen(context, screensDir);
     results.push(result);
@@ -378,11 +387,24 @@ function buildEntityDetailsDefinition(
   }
 
   // Resolve cards into tabs — propagate settings-level target so cards inherit it
-  const tabs = resolveDetailsCards(context, settings, warnings, settings.target, "detailsSettings");
+  const [tabs, conditionIds] = resolveDetailsCards(
+    context,
+    settings,
+    warnings,
+    settings.target,
+    "detailsSettings",
+  );
+
+  let propertiesCard: PropertiesCard | undefined;
+  if (screen.propertiesCard && Array.isArray(screen.propertiesCard)) {
+    propertiesCard = screen.propertiesCard.filter(c => c.target !== "CLASSIC")[0];
+  } else {
+    propertiesCard = screen.propertiesCard;
+  }
 
   // Properties card → metadata element added as first tab
-  if (screen.propertiesCard && settings.staticContent?.showProperties !== false) {
-    const metadata = convertPropertiesCard(screen.propertiesCard, entityType, warnings, context);
+  if (propertiesCard && settings.staticContent?.showProperties !== false) {
+    const metadata = convertPropertiesCard(propertiesCard, entityType, warnings, context);
     if (metadata) {
       tabs.unshift({
         type: "tab",
@@ -397,6 +419,7 @@ function buildEntityDetailsDefinition(
     version: VERSION,
     type: "EntityDetailsDefinition",
     target: { app: "*", nodeType },
+    conditionContext: createConditionContext(context, conditionIds),
     content: {
       type: "details",
       id: `${entityType}-details`,
@@ -439,7 +462,7 @@ function buildInvExDefinition(
   }
 
   // Resolve cards into layout items
-  const items = resolveListCards(context, warnings);
+  const [items, conditionIds] = resolveListCards(context, warnings);
 
   // Inventory should have at least one dql table
   if (!items.some(i => i.type === "dql-table")) {
@@ -449,7 +472,8 @@ function buildInvExDefinition(
   const content: InvExDefinitionDocument = {
     version: VERSION,
     type: "InvExTypeDefinition",
-    target: { app: "*" },
+    target: { app: "*", invExType: context.extensionName },
+    conditionContext: createConditionContext(context, conditionIds),
     content: {
       id: `${nodeType}-inventory`,
       displayName,
@@ -479,51 +503,59 @@ function buildDetailsInjections(
   if (!screen.detailsInjections) return [];
 
   const documents: OutputDocument[] = [];
-  for (const injection of screen.detailsInjections) {
-    const injectionHint = `detailsInjections.${injection.key}`;
-    if (shouldSkipByTarget(injection.target)) {
+  for (const ref of screen.detailsInjections) {
+    const screenConditionIds: string[] = [];
+    const injectionHint = `detailsInjections.${ref.key}`;
+    if (shouldSkipByTarget(ref.target)) {
       addWarning(
         warnings,
         "skipped-classic",
-        `detailsInjection "${injection.key}" skipped (target: CLASSIC)`,
+        `detailsInjection "${ref.key}" skipped (target: CLASSIC)`,
         injectionHint,
       );
       continue;
     }
+    const [refConditions, refConditionIds] = convertConditions(
+      context,
+      ref.conditions ?? [],
+      warnings,
+      injectionHint,
+    );
+    screenConditionIds.push(...refConditionIds);
 
-    const cardElement = resolveCardByRef(
-      injection,
+    const [cardElement, cardConditionIds] = resolveCardByRef(
+      ref,
       context,
       warnings,
-      injection.target,
+      ref.target,
       injectionHint,
     );
     if (!cardElement) continue;
+    screenConditionIds.push(...cardConditionIds);
 
     // Resolve target nodeType from entitySelectorTemplate
-    const targetNodeType = extractEntityTypeFromSelector(injection.entitySelectorTemplate);
-    if (injection.entitySelectorTemplate && !targetNodeType) {
+    const targetNodeType = extractEntityTypeFromSelector(ref.entitySelectorTemplate);
+    if (ref.entitySelectorTemplate && !targetNodeType) {
       addWarning(
         warnings,
         "entity-selector",
-        `detailsInjection "${injection.key}": could not extract target entity type from entitySelectorTemplate`,
+        `detailsInjection "${ref.key}": could not extract target entity type from entitySelectorTemplate`,
         injectionHint,
       );
     }
 
     const element: Tab = {
       type: "tab",
-      id: injection.key,
-      title: `${injection.key} injected by ${context.extensionName}`,
+      id: ref.key,
+      title: `${ref.key} injected by ${context.extensionName}`,
+      conditions: refConditions,
       content: [cardElement],
     };
-    if (injection.conditions) {
-      element.conditions = convertConditions(injection.conditions, warnings);
-    }
 
     const content: EntityDetailsInjectionDocument = {
       version: VERSION,
       type: "EntityDetailsInjection",
+      conditionContext: createConditionContext(context, screenConditionIds),
       target: {
         app: "*",
         nodeType: targetNodeType ?? context.nodeType,
@@ -532,7 +564,7 @@ function buildDetailsInjections(
     };
 
     documents.push({
-      fileName: `${fileNamePrefix}.${injection.key}.detailsinjection.json`,
+      fileName: `${fileNamePrefix}.${ref.key}.detailsinjection.json`,
       content,
     });
   }
@@ -552,42 +584,53 @@ function buildListInjections(
   if (!screen.listInjections) return [];
 
   const documents: OutputDocument[] = [];
-  for (const injection of screen.listInjections) {
-    const injectionHint = `listInjections.${injection.key}`;
-    if (shouldSkipByTarget(injection.target)) {
+  for (const ref of screen.listInjections) {
+    const injectionHint = `listInjections.${ref.key}`;
+    if (shouldSkipByTarget(ref.target)) {
       addWarning(
         warnings,
         "skipped-classic",
-        `listInjection "${injection.key}" skipped (target: CLASSIC)`,
+        `listInjection "${ref.key}" skipped (target: CLASSIC)`,
         injectionHint,
       );
       continue;
     }
 
-    const cardElement = resolveCardByRef(
-      injection,
+    const [cardElement, elementConditionIds] = resolveCardByRef(
+      ref,
       context,
       warnings,
-      injection.target,
+      ref.target,
       injectionHint,
     );
     if (!cardElement) continue;
 
-    const targetNodeType = extractEntityTypeFromSelector(injection.entitySelectorTemplate);
-    if (injection.entitySelectorTemplate && !targetNodeType) {
+    const conditionIds: string[] = [];
+    const [refConditions, refConditionIds] = convertConditions(
+      context,
+      ref.conditions ?? [],
+      warnings,
+      injectionHint,
+    );
+    if (refConditions.length > 0) {
+      conditionIds.push(...refConditionIds);
+    }
+    conditionIds.push(...elementConditionIds);
+
+    if ("conditions" in cardElement && refConditions.length > 0) {
+      (cardElement.conditions ?? []).push(...refConditions);
+      conditionIds.push(...elementConditionIds);
+    }
+
+    const targetNodeType = extractEntityTypeFromSelector(ref.entitySelectorTemplate);
+    if (ref.entitySelectorTemplate && !targetNodeType) {
       addWarning(
         warnings,
         "entity-selector",
-        `listInjection "${injection.key}": could not extract target entity type from entitySelectorTemplate`,
+        `listInjection "${ref.key}": could not extract target entity type from entitySelectorTemplate`,
         injectionHint,
       );
     }
-
-    const element: TabsLayoutElement = { ...cardElement };
-    // TODO: Figure out how to do this:
-    // if (injection.conditions) {
-    //   element.conditions = convertConditions(injection.conditions, warnings);
-    // }
 
     const content: InvExInjectionDocument = {
       version: VERSION,
@@ -596,11 +639,12 @@ function buildListInjections(
         app: "*",
         invExType: targetNodeType ?? context.nodeType,
       },
-      content: element,
+      conditionContext: createConditionContext(context, conditionIds),
+      content: cardElement,
     };
 
     documents.push({
-      fileName: `${fileNamePrefix}.${injection.key}.inventoryinjection.json`,
+      fileName: `${fileNamePrefix}.${ref.key}.inventoryinjection.json`,
       content,
     });
   }
@@ -625,7 +669,8 @@ function resolveDetailsCards(
   warnings: ConversionWarning[],
   settingsTarget?: string,
   hint?: string,
-): Tab[] {
+): [Tab[], string[]] {
+  const screenConditionIds: string[] = [];
   const { screen } = context;
 
   const cardRefs = settings?.layout?.cards ?? [];
@@ -647,8 +692,23 @@ function resolveDetailsCards(
 
     const cardRefTarget = resolveTarget(ref.target, settingsTarget);
     const cardHint = hint ? `${hint}.${ref.key}` : ref.key;
-    const element = resolveCardByRef(ref, context, warnings, cardRefTarget, cardHint);
+    const [element, elementConditionIds] = resolveCardByRef(
+      ref,
+      context,
+      warnings,
+      cardRefTarget,
+      cardHint,
+    );
     if (!element) continue;
+    screenConditionIds.push(...elementConditionIds);
+
+    const [refConditions, refConditionIds] = convertConditions(
+      context,
+      ref.conditions ?? [],
+      warnings,
+      hint,
+    );
+    screenConditionIds.push(...refConditionIds);
 
     // Message cards are aggregated
     if (ref.type === "MESSAGE") {
@@ -659,6 +719,7 @@ function resolveDetailsCards(
         type: "tab",
         id: ref.key,
         title: getCardDisplayName(cardDef, ref.key),
+        conditions: refConditions,
         content: [{ type: "vertical-layout", items: [element] }],
       });
     }
@@ -674,7 +735,7 @@ function resolveDetailsCards(
     });
   }
 
-  return tabs;
+  return [tabs, screenConditionIds];
 }
 
 /**
@@ -683,7 +744,8 @@ function resolveDetailsCards(
 function resolveListCards(
   context: ScreenConversionContext,
   warnings: ConversionWarning[],
-): LayoutElement[] {
+): [LayoutElement[], string[]] {
+  const conditionIds: string[] = [];
   const { screen } = context;
   const settings = screen.listSettings;
 
@@ -704,11 +766,31 @@ function resolveListCards(
       continue;
     }
 
-    const element = resolveCardByRef(ref, context, warnings, ref.target, cardHint);
-    if (element) items.push(element);
+    const [element, elementConditionIds] = resolveCardByRef(
+      ref,
+      context,
+      warnings,
+      ref.target,
+      cardHint,
+    );
+    if (!element) continue;
+
+    const [refConditions, refConditionIds] = convertConditions(
+      context,
+      ref.conditions ?? [],
+      warnings,
+      cardHint,
+    );
+    conditionIds.push(...refConditionIds);
+
+    if ("conditions" in element) {
+      (element.conditions ?? []).push(...refConditions);
+      conditionIds.push(...elementConditionIds);
+    }
+    items.push(element);
   }
 
-  return items;
+  return [items, conditionIds];
 }
 
 /**
@@ -721,7 +803,7 @@ function resolveCardByRef(
   warnings: ConversionWarning[],
   parentTarget?: string,
   hint?: string,
-): TabsLayoutElement | null {
+): [TabsLayoutElement | null, string[]] {
   const { screen } = context;
 
   switch (ref.type) {
@@ -734,9 +816,9 @@ function resolveCardByRef(
           `chartsCard "${ref.key}" not found in screen definition`,
           hint,
         );
-        return null;
+        return [null, []];
       }
-      return convertChartsCard(card, warnings, parentTarget, hint);
+      return convertChartsCard(context, card, warnings, parentTarget, hint);
     }
 
     case "DQL_TABLE": {
@@ -748,16 +830,9 @@ function resolveCardByRef(
           `dqlTableCard "${ref.key}" not found in screen definition`,
           hint,
         );
-        return null;
+        return [null, []];
       }
-      return convertDqlTableCard(
-        card,
-        warnings,
-        context,
-        context.entityToNodeMap,
-        parentTarget,
-        hint,
-      );
+      return convertDqlTableCard(context, card, warnings, parentTarget, hint);
     }
 
     case "MESSAGE": {
@@ -769,9 +844,9 @@ function resolveCardByRef(
           `messageCard "${ref.key}" not found in screen definition`,
           hint,
         );
-        return null;
+        return [null, []];
       }
-      return convertMessageCard(card, context.keywords, warnings, parentTarget, hint);
+      return convertMessageCard(context, card, context.keywords, warnings, parentTarget, hint);
     }
 
     // TODO: Are we actually using this??
@@ -784,7 +859,7 @@ function resolveCardByRef(
           `healthCard "${ref.key}" not found in screen definition`,
           hint,
         );
-        return null;
+        return [null, []];
       }
       return convertHealthCard(card, warnings, parentTarget, hint);
     }
@@ -798,7 +873,7 @@ function resolveCardByRef(
         `Card type "${ref.type}" (key: "${ref.key}") is out of scope`,
         hint,
       );
-      return null;
+      return [null, []];
 
     default:
       addWarning(
@@ -807,7 +882,7 @@ function resolveCardByRef(
         `Unknown card type "${ref.type}" (key: "${ref.key}")`,
         hint,
       );
-      return null;
+      return [null, []];
   }
 }
 

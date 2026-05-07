@@ -44,6 +44,8 @@ export interface ScreenConversionContext extends NodeContext {
   keywords?: string[];
   /** Mapping of entity types to node contexts */
   entityToNodeMap: EntityToNodeMap;
+  /** All conditions available in the screen */
+  conditions: Record<string, ConditionInfo>;
 }
 
 export interface EntityToNodeMap {
@@ -64,6 +66,22 @@ export interface ConversionWarning {
   category: WarningCategory;
   message: string;
 }
+
+export interface ConditionInfo {
+  id: string;
+  name: ConditionName;
+  parameters: Record<string, string>;
+  original: string;
+  query: string;
+  field: string;
+  warnings: ConversionWarning[];
+}
+
+export type ConditionName =
+  | "entityAttribute"
+  | "relatedEntity"
+  | "metricAvailable"
+  | "extensionConfigured";
 
 export type WarningCategory =
   | "default-card"

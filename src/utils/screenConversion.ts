@@ -29,6 +29,7 @@ import {
   ChartSingleValueVisualization,
   ChartTimeseriesChartVisualization,
   ChartTimeseriesMetricVisualization,
+  DqlConditionsContext,
   DqlTable,
   DqlTableColumn,
   DqlTableQuery,
@@ -50,8 +51,11 @@ import {
   MetricVisualizationType,
   PropertiesCard,
   ColorOverride,
+  isDqlProperty,
 } from "../interfaces/extensionMeta";
 import {
+  ConditionInfo,
+  ConditionName,
   ConversionWarning,
   DqlParseResult,
   DqlQueryInfo,
@@ -65,6 +69,7 @@ import {
   TimeseriesDqlInfo,
   WarningCategory,
 } from "../interfaces/screenConversion";
+import { createIdHash } from "./cryptography";
 
 /**
  * Generates a markdown conversion report for a single entity type.
@@ -156,11 +161,13 @@ export function resolveTarget(
 // ---------------------------------------------------------------------------
 
 export function convertChartsCard(
+  context: ScreenConversionContext,
   card: ChartsCardStub,
   warnings: ConversionWarning[],
   parentTarget?: string,
   hint?: string,
-): ChartGroup | null {
+): [ChartGroup | null, string[]] {
+  let conditionIds: string[] = [];
   const effectiveTarget = resolveTarget(card.target, parentTarget);
   if (shouldSkipByTarget(effectiveTarget)) {
     addWarning(
@@ -169,7 +176,7 @@ export function convertChartsCard(
       `chartsCard "${card.key}" skipped (target: CLASSIC)`,
       hint,
     );
-    return null;
+    return [null, conditionIds];
   }
 
   const charts: Chart[] = [];
@@ -181,7 +188,7 @@ export function convertChartsCard(
 
   if (charts.length === 0) {
     addWarning(warnings, "no-dql", `chartsCard "${card.key}" produced no convertible charts`, hint);
-    return null;
+    return [null, conditionIds];
   }
 
   const element: ChartGroup = {
@@ -193,9 +200,16 @@ export function convertChartsCard(
   if (card.description) element.cardDescription = card.description;
   if (card.numberOfVisibleCharts) element.defaultVisibleChartsNumber = card.numberOfVisibleCharts;
   if (card.mode) element.mode = card.mode;
-  if (card.conditions) element.conditions = convertConditions(card.conditions, warnings);
 
-  return element;
+  if (card.conditions) {
+    const [dqlConditions, foundIds] = convertConditions(context, card.conditions, warnings, hint);
+    if (dqlConditions.length > 0) {
+      element.conditions = dqlConditions;
+      conditionIds = foundIds;
+    }
+  }
+
+  return [element, conditionIds];
 }
 
 // ---------------------------------------------------------------------------
@@ -740,13 +754,13 @@ function adjustDqlTableFields(
 }
 
 export function convertDqlTableCard(
+  context: ScreenConversionContext,
   card: DqlTableCardStub,
   warnings: ConversionWarning[],
-  nodeContext?: NodeContext,
-  entityToNodeMap?: EntityToNodeMap,
   parentTarget?: string,
   hint?: string,
-): DqlTable | null {
+): [DqlTable | null, string[]] {
+  let conditionIds: string[] = [];
   const effectiveTarget = resolveTarget(card.target, parentTarget);
   if (shouldSkipByTarget(effectiveTarget)) {
     addWarning(
@@ -755,7 +769,7 @@ export function convertDqlTableCard(
       `dqlTableCard "${card.key}" skipped (target: CLASSIC)`,
       hint,
     );
-    return null;
+    return [null, conditionIds];
   }
 
   const columns = (card.columns ?? []).map(col => convertDqlTableColumn(col));
@@ -775,12 +789,22 @@ export function convertDqlTableCard(
     dqlQuery,
     columns,
   };
-  if (card.conditions) element.conditions = convertConditions(card.conditions, warnings);
 
-  if (nodeContext && entityToNodeMap) {
-    return adjustDqlTableFields(element, invertFieldMap(nodeContext.fieldMap), entityToNodeMap);
+  if (card.conditions) {
+    const [dqlConditions, foundIds] = convertConditions(context, card.conditions, warnings, hint);
+    if (dqlConditions.length > 0) {
+      element.conditions = dqlConditions;
+      conditionIds = foundIds;
+    }
   }
-  return element;
+
+  if (context.fieldMap && context.entityToNodeMap) {
+    return [
+      adjustDqlTableFields(element, invertFieldMap(context.fieldMap), context.entityToNodeMap),
+      conditionIds,
+    ];
+  }
+  return [element, conditionIds];
 }
 
 function convertDqlTableColumn(col: DqlTableColumnStub): DqlTableColumn {
@@ -935,12 +959,13 @@ const createDqlTableColumn = (field: string): DqlTableColumn => ({
 // ---------------------------------------------------------------------------
 
 export function convertMessageCard(
+  context: ScreenConversionContext,
   card: MessageCardStub,
   keywords: string[] | undefined,
   warnings: ConversionWarning[],
   parentTarget?: string,
   hint?: string,
-): Message | null {
+): [Message | null, string[]] {
   const effectiveTarget = resolveTarget(card.target, parentTarget);
   if (shouldSkipByTarget(effectiveTarget)) {
     addWarning(
@@ -949,35 +974,42 @@ export function convertMessageCard(
       `messageCard "${card.key}" skipped (target: CLASSIC)`,
       hint,
     );
-    return null;
+    return [null, []];
   }
 
-  const conditions = convertConditions(card.conditions, warnings);
+  const [conditions, foundIds] = convertConditions(context, card.conditions ?? [], warnings, hint);
   if (card.type === "MESSAGE" && card.message) {
-    return {
-      type: "message",
-      id: card.key,
-      content: {
-        type: "MESSAGE",
-        color: (card.message.theme === "ERROR" ? "CRITICAL" : card.message.theme) as MessageColor,
-        text: card.message.text,
+    return [
+      {
+        type: "message",
+        id: card.key,
+        content: {
+          type: "MESSAGE",
+          color: (card.message.theme === "ERROR" ? "CRITICAL" : card.message.theme) as MessageColor,
+          text: card.message.text,
+        },
+        conditions,
       },
-      conditions,
-    };
+      foundIds,
+    ];
   }
   if (card.type === "CARD" && card.card) {
     const actions = convertCardButtons(card.card.buttons, keywords, warnings);
-    return {
-      type: "message",
-      id: card.key,
-      content: {
-        type: "CARD",
-        title: card.card.displayName ?? "",
-        text: card.card.text,
-        icon: card.card.icon,
-        actions,
+    return [
+      {
+        type: "message",
+        id: card.key,
+        content: {
+          type: "CARD",
+          title: card.card.displayName ?? "",
+          text: card.card.text,
+          icon: card.card.icon,
+          actions,
+        },
+        conditions,
       },
-    };
+      foundIds,
+    ];
   }
 
   addWarning(
@@ -986,7 +1018,7 @@ export function convertMessageCard(
     `messageCard "${card.key}" has unknown type "${card.type ?? "undefined"}"`,
     hint,
   );
-  return null;
+  return [null, []];
 }
 
 function convertCardButtons(
@@ -1060,7 +1092,7 @@ export function convertHealthCard(
   warnings: ConversionWarning[],
   parentTarget?: string,
   hint?: string,
-): ChartGroup | null {
+): [ChartGroup | null, string[]] {
   const effectiveTarget = resolveTarget(card.target, parentTarget);
   if (shouldSkipByTarget(effectiveTarget)) {
     addWarning(
@@ -1069,7 +1101,7 @@ export function convertHealthCard(
       `healthCard "${card.key}" skipped (target: CLASSIC)`,
       hint,
     );
-    return null;
+    return [null, []];
   }
 
   const charts: Chart[] = [];
@@ -1096,12 +1128,15 @@ export function convertHealthCard(
     });
   }
 
-  return {
-    type: "chart-group",
-    id: card.key,
-    mode: "COMPACT",
-    charts,
-  };
+  return [
+    {
+      type: "chart-group",
+      id: card.key,
+      mode: "COMPACT",
+      charts,
+    },
+    [],
+  ];
 }
 
 // ---------------------------------------------------------------------------
@@ -1125,10 +1160,27 @@ export function convertPropertiesCard(
     return createDefaultMetadataCard(propertiesCard, entityType, nodeContext);
   }
 
+  const overrideMetadataRegistry: Record<string, MetadataFieldConfig> = {};
+  propertiesCard.properties.filter(isDqlProperty).forEach(prop => {
+    overrideMetadataRegistry[prop.dql.field] = {
+      name: prop.dql.field,
+      displayName: prop.dql.displayName,
+    };
+    if (prop.conditions && prop.conditions.length > 0) {
+      addWarning(
+        warnings,
+        "conditions",
+        "property-level conditions not supported; should be manually integrated in the DQL query",
+        "propertiesCard",
+      );
+    }
+  });
+
   return {
     type: "metadata",
     id: `${entityType}-properties`,
     dqlQuery: assembleDqlQueryToString(propertiesCard.dqlQuery),
+    overrideMetadataRegistry,
   };
 }
 
@@ -1169,24 +1221,165 @@ const createDefaultMetadataCard = (
  * Currently a placeholder that emits warnings — full implementation deferred.
  */
 export function convertConditions(
+  context: ScreenConversionContext,
   conditions: string[] | undefined,
   warnings: ConversionWarning[],
-): DqlVariableCondition[] {
-  if (!conditions || conditions.length === 0) return [];
+  warningsTrace?: string,
+): [DqlVariableCondition[], string[]] {
+  const dqlConditions: DqlVariableCondition[] = [];
+  const idsFound: string[] = [];
+  if (!conditions || conditions.length === 0) return [dqlConditions, idsFound];
 
-  // TODO: implement condition mapping — requires DQL templates per condition pattern
-  for (const condition of conditions) {
-    addWarning(warnings, "conditions", `Condition needs manual DQL translation: "${condition}"`);
-  }
+  conditions.forEach(condition => {
+    const conditionId = createIdHash(condition);
+    if (!Object.keys(context.conditions).includes(conditionId)) return;
 
-  return conditions.map((condition, index) => ({
-    type: "dql-variable",
-    variable: `condition_${index}`,
-    value: `/* TODO: ${condition} */`,
-  }));
+    const extractedCondition: ConditionInfo = context.conditions[conditionId];
+    if (!dqlConditions.some(c => c.variable === extractedCondition.field)) {
+      dqlConditions.push({
+        type: "dql-variable",
+        variable: extractedCondition.field,
+        value: true,
+      });
+    }
+    if (!idsFound.includes(extractedCondition.id)) {
+      idsFound.push(extractedCondition.id);
+    }
+    extractedCondition.warnings.forEach(warning => {
+      addWarning(warnings, warning.category, warning.message, warningsTrace);
+    });
+  });
+
+  return [dqlConditions, idsFound];
 }
 
-// General
+export const extractConditions = (context: NodeContext, content: string): ConditionInfo[] => {
+  const conditions: ConditionInfo[] = [];
+  const conditionRegex =
+    /("!?(?:entityAttribute|relatedEntity|extensionConfigured|metricAvailable)\|.+"),?$/gm;
+  let match;
+  while ((match = conditionRegex.exec(content)) !== null) {
+    const conditionStr = JSON.parse(match[1]) as string;
+    const condition = extractCondition(context, conditionStr);
+    if (condition) {
+      conditions.push(condition);
+    }
+  }
+  return conditions;
+};
+
+export const extractCondition = (context: NodeContext, condition: string): ConditionInfo | null => {
+  const id = createIdHash(condition);
+  const parts = condition.split("|");
+  const name = parts[0] as ConditionName;
+  const parameters = parts.slice(1).reduce(
+    (acc, part) => {
+      const [key, value] = part.split("=");
+      if (key && value) {
+        acc[key] = value;
+      }
+      return acc;
+    },
+    {} as Record<string, string>,
+  );
+
+  let query: string | undefined;
+  let field: string | undefined;
+  const warnings: ConversionWarning[] = [];
+  switch (name) {
+    case "entityAttribute":
+      [query, field] = entityAttributeConditionDql(context, parameters);
+      break;
+    case "relatedEntity":
+      [query, field] = relatedEntityConditionDql(context, parameters);
+      warnings.push({
+        category: "conditions",
+        message: `relatedEntity condition needs manual translation to DQL; condition "${condition}"`,
+      });
+      break;
+    case "metricAvailable":
+      [query, field] = metricAvailableConditionDql(context, parameters);
+      warnings.push({
+        category: "conditions",
+        message: `metricAvailable condition needs manual translation to DQL; condition "${condition}"`,
+      });
+      break;
+    case "extensionConfigured":
+      // TODO - come back to this
+      [query, field] = ["TODO", "TODO"];
+      break;
+  }
+
+  if (!query || !field) {
+    warnings.push({
+      category: "conditions",
+      message: `Condition "${condition}" could not be converted`,
+    });
+    return null;
+  }
+
+  return {
+    id,
+    name,
+    parameters,
+    query,
+    field,
+    original: condition,
+    warnings,
+  };
+};
+
+// Prepare DQL query for entityAttribute replacement.
+// Return along with the unique field for it.
+const entityAttributeConditionDql = (
+  context: NodeContext,
+  parameters: Record<string, string>,
+): [string, string] => {
+  let [paramKey, paramValue] = Object.entries(parameters)[0];
+  if (Number.isNaN(Number(paramValue))) {
+    paramValue = `"${paramValue}"`;
+  }
+  const gen2Togen3Fields = invertFieldMap(context.fieldMap);
+  if (Object.keys(gen2Togen3Fields).includes(paramKey)) {
+    paramKey = gen2Togen3Fields[paramKey];
+  }
+
+  const field = `entityAttribute.${paramKey}`;
+
+  return [
+    `smartscapeNodes ${context.nodeType} | filter id == $(entityId) and ${paramKey} == ${paramValue} | summarize ${field}=count()>0`,
+    field,
+  ];
+};
+
+const relatedEntityConditionDql = (
+  context: NodeContext,
+  parameters: Record<string, string>,
+): [string, string] => {
+  const entitySelectorTemplate = parameters["entitySelectorTemplate"];
+  const entityMatch = entitySelectorTemplate.match(/type\((.+?)\),/);
+  const entityType = entityMatch ? entityMatch[1] : "unknown";
+  const field = `relatedEntity.${entityType.replace(":", "_")}`;
+  return [
+    `smartscapeNodes ${context.nodeType} | filter id == $(entityId) and in(id, classicEntitySelector("""${entitySelectorTemplate}""")) | summarize ${field}=count()>0`,
+    field,
+  ];
+};
+
+const metricAvailableConditionDql = (
+  context: NodeContext,
+  parameters: Record<string, string>,
+): [string, string] => {
+  const metric = parameters["metric"];
+  const writtenWithinDays = parameters["lastWrittenWithinDays"];
+  const metricName = metric.split(":")[0];
+  const timeframe = writtenWithinDays ? `, from:now()-${writtenWithinDays}d` : "";
+  const field = `metricAvailable.${metricName}`;
+  return [
+    `timeseries metric=count(${metricName}, scalar: true), nonempty: true${timeframe} | fields ${field}=isNotNull(metric)`,
+    field,
+  ];
+};
 
 function invertFieldMap(fieldMap: Record<string, string>): Record<string, string> {
   return Object.fromEntries(Object.entries(fieldMap).map(([k, v]) => [v, k]));
@@ -1425,4 +1618,23 @@ export const adjustAllDql = (
   );
 
   return adjustedContent;
+};
+
+export const createConditionContext = (
+  context: ScreenConversionContext,
+  conditionIds: string[],
+): DqlConditionsContext | undefined => {
+  let conditionContext: DqlConditionsContext | undefined = undefined;
+  if (conditionIds.length > 0) {
+    const uniqueIds = [...new Set(conditionIds)];
+    conditionContext = {
+      query: uniqueIds
+        .filter(id => Object.keys(context.conditions).includes(id))
+        .map(id => context.conditions[id].query),
+      resultFields: uniqueIds
+        .filter(id => Object.keys(context.conditions).includes(id))
+        .map(id => context.conditions[id].field),
+    };
+  }
+  return conditionContext;
 };

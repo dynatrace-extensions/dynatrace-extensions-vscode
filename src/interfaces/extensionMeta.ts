@@ -48,6 +48,10 @@ export interface TopologyStub {
   relationships?: RelationshipStub[];
 }
 
+export interface Conditional {
+  conditions?: string[];
+}
+
 export interface TopologyType {
   displayName: string;
   name: string;
@@ -170,18 +174,16 @@ interface ListSettings {
   };
 }
 
-export interface ListScreenCard {
+export interface ListScreenCard extends Conditional {
   key: string;
   entitySelectorTemplate?: string;
   target?: string;
-  conditions?: string[];
   type: "ENTITIES_LIST" | "CHART_GROUP" | "MESSAGE" | "INJECTIONS";
 }
 
-export interface DetailsScreenCard {
+export interface DetailsScreenCard extends Conditional {
   key: string;
   entitySelectorTemplate?: string;
-  conditions?: string[];
   target?: string;
   type: DetailInjectionCardType;
 }
@@ -210,7 +212,7 @@ interface LayoutHeader {
 
 export interface ScreenStub {
   entityType: string;
-  propertiesCard?: PropertiesCard;
+  propertiesCard?: PropertiesCard | PropertiesCard[];
   listSettings?: ListSettings;
   listInjections?: ListScreenCard[];
   detailsSettings?: DetailsSettings | DetailsSettings[];
@@ -242,12 +244,11 @@ interface MinimalCardStub {
   displayName?: string;
 }
 
-export interface MessageCardStub {
+export interface MessageCardStub extends Conditional {
   key: string;
   displayName?: string;
   target?: string;
   type?: string;
-  conditions?: string[];
   message?: {
     text: string;
     theme?: string;
@@ -265,11 +266,10 @@ export interface MessageCardStub {
   };
 }
 
-export interface DqlTableCardStub {
+export interface DqlTableCardStub extends Conditional {
   key: string;
   displayName?: string;
   target?: string;
-  conditions?: string[];
   query: {
     query: string;
     lookups?: Array<{
@@ -330,7 +330,7 @@ interface EntitiesListCardStub {
   charts?: ChartStub[];
 }
 
-export interface DqlProperty {
+export interface DqlProperty extends Conditional {
   type: "DQL";
   dql: {
     field: string;
@@ -338,18 +338,16 @@ export interface DqlProperty {
   };
 }
 
-export interface AttributeProperty {
+export interface AttributeProperty extends Conditional {
   type: "ATTRIBUTE";
-  conditions?: string[];
   attribute: {
     key: string;
     displayName: string;
   };
 }
 
-export interface RelationProperty {
+export interface RelationProperty extends Conditional {
   type: "RELATION";
-  conditions?: string[];
   relation: {
     entitySelectorTemplate: string;
     displayName: string;
@@ -400,7 +398,7 @@ export interface AnchorStub {
   cardName?: string;
   chartName?: string;
 }
-export interface ChartsCardStub {
+export interface ChartsCardStub extends Conditional {
   key: string;
   displayName?: string;
   numberOfVisibleCharts?: number;
@@ -409,11 +407,10 @@ export interface ChartsCardStub {
   hideEmptyCharts?: boolean;
   charts: ChartStub[];
   target?: string;
-  conditions?: string[];
   description?: string;
 }
 
-export interface ChartStub {
+export interface ChartStub extends Conditional {
   displayName?: string;
   visualizationType: string;
   graphChartConfig?: GraphConfigStub;
