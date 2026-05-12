@@ -1638,3 +1638,43 @@ export const createConditionContext = (
   }
   return conditionContext;
 };
+
+export const extractExtensionCategory = (keywords: string[]): string => {
+  const defaultCategories = [
+    "analytics",
+    "application",
+    "compute",
+    "security",
+    "storage",
+    "cloud",
+    "database",
+    "network",
+    "virtualization",
+  ];
+  for (const keyword of keywords) {
+    if (keyword.startsWith("category:")) {
+      const category = keyword.slice("category:".length).trim();
+      if (defaultCategories.includes(category)) {
+        return category;
+      }
+    }
+  }
+  return "other";
+};
+
+export const extractExtensionTitle = (keywords: string[], extensionName: string): string => {
+  for (const keyword of keywords) {
+    if (keyword.startsWith("title:")) {
+      return keyword
+        .slice("title:".length)
+        .trim()
+        .split(" ")
+        .map(word => word.charAt(0).toUpperCase() + word.slice(1))
+        .join(" ");
+    }
+  }
+  return extensionName
+    .replace("custom:", "")
+    .replace("com.dynatrace.extension.", "")
+    .replace("com.dynatrace.", "");
+};
