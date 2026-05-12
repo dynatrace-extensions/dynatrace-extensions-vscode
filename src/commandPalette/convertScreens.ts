@@ -60,6 +60,8 @@ import {
   convertPropertiesCard,
   createConditionContext,
   extractConditions,
+  extractExtensionCategory,
+  extractExtensionTitle,
   generateConversionReport,
   resolveTarget,
   shouldSkipByTarget,
@@ -182,6 +184,22 @@ async function convertScreens(options: { skipInteractive?: boolean } = {}) {
     const result = convertSingleScreen(context, screensDir);
     results.push(result);
   }
+
+  // Create the generic invEx documents
+  const extensionCategory = extractExtensionCategory(extension.keywords ?? []);
+  const extensionTitle = extractExtensionTitle(extension.keywords ?? [], extension.name);
+  writeFileSync(
+    join(screensDir, "category.inventory.json"),
+    JSON.stringify(createCategoryInvEx(extensionCategory), null, 2),
+  );
+  writeFileSync(
+    join(screensDir, "extension.inventory.json"),
+    JSON.stringify(
+      createExtensionInvEx(extensionCategory, extension.name, extensionTitle),
+      null,
+      2,
+    ),
+  );
 
   // Show summary
   const totalFiles = results.reduce((sum, r) => sum + r.filesWritten.length, 0);
@@ -925,3 +943,31 @@ function extractEntityTypeFromSelector(selector?: string): string | undefined {
   const match = /type\(([^)]+)\)/.exec(selector);
   return match?.[1]?.replace(/"/g, "");
 }
+
+const createCategoryInvEx = (category: string): InvExDefinitionDocument => ({
+  version: VERSION,
+  type: "InvExTypeDefinition",
+  target: { app: "dynatrace.infraops" },
+  content: {
+    id: category,
+    displayName: category.charAt(0).toUpperCase() + category.slice(1),
+    content: {
+      type: "vertical-layout",
+      items: [],
+    },
+  },
+});
+
+const createExtensionInvEx = (category: string, extensionName: string, extensionTitle: string) => ({
+  version: VERSION,
+  type: "InvExTypeDefinition",
+  target: { app: "dynatrace.infraops", invExType: category },
+  content: {
+    id: extensionName,
+    displayName: extensionTitle,
+    content: {
+      type: "vertical-layout",
+      items: [],
+    },
+  },
+});
