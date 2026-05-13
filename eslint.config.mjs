@@ -141,4 +141,20 @@ export default tseslint.config(
       "no-restricted-syntax": "off",
     },
   },
+
+  // Runner files (headless command runner) — use tsconfig.runner.json
+  // and need console for CI-visible output
+  {
+    files: ["runner/**/*.ts"],
+    languageOptions: {
+      parserOptions: {
+        projectService: false,
+        project: "./tsconfig.runner.json",
+        tsconfigRootDir: __dirname,
+      },
+    },
+    rules: {
+      "no-restricted-syntax": "off",
+    },
+  },
 );

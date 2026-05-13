@@ -1,0 +1,7 @@
+{
+  "extends": "./tsconfig.src.json",
+  "compilerOptions": {
+    "composite": false
+  },
+  "include": ["common/**/*.ts", "runner/**/*.ts"]
+}
