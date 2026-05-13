@@ -1031,7 +1031,9 @@
     "build": "npm run generate:schemas && npm run pretest && npm run vscode:prepublish",
     "install:all": "npm install && cd webview-ui && npm install",
     "build:webview": "cd webview-ui && npm run build",
-    "build:all": "npm run build:webview && npm run build"
+    "build:all": "npm run build:webview && npm run build",
+    "compile:runner": "tsc -p tsconfig.runner.json",
+    "run:headless": "bash ./runner/scripts/run-headless.sh"
   },
   "devDependencies": {
     "@eslint/js": "^9",

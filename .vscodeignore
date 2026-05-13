@@ -17,6 +17,7 @@ package.json
 package-lock.json
 *.md
 CNAME
+runner/
 
 # Documentation
 docs/

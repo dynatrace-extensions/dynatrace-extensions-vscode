@@ -73,6 +73,15 @@ import { ConfirmOption, showConfirmationInformationMessage } from "../utils/vsco
  * Validates preconditions, then runs the core conversion logic.
  */
 export const convertScreensWorkflow = async (options?: { skipInteractive?: boolean }) => {
+  // Headless callers bypass the IDE-oriented precondition gates. `isExtensionsWorkspace`
+  // requires the per-extension workspaceStorage directory to exist on disk, which VSCode
+  // creates lazily on first IDE activation — a fresh container never has it, so the
+  // gate would block legitimate headless invocations. The conversion itself validates
+  // the manifest and screens internally before writing any output.
+  if (options?.skipInteractive) {
+    await convertScreens(options);
+    return;
+  }
   if ((await checkWorkspaceOpen()) && (await isExtensionsWorkspace())) {
     await convertScreens(options);
   }
