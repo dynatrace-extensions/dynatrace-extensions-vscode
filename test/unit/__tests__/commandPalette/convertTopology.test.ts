@@ -269,7 +269,9 @@ describe("convertTopology", () => {
 
       const allProcessors = [...metricsProcessors, ...logsProcessors];
       allProcessors.forEach(processor => {
-        const fieldsToExtract = processor.smartscapeNode?.fieldsToExtract || [];
+        const fieldsToExtract = processor.smartscapeNode?.fieldsToExtract;
+        if (!fieldsToExtract) return; // only node-extraction processors have fieldsToExtract
+
         const securityContextFields = fieldsToExtract.filter(
           (field: OpenPipelineFieldsToExtract) => field.fieldName === "dt.security_context",
         );
