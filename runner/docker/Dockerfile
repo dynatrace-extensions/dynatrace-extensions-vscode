@@ -6,7 +6,7 @@ ENV HEADLESS_WORKSPACE_PATH=/workspace
 
 # System deps: Node.js 24, xvfb, VSCode Electron native libraries
 RUN apt-get update && apt-get install -y --no-install-recommends \
-    curl ca-certificates xvfb \
+    curl ca-certificates xvfb xauth \
     libnss3 libatk-bridge2.0-0 libdrm2 libxkbcommon0 libgbm1 \
     libgtk-3-0 libasound2 libx11-xcb1 libxcomposite1 libxrandr2 \
     libxdamage1 libcups2 libpango-1.0-0 libcairo2 libxss1 \

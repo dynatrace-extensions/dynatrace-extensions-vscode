@@ -102,7 +102,12 @@ async function convertScreens(options: { skipInteractive?: boolean } = {}) {
   }
   const extensionFilePath = getExtensionFilePath();
   if (!extensionFilePath) {
-    logger.notify("ERROR", "Could not locate extension.yaml in the workspace.", ...logTrace);
+    const extFilepathError = "Could not locate extension.yaml in the workspace. Command aborted.";
+    if (options?.skipInteractive) {
+      logger.error(extFilepathError, ...logTrace);
+    } else {
+      logger.notify("ERROR", extFilepathError, ...logTrace);
+    }
     return;
   }
 
@@ -113,7 +118,12 @@ async function convertScreens(options: { skipInteractive?: boolean } = {}) {
     !extension.screens ||
     extension.screens.length === 0
   ) {
-    logger.notify("WARN", "No topology or screens found in extension.yaml.", ...logTrace);
+    const noScreensError = "No topology or screens found in extension.yaml.";
+    if (options?.skipInteractive) {
+      logger.error(noScreensError, ...logTrace);
+    } else {
+      logger.notify("WARN", noScreensError, ...logTrace);
+    }
     return;
   }
 
@@ -121,16 +131,20 @@ async function convertScreens(options: { skipInteractive?: boolean } = {}) {
   const entitiesWithScreens = extension.screens.map(s => s.entityType);
   const pipelineFiles = getPipelineFiles();
   if (pipelineFiles.length === 0) {
-    logger.notify(
-      "ERROR",
-      "No OpenPipeline files found. Can only convert screens for Smartscape nodes",
-      ...logTrace,
-    );
-    await showConfirmationInformationMessage("Convert topology instead?").then(async choice => {
-      if (choice === ConfirmOption.Yes) {
-        await vscode.commands.executeCommand(GlobalCommand.UploadExtension);
-      }
-    });
+    const noPipelineError =
+      "No OpenPipeline files found. Can only convert screens for Smartscape nodes";
+    if (options?.skipInteractive) {
+      logger.error(noPipelineError, ...logTrace);
+    } else {
+      logger.notify("ERROR", noPipelineError, ...logTrace);
+    }
+    if (!options.skipInteractive) {
+      await showConfirmationInformationMessage("Convert topology instead?").then(async choice => {
+        if (choice === ConfirmOption.Yes) {
+          await vscode.commands.executeCommand(GlobalCommand.UploadExtension);
+        }
+      });
+    }
     return;
   }
   const gen2FieldMap = createGen2FieldMap(extension.topology);
@@ -139,11 +153,13 @@ async function convertScreens(options: { skipInteractive?: boolean } = {}) {
     entitiesWithScreens.includes(et),
   );
   if (validEntityTypes.length === 0) {
-    logger.notify(
-      "ERROR",
-      "No pipeline nodes match your screens' entity types. Ensure the 'id_classic' field is extracted",
-      ...logTrace,
-    );
+    const noValidEntitiesError =
+      "No pipeline nodes match your screens' entity types. Ensure the 'id_classic' field is extracted";
+    if (options?.skipInteractive) {
+      logger.error(noValidEntitiesError, ...logTrace);
+    } else {
+      logger.notify("ERROR", noValidEntitiesError, ...logTrace);
+    }
     return;
   }
 
@@ -225,7 +241,11 @@ async function convertScreens(options: { skipInteractive?: boolean } = {}) {
   const reportFilePath = join(screensDir, "conversion-report.md");
   writeFileSync(reportFilePath, fullReport);
 
-  logger.notify("INFO", message, ...logTrace);
+  if (options.skipInteractive) {
+    logger.info(message, ...logTrace);
+  } else {
+    logger.notify("INFO", message, ...logTrace);
+  }
 }
 
 // Map out for each gen2 entity type, which attribute is extracted from which data field
