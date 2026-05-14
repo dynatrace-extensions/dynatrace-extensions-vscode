@@ -1003,10 +1003,19 @@ const createSmartscapeNodeProcessor = (
     "k8s.namespace.name",
   ];
 
+  // Important fields always extracted for entity identity and cost context
+  const GRAIL_IMPORTANT_FIELDS = ["dt.security_context", "dt.cost.product", "dt.cost.costcenter"];
+
   // Build fields to extract from attributes, filtering out blocked fields
   const fieldsToExtract = [
     // Standard platform/cloud context fields
     ...GRAIL_PRIMARY_FIELDS.map(field => ({
+      fieldName: field,
+      referencedFieldName: field,
+    })),
+    // Important entity identity and cost fields
+    { fieldName: "id_classic", referencedFieldName: `dt.entity.${type.name.toLowerCase()}` },
+    ...GRAIL_IMPORTANT_FIELDS.map(field => ({
       fieldName: field,
       referencedFieldName: field,
     })),
