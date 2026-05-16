@@ -1,5 +1,13 @@
 # Change Log
 
+## Version 2.12.3 (15.05.2026)
+
+### 🚀 Improved in this version:
+
+- [Smartscape - add Grail important fields and id_classic to converter](https://github.com/dynatrace-extensions/dynatrace-extensions-vscode/pull/301)
+
+---
+
 ## Version 2.12.2 (05.05.2026)
 
 ### 🪲 Fixed in this version:
