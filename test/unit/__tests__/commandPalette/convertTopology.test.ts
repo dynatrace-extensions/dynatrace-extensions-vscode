@@ -256,7 +256,7 @@ describe("convertTopology", () => {
       });
     });
 
-    it("should filter out blocked fields", async () => {
+    it("should filter out blocked fields from attributes but include them as important fields", async () => {
       if (!extension.topology?.types) {
         throw new Error("Extension topology types not found");
       }
@@ -269,12 +269,15 @@ describe("convertTopology", () => {
 
       const allProcessors = [...metricsProcessors, ...logsProcessors];
       allProcessors.forEach(processor => {
-        const fieldsToExtract = processor.smartscapeNode?.fieldsToExtract || [];
-        const blockedFields = fieldsToExtract.filter(
+        const fieldsToExtract = processor.smartscapeNode?.fieldsToExtract;
+        if (!fieldsToExtract) return; // only node-extraction processors have fieldsToExtract
+
+        const securityContextFields = fieldsToExtract.filter(
           (field: OpenPipelineFieldsToExtract) => field.fieldName === "dt.security_context",
         );
 
-        expect(blockedFields.length).toBe(0);
+        // dt.security_context is blocked from rule attributes but added once as an important field
+        expect(securityContextFields.length).toBe(1);
       });
     });
 
