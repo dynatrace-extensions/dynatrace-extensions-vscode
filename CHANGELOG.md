@@ -19,6 +19,25 @@
 - Command to convert unified analysis screens; this generates documents within the extension folder but requires topology to have been converted first.
 - Schema-based validation for Unified Analysis platform documents
 - DQL Code Lenses - validate and execute your DQL queries (from Unified Analysis platform documents) against the tenant's data
+
+---
+
+## Version 2.12.3 (15.05.2026)
+
+### 🚀 Improved in this version:
+
+- [Smartscape - add Grail important fields and id_classic to converter](https://github.com/dynatrace-extensions/dynatrace-extensions-vscode/pull/301)
+
+---
+
+## Version 2.12.2 (05.05.2026)
+
+### 🪲 Fixed in this version:
+
+- [Generating certificates command results in an invalid dev certificate](https://github.com/dynatrace-extensions/dynatrace-extensions-vscode/issues/300)
+
+---
+
 ## Version 2.12.1 (01.05.2026)
 
 ### 🪲 Fixed in this version:
