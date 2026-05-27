@@ -29,6 +29,7 @@ import {
   ChartSingleValueVisualization,
   ChartTimeseriesChartVisualization,
   ChartTimeseriesMetricVisualization,
+  Condition,
   DqlConditionsContext,
   DqlTable,
   DqlTableColumn,
@@ -1218,14 +1219,14 @@ const createDefaultMetadataCard = (
 
 /**
  * Converts YAML condition strings to DQL variable conditions.
- * Currently a placeholder that emits warnings — full implementation deferred.
  */
 export function convertConditions(
   context: ScreenConversionContext,
   conditions: string[] | undefined,
   warnings: ConversionWarning[],
   warningsTrace?: string,
-): [DqlVariableCondition[], string[]] {
+): [Condition[], string[]] {
+  const allConditions: Condition[] = [];
   const dqlConditions: DqlVariableCondition[] = [];
   const idsFound: string[] = [];
   if (!conditions || conditions.length === 0) return [dqlConditions, idsFound];
@@ -1235,6 +1236,36 @@ export function convertConditions(
     if (!Object.keys(context.conditions).includes(conditionId)) return;
 
     const extractedCondition: ConditionInfo = context.conditions[conditionId];
+
+    // Built-in conditions (extensionConfigured only for now)
+    if (extractedCondition.name === "extensionConfigured") {
+      if (
+        Object.keys(extractedCondition.parameters).includes("extensionName") &&
+        context.extensionName !== extractedCondition.parameters.extensionName
+      ) {
+        addWarning(
+          warnings,
+          "conditions",
+          "extensionConfigured condition no longer supports matching a different extension",
+          warningsTrace,
+        );
+      } else {
+        allConditions.push({
+          type: "extensionConfigured",
+          aboveOrEqualVersion: extractedCondition.parameters.aboveOrEqualVersion,
+          belowOrEqualVersion: extractedCondition.parameters.belowOrEqualVersion,
+          featureSets: Object.keys(extractedCondition.parameters).includes("featureSets")
+            ? extractedCondition.parameters.featureSets.split(",").map(s => s.trim())
+            : undefined,
+          activatedOnHost:
+            extractedCondition.parameters.activatedOnHost === "true" ? true : undefined,
+        });
+      }
+      return;
+    }
+
+    // DQL Conditions
+
     if (!dqlConditions.some(c => c.variable === extractedCondition.field)) {
       dqlConditions.push({
         type: "dql-variable",
@@ -1242,6 +1273,8 @@ export function convertConditions(
         value: true,
       });
     }
+
+    // Store the found ID for building the condition context later
     if (!idsFound.includes(extractedCondition.id)) {
       idsFound.push(extractedCondition.id);
     }
@@ -1305,8 +1338,7 @@ export const extractCondition = (context: NodeContext, condition: string): Condi
       });
       break;
     case "extensionConfigured":
-      // TODO - come back to this
-      [query, field] = ["TODO", "TODO"];
+      [query, field] = ["null", "null"]; // Not applicable for this condition
       break;
   }
 
