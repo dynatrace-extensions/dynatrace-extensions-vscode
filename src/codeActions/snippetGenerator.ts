@@ -481,9 +481,12 @@ class SnippetGenerator implements vscode.CodeActionProvider {
     let entityType = screen.entityType;
 
     // Find already inserted attributes
+    const propertiesCard = Array.isArray(screen.propertiesCard)
+      ? screen.propertiesCard.filter(c => c.target !== "CLASSIC")[0]
+      : screen.propertiesCard;
     let attributeKeysInserted: string[] = [];
-    if (insertionType === "properties" && screen.propertiesCard) {
-      attributeKeysInserted = screen.propertiesCard.properties
+    if (insertionType === "properties" && propertiesCard) {
+      attributeKeysInserted = propertiesCard.properties
         .filter(isAttributeProperty)
         .map(prop => prop.attribute.key);
     } else {
@@ -551,11 +554,13 @@ class SnippetGenerator implements vscode.CodeActionProvider {
     let entityType = screen.entityType;
 
     // Find already inserted relations
+    const propertiesCard = Array.isArray(screen.propertiesCard)
+      ? screen.propertiesCard.filter(c => c.target !== "CLASSIC")[0]
+      : screen.propertiesCard;
     let relationsInserted: RelationProperty[] = [];
     if (insertionType === "properties") {
-      const card = screen.propertiesCard;
-      if (card) {
-        relationsInserted = card.properties.filter(isRelationProperty);
+      if (propertiesCard) {
+        relationsInserted = propertiesCard.properties.filter(isRelationProperty);
       }
     } else {
       const cardIdx = getBlockItemIndexAtLine(
