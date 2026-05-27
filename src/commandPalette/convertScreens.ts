@@ -521,6 +521,9 @@ function buildInvExDefinition(
     type: "InvExTypeDefinition",
     target: { app: "*", invExType: context.extensionName },
     conditionContext: createConditionContext(context, conditionIds),
+    metadata: {
+      nodeType: context.nodeType,
+    },
     content: {
       id: `${nodeType}-inventory`,
       displayName,
