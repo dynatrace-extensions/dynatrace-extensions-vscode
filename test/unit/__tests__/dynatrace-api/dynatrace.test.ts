@@ -18,7 +18,7 @@ import {
   createDynatraceClient,
   ManagedDynatraceClient,
 } from "../../../../src/dynatrace-api/dynatrace";
-import { SaaSDynatraceClient } from "../../../../src/dynatrace-api/sdk/sdkDynatraceClient";
+import { SaaSDynatraceClient } from "../../../../src/dynatrace-api/dynatrace";
 
 jest.mock("../../../../src/dynatrace-api/http_client");
 jest.mock("../../../../src/dynatrace-api/sdk/sdkClientFactory", () => ({

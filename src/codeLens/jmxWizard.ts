@@ -181,7 +181,7 @@ class JmxWizardCodeLensProvider implements vscode.CodeLensProvider {
       this.isLoading = true;
       this._onDidChangeCodeLenses.fire();
       const processDetails = await dtClient.extensionsV2.getJMXProcessDetails(this.processId);
-      setCachedJMXData({ [this.processName]: processDetails });
+      setCachedJMXData({ [this.processName ?? ""]: processDetails });
       this.isLoading = false;
       return true;
     } catch (err) {

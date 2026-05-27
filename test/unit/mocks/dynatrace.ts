@@ -1,5 +1,5 @@
 import { DynatraceClient } from "../../../src/dynatrace-api/dynatrace";
-import { ActiveGatesServiceInterface, CredentialVaultServiceInterface, DashboardServiceInterface, ExtensionsServiceV1Interface, ExtensionsServiceV2Interface, MetricServiceInterface, SettingsServiceInterface } from "../../../src/dynatrace-api/interfaces/services";
+import { ActiveGatesServiceInterface, CredentialVaultServiceInterface, DashboardServiceInterface, DqlServiceInterface, ExtensionsServiceV1Interface, ExtensionsServiceV2Interface, MetricServiceInterface, SettingsServiceInterface } from "../../../src/dynatrace-api/interfaces/services";
 import { EntityServiceV2 } from "../../../src/dynatrace-api/environment_v2/monitoredEntities";
 import { Entity } from "../../../src/dynatrace-api/interfaces/monitoredEntities";
 
@@ -21,6 +21,7 @@ export class MockDynatrace implements DynatraceClient {
   activeGates = jest.fn() as unknown as ActiveGatesServiceInterface;
   credentialVault = jest.fn() as unknown as CredentialVaultServiceInterface;
   dashboards = jest.fn() as unknown as DashboardServiceInterface;
+  dql = jest.fn() as unknown as DqlServiceInterface;
   extensionsV1 = jest.fn() as unknown as ExtensionsServiceV1Interface;
   extensionsV2 = jest.fn() as unknown as ExtensionsServiceV2Interface;
   metrics = jest.fn() as unknown as MetricServiceInterface;

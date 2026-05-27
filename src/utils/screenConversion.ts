@@ -48,6 +48,7 @@ import {
   DqlTableColumnStub,
   HealthCardStub,
   isAttributeProperty,
+  isRelationProperty,
   MessageCardStub,
   MetricVisualizationType,
   PropertiesCard,
@@ -1148,8 +1149,39 @@ export function convertPropertiesCard(
   propertiesCard: PropertiesCard,
   entityType: string,
   warnings: ConversionWarning[],
-  nodeContext: NodeContext,
+  nodeContext?: NodeContext,
 ): Metadata | null {
+  if (!nodeContext) {
+    // Legacy path: no node context — use attribute keys directly
+    const attributeProps = propertiesCard.properties.filter(isAttributeProperty);
+    const relationProps = propertiesCard.properties.filter(isRelationProperty);
+
+    if (relationProps.length > 0) {
+      addWarning(
+        warnings,
+        "relation-properties",
+        "Relation properties are not supported in metadata cards; they will be omitted",
+        "propertiesCard",
+      );
+    }
+
+    if (attributeProps.length === 0) {
+      return null;
+    }
+
+    const fieldList = attributeProps.map(p => `\`${p.attribute.key}\``).join(", ");
+    const overrideMetadataRegistry: Record<string, MetadataFieldConfig> = {};
+    for (const prop of attributeProps) {
+      overrideMetadataRegistry[prop.attribute.key] = { displayName: prop.attribute.displayName };
+    }
+    return {
+      type: "metadata",
+      id: `${entityType}-properties`,
+      dqlQuery: `fetch \`dt.entity.${entityType}\` | filter id == $(entityId) | fields ${fieldList}`,
+      overrideMetadataRegistry,
+    };
+  }
+
   const effectiveTarget = resolveTarget(propertiesCard.target, undefined);
   if (shouldSkipByTarget(effectiveTarget) || !propertiesCard.dqlQuery) {
     addWarning(
@@ -1158,7 +1190,7 @@ export function convertPropertiesCard(
       "card not gen3-enabled; creating default",
       "propertiesCard",
     );
-    return createDefaultMetadataCard(propertiesCard, entityType, nodeContext);
+    return createDefaultMetadataCard(propertiesCard, entityType, nodeContext, warnings);
   }
 
   const overrideMetadataRegistry: Record<string, MetadataFieldConfig> = {};
@@ -1189,6 +1221,7 @@ const createDefaultMetadataCard = (
   propertiesCard: PropertiesCard,
   entityType: string,
   nodeContext: NodeContext,
+  warnings: ConversionWarning[],
 ): Metadata => {
   const inverseFieldMap = invertFieldMap(nodeContext.fieldMap);
   const overrideMetadataRegistry: Record<string, MetadataFieldConfig> = {};
@@ -1198,6 +1231,16 @@ const createDefaultMetadataCard = (
       const nodeField = inverseFieldMap[prop.attribute.key];
       if (nodeField) {
         overrideMetadataRegistry[nodeField] = { displayName: prop.attribute.displayName };
+      } else {
+        overrideMetadataRegistry[prop.attribute.key] = {
+          displayName: prop.attribute.displayName,
+        };
+        addWarning(
+          warnings,
+          "dql-conversion",
+          `Attribute key "${prop.attribute.key}" not found in node field map; using original key`,
+          "propertiesCard",
+        );
       }
     }
   }

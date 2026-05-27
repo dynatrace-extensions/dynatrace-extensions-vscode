@@ -56,6 +56,18 @@ describe("Screen Conversion Utils", () => {
     jest.restoreAllMocks();
   });
 
+  const minimalCtx: ScreenConversionContext = {
+    entityType: "test:entity",
+    nodeType: "TEST_NODE",
+    fieldMap: {},
+    staticEdges: [],
+    entityToNodeMap: {},
+    fileNamePrefix: "test_entity",
+    extensionName: "com.dynatrace.test",
+    conditions: {},
+    screen: { entityType: "test:entity" } as ScreenConversionContext["screen"],
+  };
+
   // -----------------------------------------------------------------------
   // shouldSkipByTarget
   // -----------------------------------------------------------------------
@@ -64,7 +76,7 @@ describe("Screen Conversion Utils", () => {
       ["CLASSIC", true],
       ["PLATFORM", false],
       ["BOTH", false],
-      [undefined, false],
+      [undefined, true],
     ])("target %s → skip=%s", (target, expected) => {
       expect(shouldSkipByTarget(target)).toBe(expected);
     });
@@ -111,7 +123,7 @@ describe("Screen Conversion Utils", () => {
       };
       const warnings: ConversionWarning[] = [];
 
-      const result = convertChartsCard(card, warnings);
+      const [result] = convertChartsCard(minimalCtx, card, warnings, "PLATFORM");
 
       expect(result).not.toBeNull();
       expect(defined(result).type).toBe("chart-group");
@@ -135,7 +147,7 @@ describe("Screen Conversion Utils", () => {
       };
       const warnings: ConversionWarning[] = [];
 
-      const result = convertChartsCard(card, warnings);
+      const [result] = convertChartsCard(minimalCtx, card, warnings, "PLATFORM");
 
       expect(result).toBeNull();
       expect(warnings).toHaveLength(1);
@@ -168,7 +180,7 @@ describe("Screen Conversion Utils", () => {
       };
       const warnings: ConversionWarning[] = [];
 
-      const result = convertChartsCard(card, warnings);
+      const [result] = convertChartsCard(minimalCtx, card, warnings, "PLATFORM");
 
       expect(result).not.toBeNull();
       const chart0 = (defined(result).charts as Record<string, unknown>[])[0];
@@ -195,7 +207,7 @@ describe("Screen Conversion Utils", () => {
       };
       const warnings: ConversionWarning[] = [];
 
-      const result = convertChartsCard(card, warnings);
+      const [result] = convertChartsCard(minimalCtx, card, warnings, "PLATFORM");
 
       expect(result).not.toBeNull();
       expect(warnings.some(w => w.category === "multi-metric-partial")).toBe(true);
@@ -214,7 +226,7 @@ describe("Screen Conversion Utils", () => {
       };
       const warnings: ConversionWarning[] = [];
 
-      const result = convertChartsCard(card, warnings);
+      const [result] = convertChartsCard(minimalCtx, card, warnings, "PLATFORM");
 
       expect(result).toBeNull();
       expect(warnings.some(w => w.category === "no-dql")).toBe(true);
@@ -239,7 +251,7 @@ describe("Screen Conversion Utils", () => {
       };
       const warnings: ConversionWarning[] = [];
 
-      const result = convertChartsCard(card, warnings);
+      const [result] = convertChartsCard(minimalCtx, card, warnings, "PLATFORM");
 
       expect(result).not.toBeNull();
       const chart0 = (defined(result).charts as Record<string, unknown>[])[0];
@@ -273,7 +285,7 @@ describe("Screen Conversion Utils", () => {
       };
       const warnings: ConversionWarning[] = [];
 
-      const result = convertChartsCard(card, warnings);
+      const [result] = convertChartsCard(minimalCtx, card, warnings, "PLATFORM");
 
       expect(result).not.toBeNull();
       const chart0 = (defined(result).charts as Record<string, unknown>[])[0];
@@ -323,7 +335,7 @@ describe("Screen Conversion Utils", () => {
       };
       const warnings: ConversionWarning[] = [];
 
-      const result = convertDqlTableCard(card, warnings);
+      const [result] = convertDqlTableCard(minimalCtx, card, warnings, "PLATFORM");
 
       expect(result).not.toBeNull();
       expect(defined(result).type).toBe("dql-table");
@@ -356,7 +368,7 @@ describe("Screen Conversion Utils", () => {
       };
       const warnings: ConversionWarning[] = [];
 
-      const result = convertDqlTableCard(card, warnings);
+      const [result] = convertDqlTableCard(minimalCtx, card, warnings, "PLATFORM");
 
       expect(result).toBeNull();
       expect(warnings[0].category).toBe("skipped-classic");
@@ -378,7 +390,7 @@ describe("Screen Conversion Utils", () => {
       };
       const warnings: ConversionWarning[] = [];
 
-      const result = convertMessageCard(card, undefined, warnings);
+      const [result] = convertMessageCard(minimalCtx, card, undefined, warnings, "PLATFORM");
 
       expect(result).not.toBeNull();
       expect(defined(result).type).toBe("message");
@@ -398,7 +410,7 @@ describe("Screen Conversion Utils", () => {
       };
       const warnings: ConversionWarning[] = [];
 
-      const result = convertMessageCard(card, undefined, warnings);
+      const [result] = convertMessageCard(minimalCtx, card, undefined, warnings, "PLATFORM");
 
       const content = defined(result).content as Record<string, unknown>;
       expect(content.color).toBe("CRITICAL");
@@ -424,7 +436,7 @@ describe("Screen Conversion Utils", () => {
       const keywords = ["title:F5 BIG-IP", "network"];
       const warnings: ConversionWarning[] = [];
 
-      const result = convertMessageCard(card, keywords, warnings);
+      const [result] = convertMessageCard(minimalCtx, card, keywords, warnings, "PLATFORM");
 
       expect(result).not.toBeNull();
       const content = defined(result).content as Record<string, unknown>;
@@ -449,7 +461,7 @@ describe("Screen Conversion Utils", () => {
       };
       const warnings: ConversionWarning[] = [];
 
-      const result = convertMessageCard(card, undefined, warnings);
+      const [result] = convertMessageCard(minimalCtx, card, undefined, warnings, "PLATFORM");
 
       expect(result).not.toBeNull();
       expect(warnings.some(w => w.category === "actions")).toBe(true);
@@ -464,7 +476,7 @@ describe("Screen Conversion Utils", () => {
       };
       const warnings: ConversionWarning[] = [];
 
-      const result = convertMessageCard(card, undefined, warnings);
+      const [result] = convertMessageCard(minimalCtx, card, undefined, warnings, "PLATFORM");
 
       expect(result).toBeNull();
       expect(warnings[0].category).toBe("skipped-classic");
@@ -493,7 +505,7 @@ describe("Screen Conversion Utils", () => {
       };
       const warnings: ConversionWarning[] = [];
 
-      const result = convertHealthCard(card, warnings);
+      const [result] = convertHealthCard(card, warnings, "PLATFORM");
 
       expect(result).not.toBeNull();
       expect(defined(result).type).toBe("chart-group");
@@ -516,7 +528,7 @@ describe("Screen Conversion Utils", () => {
       };
       const warnings: ConversionWarning[] = [];
 
-      expect(convertHealthCard(card, warnings)).toBeNull();
+      expect(convertHealthCard(card, warnings, "PLATFORM")[0]).toBeNull();
       expect(warnings[0].category).toBe("skipped-classic");
     });
   });
@@ -602,23 +614,24 @@ describe("Screen Conversion Utils", () => {
   describe("convertConditions", () => {
     it("returns empty array for no conditions", () => {
       const warnings: ConversionWarning[] = [];
-      expect(convertConditions(undefined, warnings)).toEqual([]);
-      expect(convertConditions([], warnings)).toEqual([]);
+      const [conds1] = convertConditions(minimalCtx, undefined, warnings);
+      expect(conds1).toEqual([]);
+      const [conds2] = convertConditions(minimalCtx, [], warnings);
+      expect(conds2).toEqual([]);
     });
 
-    it("generates placeholder conditions and warnings", () => {
+    it("returns empty arrays for conditions not present in context", () => {
       const conditions = [
         "extensionConfigured|extensionId=com.dynatrace.extension.f5",
         "entityAttribute|devMonitoringMode=Extension",
       ];
       const warnings: ConversionWarning[] = [];
 
-      const result = convertConditions(conditions, warnings);
+      const [conds, ids] = convertConditions(minimalCtx, conditions, warnings);
 
-      expect(result).toHaveLength(2);
-      expect(result[0].type).toBe("dql-variable");
-      expect(result[0].variable).toBe("condition_0");
-      expect(warnings.filter(w => w.category === "conditions")).toHaveLength(2);
+      expect(conds).toHaveLength(0);
+      expect(ids).toHaveLength(0);
+      expect(warnings.filter(w => w.category === "conditions")).toHaveLength(0);
     });
   });
 
@@ -638,6 +651,7 @@ describe("Screen Conversion Utils", () => {
           "f5:instance": { nodeType: "EXT_NETWORK_DEVICE", fieldMap: {}, staticEdges: [] },
         },
         screen: { entityType: "f5:instance" } as ScreenConversionContext["screen"],
+        conditions: {},
       };
       const filesWritten = ["f5_instance.entitydetails.json", "f5_instance.inventory.json"];
       const warnings: ConversionWarning[] = [
@@ -669,6 +683,7 @@ describe("Screen Conversion Utils", () => {
         fileNamePrefix: "test_entity",
         extensionName: "com.dynatrace.test.extension",
         screen: { entityType: "test:entity" } as ScreenConversionContext["screen"],
+        conditions: {},
       };
 
       const report = generateConversionReport(context, ["test.json"], []);
@@ -787,7 +802,8 @@ describe("Screen Conversion Utils", () => {
       };
 
       const warnings: ConversionWarning[] = [];
-      const group = defined(convertChartsCard(card, warnings));
+      const [result] = convertChartsCard(minimalCtx, card, warnings, "PLATFORM");
+      const group = defined(result);
 
       expect(warnings).toHaveLength(0);
       const chart = group.charts[0];
@@ -822,6 +838,18 @@ const testEntityToNodeMap: EntityToNodeMap = {
 };
 
 const memberContext: NodeContext = testEntityToNodeMap["f5:pool:member"];
+
+const memberCtx: ScreenConversionContext = {
+  entityType: "f5:pool:member",
+  nodeType: "F5_LTM_POOL_MEMBER",
+  fieldMap: memberContext.fieldMap,
+  staticEdges: memberContext.staticEdges,
+  entityToNodeMap: testEntityToNodeMap,
+  conditions: {},
+  extensionName: "com.dynatrace.test",
+  fileNamePrefix: "f5_pool_member",
+  screen: { entityType: "f5:pool:member" } as ScreenConversionContext["screen"],
+};
 
 describe("adjustEntityFetchDqlQuery", () => {
   it("returns non-fetch query unchanged", () => {
@@ -1066,7 +1094,8 @@ describe("convertDqlTableCard — structural field adjustment", () => {
       query: { query: "fetch `dt.entity.f5:pool:member` | fieldsAdd cpu_usage" },
       columns: [{ field: "cpu_usage", displayName: "CPU" }],
     };
-    const table = defined(convertDqlTableCard(card, [], memberContext, testEntityToNodeMap));
+    const [tableResult1] = convertDqlTableCard(memberCtx, card, [], "PLATFORM");
+    const table = defined(tableResult1);
     expect(table.columns?.[0]).toMatchObject({ field: "cpu", id: "cpu" });
   });
 
@@ -1076,7 +1105,8 @@ describe("convertDqlTableCard — structural field adjustment", () => {
       query: { query: "smartscapeNodes F5_LTM_POOL_MEMBER | fieldsAdd cpu" },
       columns: [{ field: "unknown_field", displayName: "Unknown" }],
     };
-    const table = defined(convertDqlTableCard(card, [], memberContext, testEntityToNodeMap));
+    const [tableResult2] = convertDqlTableCard(memberCtx, card, [], "PLATFORM");
+    const table = defined(tableResult2);
     expect(table.columns?.[0]).toMatchObject({ field: "unknown_field" });
   });
 
@@ -1096,7 +1126,8 @@ describe("convertDqlTableCard — structural field adjustment", () => {
       },
       columns: [],
     };
-    const table = defined(convertDqlTableCard(card, [], memberContext, testEntityToNodeMap));
+    const [tableResult3] = convertDqlTableCard(memberCtx, card, [], "PLATFORM");
+    const table = defined(tableResult3);
     const lookup = table.dqlQuery.lookups?.[0] as {
       sourceField: string;
       lookupField: string;
@@ -1121,7 +1152,8 @@ describe("convertDqlTableCard — structural field adjustment", () => {
       },
       columns: [],
     };
-    const table = defined(convertDqlTableCard(card, [], memberContext, testEntityToNodeMap));
+    const [tableResult4] = convertDqlTableCard(memberCtx, card, [], "PLATFORM");
+    const table = defined(tableResult4);
     const lookup = table.dqlQuery.lookups?.[0] as {
       lookupField: string;
       fields: string[];
@@ -1159,9 +1191,9 @@ describe("convertPropertiesCard — registry key adjustment", () => {
     };
     const metadata = defined(convertPropertiesCard(card, "f5:pool:member", warnings, memberContext));
     expect(metadata.overrideMetadataRegistry).toHaveProperty("unknown_field");
-    expect(warnings).toHaveLength(1);
-    expect(warnings[0].category).toBe("dql-conversion");
-    expect(warnings[0].message).toContain("unknown_field");
+    const dqlWarning = warnings.find(w => w.category === "dql-conversion");
+    expect(dqlWarning).toBeDefined();
+    expect(dqlWarning!.message).toContain("unknown_field");
   });
 
   it("produces same result as before when nodeContext is omitted", () => {

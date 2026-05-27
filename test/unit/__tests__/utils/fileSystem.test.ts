@@ -195,7 +195,7 @@ describe("Filesystem Utils", () => {
       // @ts-expect-error
       mockFs.readdirSync.mockReturnValue(["f1", "f2", "f3"]);
       mockFs.statSync.mockImplementation((p: fs.PathLike) => {
-        const stats = new fs.Stats();
+        const stats = Object.create(fs.Stats.prototype) as fs.Stats;
         switch (p) {
           case path.join("mock", "f1"):
             stats.mtime = new Date(1);
