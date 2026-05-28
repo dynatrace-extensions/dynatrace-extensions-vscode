@@ -1692,6 +1692,9 @@ export const adjustAllDql = (
     },
   );
 
+  // Pass 3: wrap all `$(entityId)` as `toSmartscapeId($(entityId))`
+  adjustedContent = adjustedContent.replace(/\$\(entityId\)/g, "toSmartscapeId($(entityId))");
+
   return adjustedContent;
 };
 
