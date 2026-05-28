@@ -479,7 +479,7 @@ function buildEntityDetailsDefinition(
   };
 
   return {
-    fileName: `${fileNamePrefix}.entitydetails.json`,
+    fileName: `${fileNamePrefix}-entitydetails.screen.json`,
     content,
   };
 }
@@ -535,7 +535,7 @@ function buildInvExDefinition(
   };
 
   return {
-    fileName: `${fileNamePrefix}.inventory.json`,
+    fileName: `${fileNamePrefix}-inventory.screen.json`,
     content,
   };
 }
@@ -614,7 +614,7 @@ function buildDetailsInjections(
     };
 
     documents.push({
-      fileName: `${fileNamePrefix}.${ref.key}.detailsinjection.json`,
+      fileName: `${fileNamePrefix}-${ref.key}-detailsinjection.screen.json`,
       content,
     });
   }
@@ -694,7 +694,7 @@ function buildListInjections(
     };
 
     documents.push({
-      fileName: `${fileNamePrefix}.${ref.key}.inventoryinjection.json`,
+      fileName: `${fileNamePrefix}-${ref.key}-inventoryinjection.screen.json`,
       content,
     });
   }

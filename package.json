@@ -989,19 +989,19 @@
     ],
     "jsonValidation": [
       {
-        "fileMatch": "**/extension/screens/*.entitydetails.json",
+        "fileMatch": "**/extension/screens/*-entitydetails.screen.json",
         "url": "./src/assets/jsonSchemas/screens/entityDetailsDefinition.schema.json"
       },
       {
-        "fileMatch": "**/extension/screens/*.detailsinjection.json",
+        "fileMatch": "**/extension/screens/*-detailsinjection.screen.json",
         "url": "./src/assets/jsonSchemas/screens/entityDetailsInjection.schema.json"
       },
       {
-        "fileMatch": "**/extension/screens/*.inventory.json",
+        "fileMatch": "**/extension/screens/*-inventory.screen.json",
         "url": "./src/assets/jsonSchemas/screens/invExDefinition.schema.json"
       },
       {
-        "fileMatch": "**/extension/screens/*.inventoryinjection.json",
+        "fileMatch": "**/extension/screens/*-inventoryinjection.screen.json",
         "url": "./src/assets/jsonSchemas/screens/invExInjection.schema.json"
       }
     ],
