@@ -15,6 +15,7 @@
  */
 
 import { MetricSeriesCollection, MetricSeries } from "@common";
+import { InformationOverlay } from "@dynatrace/strato-components/content";
 import { Flex, Container, Divider } from "@dynatrace/strato-components/layouts";
 import { Heading, Text, Code } from "@dynatrace/strato-components/typography";
 import {
@@ -23,7 +24,6 @@ import {
   TimeseriesChartConfig,
 } from "@dynatrace/strato-components-preview/charts";
 import { CodeSnippet, EmptyState } from "@dynatrace/strato-components-preview/content";
-import { InformationOverlay } from "@dynatrace/strato-components-preview/overlays";
 import { WarningIcon } from "@dynatrace/strato-icons";
 import React from "react";
 
