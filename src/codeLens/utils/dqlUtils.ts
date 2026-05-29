@@ -14,18 +14,10 @@
   limitations under the License.
  */
 
-import {
-  CodeLensCommand,
-  MetricSeriesCollection,
-  MetricSeries,
-  PanelDataType,
-  ViewType,
-  DqlResultsPanelData,
-} from "@common";
+import { CodeLensCommand, PanelDataType, ViewType, DqlResultsPanelData } from "@common";
 import vscode from "vscode";
 import { DynatraceClient } from "../../dynatrace-api/dynatrace";
 import { DynatraceAPIError } from "../../dynatrace-api/errors";
-import { DqlRecord } from "../../dynatrace-api/interfaces/dql";
 import { getDynatraceClient } from "../../treeViews/tenantsTreeView";
 import { checkTenantConnected } from "../../utils/conditionCheckers";
 import logger from "../../utils/logging";
@@ -170,48 +162,6 @@ export function isTimeseriesQuery(dql: string): boolean {
   return /^\s*timeseries\b/i.test(dql.split("|")[0]);
 }
 
-const TIMESERIES_SKIP_FIELDS = new Set(["timeframe", "interval", "timestamps"]);
-
-/**
- * Converts DQL timeseries records into MetricSeriesCollection[] for the MetricResults panel.
- *
- * DQL timeseries records have: timestamps (number[]), one or more numeric array value fields,
- * and string dimension fields. Each record becomes one MetricSeries; all records are grouped
- * into a single MetricSeriesCollection keyed by the query string.
- */
-export function normalizeDqlTimeseriesResult(
-  query: string,
-  records: DqlRecord[],
-): MetricSeriesCollection[] {
-  const series: MetricSeries[] = records.map(record => {
-    const timestamps = Array.isArray(record.timestamps) ? (record.timestamps as number[]) : [];
-
-    let values: number[] = [];
-    for (const [key, val] of Object.entries(record)) {
-      if (
-        !TIMESERIES_SKIP_FIELDS.has(key) &&
-        Array.isArray(val) &&
-        val.length > 0 &&
-        (typeof val[0] === "number" || val[0] === null)
-      ) {
-        values = (val as (number | null)[]).map(v => v ?? 0);
-        break;
-      }
-    }
-
-    const dimensionMap: Record<string, string> = {};
-    for (const [key, val] of Object.entries(record)) {
-      if (!TIMESERIES_SKIP_FIELDS.has(key) && typeof val === "string") {
-        dimensionMap[key] = val;
-      }
-    }
-
-    return { timestamps, values, dimensionMap, dimensions: Object.values(dimensionMap) };
-  });
-
-  return [{ metricId: query, dataPointCountRatio: 1, dimensionCountRatio: 1, data: series }];
-}
-
 /**
  * Resolves the $(entityId) template variable by fetching the first available
  * entity ID for the node type derived from the screen document's filename.
@@ -225,7 +175,7 @@ export async function resolveEntityId(
   dtClient: DynatraceClient,
 ): Promise<string | null> {
   const fileName = document.fileName.replace(/\\/g, "/").split("/").pop() ?? "";
-  const nodeType = fileName.split(".")[0];
+  const nodeType = fileName.split("-")[0];
 
   if (!nodeType) {
     logger.warn(
@@ -359,17 +309,15 @@ export async function runDql(
   }
 
   try {
-    const result = await dtClient.dql.execute(dqlQuery);
+    const queryResult = await dtClient.dql.execute(dqlQuery);
     statusCallback(rawDqlQuery, { status: "valid" });
 
-    const timeseries = isTimeseriesQuery(dqlQuery);
     const panelData: DqlResultsPanelData = {
       dataType: PanelDataType.DqlResults,
-      dqlQuery: rawDqlQuery,
-      isTimeseries: timeseries,
-      ...(timeseries
-        ? { timeseriesData: normalizeDqlTimeseriesResult(rawDqlQuery, result.records) }
-        : { records: result.records }),
+      data: {
+        dqlQuery: rawDqlQuery,
+        queryResult,
+      },
     };
     renderPanel(ViewType.DqlQueryResults, "DQL Query Results", panelData);
   } catch (err: unknown) {

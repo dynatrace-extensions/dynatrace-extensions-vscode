@@ -15,16 +15,16 @@
  */
 
 import { PanelDataBase, PanelDataType } from ".";
-import { MetricSeriesCollection } from "./metric-results-data";
+import { DqlQueryResult } from "../../src/dynatrace-api/interfaces/dql";
 
 export interface DqlResultsPanelData extends PanelDataBase {
   dataType: typeof PanelDataType.DqlResults;
+  data: DqlQueryData;
+}
+
+export interface DqlQueryData {
   /** The DQL query to display in the panel header */
   dqlQuery: string;
-  /** True when the first command is "timeseries" */
-  isTimeseries: boolean;
-  /** Normalized timeseries data — populated only when isTimeseries is true */
-  timeseriesData?: MetricSeriesCollection[];
-  /** Raw result records — populated only when isTimeseries is false */
-  records?: Record<string, unknown>[];
+  /** The result of the DQL query */
+  queryResult: DqlQueryResult;
 }
