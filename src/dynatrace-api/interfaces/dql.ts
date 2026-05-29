@@ -14,6 +14,13 @@
   limitations under the License.
  */
 
+import {
+  Metadata,
+  MetadataNotification,
+  RangedFieldTypes,
+  ResultRecord,
+} from "@dynatrace-sdk/client-query";
+
 export interface DqlNotification {
   message?: string;
   severity?: string;
@@ -22,12 +29,12 @@ export interface DqlNotification {
 export interface DqlVerifyResult {
   valid: boolean;
   canonicalQuery?: string;
-  notifications?: DqlNotification[];
+  notifications?: MetadataNotification[];
 }
 
-export type DqlRecord = Record<string, unknown>;
-
 export interface DqlQueryResult {
-  records: DqlRecord[];
+  records: ResultRecord[];
+  metadata?: Metadata;
+  types: RangedFieldTypes[];
   state: "SUCCEEDED" | "FAILED" | "CANCELLED";
 }

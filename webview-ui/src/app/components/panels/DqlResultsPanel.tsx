@@ -14,52 +14,27 @@
   limitations under the License.
  */
 
-import { DqlResultsPanelData, MetricSeries } from "@common";
+import { DqlQueryData } from "@common";
+import { TimeseriesChart, convertToTimeseries } from "@dynatrace/strato-components/charts";
 import { Flex } from "@dynatrace/strato-components/layouts";
 import { Heading, Text } from "@dynatrace/strato-components/typography";
-import {
-  TimeseriesChart,
-  Timeseries,
-  TimeseriesChartConfig,
-} from "@dynatrace/strato-components-preview/charts";
 import { CodeSnippet, EmptyState } from "@dynatrace/strato-components-preview/content";
-import {
-  DataTableV2,
-  type DataTableV2ColumnDef,
-} from "@dynatrace/strato-components-preview/tables";
-import React, { useMemo } from "react";
+// import {
+//   DataTableV2,
+//   type DataTableV2ColumnDef,
+// } from "@dynatrace/strato-components-preview/tables";
+import React from "react";
 
 interface DqlResultsPanelProps {
-  data: DqlResultsPanelData;
+  data: DqlQueryData;
 }
 
-const toTimeseriesData = (series: MetricSeries[], query: string): Timeseries[] =>
-  series.slice(0, 5).map(({ dimensions, timestamps, values }) => ({
-    name: dimensions.length > 0 ? dimensions.join(", ") : query.split("|")[0].trim(),
-    datapoints: timestamps.map((ts, i) => {
-      const end = new Date(ts);
-      const start = i > 0 ? new Date(timestamps[i - 1]) : new Date(ts);
-      return { start, end, value: values[i] };
-    }),
-  }));
-
 export const DqlResultsPanel = ({ data }: DqlResultsPanelProps) => {
-  const { dqlQuery, isTimeseries, timeseriesData, records } = data;
+  const { dqlQuery, queryResult } = data;
 
-  const tableColumns = useMemo<DataTableV2ColumnDef<Record<string, unknown>>[]>(() => {
-    const firstRecord = records?.[0];
-    if (!firstRecord) return [];
-    return Object.keys(firstRecord).map(key => ({
-      id: key,
-      accessor: key,
-      header: key,
-      width: "1fr",
-    }));
-  }, [records]);
-
-  const hasTimeseriesData = isTimeseries && (timeseriesData?.[0]?.data?.length ?? 0) > 0;
-  const hasTableData = !isTimeseries && (records?.length ?? 0) > 0;
-  const isEmpty = !hasTimeseriesData && !hasTableData;
+  const hasTimeseriesData =
+    dqlQuery.startsWith("timeseries") || dqlQuery.includes("makeTimeseries");
+  const isEmpty = queryResult.records.length === 0;
 
   return (
     <Flex flexDirection='column' gap={16}>
@@ -78,17 +53,12 @@ export const DqlResultsPanel = ({ data }: DqlResultsPanelProps) => {
           <EmptyState.Title>This query returned no results.</EmptyState.Title>
         </EmptyState>
       ) : null}
-      {!isEmpty && isTimeseries ? (
-        <Flex flexDirection='column'>
-          <Text>Timeseries data:</Text>
-          <TimeseriesChartConfig value={{ legend: { position: "bottom" } }}>
-            <TimeseriesChart data={toTimeseriesData(timeseriesData?.[0].data ?? [], dqlQuery)} />
-          </TimeseriesChartConfig>
-        </Flex>
+      {!isEmpty && hasTimeseriesData ? (
+        <TimeseriesChart data={convertToTimeseries(queryResult.records, queryResult.types)} />
       ) : null}
-      {!isEmpty && !isTimeseries && (
-        <DataTableV2 columns={tableColumns} data={records ?? []} fullWidth />
-      )}
+      <CodeSnippet language='json' showLineNumbers={false}>
+        {JSON.stringify(queryResult, null, 2)}
+      </CodeSnippet>
     </Flex>
   );
 };

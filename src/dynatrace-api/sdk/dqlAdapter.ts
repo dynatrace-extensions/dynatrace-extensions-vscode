@@ -57,7 +57,9 @@ export class SdkDqlService implements DqlServiceInterface {
       }
 
       return {
-        records: (response.result?.records ?? []) as DqlQueryResult["records"],
+        records: (response.result?.records ?? []).filter(r => r !== null),
+        metadata: response.result?.metadata,
+        types: response.result?.types ?? [],
         state: "SUCCEEDED",
       };
     } catch (err) {
