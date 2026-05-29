@@ -21,10 +21,7 @@ import { Heading } from "@dynatrace/strato-components/typography";
 import { EmptyState } from "@dynatrace/strato-components-preview/content";
 import { TitleBar } from "@dynatrace/strato-components-preview/layouts";
 import { Menu } from "@dynatrace/strato-components-preview/navigation";
-import {
-  DataTableV2,
-  type DataTableV2ColumnDef,
-} from "@dynatrace/strato-components-preview/tables";
+import { DataTable, type DataTableColumnDef } from "@dynatrace/strato-components-preview/tables";
 import { PlusIcon, EditIcon, DeleteIcon, ConnectorIcon } from "@dynatrace/strato-icons";
 import React, { useMemo, useState } from "react";
 import { triggerCommand } from "../../utils/app-utils";
@@ -60,7 +57,7 @@ export const SimulatorTargets = ({ targets }: SimulatorTargetsProps) => {
   const addTarget = (target: RemoteTarget) => triggerCommand(SimulatorCommand.AddTarget, target);
   const nameIsUnique = (name: string) => targets.findIndex(t => t.name === name) < 0;
 
-  const tableColumns = useMemo<DataTableV2ColumnDef<RemoteTarget>[]>(
+  const tableColumns = useMemo<DataTableColumnDef<RemoteTarget>[]>(
     () => [
       {
         id: "name",
@@ -112,8 +109,8 @@ export const SimulatorTargets = ({ targets }: SimulatorTargetsProps) => {
         {Object.entries(tableData).map(([name, data]) => (
           <Flex key={name} flexDirection='column' marginTop={24}>
             <Heading level={4}>Registered {name}</Heading>
-            <DataTableV2 sortable fullWidth columns={tableColumns} data={data}>
-              <DataTableV2.EmptyState>
+            <DataTable sortable fullWidth columns={tableColumns} data={data}>
+              <DataTable.EmptyState>
                 <EmptyState style={{ marginTop: 8 }} size='small'>
                   <EmptyState.Title>No {name} registered</EmptyState.Title>
                   <EmptyState.Details>
@@ -123,16 +120,16 @@ export const SimulatorTargets = ({ targets }: SimulatorTargetsProps) => {
                     <AddButton onClick={handleOpenModal} />
                   </EmptyState.Actions>
                 </EmptyState>
-              </DataTableV2.EmptyState>
-              <DataTableV2.Pagination defaultPageSize={10} defaultPageIndex={1} />
-              <DataTableV2.RowActions>
+              </DataTable.EmptyState>
+              <DataTable.Pagination defaultPageSize={10} defaultPageIndex={1} />
+              <DataTable.RowActions>
                 {(row: RemoteTarget) => (
                   <Menu>
                     <Menu.Content>
                       <Menu.Item onSelect={handleEditTarget.bind(undefined, row)}>
-                        <Menu.ItemIcon>
+                        <Menu.Prefix>
                           <EditIcon />
-                        </Menu.ItemIcon>
+                        </Menu.Prefix>
                         Edit
                       </Menu.Item>
                       <Menu.Item
@@ -142,16 +139,16 @@ export const SimulatorTargets = ({ targets }: SimulatorTargetsProps) => {
                           row,
                         )}
                       >
-                        <Menu.ItemIcon>
+                        <Menu.Prefix>
                           <DeleteIcon />
-                        </Menu.ItemIcon>
+                        </Menu.Prefix>
                         Delete
                       </Menu.Item>
                     </Menu.Content>
                   </Menu>
                 )}
-              </DataTableV2.RowActions>
-            </DataTableV2>
+              </DataTable.RowActions>
+            </DataTable>
           </Flex>
         ))}
       </Flex>

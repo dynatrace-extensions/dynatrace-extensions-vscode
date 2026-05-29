@@ -42,11 +42,11 @@ const WebviewPanel = ({ panelData }: { panelData: PanelData }) => {
     case PanelDataType.Empty:
       return <NotFound />;
     case PanelDataType.MetricResults: {
-      const metricData = panelData;
-      return <MetricResultsPanel data={metricData.data} />;
+      //const metricData = panelData;
+      return <MetricResultsPanel data={data} />;
     }
     case PanelDataType.DqlResults:
-      return <DqlResultsPanel data={panelData} />;
+      return <DqlResultsPanel data={data} />;
     case PanelDataType.WmiQueryResults:
       return <WmiResultPanel data={data} />;
     case PanelDataType.ExtensionSimulator:

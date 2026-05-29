@@ -138,7 +138,8 @@ export const TargetRegistrationForm = ({
     >
       <form onSubmit={handleSubmit(handleSubmitClick)} onReset={clearForm} noValidate>
         <Flex flexDirection='column' gap={32}>
-          <FieldSet legend='Target details' name='target-details'>
+          <FieldSet name='target-details'>
+            <FieldSet.Legend>Target details</FieldSet.Legend>
             <FormField>
               <Label>Name</Label>
               <TextInput
@@ -206,7 +207,8 @@ export const TargetRegistrationForm = ({
               </FormField>
             </Flex>
           </FieldSet>
-          <FieldSet legend='Authentication'>
+          <FieldSet name='authentication'>
+            <FieldSet.Legend>Authentication</FieldSet.Legend>
             <FormField required>
               <Label>Username</Label>
               <TextInput

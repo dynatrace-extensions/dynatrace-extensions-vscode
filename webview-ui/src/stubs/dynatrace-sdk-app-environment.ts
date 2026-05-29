@@ -10,3 +10,4 @@ export const getAppId = (): string => "";
 export const getAppVersion = (): string => "";
 export const getAppName = (): string => "";
 export const getCurrentUserDetails = (): null => null;
+export const getEnvironmentId = (): string => "";

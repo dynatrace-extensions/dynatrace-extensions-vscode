@@ -31,7 +31,7 @@ import {
   RadioGroup,
   Radio,
   Switch,
-  SelectV2,
+  Select,
   Label,
 } from "@dynatrace/strato-components-preview";
 import { WarningIcon } from "@dynatrace/strato-icons";
@@ -70,21 +70,21 @@ const RemoteTargetsFieldSet = ({
   ) : (
     <FormField required>
       <Label>Select a target</Label>
-      <SelectV2
+      <Select
         {...register("target", { required: { value: true, message: "Please select a target" } })}
         name='target'
         value={selectedId}
         onChange={onChange}
         controlState={controlState}
       >
-        <SelectV2.Content>
+        <Select.Content>
           {filteredTargets.map(t => (
-            <SelectV2.Option key={t.name} id={t.name} value={t.name}>
+            <Select.Option key={t.name} id={t.name} value={t.name}>
               {`${t.name} (${t.username}@${t.address})`}
-            </SelectV2.Option>
+            </Select.Option>
           ))}
-        </SelectV2.Content>
-      </SelectV2>
+        </Select.Content>
+      </Select>
     </FormField>
   );
 };
@@ -193,12 +193,14 @@ export const SettingsForm = ({
     >
       <form onSubmit={handleSubmit(handleSubmitClick)} onReset={clearForm} noValidate>
         <Flex flexDirection='column' gap={32}>
-          <FieldSet legend='Simulation behavior' name='simulation-details'>
+          <FieldSet name='simulation-details'>
+            <FieldSet.Legend>Simulation behavior</FieldSet.Legend>
             <Switch value={sendMetrics} onChange={setSendMetrics}>
               Send metrics to Dynatrace
             </Switch>
           </FieldSet>
-          <FieldSet legend='Execution details' name='execution-details'>
+          <FieldSet name='execution-details'>
+            <FieldSet.Legend>Execution details</FieldSet.Legend>
             <Flex gap={32}>
               <FormField required>
                 <Label>Location</Label>
@@ -258,7 +260,8 @@ export const SettingsForm = ({
             </Flex>
           </FieldSet>
           {location === SimulationLocation.Remote && (
-            <FieldSet legend='Remote target' name='remote-target'>
+            <FieldSet name='remote-target'>
+              <FieldSet.Legend>Remote target</FieldSet.Legend>
               <RemoteTargetsFieldSet
                 targets={targets}
                 eecType={eecType}

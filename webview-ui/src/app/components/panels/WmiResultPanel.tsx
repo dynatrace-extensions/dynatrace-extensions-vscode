@@ -18,10 +18,7 @@ import { WmiQueryResult } from "@common";
 import { Flex } from "@dynatrace/strato-components/layouts";
 import { Text, Heading } from "@dynatrace/strato-components/typography";
 import { CodeSnippet } from "@dynatrace/strato-components-preview/content";
-import {
-  DataTableV2,
-  type DataTableV2ColumnDef,
-} from "@dynatrace/strato-components-preview/tables";
+import { DataTable, type DataTableColumnDef } from "@dynatrace/strato-components-preview/tables";
 import React, { useMemo } from "react";
 import { format as sqlFormat } from "sql-formatter";
 
@@ -30,7 +27,7 @@ interface WmiResultPanelProps {
 }
 
 export const WmiResultPanel = ({ data: { query, results, responseTime } }: WmiResultPanelProps) => {
-  const tableColumns = useMemo<DataTableV2ColumnDef<Record<string, string | number>>[]>(
+  const tableColumns = useMemo<DataTableColumnDef<Record<string, string | number>>[]>(
     () =>
       Object.keys(results[0]).map(key => ({
         id: key,
@@ -58,9 +55,9 @@ export const WmiResultPanel = ({ data: { query, results, responseTime } }: WmiRe
           <Text>{results.length}</Text>
         </Flex>
       </Flex>
-      <DataTableV2 sortable fullWidth columns={tableColumns} data={results}>
-        <DataTableV2.Pagination defaultPageSize={10} defaultPageIndex={1} />
-      </DataTableV2>
+      <DataTable sortable fullWidth columns={tableColumns} data={results}>
+        <DataTable.Pagination defaultPageSize={10} defaultPageIndex={1} />
+      </DataTable>
     </Flex>
   );
 };

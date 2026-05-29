@@ -6,7 +6,7 @@
  * are not relevant in the VS Code webview context.
  */
 
-export const useDqlQuery = (): { data: undefined; isLoading: boolean; error: undefined } => ({
+export const useDql = (): { data: undefined; isLoading: boolean; error: undefined } => ({
   data: undefined,
   isLoading: false,
   error: undefined,
