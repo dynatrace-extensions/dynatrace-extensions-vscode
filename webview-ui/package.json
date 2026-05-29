@@ -67,6 +67,7 @@
     "editorconfig": true
   },
   "dependencies": {
+    "@dynatrace-sdk/units": "^1.5.0",
     "@dynatrace/strato-components": "^3.5.0",
     "@dynatrace/strato-components-preview": "^3.1.5",
     "@dynatrace/strato-design-tokens": "^1.5.0",
