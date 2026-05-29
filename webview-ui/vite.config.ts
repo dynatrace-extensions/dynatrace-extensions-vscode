@@ -31,10 +31,7 @@ export default defineConfig({
         __dirname,
         "src/stubs/dynatrace-sdk-app-environment.ts",
       ),
-      "@dynatrace-sdk/navigation": path.resolve(
-        __dirname,
-        "src/stubs/dynatrace-sdk-navigation.ts",
-      ),
+      "@dynatrace-sdk/navigation": path.resolve(__dirname, "src/stubs/dynatrace-sdk-navigation.ts"),
       "@dynatrace-sdk/client-notification": path.resolve(
         __dirname,
         "src/stubs/dynatrace-sdk-client-notification.ts",
@@ -50,6 +47,18 @@ export default defineConfig({
       "@dynatrace-sdk/react-hooks": path.resolve(
         __dirname,
         "src/stubs/dynatrace-sdk-react-hooks.ts",
+      ),
+      "@dynatrace-sdk/user-preferences": path.resolve(
+        __dirname,
+        "src/stubs/dynatrace-sdk-user-preferences.ts",
+      ),
+      "@dynatrace-sdk/client-state": path.resolve(
+        __dirname,
+        "src/stubs/dynatrace-sdk-client-state.ts",
+      ),
+      "@dynatrace-sdk/client-notification-v2": path.resolve(
+        __dirname,
+        "src/stubs/dynatrace-sdk-client-notification-v2.ts",
       ),
     },
   },
