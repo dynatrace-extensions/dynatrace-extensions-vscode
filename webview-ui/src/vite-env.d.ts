@@ -1,7 +1,37 @@
 /// <reference types="vite/client" />
 
 import { PanelData } from "@common";
-import { DtRuntime } from "./mock-dt-runtime";
+
+interface AppShellDefaults {
+  appId: string;
+  appName: string;
+  appVersion: string;
+  environmentId: string;
+  environmentUrl: string;
+  regionalFormat: string;
+  language: string;
+  timezone: string;
+  theme: string;
+}
+
+interface DtRuntimeShape {
+  appEnvironment: {
+    getAppId: () => string;
+    getAppName: () => string;
+    getAppVersion: () => string;
+    getEnvironmentId: () => string;
+    getEnvironmentUrl: () => string;
+  };
+  userPreferences: {
+    getTheme: () => string;
+    getTimezone: () => string;
+    getLanguage: () => string;
+    getRegionalFormat: () => string;
+  };
+  navigation: {
+    getIntentLink: (intentPayload: object, appId?: string, intentId?: string) => string;
+  };
+}
 
 declare global {
   // Type definitions for non-npm package vscode-webview 1.57
@@ -41,7 +71,9 @@ declare global {
     setState<T extends StateType | undefined>(newState: T): T;
   }
 
-  interface Window extends DtRuntime {
+  interface Window {
+    appShellDefaults: AppShellDefaults;
+    dtRuntime: DtRuntimeShape;
     panelData: PanelData;
     /**
      * Acquire an instance of the webview API.

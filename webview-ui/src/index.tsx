@@ -21,7 +21,20 @@ import React from "react";
 import ReactDOM from "react-dom/client";
 import { createGlobalStyle } from "styled-components";
 import App from "./app/App";
-import { mockDtRuntime } from "./mock-dt-runtime";
+import {
+  getAppId,
+  getAppName,
+  getAppVersion,
+  getEnvironmentId,
+  getEnvironmentUrl,
+} from "./stubs/dynatrace-sdk-app-environment";
+import { getIntentLink } from "./stubs/dynatrace-sdk-navigation";
+import {
+  getLanguage,
+  getRegionalFormat,
+  getTheme,
+  getTimezone,
+} from "./stubs/dynatrace-sdk-user-preferences";
 
 // A map of Dynatrace theme variables to equivalent VSCode ones.
 const THEME_VARIABLES: { dtVar: string; vsVar: string }[] = [
@@ -48,7 +61,22 @@ const GlobalStyle = createGlobalStyle(
 );
 
 const vscode = window.acquireVsCodeApi<PanelData>();
-mockDtRuntime();
+
+// Populate window.dtRuntime for strato-components internals that access it directly.
+// The stubs for @dynatrace-sdk/* packages read from window.appShellDefaults, which
+// is populated by the Webview Panel Manager so this object delegates back to them.
+window.dtRuntime = {
+  appEnvironment: {
+    getAppId,
+    getAppName,
+    getAppVersion,
+    getEnvironmentId,
+    getEnvironmentUrl,
+  },
+  userPreferences: { getTheme, getTimezone, getLanguage, getRegionalFormat },
+  navigation: { getIntentLink },
+};
+
 const rootElement = document.getElementById("root");
 if (rootElement) {
   ReactDOM.createRoot(rootElement).render(
