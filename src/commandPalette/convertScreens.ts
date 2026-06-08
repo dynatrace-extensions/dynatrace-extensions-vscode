@@ -214,11 +214,11 @@ async function convertScreens(options: { skipInteractive?: boolean } = {}) {
   const extensionCategory = extractExtensionCategory(extension.keywords ?? []);
   const extensionTitle = extractExtensionTitle(extension.keywords ?? [], extension.name);
   writeFileSync(
-    join(screensDir, "category.inventory.json"),
+    join(screensDir, "category-inventory.screen.json"),
     JSON.stringify(createCategoryInvEx(extensionCategory), null, 2),
   );
   writeFileSync(
-    join(screensDir, "extension.inventory.json"),
+    join(screensDir, "extension-inventory.screen.json"),
     JSON.stringify(
       createExtensionInvEx(extensionCategory, extension.name, extensionTitle),
       null,

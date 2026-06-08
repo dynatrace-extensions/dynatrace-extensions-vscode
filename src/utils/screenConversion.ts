@@ -880,7 +880,7 @@ export const buildDefaultDqlTable = (
         intentId: "go-to-extensions-manager",
         intentPayload: {
           extensions: JSON.stringify([extensionName]),
-          operation: "configue",
+          operation: "configure",
           appId: "dynatrace.infraops",
         },
       },
