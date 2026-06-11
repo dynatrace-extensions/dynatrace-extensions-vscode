@@ -124,7 +124,8 @@ export async function isExtensionsWorkspace(showWarningMessage: boolean = true):
   const context = getActivationContext();
   const fnLogTrace = [...logTrace, "isExtensionsWorkspace"];
   let status = false;
-  if (context.storageUri && existsSync(context.storageUri.fsPath)) {
+
+  if (context.storageUri) {
     const extensionYaml = getExtensionFilePath();
     if (!extensionYaml) {
       if (showWarningMessage) {
