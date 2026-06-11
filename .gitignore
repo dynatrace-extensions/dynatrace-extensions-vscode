@@ -15,3 +15,5 @@ conversions
 graphify-out
 
 .claude/settings*
+.claude/commands/jira-refine.md
+.claude/commands/jira-deliver.md
