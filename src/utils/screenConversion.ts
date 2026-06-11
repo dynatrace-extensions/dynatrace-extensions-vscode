@@ -1351,8 +1351,8 @@ export const extractCondition = (context: NodeContext, condition: string): Condi
   const parameters = parts.slice(1).reduce(
     (acc, part) => {
       const [key, value] = part.split("=");
-      if (key && value) {
-        acc[key] = value;
+      if (key) {
+        acc[key] = value ?? "";
       }
       return acc;
     },
@@ -1410,10 +1410,7 @@ const entityAttributeConditionDql = (
   context: NodeContext,
   parameters: Record<string, string>,
 ): [string, string] => {
-  let [paramKey, paramValue] = Object.entries(parameters)[0];
-  if (Number.isNaN(Number(paramValue))) {
-    paramValue = `"${paramValue}"`;
-  }
+  let [paramKey, paramValue] = Object.entries(parameters)[0] ?? [];
   const gen2Togen3Fields = invertFieldMap(context.fieldMap);
   if (Object.keys(gen2Togen3Fields).includes(paramKey)) {
     paramKey = gen2Togen3Fields[paramKey];
@@ -1421,6 +1418,16 @@ const entityAttributeConditionDql = (
 
   const field = `entityAttribute.${paramKey}`;
 
+  if (!paramValue) {
+    return [
+      `smartscapeNodes ${context.nodeType} | filter id == $(entityId) | fields ${field} = isNotNull(${paramKey})`,
+      field,
+    ];
+  }
+
+  if (Number.isNaN(Number(paramValue))) {
+    paramValue = `"${paramValue}"`;
+  }
   return [
     `smartscapeNodes ${context.nodeType} | filter id == $(entityId) and ${paramKey} == ${paramValue} | summarize ${field}=count()>0`,
     field,
