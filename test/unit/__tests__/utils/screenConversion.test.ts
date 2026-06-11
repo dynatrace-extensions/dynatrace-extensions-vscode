@@ -35,6 +35,7 @@ import {
   convertHealthCard,
   convertMessageCard,
   convertPropertiesCard,
+  extractCondition,
   generateConversionReport,
   parseDqlQuery,
   shouldSkipByTarget,
@@ -632,6 +633,65 @@ describe("Screen Conversion Utils", () => {
       expect(conds).toHaveLength(0);
       expect(ids).toHaveLength(0);
       expect(warnings.filter(w => w.category === "conditions")).toHaveLength(0);
+    });
+  });
+
+  // -----------------------------------------------------------------------
+  // extractCondition — entityAttribute
+  // -----------------------------------------------------------------------
+  describe("extractCondition / entityAttribute", () => {
+    const nodeCtx: NodeContext = {
+      nodeType: "EXT_NETWORK_DEVICE",
+      fieldMap: {},
+      staticEdges: [],
+    };
+
+    it("value-less: returns isNotNull existence-check DQL and correct field", () => {
+      const result = extractCondition(nodeCtx, "entityAttribute|param_name");
+
+      expect(result).not.toBeNull();
+      expect(result!.field).toBe("entityAttribute.param_name");
+      expect(result!.query).toContain("isNotNull(param_name)");
+      expect(result!.query).not.toContain("summarize");
+    });
+
+    it("value-less: no 'could not be converted' warning", () => {
+      const result = extractCondition(nodeCtx, "entityAttribute|param_name");
+
+      expect(result!.warnings.filter(w => w.category === "conditions")).toHaveLength(0);
+    });
+
+    it("value-less with gen2→gen3 fieldMap: resolves param name in field and DQL", () => {
+      const ctxWithMap: NodeContext = {
+        nodeType: "EXT_NETWORK_DEVICE",
+        // fieldMap is gen3→gen2, so invertFieldMap gives gen2→gen3
+        fieldMap: { param_gen3: "param_legacy" },
+        staticEdges: [],
+      };
+
+      const result = extractCondition(ctxWithMap, "entityAttribute|param_legacy");
+
+      expect(result).not.toBeNull();
+      expect(result!.field).toBe("entityAttribute.param_gen3");
+      expect(result!.query).toContain("isNotNull(param_gen3)");
+    });
+
+    it("value-present regression: still produces summarize count()>0 query", () => {
+      const result = extractCondition(nodeCtx, "entityAttribute|devMonitoringMode=Extension");
+
+      expect(result).not.toBeNull();
+      expect(result!.field).toBe("entityAttribute.devMonitoringMode");
+      expect(result!.query).toContain('devMonitoringMode == "Extension"');
+      expect(result!.query).toContain("summarize entityAttribute.devMonitoringMode=count()>0");
+    });
+
+    it("end-to-end: adjustAllDql wraps $(entityId) via Pass 3 without double-wrapping", () => {
+      const result = extractCondition(nodeCtx, "entityAttribute|param_name");
+      const adjusted = adjustAllDql(result!.query, {}, []);
+
+      expect(adjusted).toContain("toSmartscapeId($(entityId))");
+      expect(adjusted).not.toMatch(/toSmartscapeId\(toSmartscapeId/);
+      expect(adjusted).toContain("isNotNull(param_name)");
     });
   });
 
