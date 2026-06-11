@@ -935,13 +935,13 @@ const createDefaultDqlTableColumns = (fields: Set<string>): (DqlTableColumn | Bu
   },
   {
     builtInColumn: "CUSTOM_ALERTS_COLUMN",
-    displayName: "Health",
-    widthType: "pixels",
-    widthValue: 200,
-    sortable: true,
-    type: "text",
-    defaultColumn: false,
-    perspectives: ["health"],
+    overrides: {
+      displayName: "Health",
+      widthType: "pixels",
+      widthValue: 200,
+      defaultColumn: false,
+      perspectives: ["health"],
+    },
   },
   ...Array.from(fields)
     .filter(field => field !== "name")
