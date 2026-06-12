@@ -144,8 +144,8 @@ export const getConnectedTenant = async () => {
   const tenant = await getTenantsTreeDataProvider()
     .getChildren()
     .then(children =>
-      children.filter(
-        (c): c is DynatraceTenant => c.contextValue.startsWith("currentDynatraceEnvironment"),
+      children.filter((c): c is DynatraceTenant =>
+        c.contextValue.startsWith("currentDynatraceEnvironment"),
       ),
     )
     .then(children => children.pop());
@@ -201,8 +201,8 @@ class TenantsTreeDataProviderImpl implements TenantsTreeDataProvider {
   constructor() {
     this.getChildren()
       .then(children =>
-        children.filter(
-          (c): c is DynatraceTenant => c.contextValue.startsWith("currentDynatraceEnvironment"),
+        children.filter((c): c is DynatraceTenant =>
+          c.contextValue.startsWith("currentDynatraceEnvironment"),
         ),
       )
       .then(children => children.pop())
