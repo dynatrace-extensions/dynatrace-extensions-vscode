@@ -190,6 +190,11 @@
         "icon": "$(file-add)"
       },
       {
+        "command": "dynatrace-extensions-environments.openMigrationGuide",
+        "title": "Migration guide",
+        "icon": "$(book)"
+      },
+      {
         "command": "dynatrace-extensions.createMonitoringConfiguration",
         "title": "Create monitoring configuration",
         "category": "Dynatrace extensions"
@@ -654,6 +659,10 @@
           "when": "false"
         },
         {
+          "command": "dynatrace-extensions-environments.openMigrationGuide",
+          "when": "false"
+        },
+        {
           "command": "dynatrace-extensions-workspaces.enableMetricSelectors",
           "when": "false"
         },
@@ -836,17 +845,17 @@
         },
         {
           "command": "dynatrace-extensions-environments.useEnvironment",
-          "when": "view == dynatrace-extensions-environments && viewItem == dynatraceEnvironment",
+          "when": "view == dynatrace-extensions-environments && (viewItem == dynatraceEnvironment || viewItem == dynatraceEnvironmentNonCompliant)",
           "group": "inline@1"
         },
         {
           "command": "dynatrace-extensions-environments.editEnvironment",
-          "when": "view == dynatrace-extensions-environments && (viewItem == dynatraceEnvironment || viewItem == currentDynatraceEnvironment)",
+          "when": "view == dynatrace-extensions-environments && viewItem =~ /dynatraceEnvironment/",
           "group": "inline@2"
         },
         {
           "command": "dynatrace-extensions-environments.deleteEnvironment",
-          "when": "view == dynatrace-extensions-environments && (viewItem == dynatraceEnvironment || viewItem == currentDynatraceEnvironment)",
+          "when": "view == dynatrace-extensions-environments && viewItem =~ /dynatraceEnvironment/",
           "group": "inline@3"
         },
         {
@@ -873,6 +882,11 @@
           "command": "dynatrace-extensions-environments.saveConfig",
           "when": "view == dynatrace-extensions-environments && viewItem == monitoringConfiguration",
           "group": "inline@3"
+        },
+        {
+          "command": "dynatrace-extensions-environments.openMigrationGuide",
+          "when": "view == dynatrace-extensions-environments && viewItem =~ /NonCompliant$/",
+          "group": "inline"
         }
       ],
       "dynatrace-extensions.diagnostics-menu": [

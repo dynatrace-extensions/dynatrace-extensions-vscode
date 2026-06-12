@@ -23,6 +23,16 @@ import { removeOldestFiles } from "./fileSystem";
 
 type LogLevel = "DEBUG" | "INFO" | "WARN" | "ERROR" | "NONE";
 type NotificationLevel = Extract<LogLevel, "INFO" | "WARN" | "ERROR">;
+
+export interface NotifyAction {
+  title: string;
+  run: () => void | Promise<void>;
+}
+
+export interface NotifyOptions {
+  trace?: string[];
+  actions?: NotifyAction[];
+}
 const CHALK_FORMATS: Record<LogLevel, string> = {
   DEBUG: chalk.white("[DEBUG]"),
   INFO: chalk.green("[INFO]"),
@@ -86,28 +96,57 @@ const getLogChannel = (() => {
 })();
 
 /**
- * Sends a notitification at the specified level to the UI. It also logs the message internally.
+ * Sends a notification at the specified level to the UI. It also logs the message internally.
+ *
+ * Accepts either the legacy spread-trace form (`...trace: string[]`) for backward compatibility,
+ * or an options object `{ trace?, actions? }` to attach clickable action buttons.
+ *
  * @param level level of the notification
  * @param message message of the notification
- * @param trace any trace breadcrumbs for internal logging
+ * @param optionsOrFirstTrace options object OR first trace breadcrumb (legacy callers)
+ * @param remainingTrace additional trace breadcrumbs (legacy callers)
  */
-export const notify = (level: NotificationLevel, message: string, ...trace: string[]) => {
+export const notify = (
+  level: NotificationLevel,
+  message: string,
+  optionsOrFirstTrace?: NotifyOptions | string,
+  ...remainingTrace: string[]
+) => {
+  let trace: string[] = [];
+  let actions: NotifyAction[] | undefined;
+
+  if (typeof optionsOrFirstTrace === "string") {
+    trace = [optionsOrFirstTrace, ...remainingTrace];
+  } else if (optionsOrFirstTrace !== undefined) {
+    trace = optionsOrFirstTrace.trace ?? [];
+    actions = optionsOrFirstTrace.actions;
+  }
+
+  const titles: string[] = actions?.map(a => a.title) ?? [];
+
+  const handleSelection = (selected: string | undefined, logFn: () => void) => {
+    if (selected) {
+      actions?.find(a => a.title === selected)?.run();
+    }
+    logFn();
+  };
+
   switch (level) {
     case "INFO":
-      vscode.window.showInformationMessage(message).then(
-        () => info(message, ...trace),
+      vscode.window.showInformationMessage(message, ...titles).then(
+        selected => handleSelection(selected, () => info(message, ...trace)),
         () => error("Could not create UI notification", ...trace),
       );
       break;
     case "WARN":
-      vscode.window.showWarningMessage(message).then(
-        () => warn(message, ...trace),
+      vscode.window.showWarningMessage(message, ...titles).then(
+        selected => handleSelection(selected, () => warn(message, ...trace)),
         () => error("Could not create UI notification", ...trace),
       );
       break;
     case "ERROR":
-      vscode.window.showErrorMessage(message).then(
-        () => error(message, ...trace),
+      vscode.window.showErrorMessage(message, ...titles).then(
+        selected => handleSelection(selected, () => error(message, ...trace)),
         () => error("Could not create UI notification", ...trace),
       );
       break;
