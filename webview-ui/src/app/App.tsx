@@ -24,6 +24,7 @@ import { NotFound } from "./components/NotFound";
 import { DqlResultsPanel } from "./components/panels/DqlResultsPanel";
 import { ExtensionSimulator } from "./components/panels/ExtensionSimulator";
 import { MetricResultsPanel } from "./components/panels/MetricResultsPanel";
+import { MigrationGuidePanel } from "./components/panels/MigrationGuidePanel";
 import { WmiResultPanel } from "./components/panels/WmiResultPanel";
 
 interface AppProps {
@@ -41,16 +42,16 @@ const WebviewPanel = ({ panelData }: { panelData: PanelData }) => {
   switch (dataType) {
     case PanelDataType.Empty:
       return <NotFound />;
-    case PanelDataType.MetricResults: {
-      //const metricData = panelData;
+    case PanelDataType.MetricResults:
       return <MetricResultsPanel data={data} />;
-    }
     case PanelDataType.DqlResults:
       return <DqlResultsPanel data={data} />;
     case PanelDataType.WmiQueryResults:
       return <WmiResultPanel data={data} />;
     case PanelDataType.ExtensionSimulator:
       return <ExtensionSimulator data={data} />;
+    case PanelDataType.MigrationGuide:
+      return <MigrationGuidePanel data={data} />;
     default:
       return <NotFound />;
   }

@@ -43,6 +43,8 @@ export interface DynatraceTenantDto {
 type TenantsTreeContextValue =
   | "dynatraceEnvironment"
   | "currentDynatraceEnvironment"
+  | "dynatraceEnvironmentNonCompliant"
+  | "currentDynatraceEnvironmentNonCompliant"
   | "monitoringConfiguration"
   | "deployedExtension";
 
@@ -59,7 +61,11 @@ export interface DynatraceTenant extends TenantsTreeItemBase {
   token: string;
   current: boolean;
   deploymentModel: DeploymentModel;
-  contextValue: "currentDynatraceEnvironment" | "dynatraceEnvironment";
+  contextValue:
+    | "currentDynatraceEnvironment"
+    | "dynatraceEnvironment"
+    | "currentDynatraceEnvironmentNonCompliant"
+    | "dynatraceEnvironmentNonCompliant";
 }
 
 export interface MonitoringConfiguration extends TenantsTreeItemBase {

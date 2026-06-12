@@ -15,7 +15,7 @@
  */
 
 import path from "path";
-import { Utils } from "@common";
+import { EnvironmentCommand, Utils } from "@common";
 import vscode from "vscode";
 import { DynatraceClient, createDynatraceClient } from "../dynatrace-api/dynatrace";
 import {
@@ -90,7 +90,25 @@ export const checkTenantSetup = (
     }
   }
   if (issue && notify) {
-    logger.notify("WARN", `${tenant.label}: ${issue}`);
+    logger.notify("WARN", `${tenant.label}: ${issue}`, {
+      actions: [
+        {
+          title: "Edit",
+          run: async () => {
+            const treeItem = await getTenantById(tenant.id);
+            if (!treeItem) {
+              logger.warn(`Could not resolve tree item for tenant ${tenant.id}`);
+              return;
+            }
+            await vscode.commands.executeCommand(EnvironmentCommand.Edit, treeItem);
+          },
+        },
+        {
+          title: "Migration guide",
+          run: () => vscode.commands.executeCommand(EnvironmentCommand.OpenMigrationGuide),
+        },
+      ],
+    });
   }
   return issue;
 };
@@ -126,12 +144,27 @@ export const getConnectedTenant = async () => {
   const tenant = await getTenantsTreeDataProvider()
     .getChildren()
     .then(children =>
-      children.filter(
-        (c): c is DynatraceTenant => c.contextValue === "currentDynatraceEnvironment",
+      children.filter((c): c is DynatraceTenant =>
+        c.contextValue.startsWith("currentDynatraceEnvironment"),
       ),
     )
     .then(children => children.pop());
   return tenant;
+};
+
+/**
+ * Finds a tenant tree item by its id, or undefined if not present.
+ */
+export const getTenantById = async (id: string): Promise<DynatraceTenant | undefined> => {
+  const children = await getTenantsTreeDataProvider().getChildren();
+  return children.find(
+    (c): c is DynatraceTenant =>
+      (c.contextValue === "dynatraceEnvironment" ||
+        c.contextValue === "currentDynatraceEnvironment" ||
+        c.contextValue === "dynatraceEnvironmentNonCompliant" ||
+        c.contextValue === "currentDynatraceEnvironmentNonCompliant") &&
+      c.id === id,
+  );
 };
 
 export const refreshTenantsTreeView = () => {
@@ -168,8 +201,8 @@ class TenantsTreeDataProviderImpl implements TenantsTreeDataProvider {
   constructor() {
     this.getChildren()
       .then(children =>
-        children.filter(
-          (c): c is DynatraceTenant => c.contextValue === "currentDynatraceEnvironment",
+        children.filter((c): c is DynatraceTenant =>
+          c.contextValue.startsWith("currentDynatraceEnvironment"),
         ),
       )
       .then(children => children.pop())
@@ -212,6 +245,8 @@ class TenantsTreeDataProviderImpl implements TenantsTreeDataProvider {
         // For Dynatrace Environments, Extensions are the children items
         case "dynatraceEnvironment":
         case "currentDynatraceEnvironment":
+        case "dynatraceEnvironmentNonCompliant":
+        case "currentDynatraceEnvironmentNonCompliant":
           await element.dt.extensionsV2
             .list()
             .then(list =>
@@ -287,6 +322,11 @@ const createDynatraceTenantTreeItem = (tenant: DynatraceTenantDto): DynatraceTen
   const { label, id, url, token, deploymentModel, current } = tenant;
   const dtToken = decryptToken(token);
   const [iconPath, tooltip] = getTenantIconAndTooltip(tenant);
+  const setupIssue = checkTenantSetup(tenant);
+  const baseContextValue = current ? "currentDynatraceEnvironment" : "dynatraceEnvironment";
+  const contextValue: DynatraceTenant["contextValue"] = setupIssue
+    ? `${baseContextValue}NonCompliant`
+    : baseContextValue;
   return {
     ...new vscode.TreeItem(label ?? id, vscode.TreeItemCollapsibleState.Collapsed),
     url,
@@ -296,7 +336,7 @@ const createDynatraceTenantTreeItem = (tenant: DynatraceTenantDto): DynatraceTen
     tooltip,
     current,
     deploymentModel,
-    contextValue: current ? "currentDynatraceEnvironment" : "dynatraceEnvironment",
+    contextValue,
     iconPath,
   } as DynatraceTenant;
 };
