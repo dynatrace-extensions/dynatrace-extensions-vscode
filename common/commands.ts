@@ -91,6 +91,7 @@ export const EnvironmentCommand = createCommands(EnvironmentCommandPrefix, {
   DeleteConfig: "deleteConfig",
   SaveConfig: "saveConfig",
   OpenExtension: "openExtension",
+  OpenMigrationGuide: "openMigrationGuide",
 } as const);
 // eslint-disable-next-line @typescript-eslint/no-redeclare
 export type EnvironmentCommand = ObjectValues<typeof EnvironmentCommand>;
