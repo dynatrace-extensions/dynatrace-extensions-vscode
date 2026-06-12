@@ -42,10 +42,8 @@ const WebviewPanel = ({ panelData }: { panelData: PanelData }) => {
   switch (dataType) {
     case PanelDataType.Empty:
       return <NotFound />;
-    case PanelDataType.MetricResults: {
-      //const metricData = panelData;
+    case PanelDataType.MetricResults:
       return <MetricResultsPanel data={data} />;
-    }
     case PanelDataType.DqlResults:
       return <DqlResultsPanel data={data} />;
     case PanelDataType.WmiQueryResults:
