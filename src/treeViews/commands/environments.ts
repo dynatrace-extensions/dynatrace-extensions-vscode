@@ -41,6 +41,7 @@ import logger from "../../utils/logging";
 import { createObjectFromSchema } from "../../utils/schemaParsing";
 import { ConfirmOption, showQuickPick, showQuickPickConfirm } from "../../utils/vscode";
 import { refreshTenantsTreeView } from "../tenantsTreeView";
+import { openMigrationGuidePanel } from "../../webviews/migrationGuide";
 
 const logTrace = ["treeViews", "commands", "environments"];
 
@@ -176,6 +177,7 @@ export const registerTenantsViewCommands = () => {
           );
         }),
     ),
+    vscode.commands.registerCommand(EnvironmentCommand.OpenMigrationGuide, openMigrationGuidePanel),
   ];
 };
 
