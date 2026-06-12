@@ -26,7 +26,7 @@ type NotificationLevel = Extract<LogLevel, "INFO" | "WARN" | "ERROR">;
 
 export interface NotifyAction {
   title: string;
-  run: () => void | Promise<void>;
+  run: () => void | PromiseLike<void>;
 }
 
 export interface NotifyOptions {
@@ -126,7 +126,7 @@ export const notify = (
 
   const handleSelection = (selected: string | undefined, logFn: () => void) => {
     if (selected) {
-      actions?.find(a => a.title === selected)?.run();
+      void actions?.find(a => a.title === selected)?.run();
     }
     logFn();
   };

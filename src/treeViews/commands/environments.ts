@@ -40,8 +40,8 @@ import { parseJSON } from "../../utils/jsonParsing";
 import logger from "../../utils/logging";
 import { createObjectFromSchema } from "../../utils/schemaParsing";
 import { ConfirmOption, showQuickPick, showQuickPickConfirm } from "../../utils/vscode";
-import { refreshTenantsTreeView } from "../tenantsTreeView";
 import { openMigrationGuidePanel } from "../../webviews/migrationGuide";
+import { refreshTenantsTreeView } from "../tenantsTreeView";
 
 const logTrace = ["treeViews", "commands", "environments"];
 
