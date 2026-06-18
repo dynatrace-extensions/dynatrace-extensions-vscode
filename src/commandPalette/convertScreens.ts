@@ -531,6 +531,20 @@ function buildInvExDefinition(
         type: "vertical-layout",
         items,
       },
+      filtering: {
+        id: `${nodeType}-filtering`,
+        type: "filtering",
+        filters: [
+          {
+            id: "entity-name",
+            title: "Entity name",
+            type: "text",
+            fieldIds: "entity.name",
+            query: "$operation(entity.name)",
+            defaultFilter: true,
+          },
+        ],
+      },
     },
   };
 
