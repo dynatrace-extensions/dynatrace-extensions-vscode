@@ -485,6 +485,11 @@ function buildEntityDetailsDefinition(
   };
 }
 
+function fieldToTitle(field: string): string {
+  const lastPart = field.split(".").pop() ?? field;
+  return lastPart.replace(/[_-]+/g, " ").replace(/\b\w/g, c => c.toUpperCase());
+}
+
 function buildColumnFilters(items: LayoutElement[]): DqlTextFilter[] {
   const seen = new Set<string>();
   const filters: DqlTextFilter[] = [];
@@ -496,7 +501,7 @@ function buildColumnFilters(items: LayoutElement[]): DqlTextFilter[] {
       seen.add(col.field);
       filters.push({
         id: col.field,
-        title: col.displayName ?? col.field,
+        title: fieldToTitle(col.field),
         type: "text",
         fieldIds: col.field,
       });
