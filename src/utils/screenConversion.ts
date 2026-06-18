@@ -935,6 +935,8 @@ const createDefaultDqlTableColumns = (fields: Set<string>): (DqlTableColumn | Bu
     field: "name",
     displayName: "Name",
     defaultColumn: true,
+    sortable: true,
+    sortDescFirst: true,
     perspectives: ["health", "metadata"],
   },
   {
@@ -957,6 +959,7 @@ const createDqlTableColumn = (field: string): DqlTableColumn => ({
   displayName: field,
   field,
   defaultColumn: field === "name",
+  sortable: true,
   perspectives: ["id", "name", "type"].includes(field) ? ["health", "metadata"] : ["metadata"],
 });
 
