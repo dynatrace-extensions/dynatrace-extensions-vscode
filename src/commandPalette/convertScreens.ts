@@ -499,7 +499,6 @@ function buildColumnFilters(items: LayoutElement[]): DqlTextFilter[] {
         title: col.displayName ?? col.field,
         type: "text",
         fieldIds: col.field,
-        query: `$operation(${col.field})`,
       });
     }
   }
