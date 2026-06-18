@@ -374,6 +374,46 @@ describe("Screen Conversion Utils", () => {
       expect(result).toBeNull();
       expect(warnings[0].category).toBe("skipped-classic");
     });
+
+    it("applies sort defaults to all columns", () => {
+      const card: DqlTableCardStub = {
+        key: "test-sort",
+        query: { query: "fetch `dt.entity.test`" },
+        columns: [
+          { field: "name", displayName: "Name" },
+          { field: "status", displayName: "Status", sortable: false },
+        ],
+      };
+      const warnings: ConversionWarning[] = [];
+
+      const [result] = convertDqlTableCard(minimalCtx, card, warnings, "PLATFORM");
+
+      expect(result).not.toBeNull();
+      const columns = defined(result).columns as Record<string, unknown>[];
+      expect(columns[0].sortable).toBe(true);
+      expect(columns[1].sortable).toBe(true);
+      expect(columns[0].sortDescFirst).toBe(true);
+      expect(columns[1].sortDescFirst).toBeUndefined();
+    });
+
+    it("propagates defaultColumn property correctly", () => {
+      const card: DqlTableCardStub = {
+        key: "test-default-col",
+        query: { query: "fetch `dt.entity.test`" },
+        columns: [
+          { field: "name", displayName: "Name", defaultColumn: true },
+          { field: "status", displayName: "Status" },
+        ],
+      };
+      const warnings: ConversionWarning[] = [];
+
+      const [result] = convertDqlTableCard(minimalCtx, card, warnings, "PLATFORM");
+
+      expect(result).not.toBeNull();
+      const columns = defined(result).columns as Record<string, unknown>[];
+      expect(columns[0].defaultColumn).toBe(true);
+      expect(columns[1].defaultColumn).toBeUndefined();
+    });
   });
 
   // -----------------------------------------------------------------------
