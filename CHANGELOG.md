@@ -1,34 +1,21 @@
 # Change Log
 
-## Version 2.12.3 (15.05.2026)
+## Version 3.0.0 (unreleased)
+
+### ⚠️ Breaking changes
+
+- Existing SaaS Tenant connections will no longer work. These will show up in red, and you should edit each one adjusting the following details:
+  1. The URL must use a Platform domain (`*.apps.*`)
+  2. The token must be a [Platform Token](https://docs.dynatrace.com/docs/shortlink/platform-tokens) (`dt0s16.*`)
 
 ### 🚀 Improved in this version:
 
-- [Smartscape - add Grail important fields and id_classic to converter](https://github.com/dynatrace-extensions/dynatrace-extensions-vscode/pull/301)
+- SaaS and Managed environment connections are handled differently, with SaaS leveraging Platform SDKs and DQL queries
+- Icons have been updated to reflect Dynatrace's latest branding
 
----
+### ✨ New in this version:
 
-## Version 2.12.2 (05.05.2026)
-
-### 🪲 Fixed in this version:
-
-- [Generating certificates command results in an invalid dev certificate](https://github.com/dynatrace-extensions/dynatrace-extensions-vscode/issues/300)
-
----
-
-## Version 2.12.1 (01.05.2026)
-
-### 🪲 Fixed in this version:
-
-- [Handle $exists() valuePattern for log fields when converting to smartscape 2.0 matchers](https://github.com/dynatrace-extensions/dynatrace-extensions-vscode/pull/299)
-
----
-
-## Version 2.12.0 (21.04.2026)
-
-### 🚀 Improved in this version:
-
-- [Smartscape - add primary tags, primary fields and code lens for it](https://github.com/dynatrace-extensions/dynatrace-extensions-vscode/pull/298)
+- Command to convert unified analysis screens; this generates documents within the extension folder but requires topology to have been converted first.
 
 ---
 
@@ -59,18 +46,6 @@
 - https://github.com/dynatrace-extensions/dynatrace-extensions-vscode/security/dependabot/115
 
 ---
-## Version 3.0.0 (unreleased)
-
-### ⚠️ Breaking changes
-
-- Existing SaaS Tenant connections will no longer work. These will show up in red, and you should edit each one adjusting the following details:
-  1. The URL must use a Platform domain (`*.apps.*`)
-  2. The token must be a [Platform Token](https://docs.dynatrace.com/docs/shortlink/platform-tokens) (`dt0s16.*`)
-
-### 🚀 Improved in this version:
-
-- SaaS and Managed environment connections are handled differently, with SaaS leveraging Platform SDKs and DQL queries
-- Icons have been updated from Dynatrace's latest set
 
 ## Version 2.11.0 (23.03.2026)
 
