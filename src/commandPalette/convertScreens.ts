@@ -486,8 +486,7 @@ function buildEntityDetailsDefinition(
 }
 
 function fieldToTitle(field: string): string {
-  const lastPart = field.split(".").pop() ?? field;
-  return lastPart.replace(/[_-]+/g, " ").replace(/\b\w/g, c => c.toUpperCase());
+  return field.replace(/[._-]+/g, " ").replace(/\b\w/g, c => c.toUpperCase());
 }
 
 function buildColumnFilters(items: LayoutElement[]): DqlTextFilter[] {

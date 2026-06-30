@@ -775,10 +775,7 @@ export function convertDqlTableCard(
   }
 
   const columns = (card.columns ?? []).map(col => convertDqlTableColumn(col));
-  columns.forEach((col, i) => {
-    col.sortable = true;
-    if (i === 0) col.sortDescFirst = true;
-  });
+  if (columns.length > 0) columns[0].sortDescFirst = true;
   const idField = columns.length > 0 ? card.columns?.[0].field ?? "id" : "id";
 
   const dqlQuery: DqlTableQuery = {
@@ -818,6 +815,7 @@ function convertDqlTableColumn(col: DqlTableColumnStub): DqlTableColumn {
     id: col.field,
     field: col.field,
     displayName: col.displayName ?? col.field,
+    sortable: true,
   };
   if (col.columnType) result.type = col.columnType.toLowerCase() as DqlTableColumnType;
   if (col.widthType) result.widthType = col.widthType.toLowerCase() as DqlTableColumnWidthType;
