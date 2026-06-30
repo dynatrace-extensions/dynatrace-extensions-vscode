@@ -31,6 +31,7 @@ import {
 import * as vscode from "vscode";
 import { OpenPipelinePipeline } from "../interfaces/extensionDocs";
 import {
+  DetailsScreenCard,
   DetailsSettings,
   PropertiesCard,
   ScreenStub,
@@ -713,7 +714,7 @@ const SKIPPED_CARD_TYPES = new Set(["INJECTIONS", "BREAK_LINE", "ENTITIES_LIST",
  * Resolves details layout cards into tab items.
  * If layout is not specified or autoGenerate is true, all screen-level cards are included.
  */
-function resolveDetailsCards(
+export function resolveDetailsCards(
   context: ScreenConversionContext,
   settings: DetailsSettings,
   warnings: ConversionWarning[],
@@ -728,6 +729,45 @@ function resolveDetailsCards(
   const messageElements: Message[] = [];
 
   for (const ref of cardRefs) {
+    if (ref.type === "CARD_GROUP") {
+      const groupHint = hint ? `${hint}.card-group` : "card-group";
+      const [childItems, childConditionIds] = resolveGroupChildren(
+        context,
+        ref.cards ?? [],
+        warnings,
+        resolveTarget(ref.target, settingsTarget),
+        groupHint,
+      );
+      if (childItems.length === 0) {
+        addWarning(
+          warnings,
+          "skipped-out-of-scope",
+          `CARD_GROUP "${ref.displayName ?? ""}" produced no convertible cards`,
+          hint,
+        );
+        continue;
+      }
+      screenConditionIds.push(...childConditionIds);
+
+      const [groupConditions, groupConditionIds] = convertConditions(
+        context,
+        ref.conditions ?? [],
+        warnings,
+        hint,
+      );
+      screenConditionIds.push(...groupConditionIds);
+
+      const baseId = slugifyTabId(ref.displayName) || `card-group-${tabs.length}`;
+      tabs.push({
+        type: "tab",
+        id: dedupeTabId(baseId, tabs),
+        title: ref.displayName?.trim() || baseId,
+        conditions: groupConditions,
+        content: [{ type: "vertical-layout", items: childItems }],
+      });
+      continue;
+    }
+
     if (SKIPPED_CARD_TYPES.has(ref.type)) {
       if (ref.type !== "INJECTIONS") {
         addWarning(
@@ -767,7 +807,7 @@ function resolveDetailsCards(
       const cardDef = lookupCardDefinition(ref.key, ref.type, screen);
       tabs.push({
         type: "tab",
-        id: ref.key,
+        id: dedupeTabId(ref.key, tabs),
         title: getCardDisplayName(cardDef, ref.key),
         conditions: refConditions,
         content: [{ type: "vertical-layout", items: [element] }],
@@ -791,7 +831,7 @@ function resolveDetailsCards(
 /**
  * Resolves list layout cards into layout items (vertical-layout children).
  */
-function resolveListCards(
+export function resolveListCards(
   context: ScreenConversionContext,
   warnings: ConversionWarning[],
 ): [LayoutElement[], string[]] {
@@ -803,6 +843,20 @@ function resolveListCards(
   const items: LayoutElement[] = [];
 
   for (const ref of cardRefs) {
+    if ((ref as unknown as { type: string }).type === "CARD_GROUP") {
+      const groupHint = `listSettings.card-group`;
+      const [childItems, childConditionIds] = resolveGroupChildren(
+        context,
+        (ref as unknown as DetailsScreenCard).cards ?? [],
+        warnings,
+        ref.target,
+        groupHint,
+      );
+      items.push(...childItems);
+      conditionIds.push(...childConditionIds);
+      continue;
+    }
+
     const cardHint = `listSettings.${ref.key}`;
     if (SKIPPED_CARD_TYPES.has(ref.type)) {
       if (ref.type !== "INJECTIONS") {
@@ -841,6 +895,102 @@ function resolveListCards(
   }
 
   return [items, conditionIds];
+}
+
+/**
+ * Resolves the child cards of a CARD_GROUP into vertical-layout items, in document order.
+ * Out-of-scope children are skipped with a warning, MESSAGE children are kept inline,
+ * and nested CARD_GROUPs are flattened into the same item list.
+ */
+function resolveGroupChildren(
+  context: ScreenConversionContext,
+  childRefs: DetailsScreenCard[],
+  warnings: ConversionWarning[],
+  parentTarget?: string,
+  hint?: string,
+): [LayoutElement[], string[]] {
+  const items: LayoutElement[] = [];
+  const conditionIds: string[] = [];
+
+  for (const child of childRefs) {
+    const childHint = hint ? `${hint}.${child.key ?? child.displayName ?? "card"}` : child.key;
+
+    if (child.type === "CARD_GROUP") {
+      const [nestedItems, nestedConditionIds] = resolveGroupChildren(
+        context,
+        child.cards ?? [],
+        warnings,
+        resolveTarget(child.target, parentTarget),
+        childHint,
+      );
+      items.push(...nestedItems);
+      conditionIds.push(...nestedConditionIds);
+      continue;
+    }
+
+    if (SKIPPED_CARD_TYPES.has(child.type)) {
+      if (child.type !== "INJECTIONS") {
+        addWarning(
+          warnings,
+          "skipped-out-of-scope",
+          `Card type "${child.type}" (key: "${child.key}") skipped`,
+          childHint,
+        );
+      }
+      continue;
+    }
+
+    const [element, elementConditionIds] = resolveCardByRef(
+      child,
+      context,
+      warnings,
+      resolveTarget(child.target, parentTarget),
+      childHint,
+    );
+    if (!element) continue;
+    conditionIds.push(...elementConditionIds);
+
+    const [refConditions, refConditionIds] = convertConditions(
+      context,
+      child.conditions ?? [],
+      warnings,
+      childHint,
+    );
+    // Attach the layout-ref conditions to the element itself (group children are
+    // vertical-layout items, not tabs, so they carry their own conditions). Gate on the
+    // element's type — not `"conditions" in element` — because converters only create the
+    // `conditions` property when the card *definition* had conditions; ref-level conditions
+    // would otherwise be silently dropped along with their conditionContext ids.
+    if (
+      refConditions.length > 0 &&
+      (element.type === "chart-group" || element.type === "dql-table" || element.type === "message")
+    ) {
+      element.conditions = [...(element.conditions ?? []), ...refConditions];
+      conditionIds.push(...refConditionIds);
+    }
+
+    items.push(element);
+  }
+
+  return [items, conditionIds];
+}
+
+/** Lowercases and hyphenates a displayName into a stable tab id fragment. */
+function slugifyTabId(displayName?: string): string {
+  if (!displayName) return "";
+  return displayName
+    .toLowerCase()
+    .replace(/[^a-z0-9]+/g, "-")
+    .replace(/^-+|-+$/g, "");
+}
+
+/** Ensures the candidate tab id is unique among already-emitted tabs. */
+function dedupeTabId(candidate: string, tabs: Tab[]): string {
+  const used = new Set(tabs.map(t => t.id));
+  if (!used.has(candidate)) return candidate;
+  let i = 2;
+  while (used.has(`${candidate}-${i}`)) i++;
+  return `${candidate}-${i}`;
 }
 
 /**

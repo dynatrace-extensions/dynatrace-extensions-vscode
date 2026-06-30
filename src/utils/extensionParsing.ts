@@ -977,7 +977,8 @@ type CardMeta = {
     | "EVENTS"
     | "METRIC_TABLE"
     | "HEALTH_CARD"
-    | "INJECTIONS";
+    | "INJECTIONS"
+    | "CARD_GROUP";
 };
 
 /**
@@ -1000,7 +1001,9 @@ export function getReferencedCardsMeta(screenIdx: number, extension: ExtensionSt
     extension.screens?.[screenIdx].detailsSettings as DetailsSettings | undefined
   )?.layout?.cards;
   if (detailsSettingsCards) {
-    unparsedCards.push(...detailsSettingsCards.filter(c => c.type !== "INJECTIONS"));
+    unparsedCards.push(
+      ...detailsSettingsCards.filter(c => c.type !== "INJECTIONS" && c.type !== "CARD_GROUP"),
+    );
   }
 
   const detailsInjectionsCards = extension.screens?.[screenIdx].detailsInjections;

@@ -39,6 +39,7 @@ export const DetailInjectionCardType = {
   EVENTS: "EVENTS",
   METRIC_TABLE: "METRIC_TABLE",
   INJECTIONS: "INJECTIONS",
+  CARD_GROUP: "CARD_GROUP",
 } as const;
 // eslint-disable-next-line @typescript-eslint/no-redeclare
 export type DetailInjectionCardType = UtilTypes.ObjectValues<typeof DetailInjectionCardType>;
@@ -186,6 +187,10 @@ export interface DetailsScreenCard extends Conditional {
   entitySelectorTemplate?: string;
   target?: string;
   type: DetailInjectionCardType;
+  // Populated only when type === "CARD_GROUP": a named container (its `key`
+  // field is absent at runtime) wrapping an ordered list of child card refs.
+  displayName?: string;
+  cards?: DetailsScreenCard[];
 }
 
 export interface DetailsSettings {

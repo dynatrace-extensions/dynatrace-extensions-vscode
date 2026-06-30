@@ -1313,7 +1313,8 @@ export function convertConditions(
       dqlConditions.push({
         type: "dql-variable",
         variable: extractedCondition.field,
-        value: true,
+        // Negated conditions render when the (positive) DQL field is false.
+        value: !extractedCondition.negated,
       });
     }
 
@@ -1341,12 +1342,49 @@ export const extractConditions = (context: NodeContext, content: string): Condit
       conditions.push(condition);
     }
   }
+  flagFieldCollisions(conditions);
   return conditions;
+};
+
+/**
+ * Flags conditions that resolve to the same generated DQL field but with different queries —
+ * e.g. `entityAttribute|extension_os=MacOS` and `entityAttribute|extension_os=Solaris` both
+ * produce the value-agnostic field `entityAttribute.extension_os`. The conditionContext keys on
+ * the field, so it cannot represent both queries at once; these need manual review. Conditions
+ * that share a field with an identical query (such as a positive/negated pair) are not flagged.
+ */
+const flagFieldCollisions = (conditions: ConditionInfo[]): void => {
+  const byField = new Map<string, ConditionInfo[]>();
+  for (const condition of conditions) {
+    const group = byField.get(condition.field) ?? [];
+    group.push(condition);
+    byField.set(condition.field, group);
+  }
+
+  for (const [field, group] of byField) {
+    const distinctQueries = new Set(group.map(c => c.query));
+    if (distinctQueries.size <= 1) continue;
+    group.forEach(condition =>
+      condition.warnings.push({
+        category: "conditions",
+        message:
+          `Condition "${condition.original}" shares the generated field "${field}" with another ` +
+          `condition that has a different query; the conditionContext cannot represent both, so ` +
+          `it needs manual review.`,
+      }),
+    );
+  }
 };
 
 export const extractCondition = (context: NodeContext, condition: string): ConditionInfo | null => {
   const id = createIdHash(condition);
-  const parts = condition.split("|");
+  // A leading "!" negates the condition. Strip it for parsing the name/parameters and
+  // building the DQL (which always describes the positive check); the negation is applied
+  // later as the dql-variable value. Keep `id`/`original` based on the raw string so they
+  // match the layout-ref lookup and stay distinct from the positive variant.
+  const negated = condition.startsWith("!");
+  const normalized = negated ? condition.slice(1) : condition;
+  const parts = normalized.split("|");
   const name = parts[0] as ConditionName;
   const parameters = parts.slice(1).reduce(
     (acc, part) => {
@@ -1399,6 +1437,7 @@ export const extractCondition = (context: NodeContext, condition: string): Condi
     parameters,
     query,
     field,
+    negated,
     original: condition,
     warnings,
   };

@@ -74,6 +74,8 @@ export interface ConditionInfo {
   original: string;
   query: string;
   field: string;
+  /** True when the source condition was negated (prefixed with "!"). */
+  negated: boolean;
   warnings: ConversionWarning[];
 }
 

@@ -36,6 +36,7 @@ import {
   convertMessageCard,
   convertPropertiesCard,
   extractCondition,
+  extractConditions,
   generateConversionReport,
   parseDqlQuery,
   shouldSkipByTarget,
@@ -633,6 +634,123 @@ describe("Screen Conversion Utils", () => {
       expect(conds).toHaveLength(0);
       expect(ids).toHaveLength(0);
       expect(warnings.filter(w => w.category === "conditions")).toHaveLength(0);
+    });
+
+    it("emits value:true for a positive condition and value:false for its negation", () => {
+      const positive = "entityAttribute|extension_os=MacOS";
+      const negated = "!entityAttribute|extension_os=MacOS";
+      const posInfo = extractCondition(minimalCtx, positive)!;
+      const negInfo = extractCondition(minimalCtx, negated)!;
+      const ctx = { ...minimalCtx, conditions: { [posInfo.id]: posInfo, [negInfo.id]: negInfo } };
+
+      const [posConds, posIds] = convertConditions(ctx, [positive], []);
+      expect(posConds).toEqual([
+        { type: "dql-variable", variable: "entityAttribute.extension_os", value: true },
+      ]);
+      expect(posIds).toContain(posInfo.id);
+
+      const [negConds, negIds] = convertConditions(ctx, [negated], []);
+      expect(negConds).toEqual([
+        { type: "dql-variable", variable: "entityAttribute.extension_os", value: false },
+      ]);
+      expect(negIds).toContain(negInfo.id);
+    });
+  });
+
+  // -----------------------------------------------------------------------
+  // extractCondition — negation
+  // -----------------------------------------------------------------------
+  describe("extractCondition / negation", () => {
+    const nodeCtx: NodeContext = {
+      nodeType: "EXT_NETWORK_DEVICE",
+      fieldMap: {},
+      staticEdges: [],
+    };
+
+    it("strips the leading '!' to parse name/field and marks the condition negated", () => {
+      const result = extractCondition(nodeCtx, "!entityAttribute|extension_os=MacOS");
+
+      expect(result).not.toBeNull();
+      expect(result!.negated).toBe(true);
+      expect(result!.field).toBe("entityAttribute.extension_os");
+      expect(result!.query).toContain('extension_os == "MacOS"');
+      // The id/original must reflect the raw string so it matches the layout-ref lookup.
+      expect(result!.original).toBe("!entityAttribute|extension_os=MacOS");
+    });
+
+    it("handles a negated metricAvailable condition", () => {
+      const result = extractCondition(
+        nodeCtx,
+        "!metricAvailable|metric=remote_unix.disk_average_latency",
+      );
+
+      expect(result).not.toBeNull();
+      expect(result!.negated).toBe(true);
+      expect(result!.field).toBe("metricAvailable.remote_unix.disk_average_latency");
+    });
+
+    it("marks a non-negated condition as negated=false", () => {
+      const result = extractCondition(nodeCtx, "entityAttribute|extension_os=MacOS");
+
+      expect(result!.negated).toBe(false);
+    });
+  });
+
+  // -----------------------------------------------------------------------
+  // extractConditions — field collisions
+  // -----------------------------------------------------------------------
+  describe("extractConditions / field collisions", () => {
+    const nodeCtx: NodeContext = {
+      nodeType: "EXT_NETWORK_DEVICE",
+      fieldMap: {},
+      staticEdges: [],
+    };
+
+    /** Serializes condition strings the way convertScreens does (one per line). */
+    const screenContent = (conditions: string[]): string =>
+      JSON.stringify({ cards: conditions.map(c => ({ conditions: [c] })) }, null, 2);
+
+    it("flags conditions that share a field but differ in query for manual review", () => {
+      const content = screenContent([
+        "entityAttribute|extension_os=MacOS",
+        "entityAttribute|extension_os=Solaris",
+      ]);
+
+      const results = extractConditions(nodeCtx, content);
+
+      expect(results).toHaveLength(2);
+      results.forEach(r => {
+        expect(r.field).toBe("entityAttribute.extension_os");
+        const reviewWarnings = r.warnings.filter(
+          w => w.category === "conditions" && /manual review/i.test(w.message),
+        );
+        expect(reviewWarnings).toHaveLength(1);
+      });
+    });
+
+    it("does not flag a single value-bearing condition", () => {
+      const content = screenContent(["entityAttribute|extension_os=MacOS"]);
+
+      const results = extractConditions(nodeCtx, content);
+
+      expect(results).toHaveLength(1);
+      expect(
+        results[0].warnings.filter(w => /manual review/i.test(w.message)),
+      ).toHaveLength(0);
+    });
+
+    it("does not flag a positive/negated pair sharing the same query", () => {
+      const content = screenContent([
+        "metricAvailable|metric=remote_unix.disk_average_latency",
+        "!metricAvailable|metric=remote_unix.disk_average_latency",
+      ]);
+
+      const results = extractConditions(nodeCtx, content);
+
+      expect(results).toHaveLength(2);
+      results.forEach(r =>
+        expect(r.warnings.filter(w => /manual review/i.test(w.message))).toHaveLength(0),
+      );
     });
   });
 
