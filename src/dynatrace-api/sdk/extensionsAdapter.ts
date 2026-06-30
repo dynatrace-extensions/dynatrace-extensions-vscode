@@ -111,7 +111,7 @@ export class SdkExtensionsServiceV2 implements ExtensionsServiceV2Interface {
           () =>
             this.definitions.listExtensionVersions({
               extensionName,
-              nextPageKey: pageKey,
+              pageKey,
               abortSignal: signal,
             }),
           signal,
@@ -183,7 +183,7 @@ export class SdkExtensionsServiceV2 implements ExtensionsServiceV2Interface {
           () =>
             this.definitions.listExtensionInfos({
               name: name ?? undefined,
-              nextPageKey: pageKey,
+              pageKey,
               abortSignal: signal,
             }),
           signal,
@@ -214,7 +214,7 @@ export class SdkExtensionsServiceV2 implements ExtensionsServiceV2Interface {
               extensionName,
               version,
               active: activeOnly,
-              nextPageKey: pageKey,
+              pageKey,
               abortSignal: signal,
             }),
           signal,

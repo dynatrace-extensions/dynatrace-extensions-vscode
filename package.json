@@ -39,6 +39,11 @@
   "contributes": {
     "commands": [
       {
+        "command": "dynatrace-extensions.convertScreens",
+        "title": "Convert screens",
+        "category": "Dynatrace extensions"
+      },
+      {
         "command": "dynatrace-extensions.loadSchemas",
         "title": "Load schemas",
         "category": "Dynatrace extensions"
@@ -1033,7 +1038,10 @@
     "typescript": "^5.5.3"
   },
   "dependencies": {
-    "axios": "^1.16.1",
+    "@dynatrace-internal/client-extensions": "^0.8.0",
+    "@dynatrace-sdk/http-client": "^1.4.0",
+    "@dynatrace/unified-analysis": "^1.0.0-rc-1775548636367",
+    "axios": "^1.15.0",
     "chalk": "^4.1.2",
     "form-data": "^4.0.4",
     "fs-extra": "^11.2.0",

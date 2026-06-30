@@ -93,3 +93,14 @@ export interface WorkspacesTreeDataProvider extends vscode.TreeDataProvider<Work
   getTreeItem: (element: WorkspaceTreeItem) => vscode.TreeItem;
   getChildren: (element?: WorkspaceTreeItem) => WorkspaceTreeItem[];
 }
+
+export interface IconPath {
+  /**
+   * The icon path for the light theme.
+   */
+  light: string | vscode.Uri;
+  /**
+   * The icon path for the dark theme.
+   */
+  dark: string | vscode.Uri;
+}

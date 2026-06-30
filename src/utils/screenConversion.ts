@@ -18,7 +18,6 @@
  * UTILITIES FOR SCREEN CONVERSION (YAML → JSON document format)
  ********************************************************************************/
 
-import { getIndicatorsLookup } from "@dynatrace/unified-analysis";
 import {
   BuiltInColumn,
   CardActions,
@@ -38,6 +37,12 @@ import {
   Message,
   Metadata,
 } from "@dynatrace/unified-analysis/documents";
+// Internal path used because no public subpath exposes this function without browser-only deps.
+// health.constants.js (same package) imports react/jsx-runtime + strato packages at eval time.
+// esbuild aliases in package.json redirect those to stubs so the extension host bundle stays clean.
+// If @dynatrace/unified-analysis ever exposes a browser-free subpath for DQL utilities, remove
+// this deep import and the alias stubs in scripts/stubs/.
+import { getIndicatorsLookup } from "@dynatrace/unified-analysis/src/shared/utils/health/dql/getIndicatorsLookup";
 import {
   AttributeProperty,
   ChartsCardStub,
@@ -57,6 +62,7 @@ import {
   ConversionWarning,
   DqlTableColumnType,
   DqlTableColumnWidthType,
+  EntityToNodeMap,
   FoldTransformation,
   MessageColor,
   NodeContext,
@@ -431,7 +437,7 @@ export function convertDqlTableCard(
   }
 
   const columns = (card.columns ?? []).map(col => convertDqlTableColumn(col));
-  const idField = columns.length > 0 ? (card.columns?.[0].field ?? "id") : "id";
+  const idField = columns.length > 0 ? card.columns?.[0].field ?? "id" : "id";
 
   const dqlQuery: DqlTableQuery = {
     idField,
@@ -530,16 +536,8 @@ export const buildDefaultDqlTable = (
     dqlQuery: {
       idField: "id",
       query: `smartscapeNodes ${nodeType}\n| fieldsAdd ${Array.from(fields).join(", ")}`,
-      lookups: [
-        getIndicatorsLookup({
-          mainAlertConfig: { alertGroups: [] },
-          sourceField: "id",
-          filterExpression: `in(affected_entity_types, "${nodeType}")`,
-        }),
-      ],
-      additionalCommands: [
-        { query: "", dependencies: [], fields: [...fields, "healthIndicators", "customAlerts"] },
-      ],
+      lookups: [],
+      additionalCommands: [],
     },
     columns: createDefaultDqlTableColumns(fields),
     perspectives: [
@@ -554,6 +552,10 @@ export const buildDefaultDqlTable = (
         description: "All attributes available for this node type",
       },
     ],
+    alertLookupParams: {
+      lookupField: "id",
+      filterExpression: `in(affected_entity_types, "${nodeType}")`,
+    },
     alertGroups: [
       {
         groupName: "Metric alerts",
@@ -829,3 +831,66 @@ export function convertConditions(
     value: `/* TODO: ${condition} */`,
   }));
 }
+
+// General
+
+export const adjustAllDql = (
+  content: string,
+  entityToNodeMap: EntityToNodeMap,
+  warnings: ConversionWarning[],
+): string => {
+  // Change the command
+  // fetch `dt.entity.someType`  →  smartscapeNodes SOMETYPE
+  let adjustedContent = content;
+  adjustedContent = adjustedContent.replace(/fetch\s+`dt\.entity\.(.+?)`/g, (match, entityType) => {
+    if (!entityType) return match; // No entity type captured, return original
+    if (Object.keys(entityToNodeMap).includes(String(entityType))) {
+      const { nodeType } = entityToNodeMap[entityType as keyof EntityToNodeMap];
+      if (nodeType) {
+        return `smartscapeNodes ${nodeType.toUpperCase()}`;
+      } else {
+        addWarning(
+          warnings,
+          "dql-conversion",
+          `No node type mapping found for entity type "${entityType}" in DQL query: "${match}"`,
+        );
+        return match; // No mapping found, return original
+      }
+    }
+    // Try optimistic conversion
+    addWarning(
+      warnings,
+      "dql-conversion",
+      `Entity type "${entityType}" in DQL query is external to extension; conversion may be inaccurate: "${match}"`,
+    );
+    return `smartscapeNodes ${String(entityType).toUpperCase()}`; // Entity type not in mapping, return original
+  });
+
+  // Change all dimension values
+  // dt.entity.someType  →  dt.smartscape.someType
+  adjustedContent = adjustedContent.replace(/dt\.entity\.(.+?)`/g, (match, entityType) => {
+    if (!entityType) return match; // No entity type captured, return original
+    if (Object.keys(entityToNodeMap).includes(String(entityType))) {
+      const { nodeType } = entityToNodeMap[entityType as keyof EntityToNodeMap];
+      if (nodeType) {
+        return `dt.smartscape.${nodeType.toLowerCase()}${match.endsWith("`") ? "`" : ""}`;
+      } else {
+        addWarning(
+          warnings,
+          "dql-conversion",
+          `No node type mapping found for entity type "${entityType}" in DQL query: "${match}"`,
+        );
+        return match; // No mapping found, return original
+      }
+    }
+    // Try optimistic conversion
+    addWarning(
+      warnings,
+      "dql-conversion",
+      `Entity type "${entityType}" in DQL query is external to extension; conversion may be inaccurate: "${match}"`,
+    );
+    return `dt.smartscape.${String(entityType).toLowerCase()}${match.endsWith("`") ? "`" : ""}`; // Entity type not in mapping, return original
+  });
+
+  return adjustedContent;
+};

@@ -23,6 +23,7 @@ import {
   DeploymentModel,
   DynatraceTenant,
   DynatraceTenantDto,
+  IconPath,
   MonitoringConfiguration,
   TenantsTreeDataProvider,
   TenantsTreeItem,
@@ -35,10 +36,14 @@ import { createSingletonProvider } from "../utils/singleton";
 
 const ICONS_PATH = path.join(__filename, "..", "..", "src", "assets", "icons");
 const ICONS = {
-  DEPLOYED_EXTENSION_SAAS: vscode.Uri.file(path.join(ICONS_PATH, "deployed_extension_saas.png")),
-  DEPLOYED_EXTENSION_MANAGED: vscode.Uri.file(
-    path.join(ICONS_PATH, "deployed_extension_managed.png"),
-  ),
+  DEPLOYED_EXTENSION_SAAS: {
+    light: vscode.Uri.file(path.join(ICONS_PATH, "deployed_extension_saas.png")),
+    dark: vscode.Uri.file(path.join(ICONS_PATH, "deployed_extension_saas.png")),
+  },
+  DEPLOYED_EXTENSION_MANAGED: {
+    light: vscode.Uri.file(path.join(ICONS_PATH, "deployed_extension_managed.png")),
+    dark: vscode.Uri.file(path.join(ICONS_PATH, "deployed_extension_managed.png")),
+  },
   SAAS_TENANT: {
     light: vscode.Uri.file(path.join(ICONS_PATH, "saas_light.png")),
     dark: vscode.Uri.file(path.join(ICONS_PATH, "saas_dark.png")),
@@ -55,8 +60,11 @@ const ICONS = {
     light: vscode.Uri.file(path.join(ICONS_PATH, "managed_current_light.png")),
     dark: vscode.Uri.file(path.join(ICONS_PATH, "managed_current_dark.png")),
   },
-  SAAS_TENANT_INVALID: vscode.Uri.file(path.join(ICONS_PATH, "saas_invalid.png")),
-} satisfies Record<string, vscode.IconPath>;
+  SAAS_TENANT_INVALID: {
+    light: vscode.Uri.file(path.join(ICONS_PATH, "saas_invalid.png")),
+    dark: vscode.Uri.file(path.join(ICONS_PATH, "saas_invalid.png")),
+  },
+} satisfies Record<string, IconPath>;
 type ConfigStatus = "ERROR" | "OK" | "UNKNOWN";
 const CONFIG_STATUS_COLORS: Record<ConfigStatus, string> = {
   ERROR: "🔴",
@@ -87,7 +95,7 @@ export const checkTenantSetup = (
   return issue;
 };
 
-const getTenantIconAndTooltip = (tenant: DynatraceTenantDto): [vscode.IconPath, string] => {
+const getTenantIconAndTooltip = (tenant: DynatraceTenantDto): [IconPath, string] => {
   const setupIssue = checkTenantSetup(tenant);
 
   if (setupIssue) {

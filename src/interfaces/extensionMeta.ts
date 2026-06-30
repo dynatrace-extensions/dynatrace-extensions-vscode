@@ -185,7 +185,7 @@ export interface DetailsScreenCard {
   type: DetailInjectionCardType;
 }
 
-interface DetailsSettings {
+export interface DetailsSettings {
   target?: string;
   staticContent?: {
     showProblems?: boolean;
@@ -212,7 +212,7 @@ export interface ScreenStub {
   propertiesCard?: PropertiesCard;
   listSettings?: ListSettings;
   listInjections?: ListScreenCard[];
-  detailsSettings?: DetailsSettings;
+  detailsSettings?: DetailsSettings | DetailsSettings[];
   detailsInjections?: DetailsScreenCard[];
   healthCards?: HealthCardStub[];
   entitiesListCards?: EntitiesListCardStub[];

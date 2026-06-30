@@ -20,6 +20,7 @@ import { glob } from "glob";
 import vscode from "vscode";
 import { ExtensionStub } from "../interfaces/extensionMeta";
 import {
+  IconPath,
   WorkspaceTreeItem,
   WorkspacesTreeContextValue,
   WorkspacesTreeDataProvider,
@@ -29,7 +30,7 @@ import { createSingletonProvider } from "../utils/singleton";
 import { parseYAML } from "../utils/yamlParsing";
 
 const ICONS_PATH = path.join(__filename, "..", "..", "src", "assets", "icons");
-const ICONS: Record<string, vscode.IconPath> = {
+const ICONS: Record<string, IconPath> = {
   EXTENSION: {
     light: vscode.Uri.file(path.join(ICONS_PATH, "extension_light.png")),
     dark: vscode.Uri.file(path.join(ICONS_PATH, "extension_dark.png")),
@@ -62,7 +63,7 @@ const createWorkspacesTreeItem = (
   label: string,
   collapsibleState: vscode.TreeItemCollapsibleState,
   workspacePath: string,
-  icon: string | vscode.IconPath,
+  icon: string | IconPath,
   contextValue: WorkspacesTreeContextValue,
   id: string,
   version?: string,
