@@ -18,6 +18,7 @@ import { existsSync, mkdirSync, readFileSync, writeFileSync } from "fs";
 import { join, dirname } from "path";
 import { GlobalCommand } from "@common";
 import {
+  DqlTextFilter,
   EntityDetailsDefinitionDocument,
   EntityDetailsInjectionDocument,
   Header,
@@ -484,6 +485,32 @@ function buildEntityDetailsDefinition(
   };
 }
 
+function fieldToTitle(field: string): string {
+  return field.replace(/[._-]+/g, " ").replace(/\b\w/g, c => c.toUpperCase());
+}
+
+function buildColumnFilters(items: LayoutElement[]): DqlTextFilter[] {
+  const seen = new Set<string>();
+  const filters: DqlTextFilter[] = [];
+
+  for (const item of items) {
+    if (item.type !== "dql-table") continue;
+    for (const col of item.columns ?? []) {
+      if (!("field" in col) || seen.has(col.field)) continue;
+      seen.add(col.field);
+      filters.push({
+        id: col.field,
+        title: fieldToTitle(col.field),
+        type: "text",
+        fieldIds: col.field,
+      });
+    }
+  }
+
+  if (filters.length > 0) filters[0].defaultFilter = true;
+  return filters;
+}
+
 /**
  * Builds an InvExDefinitionDocument from listSettings.
  * Resolves layout cards into a vertical layout.
@@ -530,6 +557,11 @@ function buildInvExDefinition(
       content: {
         type: "vertical-layout",
         items,
+      },
+      filtering: {
+        id: `${nodeType}-filtering`,
+        type: "filtering",
+        filters: buildColumnFilters(items),
       },
     },
   };

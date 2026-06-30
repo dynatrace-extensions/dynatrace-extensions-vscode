@@ -775,6 +775,7 @@ export function convertDqlTableCard(
   }
 
   const columns = (card.columns ?? []).map(col => convertDqlTableColumn(col));
+  if (columns.length > 0) columns[0].sortDescFirst = true;
   const idField = columns.length > 0 ? card.columns?.[0].field ?? "id" : "id";
 
   const dqlQuery: DqlTableQuery = {
@@ -814,12 +815,13 @@ function convertDqlTableColumn(col: DqlTableColumnStub): DqlTableColumn {
     id: col.field,
     field: col.field,
     displayName: col.displayName ?? col.field,
+    sortable: true,
   };
   if (col.columnType) result.type = col.columnType.toLowerCase() as DqlTableColumnType;
   if (col.widthType) result.widthType = col.widthType.toLowerCase() as DqlTableColumnWidthType;
   if (col.widthValue !== undefined) result.widthValue = col.widthValue;
   if (col.sortable !== undefined) result.sortable = col.sortable;
-  if (col.defaultColumn !== undefined) result.sortable = col.sortable;
+  if (col.defaultColumn !== undefined) result.defaultColumn = col.defaultColumn;
   const cellRenderer = parseFormatter(col.formatter);
   if (cellRenderer) result.cellRenderer = cellRenderer;
 
@@ -931,6 +933,8 @@ const createDefaultDqlTableColumns = (fields: Set<string>): (DqlTableColumn | Bu
     field: "name",
     displayName: "Name",
     defaultColumn: true,
+    sortable: true,
+    sortDescFirst: true,
     perspectives: ["health", "metadata"],
   },
   {
@@ -953,6 +957,7 @@ const createDqlTableColumn = (field: string): DqlTableColumn => ({
   displayName: field,
   field,
   defaultColumn: field === "name",
+  sortable: true,
   perspectives: ["id", "name", "type"].includes(field) ? ["health", "metadata"] : ["metadata"],
 });
 
