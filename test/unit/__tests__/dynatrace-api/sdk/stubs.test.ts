@@ -16,7 +16,6 @@
 
 import {
   StubbedActiveGatesService,
-  StubbedCredentialVaultService,
   StubbedDashboardService,
   StubbedEntityServiceV2,
   StubbedExtensionsServiceV1,
@@ -57,26 +56,6 @@ describe("SaaS SDK stubs", () => {
       const result = await service.query("builtin:host.cpu.usage");
 
       expect(result).toEqual([]);
-    });
-  });
-
-  describe("StubbedCredentialVaultService", () => {
-    const service = new StubbedCredentialVaultService();
-
-    it("postCertificate() throws not supported", async () => {
-      await expect(service.postCertificate("cert", "name")).rejects.toThrow(
-        "not supported on SaaS",
-      );
-    });
-
-    it("putCertificate() throws not supported", async () => {
-      await expect(service.putCertificate("id", "cert", "name")).rejects.toThrow(
-        "not supported on SaaS",
-      );
-    });
-
-    it("getCertificate() throws not supported", async () => {
-      await expect(service.getCertificate("id")).rejects.toThrow("not supported on SaaS");
     });
   });
 

@@ -36,6 +36,7 @@ import {
   SettingsServiceInterface,
 } from "./interfaces/services";
 import { RateLimitConfig, RateLimitRetryHandler } from "./rateLimitHandler";
+import { SdkCredentialVaultAdapter } from "./sdk/credentialVaultAdapter";
 import { SdkDqlService } from "./sdk/dqlAdapter";
 import { SdkExtensionsServiceV2 } from "./sdk/extensionsAdapter";
 import { createSdkClients } from "./sdk/sdkClientFactory";
@@ -43,7 +44,6 @@ import { SdkSettingsService } from "./sdk/settingsAdapter";
 import { SettingsClient } from "./sdk/settingsClient";
 import {
   StubbedActiveGatesService,
-  StubbedCredentialVaultService,
   StubbedDashboardService,
   StubbedDqlService,
   StubbedEntityServiceV2,
@@ -124,11 +124,11 @@ export class SaaSDynatraceClient implements DynatraceClient {
       retryHandler,
     );
     this.settings = new SdkSettingsService(new SettingsClient(clients.httpClient), retryHandler);
+    this.credentialVault = new SdkCredentialVaultAdapter(clients.credentialVault, retryHandler);
     this.dql = new SdkDqlService(clients.queryAssistance, clients.queryExecution);
 
     // Stubbed services — not yet supported on SaaS
     this.extensionsV1 = new StubbedExtensionsServiceV1();
-    this.credentialVault = new StubbedCredentialVaultService();
     this.entitiesV2 = new StubbedEntityServiceV2();
     this.metrics = new StubbedMetricService();
     this.dashboards = new StubbedDashboardService();
