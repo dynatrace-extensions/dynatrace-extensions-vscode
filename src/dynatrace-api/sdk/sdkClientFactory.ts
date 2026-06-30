@@ -21,6 +21,7 @@ import {
   EnvironmentClient,
   SchemaClient,
 } from "@dynatrace-internal/client-extensions";
+import { CredentialVaultEntriesClient } from "@dynatrace-sdk/client-credential-vault";
 import { QueryAssistanceClient, QueryExecutionClient } from "@dynatrace-sdk/client-query";
 import { PlatformHttpClient } from "@dynatrace-sdk/http-client";
 
@@ -32,6 +33,7 @@ export interface SdkClients {
   discovery: DiscoveryClient;
   queryAssistance: QueryAssistanceClient;
   queryExecution: QueryExecutionClient;
+  credentialVault: CredentialVaultEntriesClient;
   httpClient: PlatformHttpClient;
 }
 
@@ -57,6 +59,7 @@ export function createSdkClients(baseUrl: string, platformToken: string): SdkCli
     discovery: new DiscoveryClient(httpClient),
     queryAssistance: new QueryAssistanceClient(httpClient),
     queryExecution: new QueryExecutionClient(httpClient),
+    credentialVault: new CredentialVaultEntriesClient(httpClient),
     httpClient,
   };
 }

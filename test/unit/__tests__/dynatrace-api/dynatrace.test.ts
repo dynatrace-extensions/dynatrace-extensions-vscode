@@ -30,6 +30,11 @@ jest.mock("../../../../src/dynatrace-api/sdk/sdkClientFactory", () => ({
     discovery: {},
     settingsObjects: {},
     settingsSchemas: {},
+    credentialVault: {
+      createCredentialVaultEntry: jest.fn(),
+      updateCredentialVaultEntry: jest.fn(),
+      getCredentialVaultEntry: jest.fn(),
+    },
   }),
 }));
 jest.mock("../../../../src/utils/logging");

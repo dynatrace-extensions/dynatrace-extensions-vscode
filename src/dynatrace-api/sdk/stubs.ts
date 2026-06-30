@@ -17,14 +17,12 @@
 import { MetricSeriesCollection } from "@common";
 import logger from "../../utils/logging";
 import { ActiveGate } from "../interfaces/activegates";
-import { CredentialsResponseElement } from "../interfaces/credentialVault";
 import { Dashboard } from "../interfaces/dashboards";
 import { DqlQueryResult, DqlVerifyResult } from "../interfaces/dql";
 import { ExtensionV1DTO } from "../interfaces/extensions";
 import { Entity, EntityType } from "../interfaces/monitoredEntities";
 import {
   ActiveGatesServiceInterface,
-  CredentialVaultServiceInterface,
   DashboardServiceInterface,
   DqlServiceInterface,
   EntityServiceV2Interface,
@@ -86,37 +84,6 @@ export class StubbedMetricService implements MetricServiceInterface {
   ): Promise<MetricSeriesCollection[]> {
     logger.info("Metric queries via DQL not yet supported on SaaS. Returning empty.", ...logTrace);
     return [];
-  }
-}
-
-/**
- * Stub: Credential vault management for SaaS is not yet supported.
- */
-export class StubbedCredentialVaultService implements CredentialVaultServiceInterface {
-  async postCertificate(
-    _certificate: string,
-    _name: string,
-    _description?: string,
-    _signal?: AbortSignal,
-  ): Promise<{ id: string }> {
-    notSupported("Credential vault");
-  }
-
-  async putCertificate(
-    _certificateId: string,
-    _certificate: string,
-    _name: string,
-    _description?: string,
-    _signal?: AbortSignal,
-  ): Promise<unknown> {
-    notSupported("Credential vault");
-  }
-
-  async getCertificate(
-    _certificateId: string,
-    _signal?: AbortSignal,
-  ): Promise<CredentialsResponseElement> {
-    notSupported("Credential vault");
   }
 }
 
