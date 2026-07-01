@@ -733,8 +733,8 @@ function convertSingleValueChart(
   };
 }
 
-function mapSeriesType(type?: MetricVisualizationType): "line" | "area" | "bar" {
-  if (!type) return "line";
+function mapSeriesType(type?: MetricVisualizationType): "line" | "area" | "bar" | undefined {
+  if (!type) return undefined;
   const mapping: Record<string, "line" | "area" | "bar"> = {
     LINE: "line",
     AREA: "area",

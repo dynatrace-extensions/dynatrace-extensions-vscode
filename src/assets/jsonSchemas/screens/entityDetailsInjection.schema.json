@@ -102,6 +102,9 @@
         },
         {
           "$ref": "#/definitions/Ownership"
+        },
+        {
+          "$ref": "#/definitions/CustomCard"
         }
       ],
       "description": "All Elements that are supported in all layout places of UA."
@@ -4561,9 +4564,52 @@
       ],
       "additionalProperties": false
     },
+    "CustomCard": {
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "customCardType": {
+          "type": "string",
+          "description": "Custom card type used to match its content slot."
+        },
+        "cardProps": {
+          "$ref": "#/definitions/Record%3Cstring%2Cunknown%3E",
+          "description": "Static properties forwarded to the custom card, readable via `useUAContext().schema.cardProps`."
+        },
+        "conditions": {
+          "type": "array",
+          "items": {
+            "$ref": "#/definitions/Condition"
+          },
+          "description": "If provided, the element is only rendered when ALL conditions are met."
+        },
+        "type": {
+          "type": "string",
+          "const": "custom"
+        },
+        "id": {
+          "type": "string"
+        },
+        "cardTitle": {
+          "type": "string"
+        },
+        "cardDescription": {
+          "type": "string"
+        }
+      },
+      "required": [
+        "id",
+        "type"
+      ],
+      "description": "Serializable document representation of a custom card.\n\nAt runtime the mapper resolves this to a `CustomCardUiSchema` (`type: 'custom'`), which `ElementRenderer` matches against the React content supplied by the app via `<UAContent.CustomCard>` (by `id`, `customCardType`, or `schemaKey`)."
+    },
+    "Record<string,unknown>": {
+      "type": "object",
+      "additionalProperties": {}
+    },
     "Version": {
       "type": "string",
-      "const": "1.1.0"
+      "const": "1.3.2"
     },
     "DqlConditionsContext": {
       "type": "object",
