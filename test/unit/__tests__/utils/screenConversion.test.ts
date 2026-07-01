@@ -24,6 +24,7 @@ import {
 import {
   ConversionWarning,
   ScreenConversionContext,
+  TimeseriesDqlInfo,
 } from "../../../../src/interfaces/screenConversion";
 import {
   addWarning,
@@ -35,6 +36,7 @@ import {
   convertHealthCard,
   convertMessageCard,
   convertPropertiesCard,
+  deduplicateSeriesFieldNames,
   extractCondition,
   generateConversionReport,
   parseDqlQuery,
@@ -912,6 +914,85 @@ describe("Screen Conversion Utils", () => {
       expect(chart.dqlQuery).toContain("total=avg(memory.total)");
       expect(chart.dqlQuery).toContain("by:{host.name}");
     });
+
+    it("differentiates duplicate implicit field names with indexed aliases", () => {
+      const card: ChartsCardStub = {
+        key: "count-card",
+        charts: [
+          {
+            visualizationType: "GRAPH_CHART",
+            graphChartConfig: {
+              metrics: [
+                { metricSelector: "", dqlQuery: "timeseries count()" },
+                { metricSelector: "", dqlQuery: "timeseries count()" },
+              ],
+            },
+          },
+        ],
+      };
+
+      const warnings: ConversionWarning[] = [];
+      const [result] = convertChartsCard(minimalCtx, card, warnings, "PLATFORM");
+      const chart = defined(result).charts[0];
+
+      expect(warnings).toHaveLength(0);
+      // Each series must define a distinct field — no repeated `count`
+      expect(chart.dqlQuery).toContain("count = count()");
+      expect(chart.dqlQuery).toContain("count1 = count()");
+    });
+  });
+});
+
+// =============================================================================
+// deduplicateSeriesFieldNames
+// =============================================================================
+
+describe("deduplicateSeriesFieldNames", () => {
+  const mk = (name: string, seriesText: string): TimeseriesDqlInfo => ({
+    name,
+    seriesText,
+    dqlQuery: `timeseries ${seriesText}`,
+  });
+
+  it("leaves already-unique field names untouched", () => {
+    const input = [mk("used", "used=avg(memory.used)"), mk("total", "total=avg(memory.total)")];
+    expect(deduplicateSeriesFieldNames(input)).toEqual(input);
+  });
+
+  it("is a no-op for a single metric", () => {
+    const input = [mk("count()", "count()")];
+    expect(deduplicateSeriesFieldNames(input)).toEqual(input);
+  });
+
+  it("aliases two colliding implicit fields as base and base1", () => {
+    const input = [mk("count()", "count()"), mk("count()", "count()")];
+    const result = deduplicateSeriesFieldNames(input);
+    expect(result.map(m => m.name)).toEqual(["count", "count1"]);
+    expect(result.map(m => m.seriesText)).toEqual(["count = count()", "count1 = count()"]);
+  });
+
+  it("indexes a three-way collision as base, base1, base2", () => {
+    const input = [mk("count()", "count()"), mk("count()", "count()"), mk("count()", "count()")];
+    expect(deduplicateSeriesFieldNames(input).map(m => m.name)).toEqual([
+      "count",
+      "count1",
+      "count2",
+    ]);
+  });
+
+  it("preserves an explicit alias and only indexes the later collider", () => {
+    // `avg(count)` extracts name `avg`; the aliased `avg=...` collides on `avg`
+    const input = [mk("avg", "avg=sum(x)"), mk("avg", "avg=sum(y)")];
+    const result = deduplicateSeriesFieldNames(input);
+    expect(result.map(m => m.name)).toEqual(["avg", "avg1"]);
+    expect(result[1].seriesText).toBe("avg1 = sum(y)");
+  });
+
+  it("skips a generated name that already exists as a unique field", () => {
+    const input = [mk("count()", "count()"), mk("count()", "count()"), mk("count1", "count1=sum(x)")];
+    // `count1` is taken by the third (unique) series, so the second collider becomes `count2`
+    const result = deduplicateSeriesFieldNames(input);
+    expect(result.map(m => m.name)).toEqual(["count", "count2", "count1"]);
   });
 });
 
