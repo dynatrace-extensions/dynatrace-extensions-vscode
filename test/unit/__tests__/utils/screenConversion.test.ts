@@ -375,7 +375,7 @@ describe("Screen Conversion Utils", () => {
       expect(warnings[0].category).toBe("skipped-classic");
     });
 
-    it("applies sort defaults to all columns", () => {
+    it("defaults columns to sortable but respects an explicit sortable:false", () => {
       const card: DqlTableCardStub = {
         key: "test-sort",
         query: { query: "fetch `dt.entity.test`" },
@@ -391,7 +391,7 @@ describe("Screen Conversion Utils", () => {
       expect(result).not.toBeNull();
       const columns = defined(result).columns as Record<string, unknown>[];
       expect(columns[0].sortable).toBe(true);
-      expect(columns[1].sortable).toBe(true);
+      expect(columns[1].sortable).toBe(false);
       expect(columns[0].sortDescFirst).toBe(true);
       expect(columns[1].sortDescFirst).toBeUndefined();
     });
