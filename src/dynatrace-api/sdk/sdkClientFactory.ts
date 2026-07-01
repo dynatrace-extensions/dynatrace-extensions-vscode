@@ -23,6 +23,7 @@ import {
 } from "@dynatrace-internal/client-extensions";
 import { CredentialVaultEntriesClient } from "@dynatrace-sdk/client-credential-vault";
 import { QueryAssistanceClient, QueryExecutionClient } from "@dynatrace-sdk/client-query";
+import { SettingsObjectsClient, SettingsSchemasClient } from "@dynatrace-sdk/client-settings";
 import { PlatformHttpClient } from "@dynatrace-sdk/http-client";
 
 export interface SdkClients {
@@ -34,7 +35,8 @@ export interface SdkClients {
   queryAssistance: QueryAssistanceClient;
   queryExecution: QueryExecutionClient;
   credentialVault: CredentialVaultEntriesClient;
-  httpClient: PlatformHttpClient;
+  settingsObjects: SettingsObjectsClient;
+  settingsSchemas: SettingsSchemasClient;
 }
 
 /**
@@ -60,6 +62,7 @@ export function createSdkClients(baseUrl: string, platformToken: string): SdkCli
     queryAssistance: new QueryAssistanceClient(httpClient),
     queryExecution: new QueryExecutionClient(httpClient),
     credentialVault: new CredentialVaultEntriesClient(httpClient),
-    httpClient,
+    settingsObjects: new SettingsObjectsClient(httpClient),
+    settingsSchemas: new SettingsSchemasClient(httpClient),
   };
 }
