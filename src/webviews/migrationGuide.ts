@@ -17,7 +17,6 @@
 import { PanelDataType, ViewType } from "@common";
 import { renderPanel } from "./webview-utils";
 
-// Placeholder markdown — final copy to be delivered separately.
 const MIGRATION_GUIDE_MD = `
 # SaaS Tenant Migration Guide
 
