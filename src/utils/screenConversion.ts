@@ -159,6 +159,32 @@ export function resolveTarget(
 }
 
 // ---------------------------------------------------------------------------
+// Base entity node types (entities without an OpenPipeline node)
+// ---------------------------------------------------------------------------
+
+/**
+ * Classic base-entity types that have no OpenPipeline Smartscape node definition, mapped to their
+ * platform node type. These entities cannot be derived from `smartscapeNodeExtraction`, so screens
+ * keyed on them (typically injection-only) rely on this static lookup to resolve their node type.
+ * Extend this record as more base entities need to be supported.
+ */
+export const BASE_ENTITY_NODE_TYPES: Record<string, string> = {
+  HOST: "HOST",
+  PROCESS_GROUP_INSTANCE: "PROCESS",
+};
+
+/**
+ * Builds a NodeContext for a base entity type that has no OpenPipeline node. Base entities carry no
+ * field map or static edges — only their platform node type is known. Returns undefined for entity
+ * types that are not recognised base entities.
+ */
+export function getBaseEntityNodeContext(entityType: string): NodeContext | undefined {
+  const nodeType = BASE_ENTITY_NODE_TYPES[entityType];
+  if (!nodeType) return undefined;
+  return { nodeType, fieldMap: {}, staticEdges: [] };
+}
+
+// ---------------------------------------------------------------------------
 // Charts card converter (chartsCards → chart-group)
 // ---------------------------------------------------------------------------
 
