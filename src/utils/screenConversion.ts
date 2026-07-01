@@ -540,19 +540,18 @@ function splitByComma(s: string): string[] {
 
 // Resolves a theme color name to a Strato CSS variable, defaulting to blue
 const resolveThemeColor = (themeColor: string): string => {
-  const fallback = "#2e5bd6";
   return (
     {
-      BLUE: `var(--dt-colors-charts-rainbow-blue-default, ${fallback})`,
-      ROYALBLUE: `var(--dt-colors-charts-sequential-pink-purple-color-08-default, ${fallback})`,
-      PURPLE: `var(--dt-colors-charts-sequential-purple-color-01-default, ${fallback})`,
-      YELLOW: `var(--dt-colors-charts-rainbow-yellow-default, ${fallback})`,
-      TURQUOISE: `var(--dt-colors-charts-sequential-turquoise-color-05-default, ${fallback})`,
-      ORANGE: `var(--dt-colors-charts-rainbow-orange-default, ${fallback})`,
-      GREEN: `var(--dt-colors-charts-rainbow-moss-default, ${fallback})`,
-      RED: `var(--dt-colors-charts-rainbow-red-default, ${fallback})`,
-      GRAY: `var(--dt-colors-charts-sequential-grey-color-04-default, ${fallback})`,
-    }[themeColor] ?? `var(--dt-colors-theme-primary-90, ${fallback})`
+      BLUE: "var(--dt-colors-charts-rainbow-blue-default, #2857d4)",
+      ROYALBLUE: "var(--dt-colors-charts-sequential-pink-purple-color-08-default, #4447cf)",
+      PURPLE: "var(--dt-colors-charts-rainbow-magenta-default, #b138c7)",
+      YELLOW: "var(--dt-colors-charts-rainbow-yellow-default, #b68c2b)",
+      TURQUOISE: "var(--dt-colors-charts-sequential-turquoise-color-05-default, #1d957b)",
+      ORANGE: "var(--dt-colors-charts-rainbow-orange-default, #dc671e)",
+      GREEN: "var(--dt-colors-charts-rainbow-moss-default, #368160)",
+      RED: "var(--dt-colors-charts-rainbow-red-default, #cd3741)",
+      GRAY: "var(--dt-colors-charts-sequential-grey-color-04-default, #66687a)",
+    }[themeColor] ?? "var(--dt-colors-theme-primary-90, #4f4bad)"
   );
 };
 
