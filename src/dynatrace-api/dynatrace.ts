@@ -41,7 +41,6 @@ import { SdkDqlService } from "./sdk/dqlAdapter";
 import { SdkExtensionsServiceV2 } from "./sdk/extensionsAdapter";
 import { createSdkClients } from "./sdk/sdkClientFactory";
 import { SdkSettingsService } from "./sdk/settingsAdapter";
-import { SettingsClient } from "./sdk/settingsClient";
 import {
   StubbedActiveGatesService,
   StubbedDashboardService,
@@ -123,7 +122,11 @@ export class SaaSDynatraceClient implements DynatraceClient {
       clients.discovery,
       retryHandler,
     );
-    this.settings = new SdkSettingsService(new SettingsClient(clients.httpClient), retryHandler);
+    this.settings = new SdkSettingsService(
+      clients.settingsObjects,
+      clients.settingsSchemas,
+      retryHandler,
+    );
     this.credentialVault = new SdkCredentialVaultAdapter(clients.credentialVault, retryHandler);
     this.dql = new SdkDqlService(clients.queryAssistance, clients.queryExecution);
 

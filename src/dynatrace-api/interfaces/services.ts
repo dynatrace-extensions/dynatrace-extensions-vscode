@@ -28,7 +28,7 @@ import {
   MinimalExtension,
 } from "./extensions";
 import { Entity, EntityType } from "./monitoredEntities";
-import { SchemaStub, SettingsObject, SettingsObjectCreate, SettingsObjectUpdate } from "./settings";
+import { SchemaStub, SettingsObject } from "./settings";
 
 export interface ExtensionsServiceV2Interface {
   listSchemaVersions(signal?: AbortSignal): Promise<string[]>;
@@ -135,17 +135,7 @@ export interface SettingsServiceInterface {
     pageSize?: number,
     signal?: AbortSignal,
   ): Promise<SettingsObject[]>;
-  putObject(
-    objectId: string,
-    payload: SettingsObjectUpdate,
-    signal?: AbortSignal,
-  ): Promise<unknown>;
   getSchema(schemaId: string, signal?: AbortSignal): Promise<unknown>;
-  postObject(
-    payload: SettingsObjectCreate[],
-    validateOnly?: boolean,
-    signal?: AbortSignal,
-  ): Promise<unknown>;
 }
 
 export interface CredentialVaultServiceInterface {

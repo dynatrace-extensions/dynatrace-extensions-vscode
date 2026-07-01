@@ -34,21 +34,4 @@ interface SettingsObject {
   created: number;
 }
 
-interface SettingsObjectUpdate {
-  schemaVersion?: string;
-  updateToken?: string;
-  insertAfter?: string;
-  insertBefore?: string;
-  value: unknown;
-}
-
-interface SettingsObjectCreate {
-  externalId?: string;
-  schemaId: string;
-  schemaVersion?: string;
-  insertAfter?: string;
-  scope?: string;
-  value?: unknown;
-}
-
-export { SettingsObject, SettingsObjectUpdate, SettingsObjectCreate, SchemaStub };
+export { SettingsObject, SchemaStub };
