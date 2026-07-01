@@ -255,7 +255,7 @@ function convertGraphChart(
   const config = chart.graphChartConfig;
   if (!config?.metrics || config.metrics.length === 0) return null;
 
-  const dqlMetrics = graphChartMetricsToDqlInfo(config.metrics);
+  const dqlMetrics = deduplicateSeriesFieldNames(graphChartMetricsToDqlInfo(config.metrics));
   const nonDqlMetrics = config.metrics.filter(m => !m.dqlQuery);
 
   if (nonDqlMetrics.length > 0) {
@@ -584,6 +584,71 @@ const graphChartMetricsToDqlInfo = (metrics: ChartMetric[]): TimeseriesDqlInfo[]
       };
     });
 };
+
+/**
+ * Derives a clean, valid field-name base from a series' extracted name.
+ * A function expression collapses to its leading identifier (`count()` → `count`,
+ * `avg(metric.used)` → `avg`); an explicit alias is returned unchanged (`used` → `used`).
+ */
+function baseFieldName(name: string): string {
+  const parenIdx = name.indexOf("(");
+  return (parenIdx === -1 ? name : name.slice(0, parenIdx)).trim();
+}
+
+/**
+ * Removes a leading `alias =` assignment from a series expression, if present.
+ * Mirrors the alias detection in `extractMetricNames`: an `=` before the first `(`
+ * is an alias assignment; a `=` that only appears inside the expression (e.g. `==`) is not.
+ */
+function stripSeriesAlias(seriesText: string): string {
+  const eqIdx = seriesText.indexOf("=");
+  const parenIdx = seriesText.indexOf("(");
+  if (eqIdx !== -1 && (parenIdx === -1 || eqIdx < parenIdx)) {
+    return seriesText.slice(eqIdx + 1).trim();
+  }
+  return seriesText.trim();
+}
+
+/** Returns `base`, or the first free `base<n>` not already present in `used`. */
+function nextFreeName(base: string, used: Set<string>): string {
+  if (!used.has(base)) return base;
+  let i = 1;
+  while (used.has(`${base}${i}`)) i++;
+  return `${base}${i}`;
+}
+
+/**
+ * Ensures every series in a multi-metric chart exposes a unique field name before the
+ * per-metric DQL queries are merged into a single `timeseries { ... }` block.
+ *
+ * When two or more series resolve to the same field name (commonly the implicit `count`
+ * from `timeseries count()`), the merged query would redefine that field and fail on the
+ * platform. Each member of a colliding group is rewritten with an explicit, indexed alias
+ * (`count`, `count1`, `count2`, …) so the DQL is valid and the field name stays in sync with
+ * the key used in the chart's `visualization.metrics` override map. Series with already-unique
+ * names are returned untouched, so single-metric charts and non-colliding charts are unaffected.
+ */
+export function deduplicateSeriesFieldNames(metrics: TimeseriesDqlInfo[]): TimeseriesDqlInfo[] {
+  const nameCounts = new Map<string, number>();
+  for (const m of metrics) {
+    if (m.name) nameCounts.set(m.name, (nameCounts.get(m.name) ?? 0) + 1);
+  }
+
+  // Seed the used-name set with names that are already unique so generated aliases avoid them.
+  const used = new Set<string>();
+  for (const [name, count] of nameCounts) {
+    if (count === 1) used.add(name);
+  }
+
+  return metrics.map(metric => {
+    if (!metric.name || (nameCounts.get(metric.name) ?? 0) <= 1) return metric;
+
+    const uniqueName = nextFreeName(baseFieldName(metric.name), used);
+    used.add(uniqueName);
+    const expression = stripSeriesAlias(metric.seriesText ?? "");
+    return { ...metric, name: uniqueName, seriesText: `${uniqueName} = ${expression}` };
+  });
+}
 
 /**
  * Combines multiple per-metric DQL queries into a single timeseries command.
