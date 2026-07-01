@@ -34,16 +34,22 @@ features so you can make the most of this VSCode extension.
 
 1. Follow the [official documentation](https://docs.dynatrace.com/docs/shortlink/platform-tokens) to create a
 Platform Token and ensure it has the following scopes:
+
   - \`extensions:definitions:read\`
   - \`extensions:definitions:write\`
   - \`extensions:configurations:read\`
   - \`extensions:configurations:write\`
   - \`extensions:discovery.jmx:read\`
+  - \`extensions:discovery.pmi:read\`
+  - \`storage:buckets:read\`
   - \`storage:metrics:read\`
   - \`storage:entities:read\`
-  - \`storage:buckets:read\`
   - \`storage:smartscape:read\`
   - \`settings:objects:read\`
+  - \`credential-vault:entries:read\`
+  - \`credential-vault:entries:write\`
+  - \`credential-vault:entries:admin\`
+
 2. Copy the token — it will start with \`dt0s16\`
 
 ## Step 2 — Update the tenant details in the extension
@@ -52,6 +58,7 @@ Open the environment settings (click **Edit** on the tenant in the Environments 
 non-compliant details.
 
 1. If your current URL uses the legacy domain, you must update it to the Platform domain, for example:
+
 - Old: \`https://abc12345.live.dynatrace.com\`
 - New: \`https://abc12345.apps.dynatrace.com\`
 
@@ -62,6 +69,7 @@ non-compliant details.
 ## Verification
 
 After saving, the icon of this environment should no longer be red.
+
 You can now also expand the node to view a list of extensions available in the environment.
 `.trim();
 
