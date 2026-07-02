@@ -30,7 +30,7 @@ import {
   addWarning,
   adjustAllDql,
   adjustEntityFetchDqlQuery,
-  BASE_ENTITY_NODE_TYPES,
+  BUILTIN_ENTITY_NODE_TYPES,
   convertChartsCard,
   convertConditions,
   convertDqlTableCard,
@@ -40,7 +40,7 @@ import {
   deduplicateSeriesFieldNames,
   extractCondition,
   generateConversionReport,
-  getBaseEntityNodeContext,
+  getBuiltinEntityNodeContext,
   parseDqlQuery,
   shouldSkipByTarget,
   splitDqlPipes,
@@ -1391,15 +1391,15 @@ describe("convertPropertiesCard — registry key adjustment", () => {
   });
 });
 
-describe("base entity node types", () => {
+describe("builtin entity node types", () => {
   it("seeds the lookup with HOST and PROCESS_GROUP_INSTANCE", () => {
-    expect(BASE_ENTITY_NODE_TYPES.HOST).toBe("HOST");
-    expect(BASE_ENTITY_NODE_TYPES.PROCESS_GROUP_INSTANCE).toBe("PROCESS");
+    expect(BUILTIN_ENTITY_NODE_TYPES.HOST).toBe("HOST");
+    expect(BUILTIN_ENTITY_NODE_TYPES.PROCESS_GROUP_INSTANCE).toBe("PROCESS");
   });
 
-  describe("getBaseEntityNodeContext", () => {
+  describe("getBuiltinEntityNodeContext", () => {
     it("builds a node context for HOST", () => {
-      expect(getBaseEntityNodeContext("HOST")).toEqual({
+      expect(getBuiltinEntityNodeContext("HOST")).toEqual({
         nodeType: "HOST",
         fieldMap: {},
         staticEdges: [],
@@ -1407,16 +1407,16 @@ describe("base entity node types", () => {
     });
 
     it("maps PROCESS_GROUP_INSTANCE to the PROCESS node type", () => {
-      expect(getBaseEntityNodeContext("PROCESS_GROUP_INSTANCE")).toEqual({
+      expect(getBuiltinEntityNodeContext("PROCESS_GROUP_INSTANCE")).toEqual({
         nodeType: "PROCESS",
         fieldMap: {},
         staticEdges: [],
       });
     });
 
-    it("returns undefined for entity types that are not recognised base entities", () => {
-      expect(getBaseEntityNodeContext("f5:pool:member")).toBeUndefined();
-      expect(getBaseEntityNodeContext("SERVICE")).toBeUndefined();
+    it("returns undefined for entity types that are not recognised builtin entities", () => {
+      expect(getBuiltinEntityNodeContext("f5:pool:member")).toBeUndefined();
+      expect(getBuiltinEntityNodeContext("SERVICE")).toBeUndefined();
     });
   });
 });
