@@ -977,7 +977,8 @@ type CardMeta = {
     | "EVENTS"
     | "METRIC_TABLE"
     | "HEALTH_CARD"
-    | "INJECTIONS";
+    | "INJECTIONS"
+    | "CARD_GROUP";
 };
 
 /**

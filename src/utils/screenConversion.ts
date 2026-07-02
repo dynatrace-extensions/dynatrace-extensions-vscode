@@ -34,11 +34,14 @@ import {
   DqlTable,
   DqlTableColumn,
   DqlTableQuery,
+  DqlTextFilter,
   DqlVariableCondition,
   IntentAction,
+  LayoutElement,
   Message,
   Metadata,
   MetadataFieldConfig,
+  Tab,
 } from "@dynatrace/unified-analysis/documents";
 import {
   ChartsCardStub,
@@ -1052,6 +1055,32 @@ const createDqlTableColumn = (field: string): DqlTableColumn => ({
   perspectives: ["id", "name", "type"].includes(field) ? ["health", "metadata"] : ["metadata"],
 });
 
+export function fieldToTitle(field: string): string {
+  return field.replace(/[._-]+/g, " ").replace(/\b\w/g, c => c.toUpperCase());
+}
+
+export function buildColumnFilters(items: LayoutElement[]): DqlTextFilter[] {
+  const seen = new Set<string>();
+  const filters: DqlTextFilter[] = [];
+
+  for (const item of items) {
+    if (item.type !== "dql-table") continue;
+    for (const col of item.columns ?? []) {
+      if (!("field" in col) || seen.has(col.field)) continue;
+      seen.add(col.field);
+      filters.push({
+        id: col.field,
+        title: fieldToTitle(col.field),
+        type: "text",
+        fieldIds: col.field,
+      });
+    }
+  }
+
+  if (filters.length > 0) filters[0].defaultFilter = true;
+  return filters;
+}
+
 // ---------------------------------------------------------------------------
 // Message card converter (messageCards → message)
 // ---------------------------------------------------------------------------
@@ -1859,3 +1888,16 @@ export const extractExtensionTitle = (keywords: string[], extensionName: string)
     .replace("com.dynatrace.extension.", "")
     .replace("com.dynatrace.", "");
 };
+
+// ---------------------------------------------------------------------------
+// General utility functions for screen conversion
+// ---------------------------------------------------------------------------
+
+/** Ensures the candidate tab id is unique among already-emitted tabs. */
+export function dedupeTabId(candidate: string, tabs: Tab[]): string {
+  const used = new Set(tabs.map(t => t.id));
+  if (!used.has(candidate)) return candidate;
+  let i = 2;
+  while (used.has(`${candidate}-${i}`)) i++;
+  return `${candidate}-${i}`;
+}

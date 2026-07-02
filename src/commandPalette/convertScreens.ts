@@ -18,7 +18,6 @@ import { existsSync, mkdirSync, readFileSync, writeFileSync } from "fs";
 import { join, dirname } from "path";
 import { GlobalCommand } from "@common";
 import {
-  DqlTextFilter,
   EntityDetailsDefinitionDocument,
   EntityDetailsInjectionDocument,
   Header,
@@ -30,8 +29,10 @@ import {
   VERSION,
 } from "@dynatrace/unified-analysis/documents";
 import * as vscode from "vscode";
+import { slugify } from "../codeActions/utils/snippetBuildingUtils";
 import { OpenPipelinePipeline } from "../interfaces/extensionDocs";
 import {
+  DetailsScreenCard,
   DetailsSettings,
   PropertiesCard,
   ScreenStub,
@@ -52,6 +53,7 @@ import logger from "../utils/logging";
 import {
   addWarning,
   adjustAllDql,
+  buildColumnFilters,
   buildDefaultDqlTable,
   convertChartsCard,
   convertConditions,
@@ -60,6 +62,7 @@ import {
   convertMessageCard,
   convertPropertiesCard,
   createConditionContext,
+  dedupeTabId,
   extractConditions,
   extractExtensionCategory,
   extractExtensionTitle,
@@ -537,32 +540,6 @@ function buildEntityDetailsDefinition(
   };
 }
 
-function fieldToTitle(field: string): string {
-  return field.replace(/[._-]+/g, " ").replace(/\b\w/g, c => c.toUpperCase());
-}
-
-function buildColumnFilters(items: LayoutElement[]): DqlTextFilter[] {
-  const seen = new Set<string>();
-  const filters: DqlTextFilter[] = [];
-
-  for (const item of items) {
-    if (item.type !== "dql-table") continue;
-    for (const col of item.columns ?? []) {
-      if (!("field" in col) || seen.has(col.field)) continue;
-      seen.add(col.field);
-      filters.push({
-        id: col.field,
-        title: fieldToTitle(col.field),
-        type: "text",
-        fieldIds: col.field,
-      });
-    }
-  }
-
-  if (filters.length > 0) filters[0].defaultFilter = true;
-  return filters;
-}
-
 /**
  * Builds an InvExDefinitionDocument from listSettings.
  * Resolves layout cards into a vertical layout.
@@ -812,6 +789,7 @@ function resolveDetailsCards(
   const messageElements: Message[] = [];
 
   for (const ref of cardRefs) {
+    // Handle cards that should be skipped entirely
     if (SKIPPED_CARD_TYPES.has(ref.type)) {
       if (ref.type !== "INJECTIONS") {
         addWarning(
@@ -821,6 +799,16 @@ function resolveDetailsCards(
           hint,
         );
       }
+      continue;
+    }
+
+    // Handle card groups
+    if (ref.type === "CARD_GROUP") {
+      const resolvedGroup = resolveCardGroup(ref, context, warnings, tabs, settingsTarget, hint);
+      if (resolvedGroup === null) continue;
+      const [tab, conditionIds] = resolvedGroup;
+      tabs.push(tab);
+      screenConditionIds.push(...conditionIds);
       continue;
     }
 
@@ -872,6 +860,134 @@ function resolveDetailsCards(
   return [tabs, screenConditionIds];
 }
 
+// Resolves a CARD_GROUP and its children (including nested CARD_GROUPs) into a single tab with a vertical layout.
+function resolveCardGroup(
+  cardGroup: DetailsScreenCard,
+  context: ScreenConversionContext,
+  warnings: ConversionWarning[],
+  existingTabs: Tab[],
+  settingsTarget?: string,
+  hint?: string,
+): [Tab, string[]] | null {
+  const groupHint = hint ? `${hint}.card-group` : "card-group";
+  const conditionIds: string[] = [];
+  const [childItems, childConditionIds] = resolveGroupChildren(
+    context,
+    cardGroup.cards ?? [],
+    warnings,
+    resolveTarget(cardGroup.target, settingsTarget),
+    groupHint,
+  );
+  if (childItems.length === 0) {
+    addWarning(
+      warnings,
+      "skipped-out-of-scope",
+      `CARD_GROUP "${cardGroup.displayName ?? ""}" produced no convertible cards`,
+      hint,
+    );
+    return null;
+  }
+  conditionIds.push(...childConditionIds);
+
+  const [groupConditions, groupConditionIds] = convertConditions(
+    context,
+    cardGroup.conditions ?? [],
+    warnings,
+    hint,
+  );
+  conditionIds.push(...groupConditionIds);
+
+  const baseId = cardGroup.displayName
+    ? slugify(cardGroup.displayName)
+    : `card-group-${existingTabs.length}`;
+  const tab: Tab = {
+    type: "tab",
+    id: dedupeTabId(baseId, existingTabs),
+    title: cardGroup.displayName?.trim() || baseId,
+    conditions: groupConditions,
+    content: [{ type: "vertical-layout", items: childItems }],
+  };
+  return [tab, conditionIds];
+}
+
+/**
+ * Resolves the child cards of a CARD_GROUP into vertical-layout items, in document order.
+ * Out-of-scope children are skipped with a warning, MESSAGE children are kept inline,
+ * and nested CARD_GROUPs are flattened into the same item list.
+ */
+function resolveGroupChildren(
+  context: ScreenConversionContext,
+  childRefs: DetailsScreenCard[],
+  warnings: ConversionWarning[],
+  parentTarget?: string,
+  hint?: string,
+): [LayoutElement[], string[]] {
+  const items: LayoutElement[] = [];
+  const conditionIds: string[] = [];
+
+  for (const child of childRefs) {
+    const childHint = hint ? `${hint}.${child.key ?? child.displayName ?? "card"}` : child.key;
+
+    if (child.type === "CARD_GROUP") {
+      const [nestedItems, nestedConditionIds] = resolveGroupChildren(
+        context,
+        child.cards ?? [],
+        warnings,
+        resolveTarget(child.target, parentTarget),
+        childHint,
+      );
+      items.push(...nestedItems);
+      conditionIds.push(...nestedConditionIds);
+      continue;
+    }
+
+    if (SKIPPED_CARD_TYPES.has(child.type)) {
+      if (child.type !== "INJECTIONS") {
+        addWarning(
+          warnings,
+          "skipped-out-of-scope",
+          `Card type "${child.type}" (key: "${child.key}") skipped`,
+          childHint,
+        );
+      }
+      continue;
+    }
+
+    const [element, elementConditionIds] = resolveCardByRef(
+      child,
+      context,
+      warnings,
+      resolveTarget(child.target, parentTarget),
+      childHint,
+    );
+    if (!element) continue;
+    conditionIds.push(...elementConditionIds);
+
+    const [refConditions, refConditionIds] = convertConditions(
+      context,
+      child.conditions ?? [],
+      warnings,
+      childHint,
+    );
+    // Attach the layout-ref conditions to the element itself (group children are
+    // vertical-layout items, not tabs, so they carry their own conditions). Gate on the
+    // element's type — not `"conditions" in element` — because converters only create the
+    // `conditions` property when the card *definition* had conditions; ref-level conditions
+    // would otherwise be silently dropped along with their conditionContext ids.
+    if (
+      refConditions.length > 0 &&
+      (element.type === "chart-group" || element.type === "dql-table" || element.type === "message")
+    ) {
+      element.conditions = [...(element.conditions ?? []), ...refConditions];
+      conditionIds.push(...refConditionIds);
+    }
+
+    items.push(element);
+  }
+
+  return [items, conditionIds];
+}
+
 /**
  * Resolves list layout cards into layout items (vertical-layout children).
  */
@@ -888,6 +1004,7 @@ function resolveListCards(
 
   for (const ref of cardRefs) {
     const cardHint = `listSettings.${ref.key}`;
+    // Handle cards that should be skipped entirely
     if (SKIPPED_CARD_TYPES.has(ref.type)) {
       if (ref.type !== "INJECTIONS") {
         addWarning(
@@ -897,6 +1014,31 @@ function resolveListCards(
           cardHint,
         );
       }
+      continue;
+    }
+
+    // Handle card groups
+    if (ref.type === "CARD_GROUP") {
+      const groupHint = `${cardHint}.card-group`;
+      const [childItems, childConditionIds] = resolveGroupChildren(
+        context,
+        // Forced as DetailsScreenCard to not complicate interfaces further
+        (ref as unknown as DetailsScreenCard).cards ?? [],
+        warnings,
+        ref.target,
+        groupHint,
+      );
+      if (childItems.length === 0) {
+        addWarning(
+          warnings,
+          "skipped-out-of-scope",
+          `CARD_GROUP "${ref.key ?? ""}" produced no convertible cards`,
+          cardHint,
+        );
+        continue;
+      }
+      items.push(...childItems);
+      conditionIds.push(...childConditionIds);
       continue;
     }
 
