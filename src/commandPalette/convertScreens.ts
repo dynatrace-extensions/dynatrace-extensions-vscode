@@ -64,6 +64,7 @@ import {
   extractExtensionCategory,
   extractExtensionTitle,
   generateConversionReport,
+  getBuiltinEntityNodeContext,
   resolveTarget,
   shouldSkipByTarget,
 } from "../utils/screenConversion";
@@ -153,7 +154,26 @@ async function convertScreens(options: { skipInteractive?: boolean } = {}) {
   const validEntityTypes = Object.keys(entityToNodeMap).filter(et =>
     entitiesWithScreens.includes(et),
   );
-  if (validEntityTypes.length === 0) {
+
+  // Builtin entities (e.g. HOST, PROCESS_GROUP_INSTANCE) have no OpenPipeline node, so they are
+  // absent from entityToNodeMap. Their screens are injection-only: include them when they carry
+  // injections so their injection documents are still emitted (resolved via the static builtin
+  // entity lookup).
+  const builtinEntityTypes = [
+    ...new Set(
+      extension.screens
+        .filter(
+          s =>
+            !entityToNodeMap[s.entityType] &&
+            getBuiltinEntityNodeContext(s.entityType) !== undefined &&
+            ((s.detailsInjections?.length ?? 0) > 0 || (s.listInjections?.length ?? 0) > 0),
+        )
+        .map(s => s.entityType),
+    ),
+  ];
+
+  const convertibleEntityTypes = [...validEntityTypes, ...builtinEntityTypes];
+  if (convertibleEntityTypes.length === 0) {
     const noValidEntitiesError =
       "No pipeline nodes match your screens' entity types. Ensure the 'id_classic' field is extracted";
     if (options?.skipInteractive) {
@@ -166,10 +186,10 @@ async function convertScreens(options: { skipInteractive?: boolean } = {}) {
 
   let selected: { label: string }[];
   if (options.skipInteractive) {
-    selected = validEntityTypes.map(et => ({ label: et }));
+    selected = convertibleEntityTypes.map(et => ({ label: et }));
   } else {
     const picked = await vscode.window.showQuickPick(
-      validEntityTypes.map(et => ({ label: et })),
+      convertibleEntityTypes.map(et => ({ label: et })),
       {
         canPickMany: true,
         placeHolder: "Select entity types to convert screens for",
@@ -195,7 +215,16 @@ async function convertScreens(options: { skipInteractive?: boolean } = {}) {
   for (const screen of extension.screens) {
     if (!selectedEntityTypes.has(screen.entityType)) continue;
 
-    const resolvedNode = entityToNodeMap[screen.entityType];
+    const isBuiltinEntity = !entityToNodeMap[screen.entityType];
+    const resolvedNode =
+      entityToNodeMap[screen.entityType] ?? getBuiltinEntityNodeContext(screen.entityType);
+    if (!resolvedNode) {
+      logger.warn(
+        `No node context for entity type "${screen.entityType}"; skipping screen`,
+        ...logTrace,
+      );
+      continue;
+    }
     const conditions = extractConditions(resolvedNode, JSON.stringify(screen, undefined, 2));
     const context: ScreenConversionContext = {
       ...resolvedNode,
@@ -207,7 +236,7 @@ async function convertScreens(options: { skipInteractive?: boolean } = {}) {
       entityToNodeMap,
       conditions: Object.fromEntries(conditions.map(c => [c.id, c])),
     };
-    const result = convertSingleScreen(context, screensDir);
+    const result = convertSingleScreen(context, screensDir, isBuiltinEntity);
     results.push(result);
   }
 
@@ -335,10 +364,15 @@ const createEntityToNodeTypeMap = (
 
 /**
  * Converts a single screen entity type and writes all applicable JSON document files.
+ *
+ * For builtin entities (which have no OpenPipeline node) the extension does not own the entity's
+ * own screen definition, so only injections are converted; any detailsSettings/listSettings
+ * present are skipped with a warning.
  */
 function convertSingleScreen(
   context: ScreenConversionContext,
   screensDir: string,
+  isBuiltinEntity = false,
 ): ScreenConversionResult {
   const logTrace = ["commandPalette", "convertScreens", "convertSingleScreen"];
   const warnings: ConversionWarning[] = [];
@@ -348,14 +382,32 @@ function convertSingleScreen(
 
   // 4.1 detailsSettings → EntityDetailsDefinitionDocument
   if (screen.detailsSettings) {
-    const doc = buildEntityDetailsDefinition(context, warnings);
-    if (doc) documents.push(doc);
+    if (isBuiltinEntity) {
+      addWarning(
+        warnings,
+        "skipped-out-of-scope",
+        "detailsSettings skipped for builtin entity (extension does not own its screen definition)",
+        "detailsSettings",
+      );
+    } else {
+      const doc = buildEntityDetailsDefinition(context, warnings);
+      if (doc) documents.push(doc);
+    }
   }
 
   // 4.2 listSettings → InvExDefinitionDocument
   if (screen.listSettings) {
-    const doc = buildInvExDefinition(context, warnings);
-    if (doc) documents.push(doc);
+    if (isBuiltinEntity) {
+      addWarning(
+        warnings,
+        "skipped-out-of-scope",
+        "listSettings skipped for builtin entity (extension does not own its screen definition)",
+        "listSettings",
+      );
+    } else {
+      const doc = buildInvExDefinition(context, warnings);
+      if (doc) documents.push(doc);
+    }
   }
 
   // 4.3 detailsInjections → EntityDetailsInjectionDocument(s)

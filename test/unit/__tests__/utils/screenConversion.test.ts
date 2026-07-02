@@ -30,6 +30,7 @@ import {
   addWarning,
   adjustAllDql,
   adjustEntityFetchDqlQuery,
+  BUILTIN_ENTITY_NODE_TYPES,
   convertChartsCard,
   convertConditions,
   convertDqlTableCard,
@@ -39,6 +40,7 @@ import {
   deduplicateSeriesFieldNames,
   extractCondition,
   generateConversionReport,
+  getBuiltinEntityNodeContext,
   parseDqlQuery,
   shouldSkipByTarget,
   splitDqlPipes,
@@ -1386,5 +1388,35 @@ describe("convertPropertiesCard — registry key adjustment", () => {
     };
     const metadata = defined(convertPropertiesCard(card, "f5:pool:member", []));
     expect(metadata.overrideMetadataRegistry).toHaveProperty("cpu_usage");
+  });
+});
+
+describe("builtin entity node types", () => {
+  it("seeds the lookup with HOST and PROCESS_GROUP_INSTANCE", () => {
+    expect(BUILTIN_ENTITY_NODE_TYPES.HOST).toBe("HOST");
+    expect(BUILTIN_ENTITY_NODE_TYPES.PROCESS_GROUP_INSTANCE).toBe("PROCESS");
+  });
+
+  describe("getBuiltinEntityNodeContext", () => {
+    it("builds a node context for HOST", () => {
+      expect(getBuiltinEntityNodeContext("HOST")).toEqual({
+        nodeType: "HOST",
+        fieldMap: {},
+        staticEdges: [],
+      });
+    });
+
+    it("maps PROCESS_GROUP_INSTANCE to the PROCESS node type", () => {
+      expect(getBuiltinEntityNodeContext("PROCESS_GROUP_INSTANCE")).toEqual({
+        nodeType: "PROCESS",
+        fieldMap: {},
+        staticEdges: [],
+      });
+    });
+
+    it("returns undefined for entity types that are not recognised builtin entities", () => {
+      expect(getBuiltinEntityNodeContext("f5:pool:member")).toBeUndefined();
+      expect(getBuiltinEntityNodeContext("SERVICE")).toBeUndefined();
+    });
   });
 });
