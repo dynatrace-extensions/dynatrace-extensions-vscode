@@ -21,7 +21,7 @@ import jszip from "jszip";
 import vscode from "vscode";
 import yaml from "yaml";
 import { slugify } from "../codeActions/utils/snippetBuildingUtils";
-import { Dynatrace } from "../dynatrace-api/dynatrace";
+import { DynatraceClient } from "../dynatrace-api/dynatrace";
 import {
   ChartDto,
   ChartMetric,
@@ -770,7 +770,7 @@ export async function extractv1ExtensionFromLocal(): Promise<[ExtensionV1 | unde
  */
 export async function extractV1FromRemote(
   extensionType: "JMX" | "Python",
-  dt?: Dynatrace,
+  dt?: DynatraceClient,
 ): Promise<[ExtensionV1 | undefined, string]> {
   // TODO - move this to a shared file, as it is used by Python extensions as well
 
@@ -819,7 +819,7 @@ export async function extractV1FromRemote(
  * @param dt Dynatrace Client API
  * @param outputPath optional path where to save the manifest
  */
-export async function convertJMXExtension(dt?: Dynatrace, outputPath?: string) {
+export async function convertJMXExtension(dt?: DynatraceClient, outputPath?: string) {
   const fnLogTrace = [...logTrace, "convertJMXExtension"];
   logger.info("Executing Covert JMX command", ...fnLogTrace);
   // User chooses if they want to use a local file or browse from the Dynatrace environment
