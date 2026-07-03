@@ -173,8 +173,9 @@ export function resolveTarget(
  * Extend this record as more builtin entities need to be supported.
  */
 export const BUILTIN_ENTITY_NODE_TYPES: Record<string, string> = {
-  HOST: "HOST",
-  PROCESS_GROUP_INSTANCE: "PROCESS",
+  "HOST": "HOST",
+  "PROCESS_GROUP_INSTANCE": "PROCESS",
+  "NETWORK:DEVICE": "EXT_NETWORK_DEVICE",
 };
 
 /**
@@ -183,7 +184,7 @@ export const BUILTIN_ENTITY_NODE_TYPES: Record<string, string> = {
  * for entity types that are not recognised builtin entities.
  */
 export function getBuiltinEntityNodeContext(entityType: string): NodeContext | undefined {
-  const nodeType = BUILTIN_ENTITY_NODE_TYPES[entityType];
+  const nodeType = BUILTIN_ENTITY_NODE_TYPES[entityType.toUpperCase()];
   if (!nodeType) return undefined;
   return { nodeType, fieldMap: {}, staticEdges: [] };
 }
