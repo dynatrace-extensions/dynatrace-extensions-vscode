@@ -36,5 +36,6 @@ jobs:
         run: npm run build:all
       - name: Run Unit tests
         run: npm run test:unit
-      - name: Run E2E tests
-        run: xvfb-run -a npm run test:e2e
+      # Temporary disable E2E tests until runner infra properly setup
+      # - name: Run E2E tests
+      #   run: xvfb-run -a npm run test:e2e
