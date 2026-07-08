@@ -23,8 +23,13 @@ jobs:
         uses: actions/setup-node@v6
         with:
           node-version: 24
-      - name: Install Linux deps
-        run: sudo apt install xvfb -y
+      - name: Setup JFrog CLI
+        uses: jfrog/setup-jfrog-cli@v4
+        env:
+          JF_URL: ${{ secrets.JF_URL }}
+          JF_ACCESS_TOKEN: ${{ secrets.JF_TOKEN }}
+      - name: Point npm at the internal registry
+        run: jf npmc --repo-resolve=npm-dynatrace-release-v
       - name: Install all
         run: npm run install:all
       - name: Build everything
@@ -33,4 +38,3 @@ jobs:
         run: npm run test:unit
       - name: Run E2E tests
         run: xvfb-run -a npm run test:e2e
-
