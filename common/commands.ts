@@ -44,6 +44,7 @@ export const GlobalCommand = createCommands("dynatrace-extensions", {
   InitPending: "initPending",
   InitWorkspace: "initWorkspace",
   OpenScreen: "openScreen",
+  OpenPlatformUaScreen: "openPlatformUaScreen",
   DistributeCertificate: "distributeCertificate",
   GenerateCertificates: "generateCertificates",
   ConvertJmxExtension: "convertJmxExtension",
