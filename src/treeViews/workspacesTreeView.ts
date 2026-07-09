@@ -50,6 +50,13 @@ export const refreshWorkspacesTreeView = () => {
 };
 
 /**
+ * Extracts the display text of a tree item's label, which may be a plain string
+ * or a {@link vscode.TreeItemLabel}. Used for alphabetical sorting.
+ */
+const labelText = (item: WorkspaceTreeItem): string =>
+  typeof item.label === "string" ? item.label : item.label?.label ?? "";
+
+/**
  * Creates a TreeItem that can be used to represent either an extensions workspace
  * or an extension manifest within that workspace.
  * @param label the label to be shown in the tree view (as node)
@@ -138,22 +145,29 @@ class WorkspacesTreeDataProviderImpl implements WorkspacesTreeDataProvider {
           ),
         );
       });
+      // Render extensions alphabetically (case-insensitive) by name
+      extensions.sort((a, b) =>
+        labelText(a).localeCompare(labelText(b), undefined, { sensitivity: "base" }),
+      );
       return extensions;
     }
-    // If not item specified, grab all workspaces from global storage
-    return getAllWorkspaces().map(workspace =>
-      createWorkspacesTreeItem(
-        workspace.name.toUpperCase(),
-        vscode.TreeItemCollapsibleState.Collapsed,
-        workspace.folder,
-        vscode.workspace.workspaceFolders &&
-          vscode.workspace.workspaceFolders[0].uri.toString() === workspace.folder
-          ? ICONS.EXTENSION_CURRENT
-          : ICONS.EXTENSION,
-        "extensionWorkspace",
-        workspace.id,
-      ),
-    );
+    // If no item specified, grab all workspaces from global storage, sorted
+    // alphabetically (case-insensitive) by their raw name - not the upper-cased label.
+    return [...getAllWorkspaces()]
+      .sort((a, b) => a.name.localeCompare(b.name, undefined, { sensitivity: "base" }))
+      .map(workspace =>
+        createWorkspacesTreeItem(
+          workspace.name.toUpperCase(),
+          vscode.TreeItemCollapsibleState.Collapsed,
+          workspace.folder,
+          vscode.workspace.workspaceFolders &&
+            vscode.workspace.workspaceFolders[0].uri.toString() === workspace.folder
+            ? ICONS.EXTENSION_CURRENT
+            : ICONS.EXTENSION,
+          "extensionWorkspace",
+          workspace.id,
+        ),
+      );
   }
 }
 
