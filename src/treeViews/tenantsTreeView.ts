@@ -182,6 +182,16 @@ export const isConnectedToManaged = async (): Promise<boolean> => {
 };
 
 /**
+ * Whether the currently connected tenant is a platform (gen3 "apps") tenant.
+ * There is no dedicated flag for this, so it is derived the same way the rest of
+ * the codebase does: a SaaS tenant whose URL is an ".apps" platform URL.
+ */
+export const isConnectedToPlatform = async (): Promise<boolean> => {
+  const tenant = await getConnectedTenant();
+  return tenant?.deploymentModel === "saas" && tenant.url.includes(".apps");
+};
+
+/**
  * A tree data provider that renders all Dynatrace Environments that have been registered
  * with the VSCode Extension. Extensions available in the environment, as well as their
  * monitoring configurations are rendered as children.
