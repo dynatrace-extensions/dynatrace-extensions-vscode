@@ -16,7 +16,7 @@
 
 import { GlobalCommand } from "@common";
 import vscode from "vscode";
-import { getConnectedTenant, isConnectedToPlatform } from "../treeViews/tenantsTreeView";
+import { getConnectedTenant, isConnectedToSaaS } from "../treeViews/tenantsTreeView";
 import { getCachedParsedExtension } from "../utils/caching";
 import logger from "../utils/logging";
 import { createSingletonProvider } from "../utils/singleton";
@@ -60,7 +60,7 @@ class ScreenLensProvider implements vscode.CodeLensProvider {
 
     // On platform (gen3) tenants these classic entity screens do not apply; the
     // platform UA lens handles those files instead.
-    if (await isConnectedToPlatform()) {
+    if (await isConnectedToSaaS()) {
       return [];
     }
 

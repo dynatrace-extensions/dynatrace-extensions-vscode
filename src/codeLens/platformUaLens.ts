@@ -16,7 +16,7 @@
 
 import { GlobalCommand } from "@common";
 import vscode from "vscode";
-import { getConnectedTenant, isConnectedToPlatform } from "../treeViews/tenantsTreeView";
+import { getConnectedTenant, isConnectedToSaaS } from "../treeViews/tenantsTreeView";
 import { parseJSON } from "../utils/jsonParsing";
 import logger from "../utils/logging";
 import { createSingletonProvider } from "../utils/singleton";
@@ -104,7 +104,7 @@ class PlatformUaLensProvider implements vscode.CodeLensProvider {
     // Reuse the existing screen lens toggle; only operate on platform tenants.
     if (
       !vscode.workspace.getConfiguration("dynatraceExtensions", null).get("screenCodeLens") ||
-      !(await isConnectedToPlatform())
+      !(await isConnectedToSaaS())
     ) {
       return [];
     }
