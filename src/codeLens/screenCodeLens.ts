@@ -16,7 +16,7 @@
 
 import { GlobalCommand } from "@common";
 import vscode from "vscode";
-import { getConnectedTenant } from "../treeViews/tenantsTreeView";
+import { getConnectedTenant, isConnectedToSaaS } from "../treeViews/tenantsTreeView";
 import { getCachedParsedExtension } from "../utils/caching";
 import logger from "../utils/logging";
 import { createSingletonProvider } from "../utils/singleton";
@@ -43,9 +43,7 @@ class ScreenLensProvider implements vscode.CodeLensProvider {
    * @param document VSCode Text Document - this should be the extension.yaml
    * @returns list of code lenses
    */
-  public provideCodeLenses(
-    document: vscode.TextDocument,
-  ): vscode.ProviderResult<vscode.CodeLens[]> {
+  public async provideCodeLenses(document: vscode.TextDocument): Promise<vscode.CodeLens[]> {
     this.codeLenses = [];
     const regex = new RegExp(this.regex);
     const text = document.getText();
@@ -57,6 +55,12 @@ class ScreenLensProvider implements vscode.CodeLensProvider {
       !text.includes("screens:") ||
       !vscode.workspace.getConfiguration("dynatraceExtensions", null).get("screenCodeLens")
     ) {
+      return [];
+    }
+
+    // On platform (gen3) tenants these classic entity screens do not apply; the
+    // platform UA lens handles those files instead.
+    if (await isConnectedToSaaS()) {
       return [];
     }
 

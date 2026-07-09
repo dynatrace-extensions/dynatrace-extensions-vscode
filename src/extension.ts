@@ -32,6 +32,7 @@ import { getTopologyCompletionProvider } from "./codeCompletions/topology";
 import { getWmiCompletionProvider } from "./codeCompletions/wmi";
 import { getDqlCodeLensProvider } from "./codeLens/dqlCodeLens";
 import { getJmxWizardCodeLensProvider } from "./codeLens/jmxWizard";
+import { getPlatformUaLensProvider } from "./codeLens/platformUaLens";
 import { getPrometheusCodeLensProvider } from "./codeLens/prometheusScraper";
 import { getScreenLensProvider } from "./codeLens/screenCodeLens";
 import { getSelectorCodeLensProvider } from "./codeLens/selectorCodeLens";
@@ -259,6 +260,7 @@ const registerCodeLensProviders = () => [
   registerCodeLensProvider(getWmiCodeLensProvider()),
   registerCodeLensProvider(getSnmpCodeLensProvider()),
   registerCodeLensProvider(getDqlCodeLensProvider(), SCREENS_DOC_SELECTOR),
+  registerCodeLensProvider(getPlatformUaLensProvider(), SCREENS_DOC_SELECTOR),
 ];
 
 const registerCodeLensProvider = (
