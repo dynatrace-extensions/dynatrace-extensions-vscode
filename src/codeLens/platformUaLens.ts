@@ -120,11 +120,11 @@ class PlatformUaLensProvider implements vscode.CodeLensProvider {
     }
 
     const range = new vscode.Range(0, 0, 0, 0);
-    const title = kind === "details" ? "Open Details View" : "Open Inventory View";
+    const title = kind === "details" ? "Open details view" : "Open inventory";
     const tooltip =
       kind === "details"
-        ? "Open this node type's Details View in Dynatrace"
-        : "Open this node type's Inventory View in Dynatrace";
+        ? "Open this node's Details page in Dynatrace"
+        : "Open this node type's Inventory in Dynatrace";
 
     return [
       new vscode.CodeLens(range, {
