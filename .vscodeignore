@@ -1,28 +1,21 @@
-# Project files
-.vscode/
-.vscode-test/
-.github/
-.gitignore
-.gitattributes
-.yarnrc
-.eslintrc.json
-.prettierrc.json
-.editorconfig
-.vscodeignore
-tsconfig.src.json
-tsconfig.test.json
-tsconfig.json
-jest.config.js
+# Project and tooling files
+.*
+.*/
+tsconfig.*
+eslint.*
+jest.*
 package.json
 package-lock.json
 *.md
 CNAME
-runner/
+scripts/
 
 # Documentation
 docs/
 
 # Uncompiled source code
+runner/
+common/
 src/
 test/
 out/
@@ -40,3 +33,6 @@ webview-ui/
 
 # Test coverage
 coverage
+
+# Mac files
+**/.DS_Store
