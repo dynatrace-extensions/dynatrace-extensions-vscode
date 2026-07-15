@@ -16,11 +16,12 @@
 
 import { HttpClient } from "../http_client";
 import { ExtensionV1DTO, ExtensionV1ListDto } from "../interfaces/extensions";
+import { ExtensionsServiceV1Interface } from "../interfaces/services";
 
 /**
- * Implementation of the Extensions V2 API
+ * Implementation of the Extensions V1 API
  */
-export class ExtensionsServiceV1 {
+export class ExtensionsServiceV1 implements ExtensionsServiceV1Interface {
   private readonly endpoint = "/api/config/v1/extensions";
   private readonly httpClient: HttpClient;
 

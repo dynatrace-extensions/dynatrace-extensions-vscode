@@ -20,9 +20,19 @@ export interface CredentialsResponseElement {
   description: string;
   owner: string;
   ownerAccessOnly: boolean;
-  scope?: "ALL" | "EXTENSION" | "SYNTHETIC" | "UNKNOWN";
+  scope?: "ALL" | "APP_ENGINE" | "EXTENSION" | "EXTENSION_AUTHENTICATION" | "SYNTHETIC" | "UNKNOWN";
   externalVault?: unknown;
   credentialUsageSummary: unknown;
-  scopes?: "ALL" | "EXTENSION" | "SYNTHETIC" | "UNKNOWN";
-  type: "CERTIFICATE" | "PUBLIC_CERTIFICATE" | "TOKEN" | "UNKNOWN" | "USERNAME_PASSWORD";
+  scopes?: Array<
+    "ALL" | "APP_ENGINE" | "EXTENSION" | "EXTENSION_AUTHENTICATION" | "SYNTHETIC" | "UNKNOWN"
+  >;
+  type:
+    | "AWS_MONITORING_KEY_BASED"
+    | "AWS_MONITORING_ROLE_BASED"
+    | "CERTIFICATE"
+    | "PUBLIC_CERTIFICATE"
+    | "SNMPV3"
+    | "TOKEN"
+    | "UNKNOWN"
+    | "USERNAME_PASSWORD";
 }

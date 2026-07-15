@@ -5,8 +5,9 @@ const config = {
   testEnvironment: "node",
   rootDir: "../..",
   transform: {
-    "^.+\\.ts$": ["ts-jest", { tsconfig: "<rootDir>/tsconfig.test.json" }],
+    "^.+\\.[jt]s$": ["ts-jest", { tsconfig: "<rootDir>/tsconfig.test.json" }],
   },
+  transformIgnorePatterns: ["node_modules/(?!@dynatrace-sdk|@dynatrace-internal)"],
   modulePathIgnorePatterns: ["<rootDir>/.vscode-test"],
   testMatch: ["<rootDir>/test/unit/__tests__/**/*.test.ts"],
   moduleNameMapper: {

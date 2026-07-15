@@ -22,11 +22,12 @@ import { DynatraceAPIError } from "../../dynatrace-api/errors";
 import { getActivationContext } from "../../extension";
 import {
   DeployedExtension,
+  DeploymentModel,
   DynatraceTenant,
   MonitoringConfiguration,
 } from "../../interfaces/treeViews";
 import { showConnectedStatusBar } from "../../statusBar/connection";
-import { checkUrlReachable } from "../../utils/conditionCheckers";
+import { checkSaasReachable, checkUrlReachable } from "../../utils/conditionCheckers";
 import { encryptToken } from "../../utils/cryptography";
 import {
   createUniqueFileName,
@@ -39,6 +40,7 @@ import { parseJSON } from "../../utils/jsonParsing";
 import logger from "../../utils/logging";
 import { createObjectFromSchema } from "../../utils/schemaParsing";
 import { ConfirmOption, showQuickPick, showQuickPickConfirm } from "../../utils/vscode";
+import { openMigrationGuidePanel } from "../../webviews/migrationGuide";
 import { refreshTenantsTreeView } from "../tenantsTreeView";
 
 const logTrace = ["treeViews", "commands", "environments"];
@@ -80,18 +82,26 @@ export function validateEnvironmentUrl(value: string): string | null {
     }
     return null;
   }
-  if ([".live.", ".dev.", ".sprint."].some(x => value.includes(x))) {
-    if (
-      !(
-        /^https:\/\/[a-zA-Z:.-_0-9]*?\.live\.dynatrace\.com(?:\/|$)$/.test(value) ||
-        /^https:\/\/[a-zA-Z:.-_0-9]*?\.(?:dev|sprint)\.dynatracelabs\.com(?:\/|$)$/.test(value)
-      )
-    ) {
-      return "This does not look right. It should be the base URL to your SaaS environment.";
-    }
-    return null;
+  if (
+    [".live.dynatrace.", ".dev.dynatracelabs.", ".sprint.dynatracelabs."].some(
+      x => value.includes(x) && !value.includes(".apps."),
+    )
+  ) {
+    return "Legacy SaaS URLs are no longer supported. Use your Platform URL (*.apps.*) instead.";
   }
   return "This does not look like a Dynatrace environment URL";
+}
+
+/**
+ * Derives the deployment model from a validated Dynatrace environment URL.
+ * @param url a validated environment URL
+ * @returns the deployment model
+ */
+export function deriveDeploymentModel(url: string): DeploymentModel {
+  if (url.includes(".apps.dynatrace.com") || url.includes(".apps.dynatracelabs.com")) {
+    return "saas";
+  }
+  return "managed";
 }
 
 /**
@@ -105,8 +115,8 @@ export const registerTenantsViewCommands = () => {
       addEnvironment().then(refreshTenantsTreeView),
     ),
     vscode.commands.registerCommand(EnvironmentCommand.Use, async (tenant: DynatraceTenant) => {
-      const { url, apiUrl, token, label } = tenant;
-      await registerTenant(url, apiUrl, encryptToken(token), label, true);
+      const { url, token, label, deploymentModel } = tenant;
+      await registerTenant(url, encryptToken(token), label, true, deploymentModel);
       showConnectedStatusBar(tenant).catch(Utils.noOp);
       refreshTenantsTreeView();
     }),
@@ -167,6 +177,7 @@ export const registerTenantsViewCommands = () => {
           );
         }),
     ),
+    vscode.commands.registerCommand(EnvironmentCommand.OpenMigrationGuide, openMigrationGuidePanel),
   ];
 };
 
@@ -215,7 +226,7 @@ export async function getConfigurationDetailsViaFile(
         rmSync(tempConfigFile);
         // Resolve or reject the promise
         if (newDetails === defaultDetails && rejectNoChanges) {
-          reject("No changes.");
+          reject(new Error("No changes."));
         } else {
           resolve(newDetails);
         }
@@ -247,24 +258,39 @@ async function addEnvironment() {
     url = url.slice(0, -1);
   }
 
-  let apiUrl = url;
-  if (apiUrl.includes(".apps")) {
-    apiUrl = apiUrl.replace(".apps.dynatrace.com", ".live.dynatrace.com");
-    apiUrl = apiUrl.replace(".apps.dynatracelabs.com", ".dynatracelabs.com");
-  }
+  const deploymentModel = deriveDeploymentModel(url);
 
-  const reachable = await checkUrlReachable(apiUrl, "/api/v1/time", true);
+  const reachable =
+    deploymentModel === "saas"
+      ? await checkSaasReachable(url)
+      : await checkUrlReachable(url, "/api/v1/time", true);
   if (!reachable) {
     logger.notify("ERROR", "The environment URL entered is not reachable.", ...fnLogTrace);
     return;
   }
 
+  const tokenPlaceholder =
+    deploymentModel === "saas"
+      ? "A platform token, to use when authenticating API calls..."
+      : "An access token, to use when authenticating API calls...";
   const token = await vscode.window.showInputBox({
     title: "Add a Dynatrace environment (2/3)",
-    placeHolder: "An access token, to use when authenticating API calls...",
+    placeHolder: tokenPlaceholder,
     prompt: "Mandatory",
     ignoreFocusOut: true,
     password: true,
+    validateInput: value => {
+      if (deploymentModel === "managed") {
+        if (!value.startsWith("dt0c01") && !value.startsWith("dt0s01")) {
+          return "This doesn't look right. Access tokens are expected to start with dt0c01 or dt0s01.";
+        }
+      }
+      if (deploymentModel === "saas") {
+        if (!value.startsWith("dt0s16")) {
+          return "This doesn't look right. Platform tokens are expected to start with dt0s16.";
+        }
+      }
+    },
   });
   if (!token || token === "") {
     logger.notify("ERROR", "Token cannot be blank. Operation was cancelled", ...fnLogTrace);
@@ -283,7 +309,13 @@ async function addEnvironment() {
     ignoreFocusOut: true,
   });
 
-  await registerTenant(url, apiUrl, encryptToken(token), name, current === ConfirmOption.Yes);
+  await registerTenant(
+    url,
+    encryptToken(token),
+    name,
+    current === ConfirmOption.Yes,
+    deploymentModel,
+  );
 }
 
 /**
@@ -312,21 +344,24 @@ async function editEnvironment(environment: DynatraceTenant) {
     url = url.slice(0, -1);
   }
 
-  let apiUrl = url;
-  if (apiUrl.includes(".apps")) {
-    apiUrl = apiUrl.replace(".apps.dynatrace.com", ".live.dynatrace.com");
-    apiUrl = apiUrl.replace(".apps.dynatracelabs.com", ".dynatracelabs.com");
-  }
+  const deploymentModel = deriveDeploymentModel(url);
 
-  const reachable = await checkUrlReachable(apiUrl, "/api/v1/time", true);
+  const reachable =
+    deploymentModel === "saas"
+      ? await checkSaasReachable(url)
+      : await checkUrlReachable(url, "/api/v1/time", true);
   if (!reachable) {
     logger.notify("ERROR", "The environment URL entered is not reachable.", ...fnLogTrace);
     return;
   }
 
+  const tokenPlaceholder =
+    deploymentModel === "saas"
+      ? "A platform token, to use when authenticating API calls..."
+      : "An access token, to use when authenticating API calls...";
   const token = await vscode.window.showInputBox({
     title: "The new access token for this environment",
-    placeHolder: "An access token, to use when autheticating API calls...",
+    placeHolder: tokenPlaceholder,
     value: environment.token,
     password: true,
     prompt: "Mandatory",
@@ -350,7 +385,13 @@ async function editEnvironment(environment: DynatraceTenant) {
     ignoreFocusOut: true,
   });
 
-  await registerTenant(url, apiUrl, encryptToken(token), name, current === ConfirmOption.Yes);
+  await registerTenant(
+    url,
+    encryptToken(token),
+    name,
+    current === ConfirmOption.Yes,
+    deploymentModel,
+  );
 }
 
 /**
@@ -404,8 +445,8 @@ async function changeConnection() {
   if (choice) {
     const environment = environments.find(e => e.label === choice);
     if (environment) {
-      const { url, apiUrl, token, label } = environment;
-      await registerTenant(url, apiUrl, token, label, true);
+      const { url, token, label, deploymentModel } = environment;
+      await registerTenant(url, token, label, true, deploymentModel);
       showConnectedStatusBar(environment).catch(Utils.noOp);
       return;
     }

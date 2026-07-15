@@ -27,6 +27,12 @@ const logTrace = ["utils", "cryptography"];
 
 const algorithm = "aes-256-cbc";
 
+// Creates a simple ID hash using 32 bits
+export const createIdHash = (input: string): string => {
+  const hex = crypto.createHash("sha1").update(input, "utf-8").digest("hex");
+  return parseInt(hex.slice(0, 8), 16).toString(36);
+};
+
 /**
  * Encrypts a token using AES-256-CBC algorithm and provides a string comprised
  * of the initialization vector, key, and token in hex format. This is not
@@ -107,7 +113,7 @@ export function sign(inputFilePath: string, certKeyPath: string): string {
   const cert = forge.pki.certificateFromPem(certContents);
   const p7 = forge.pkcs7.createSignedData();
 
-  p7.content = forge.util.createBuffer(dataToSign);
+  p7.content = forge.util.createBuffer(dataToSign.toString("binary"));
   p7.addCertificate(cert);
   p7.addSigner({
     key: forge.pki.privateKeyFromPem(keyContents),

@@ -14,6 +14,8 @@
   limitations under the License.
  */
 
+import { EecType, OsType, RemoteTarget } from "@common";
+import { Button, Container, Flex, Text, ExternalLink } from "@dynatrace/strato-components";
 import {
   FieldSet,
   FormField,
@@ -24,11 +26,9 @@ import {
   showToast,
   Label,
 } from "@dynatrace/strato-components-preview";
-import { Button, Container, Flex, Text, ExternalLink } from "@dynatrace/strato-components";
 import { WarningIcon } from "@dynatrace/strato-icons";
 import React, { useEffect, useState } from "react";
 import { useForm } from "react-hook-form";
-import { EecType, OsType, RemoteTarget } from "@common";
 
 interface TargetRegistrationFormProps {
   modalOpen: boolean;
@@ -138,7 +138,8 @@ export const TargetRegistrationForm = ({
     >
       <form onSubmit={handleSubmit(handleSubmitClick)} onReset={clearForm} noValidate>
         <Flex flexDirection='column' gap={32}>
-          <FieldSet legend='Target details' name='target-details'>
+          <FieldSet name='target-details'>
+            <FieldSet.Legend>Target details</FieldSet.Legend>
             <FormField>
               <Label>Name</Label>
               <TextInput
@@ -166,7 +167,8 @@ export const TargetRegistrationForm = ({
                   },
                   pattern: {
                     value:
-                      /^(?:(?:25[0-5]|2[0-4][0-9]|[01]?[0-9][0-9]?)\.){3}(?:25[0-5]|2[0-4][0-9]|[01]?[0-9][0-9]?)$|^(([a-zA-Z0-9]|[a-zA-Z0-9][a-zA-Z0-9-]*[a-zA-Z0-9])\.)+([A-Za-z]|[A-Za-z][A-Za-z0-9-]*[A-Za-z0-9])$/,
+                      // eslint-disable-next-line sonarjs/regex-complexity -- IP + hostname combined pattern; complexity is inherent
+                      /^(?:(?:25[0-5]|2[0-4]\d|[01]?\d\d?)\.){3}(?:25[0-5]|2[0-4]\d|[01]?\d\d?)$|^(([a-zA-Z\d]|[a-zA-Z\d][a-zA-Z\d-]*[a-zA-Z\d])\.)+([A-Za-z]|[A-Za-z][A-Za-z\d-]*[A-Za-z\d])$/,
                     message: "Must be a valid IP address or hostname",
                   },
                 })}
@@ -205,7 +207,8 @@ export const TargetRegistrationForm = ({
               </FormField>
             </Flex>
           </FieldSet>
-          <FieldSet legend='Authentication'>
+          <FieldSet name='authentication'>
+            <FieldSet.Legend>Authentication</FieldSet.Legend>
             <FormField required>
               <Label>Username</Label>
               <TextInput

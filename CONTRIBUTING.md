@@ -116,12 +116,13 @@ This project is structured as follows:
   |   |-- common/    # Folder for interfaces & types shared between the extension and webview ui app
 	|   |
 	|   |-- dynatrace-api/			# Client for Dynatrace API operations
-	|   |    |-- configuration_v1/		# All operations of Config v1 endpoint
-	|   |    |-- environment_v2/		# All operations of Environment v2 endpoint
-	|   |    |-- interfaces/		# All interfaces related to API
-	|   |    |-- dynatrace.ts 		# Main implementation
-	|   |    |-- errors.ts          	# Custom errors
-	|   |    |-- http_client.ts 		# HTTP Client implementation
+	|   |    |-- configuration_v1/		# All operations of Config v1 endpoint (Managed)
+	|   |    |-- environment_v2/		# All operations of Environment v2 endpoint (Managed)
+	|   |    |-- sdk/			# SaaS platform transport (SDK adapters, stubs, client factory)
+	|   |    |-- interfaces/		# All interfaces related to API (DTOs + service contracts)
+	|   |    |-- dynatrace.ts 		# DynatraceClient interface + factory + ManagedDynatraceClient
+	|   |    |-- errors.ts          	# Custom errors + SDK error wrapping
+	|   |    |-- http_client.ts 		# HTTP Client implementation (Managed only)
 	|   |
 	|   |-- hover/      # Main folder for hover provider implementations
 	|   |-- interfaces/			# Generic/shared interfaces throughout the project
@@ -183,8 +184,9 @@ export const myCommandWorkflow = async () => {
 
 **Dynatrace API Client**
 
-The project packages a very simplistic and rudimentary implementation of an HTTP Client wrapped around the Dynatrace API which is found in `/src/dynatrace-api`. This is to support API functions but does not aim to be a complete/standalone client (nor should it have to).
-Extending the client is done only if other features/functionality need to use operations that are not implemented. Each folder represents an API (e.g. configuration, environment) and each file within represents an API endpoint (e.g. monitored entities). Interfaces are shared and kept in the `/src/dynatrace-api/interfaces` folder and do not necessarily need to be 100% complete.
+The project packages a dual-transport API client layer in `/src/dynatrace-api` that supports two deployment models: Managed (Axios-based `HttpClient` for REST APIs) and SaaS (Dynatrace SDK clients via `@dynatrace-internal/client-extensions` and `@dynatrace-sdk/client-environment-v2`). Both paths implement the `DynatraceClient` interface so upstream consumers are deployment-model agnostic. A factory function `createDynatraceClient()` routes to the appropriate implementation.
+
+For Managed, each folder represents an API (e.g. configuration, environment) and each file within represents an API endpoint (e.g. monitored entities). For SaaS, adapter classes in `sdk/` map SDK clients to the same service interfaces. Interfaces are shared and kept in the `/src/dynatrace-api/interfaces` folder and do not necessarily need to be 100% complete.
 
 For detailed guidance on extending the API client, see [src/dynatrace-api/README.md](src/dynatrace-api/README.md).
 

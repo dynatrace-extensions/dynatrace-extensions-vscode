@@ -14,16 +14,18 @@
   limitations under the License.
  */
 
-import React, { useEffect, useState } from "react";
+import { PanelData, PanelDataType, WebviewEvent, WebviewEventType } from "@common";
 import { CodeSnippet } from "@dynatrace/strato-components-preview/content";
+import { Page } from "@dynatrace/strato-components-preview/layouts";
 import { showToast } from "@dynatrace/strato-components-preview/notifications";
 import { Modal } from "@dynatrace/strato-components-preview/overlays";
-import { Page } from "@dynatrace/strato-components-preview/layouts";
+import React, { useEffect, useState } from "react";
+import { NotFound } from "./components/NotFound";
+import { DqlResultsPanel } from "./components/panels/DqlResultsPanel";
 import { ExtensionSimulator } from "./components/panels/ExtensionSimulator";
 import { MetricResultsPanel } from "./components/panels/MetricResultsPanel";
+import { MigrationGuidePanel } from "./components/panels/MigrationGuidePanel";
 import { WmiResultPanel } from "./components/panels/WmiResultPanel";
-import { NotFound } from "./components/NotFound";
-import { PanelData, PanelDataType, WebviewEvent, WebviewEventType } from "@common";
 
 interface AppProps {
   vscode: WebviewApi<PanelData>;
@@ -42,10 +44,14 @@ const WebviewPanel = ({ panelData }: { panelData: PanelData }) => {
       return <NotFound />;
     case PanelDataType.MetricResults:
       return <MetricResultsPanel data={data} />;
+    case PanelDataType.DqlResults:
+      return <DqlResultsPanel data={data} />;
     case PanelDataType.WmiQueryResults:
       return <WmiResultPanel data={data} />;
     case PanelDataType.ExtensionSimulator:
       return <ExtensionSimulator data={data} />;
+    case PanelDataType.MigrationGuide:
+      return <MigrationGuidePanel data={data} />;
     default:
       return <NotFound />;
   }

@@ -16,11 +16,12 @@
 
 import { MetricSeriesCollection } from "@common";
 import { HttpClient } from "../http_client";
+import { MetricServiceInterface } from "../interfaces/services";
 
 /**
  * Implementation of the Metrics V2 API
  */
-export class MetricService {
+export class MetricService implements MetricServiceInterface {
   private readonly endpoint = "/api/v2/metrics";
   private readonly httpClient: HttpClient;
 

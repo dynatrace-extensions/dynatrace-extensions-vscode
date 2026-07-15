@@ -1,6 +1,8 @@
 import { ObjectValues } from "../util-types";
+import { DqlResultsPanelData } from "./dql-results-data";
 import { EmptyStatePanelData } from "./empty-state-data";
 import { MetricResultsPanelData } from "./metric-results-data";
+import { MigrationGuidePanelData } from "./migration-guide-data";
 import { SimulatorPanelData } from "./simulator-data";
 import { WmiQueryResultPanelData } from "./wmi-query-result-data";
 
@@ -8,6 +10,8 @@ export * from "./simulator-data";
 export * from "./metric-results-data";
 export * from "./wmi-query-result-data";
 export * from "./empty-state-data";
+export * from "./dql-results-data";
+export * from "./migration-guide-data";
 
 /**
  * Registered data types for panels
@@ -17,6 +21,8 @@ export const PanelDataType = {
   MetricResults: "METRIC_RESULTS",
   WmiQueryResults: "WMI_RESULT",
   ExtensionSimulator: "SIMULATOR_DATA",
+  DqlResults: "DQL_RESULTS",
+  MigrationGuide: "MIGRATION_GUIDE",
 } as const;
 // eslint-disable-next-line @typescript-eslint/no-redeclare
 export type PanelDataType = ObjectValues<typeof PanelDataType>;
@@ -28,6 +34,8 @@ export const ViewType = {
   MetricResults: "dynatrace-extensions.MetricResults",
   WmiQueryResults: "dynatrace-extensions.WmiResults",
   ExtensionSimulator: "dynatrace-extensions.SimulatorUI",
+  DqlQueryResults: "dynatrace-extensions.DqlResults",
+  MigrationGuide: "dynatrace-extensions.MigrationGuide",
 } as const;
 // eslint-disable-next-line @typescript-eslint/no-redeclare
 export type ViewType = ObjectValues<typeof ViewType>;
@@ -43,4 +51,6 @@ export type PanelData =
   | SimulatorPanelData
   | MetricResultsPanelData
   | WmiQueryResultPanelData
-  | EmptyStatePanelData;
+  | EmptyStatePanelData
+  | DqlResultsPanelData
+  | MigrationGuidePanelData;

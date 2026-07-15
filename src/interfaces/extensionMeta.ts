@@ -15,6 +15,7 @@
  */
 
 import { UtilTypes } from "@common";
+import { DqlTableAdditionalCommand, DqlTableQuery } from "@dynatrace/unified-analysis/documents";
 
 export type DatasourceName =
   | "snmp"
@@ -38,13 +39,18 @@ export const DetailInjectionCardType = {
   EVENTS: "EVENTS",
   METRIC_TABLE: "METRIC_TABLE",
   INJECTIONS: "INJECTIONS",
+  CARD_GROUP: "CARD_GROUP",
 } as const;
 // eslint-disable-next-line @typescript-eslint/no-redeclare
 export type DetailInjectionCardType = UtilTypes.ObjectValues<typeof DetailInjectionCardType>;
 
-interface TopologyStub {
+export interface TopologyStub {
   types?: TopologyType[];
   relationships?: RelationshipStub[];
+}
+
+export interface Conditional {
+  conditions?: string[];
 }
 
 export interface TopologyType {
@@ -157,61 +163,141 @@ interface VarStub {
 }
 
 interface ListSettings {
+  staticContent?: {
+    showGlobalFilter?: boolean;
+    header?: LayoutHeader;
+    hideDefaultBreadcrumb?: boolean;
+    breadcrumbs?: Array<{ type: string; displayName?: string; entityType?: string }>;
+  };
   layout?: {
     autoGenerate?: boolean;
     cards?: ListScreenCard[];
   };
 }
 
-interface ListScreenCard {
+export interface ListScreenCard extends Conditional {
   key: string;
   entitySelectorTemplate?: string;
-  type: "ENTITIES_LIST" | "CHART_GROUP" | "MESSAGE" | "INJECTIONS";
+  target?: string;
+  type: "ENTITIES_LIST" | "CHART_GROUP" | "MESSAGE" | "INJECTIONS" | "CARD_GROUP";
 }
 
-interface DetailsScreenCard {
+export interface DetailsScreenCard extends Conditional {
   key: string;
   entitySelectorTemplate?: string;
-  conditions?: string[];
+  target?: string;
   type: DetailInjectionCardType;
+  /** Populated only when type === "CARD_GROUP": a named container (its `key`
+  field is absent at runtime) wrapping an ordered list of child card refs. */
+  displayName?: string;
+  cards?: DetailsScreenCard[];
 }
 
-interface DetailsSettings {
+export interface DetailsSettings {
+  target?: string;
+  staticContent?: {
+    showProblems?: boolean;
+    showProperties?: boolean;
+    showTags?: boolean;
+    showGlobalFilter?: boolean;
+    showAddTag?: boolean;
+    header?: LayoutHeader;
+    breadcrumbs?: Array<{ type: string; displayName?: string; entityType?: string }>;
+  };
   layout?: {
     autoGenerate?: boolean;
     cards?: DetailsScreenCard[];
   };
 }
 
+interface LayoutHeader {
+  title?: string;
+  description: string;
+}
+
 export interface ScreenStub {
   entityType: string;
-  propertiesCard?: PropertiesCard;
+  propertiesCard?: PropertiesCard | PropertiesCard[];
   listSettings?: ListSettings;
   listInjections?: ListScreenCard[];
-  detailsSettings?: DetailsSettings;
+  detailsSettings?: DetailsSettings | DetailsSettings[];
   detailsInjections?: DetailsScreenCard[];
   healthCards?: HealthCardStub[];
   entitiesListCards?: EntitiesListCardStub[];
   metricTableCards?: MetricTableCardStub[];
   chartsCards?: ChartsCardStub[];
-  messageCards?: MinimalCardStub[];
+  messageCards?: MessageCardStub[];
   logsCards?: MinimalCardStub[];
   eventsCards?: MinimalCardStub[];
+  dqlTableCards?: DqlTableCardStub[];
   actions?: Action[];
 }
 
-interface PropertiesCard {
+export interface PropertiesCard {
+  target?: string;
   displayOnlyConfigured: boolean;
   properties: Property[];
+  dqlQuery?: DqlTableQuery;
 }
 
-export type Property = AttributeProperty | RelationProperty;
+export type Property = AttributeProperty | RelationProperty | DqlProperty;
 
 type Column = AttributeProperty | RelationProperty | CustomColumn;
 
 interface MinimalCardStub {
   key: string;
   displayName?: string;
+}
+
+export interface MessageCardStub extends Conditional {
+  key: string;
+  displayName?: string;
+  target?: string;
+  type?: string;
+  message?: {
+    text: string;
+    theme?: string;
+  };
+  card?: {
+    text: string;
+    theme?: string;
+    icon?: string;
+    displayName?: string;
+    buttons?: Array<{
+      actionExpression: string;
+      text: string;
+      color?: string;
+    }>;
+  };
+}
+
+export interface DqlTableCardStub extends Conditional {
+  key: string;
+  displayName?: string;
+  target?: string;
+  query: {
+    query: string;
+    lookups?: Array<{
+      query: string;
+      sourceField: string;
+      lookupField: string;
+      fields: string[];
+    }>;
+    additionalCommands?: DqlTableAdditionalCommand[];
+  };
+  columns?: DqlTableColumnStub[];
+}
+
+export interface DqlTableColumnStub {
+  field: string;
+  displayName?: string;
+  columnType?: string;
+  widthType?: string;
+  widthValue?: number;
+  defaultColumn?: boolean;
+  resizable?: boolean;
+  sortable?: boolean;
+  formatter?: string;
 }
 
 interface Filtering {
@@ -249,18 +335,24 @@ interface EntitiesListCardStub {
   charts?: ChartStub[];
 }
 
-export interface AttributeProperty {
+export interface DqlProperty extends Conditional {
+  type: "DQL";
+  dql: {
+    field: string;
+    displayName: string;
+  };
+}
+
+export interface AttributeProperty extends Conditional {
   type: "ATTRIBUTE";
-  conditions?: string[];
   attribute: {
     key: string;
     displayName: string;
   };
 }
 
-export interface RelationProperty {
+export interface RelationProperty extends Conditional {
   type: "RELATION";
-  conditions?: string[];
   relation: {
     entitySelectorTemplate: string;
     displayName: string;
@@ -271,6 +363,7 @@ export const isAttributeProperty = (prop: Property | Column): prop is AttributeP
   prop.type === "ATTRIBUTE";
 export const isRelationProperty = (prop: Property | Column): prop is RelationProperty =>
   prop.type === "RELATION";
+export const isDqlProperty = (prop: Property | Column): prop is DqlProperty => prop.type === "DQL";
 
 interface CustomColumn {
   type: "CUSTOM";
@@ -295,6 +388,8 @@ export interface MetricTableCardStub {
 export interface HealthCardStub {
   key: string;
   tiles: TileStub[];
+  target?: string;
+  conditions?: string[];
 }
 
 export interface TileStub {
@@ -308,17 +403,19 @@ export interface AnchorStub {
   cardName?: string;
   chartName?: string;
 }
-export interface ChartsCardStub {
+export interface ChartsCardStub extends Conditional {
   key: string;
   displayName?: string;
   numberOfVisibleCharts?: number;
   chartsInRow?: number;
-  mode?: string;
+  mode?: "NORMAL" | "COMPACT";
   hideEmptyCharts?: boolean;
   charts: ChartStub[];
+  target?: string;
+  description?: string;
 }
 
-export interface ChartStub {
+export interface ChartStub extends Conditional {
   displayName?: string;
   visualizationType: string;
   graphChartConfig?: GraphConfigStub;
@@ -332,12 +429,14 @@ export interface ChartMetricVisualization {
   displayName?: string;
   themeColor?: string;
   seriesType?: MetricVisualizationType;
+  colorOverride?: ColorOverride[];
 }
 
 export interface ChartMetric {
   metricSelector: string;
   metricSelectorDetailed?: string;
   metricSelectorSort?: string;
+  dqlQuery?: string;
   visualization?: ChartMetricVisualization;
   yAxisKey?: string;
 }
@@ -350,11 +449,24 @@ export interface GraphConfigStub {
     key: string;
     position: "RIGHT" | "LEFT";
     visible: boolean;
+    min?: string;
+    max?: string;
   }[];
 }
 
-interface SingleMetricConfig {
-  metric: { metricSelector: string };
+export interface SingleMetricConfig {
+  metric: { metricSelector: string; dqlQuery?: string; overrideUnit?: string };
+  foldTransformation?: string;
+  showTrend?: boolean;
+  showSparkline?: boolean;
+  displayName?: string;
+  colorOverride?: ColorOverride[];
+  showLegend?: boolean;
+}
+
+export interface ColorOverride {
+  color: string;
+  seriesName: string;
 }
 
 export interface DocumentDashboard {
@@ -366,6 +478,7 @@ export interface ExtensionStub {
   name: string;
   version: string;
   minDynatraceVersion: string;
+  keywords?: string[];
   author: {
     name: string;
   };

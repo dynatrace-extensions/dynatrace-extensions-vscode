@@ -14,18 +14,18 @@
   limitations under the License.
  */
 
-import React from "react";
+import { MetricSeriesCollection, MetricSeries } from "@common";
+import { InformationOverlay } from "@dynatrace/strato-components/content";
+import { Flex, Container, Divider } from "@dynatrace/strato-components/layouts";
+import { Heading, Text, Code } from "@dynatrace/strato-components/typography";
 import {
   TimeseriesChart,
   Timeseries,
   TimeseriesChartConfig,
 } from "@dynatrace/strato-components-preview/charts";
-import { InformationOverlay } from "@dynatrace/strato-components-preview/overlays";
 import { CodeSnippet, EmptyState } from "@dynatrace/strato-components-preview/content";
-import { Heading, Text, Code } from "@dynatrace/strato-components/typography";
-import { Flex, Container, Divider } from "@dynatrace/strato-components/layouts";
 import { WarningIcon } from "@dynatrace/strato-icons";
-import { MetricSeriesCollection, MetricSeries } from "@common";
+import React from "react";
 
 interface MetricResultsPanelProps {
   data: MetricSeriesCollection[];

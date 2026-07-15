@@ -77,18 +77,18 @@ const mockDynatraceEnvironmentsEntries: DynatraceTenantDto[] = [
   {
     id: "abc12345",
     url: "https://abc12345.com",
-    apiUrl: "C",
     token: "D",
     current: true,
     label: "Mock-1",
+    deploymentModel: "managed",
   },
   {
     id: "xyz98765",
     url: "https://a/e/xyz98765",
-    apiUrl: "Y",
     token: "Z",
     current: false,
     label: "Mock-2",
+    deploymentModel: "managed",
   },
 ];
 const mockSummariesEntries: ExecutionSummary[] = [
@@ -195,7 +195,7 @@ describe("Filesystem Utils", () => {
       // @ts-expect-error
       mockFs.readdirSync.mockReturnValue(["f1", "f2", "f3"]);
       mockFs.statSync.mockImplementation((p: fs.PathLike) => {
-        const stats = new fs.Stats();
+        const stats = Object.create(fs.Stats.prototype) as fs.Stats;
         switch (p) {
           case path.join("mock", "f1"):
             stats.mtime = new Date(1);
@@ -507,6 +507,67 @@ describe("Filesystem Utils", () => {
         getAllTenants();
       }).toThrow();
     });
+
+    it("should infer 'managed' deploymentModel for legacy entries without deploymentModel", () => {
+      const legacyEntry = {
+        id: "abc123",
+        url: "https://host/e/abc123",
+        apiUrl: "https://host/e/abc123",
+        token: "T",
+        current: false,
+        label: "Legacy",
+      };
+      mockFileSystemItem(mockFs, [
+        { pathParts: [mockGlobalStoragePath] },
+        { pathParts: [mockEnvironmentsJsonPath], content: JSON.stringify([legacyEntry]) },
+      ]);
+
+      const actual = getAllTenants();
+
+      expect(actual).toHaveLength(1);
+      expect(actual[0].deploymentModel).toBe("managed");
+      expect(actual[0]).not.toHaveProperty("apiUrl");
+    });
+
+    it("should infer 'saas' deploymentModel for legacy entries with .apps. URL", () => {
+      const legacyEntry = {
+        id: "abc123",
+        url: "https://abc123.apps.dynatrace.com",
+        apiUrl: "https://abc123.live.dynatrace.com",
+        token: "T",
+        current: false,
+        label: "Legacy SaaS",
+      };
+      mockFileSystemItem(mockFs, [
+        { pathParts: [mockGlobalStoragePath] },
+        { pathParts: [mockEnvironmentsJsonPath], content: JSON.stringify([legacyEntry]) },
+      ]);
+
+      const actual = getAllTenants();
+
+      expect(actual).toHaveLength(1);
+      expect(actual[0].deploymentModel).toBe("saas");
+      expect(actual[0]).not.toHaveProperty("apiUrl");
+    });
+
+    it("should preserve existing deploymentModel when present", () => {
+      const entry = {
+        id: "abc123",
+        url: "https://host/e/abc123",
+        token: "T",
+        current: false,
+        label: "Migrated",
+        deploymentModel: "managed",
+      };
+      mockFileSystemItem(mockFs, [
+        { pathParts: [mockGlobalStoragePath] },
+        { pathParts: [mockEnvironmentsJsonPath], content: JSON.stringify([entry]) },
+      ]);
+
+      const actual = getAllTenants();
+
+      expect(actual[0].deploymentModel).toBe("managed");
+    });
   });
 
   describe("registerTenant", () => {
@@ -526,7 +587,7 @@ describe("Filesystem Utils", () => {
       mockFileSystemItem(mockFs, [{ pathParts: [mockEnvironmentsJsonPath], content: "[]" }]);
       const executeCommandSpy = jest.spyOn(vscode.commands, "executeCommand");
 
-      await registerTenant("https://a/e/X", "", "");
+      await registerTenant("https://a/e/X", "");
 
       expect(executeCommandSpy).toHaveBeenCalledWith(
         "setContext",
@@ -537,10 +598,10 @@ describe("Filesystem Utils", () => {
 
     it("should add a new tenant to the list", async () => {
       mockFileSystemItem(mockFs, [{ pathParts: [mockEnvironmentsJsonPath], content: "[]" }]);
-      const { url, apiUrl, token, current, label } = mockDynatraceEnvironmentsEntries[0];
+      const { url, token, current, label, deploymentModel } = mockDynatraceEnvironmentsEntries[0];
       const expectedTenantsJson = JSON.stringify([mockDynatraceEnvironmentsEntries[0]]);
 
-      await registerTenant(url, apiUrl, token, label, current);
+      await registerTenant(url, token, label, current, deploymentModel);
 
       expect(mockFs.writeFileSync).toHaveBeenCalledWith(
         mockEnvironmentsJsonPath,
@@ -552,13 +613,13 @@ describe("Filesystem Utils", () => {
       const existingWorkspace = mockDynatraceEnvironmentsEntries[0];
       const expectedTenantsJson = JSON.stringify([
         existingWorkspace,
-        { id: "X", url: "https://a/e/X", apiUrl: "", token: "", current: false, label: "X" },
+        { id: "X", url: "https://a/e/X", token: "", current: false, label: "X", deploymentModel: "managed" },
       ]);
       mockFileSystemItem(mockFs, [
         { pathParts: [mockEnvironmentsJsonPath], content: JSON.stringify([existingWorkspace]) },
       ]);
 
-      await registerTenant("https://a/e/X", "", "");
+      await registerTenant("https://a/e/X", "");
 
       expect(mockFs.writeFileSync).toHaveBeenCalledWith(
         mockEnvironmentsJsonPath,
@@ -570,10 +631,10 @@ describe("Filesystem Utils", () => {
       const expected = {
         id: "abc12345",
         url: "https://abc12345.com",
-        apiUrl: "",
         token: "",
         current: false,
         label: "",
+        deploymentModel: "managed" as const,
       };
       mockFileSystemItem(mockFs, [
         {
@@ -582,7 +643,7 @@ describe("Filesystem Utils", () => {
         },
       ]);
 
-      await registerTenant(expected.url, expected.apiUrl, expected.token, expected.label);
+      await registerTenant(expected.url, expected.token, expected.label);
 
       expect(mockFs.writeFileSync).toHaveBeenCalledWith(
         mockEnvironmentsJsonPath,
@@ -596,20 +657,20 @@ describe("Filesystem Utils", () => {
         { pathParts: [mockEnvironmentsJsonPath], content: JSON.stringify([existingWorkspace]) },
       ]);
 
-      await registerTenant("https://a/e/X", "", "", "", true);
+      await registerTenant("https://a/e/X", "", "", true);
 
       expect(mockFs.writeFileSync).toHaveBeenCalledWith(
         mockEnvironmentsJsonPath,
         JSON.stringify([
           { ...existingWorkspace, current: false },
-          { id: "X", url: "https://a/e/X", apiUrl: "", token: "", current: true, label: "" },
+          { id: "X", url: "https://a/e/X", token: "", current: true, label: "", deploymentModel: "managed" },
         ]),
       );
     });
 
     it("should throw if json file doesn't exist", async () => {
       mockFileSystemItem(mockFs, []);
-      await expect(registerTenant("https://a/e/X", "", "", "", true)).rejects.toThrow();
+      await expect(registerTenant("https://a/e/X", "", "", true)).rejects.toThrow();
     });
   });
 

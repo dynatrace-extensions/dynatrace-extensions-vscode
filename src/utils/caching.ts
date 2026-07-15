@@ -55,6 +55,7 @@ let baristaIcons: string[] = [];
 let selectorStatuses = new Map<string, ValidationStatus>();
 let prometheusData: PromData = {};
 let jmxData: JMXData = {};
+let dqlStatuses = new Map<string, ValidationStatus>();
 let wmiQueryResults = new Map<string, WmiQueryResult>();
 let wmiQueryStatuses = new Map<string, ValidationStatus>();
 let snmpOIDs = new Map<string, OidInformation>();
@@ -99,6 +100,7 @@ const setDefaultValues = () => {
   builtinEntityTypes = [];
   parsedExtension = new BehaviorSubject<ExtensionStub | undefined | null>(undefined);
   baristaIcons = [];
+  dqlStatuses = new Map<string, ValidationStatus>();
   selectorStatuses = new Map<string, ValidationStatus>();
   prometheusData = {};
   wmiQueryResults = new Map<string, WmiQueryResult>();
@@ -257,6 +259,8 @@ export const getCachedPrometheusData = () => prometheusData;
 
 export const getCachedJMXData = () => jmxData;
 
+export const getCachedDqlStatus = (query: string) => dqlStatuses.get(query);
+
 export const getCachedSelectorStatus = (selector: string) => selectorStatuses.get(selector);
 
 export const getCachedEntityInstances = (type: string) => entityInstances.get(type);
@@ -287,6 +291,10 @@ export const setCachedPrometheusData = (data: PromData) => {
 
 export const setCachedJMXData = (data: JMXData) => {
   jmxData = data;
+};
+
+export const setCachedDqlStatus = (query: string, status: ValidationStatus) => {
+  dqlStatuses.set(query, status);
 };
 
 export const setCachedSelectorStatus = (selector: string, status: ValidationStatus) => {

@@ -20,6 +20,7 @@ import { glob } from "glob";
 import vscode from "vscode";
 import { ExtensionStub } from "../interfaces/extensionMeta";
 import {
+  IconPath,
   WorkspaceTreeItem,
   WorkspacesTreeContextValue,
   WorkspacesTreeDataProvider,
@@ -29,24 +30,31 @@ import { createSingletonProvider } from "../utils/singleton";
 import { parseYAML } from "../utils/yamlParsing";
 
 const ICONS_PATH = path.join(__filename, "..", "..", "src", "assets", "icons");
-const ICONS: Record<string, { light: string; dark: string }> = {
+const ICONS: Record<string, IconPath> = {
   EXTENSION: {
-    light: path.join(ICONS_PATH, "extension_light.png"),
-    dark: path.join(ICONS_PATH, "extension_dark.png"),
+    light: vscode.Uri.file(path.join(ICONS_PATH, "extension_light.png")),
+    dark: vscode.Uri.file(path.join(ICONS_PATH, "extension_dark.png")),
   },
   EXTENSION_CURRENT: {
-    light: path.join(ICONS_PATH, "extension_current_light.png"),
-    dark: path.join(ICONS_PATH, "extension_current_dark.png"),
+    light: vscode.Uri.file(path.join(ICONS_PATH, "extension_current_light.png")),
+    dark: vscode.Uri.file(path.join(ICONS_PATH, "extension_current_dark.png")),
   },
   EXTENSION_MANIFEST: {
-    light: path.join(ICONS_PATH, "manifest_light.png"),
-    dark: path.join(ICONS_PATH, "manifest_dark.png"),
+    light: vscode.Uri.file(path.join(ICONS_PATH, "manifest_light.png")),
+    dark: vscode.Uri.file(path.join(ICONS_PATH, "manifest_dark.png")),
   },
 };
 
 export const refreshWorkspacesTreeView = () => {
   getWorkspacesTreeDataProvider().refresh();
 };
+
+/**
+ * Extracts the display text of a tree item's label, which may be a plain string
+ * or a {@link vscode.TreeItemLabel}. Used for alphabetical sorting.
+ */
+const labelText = (item: WorkspaceTreeItem): string =>
+  typeof item.label === "string" ? item.label : item.label?.label ?? "";
 
 /**
  * Creates a TreeItem that can be used to represent either an extensions workspace
@@ -62,11 +70,7 @@ const createWorkspacesTreeItem = (
   label: string,
   collapsibleState: vscode.TreeItemCollapsibleState,
   workspacePath: string,
-  icon:
-    | string
-    | vscode.Uri
-    | { light: string | vscode.Uri; dark: string | vscode.Uri }
-    | vscode.ThemeIcon,
+  icon: string | IconPath,
   contextValue: WorkspacesTreeContextValue,
   id: string,
   version?: string,
@@ -141,22 +145,29 @@ class WorkspacesTreeDataProviderImpl implements WorkspacesTreeDataProvider {
           ),
         );
       });
+      // Render extensions alphabetically (case-insensitive) by name
+      extensions.sort((a, b) =>
+        labelText(a).localeCompare(labelText(b), undefined, { sensitivity: "base" }),
+      );
       return extensions;
     }
-    // If not item specified, grab all workspaces from global storage
-    return getAllWorkspaces().map(workspace =>
-      createWorkspacesTreeItem(
-        workspace.name.toUpperCase(),
-        vscode.TreeItemCollapsibleState.Collapsed,
-        workspace.folder,
-        vscode.workspace.workspaceFolders &&
-          vscode.workspace.workspaceFolders[0].uri.toString() === workspace.folder
-          ? ICONS.EXTENSION_CURRENT
-          : ICONS.EXTENSION,
-        "extensionWorkspace",
-        workspace.id,
-      ),
-    );
+    // If no item specified, grab all workspaces from global storage, sorted
+    // alphabetically (case-insensitive) by their raw name - not the upper-cased label.
+    return [...getAllWorkspaces()]
+      .sort((a, b) => a.name.localeCompare(b.name, undefined, { sensitivity: "base" }))
+      .map(workspace =>
+        createWorkspacesTreeItem(
+          workspace.name.toUpperCase(),
+          vscode.TreeItemCollapsibleState.Collapsed,
+          workspace.folder,
+          vscode.workspace.workspaceFolders &&
+            vscode.workspace.workspaceFolders[0].uri.toString() === workspace.folder
+            ? ICONS.EXTENSION_CURRENT
+            : ICONS.EXTENSION,
+          "extensionWorkspace",
+          workspace.id,
+        ),
+      );
   }
 }
 

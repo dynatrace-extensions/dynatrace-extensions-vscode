@@ -17,11 +17,12 @@
 import { util } from "node-forge";
 import { HttpClient } from "../http_client";
 import { CredentialsResponseElement } from "../interfaces/credentialVault";
+import { CredentialVaultServiceInterface } from "../interfaces/services";
 
 /**
  * Implementation of the Dynatrace Credential Vault API.
  */
-export class CredentialVaultService {
+export class CredentialVaultService implements CredentialVaultServiceInterface {
   private readonly endpoint: string;
   private readonly httpClient: HttpClient;
 

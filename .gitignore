@@ -6,3 +6,14 @@ coverage
 
 .github/plans/*
 !.github/plans/.gitkeep
+.ai/plans/*
+!.ai/plans/.gitkeep
+.DS_Store
+
+samples
+conversions
+graphify-out
+
+.claude/settings*
+.claude/commands/jira-refine.md
+.claude/commands/jira-deliver.md

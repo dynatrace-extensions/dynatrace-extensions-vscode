@@ -18,6 +18,8 @@ export const CodeLensCommand = createCommands("dynatrace-extensions.codelens", {
   RunWMIQuery: "runWMIQuery",
   ValidateSelector: "validateSelector",
   RunSelector: "runSelector",
+  ValidateDqlQuery: "validateDqlQuery",
+  RunDqlQuery: "runDqlQuery",
 } as const);
 // eslint-disable-next-line @typescript-eslint/no-redeclare
 export type CodeLensCommand = ObjectValues<typeof CodeLensCommand>;
@@ -42,6 +44,7 @@ export const GlobalCommand = createCommands("dynatrace-extensions", {
   InitPending: "initPending",
   InitWorkspace: "initWorkspace",
   OpenScreen: "openScreen",
+  OpenPlatformUaScreen: "openPlatformUaScreen",
   DistributeCertificate: "distributeCertificate",
   GenerateCertificates: "generateCertificates",
   ConvertJmxExtension: "convertJmxExtension",
@@ -54,6 +57,7 @@ export const GlobalCommand = createCommands("dynatrace-extensions", {
   CreateAlert: "createAlert",
   CreateMonitoringConfiguration: "createMonitoringConfiguration",
   CreateSmartscapeTopology: "createSmartscapeTopology",
+  ConvertScreens: "convertScreens",
   DownloadSupportArchive: "downloadSupportArchive",
 } as const);
 // eslint-disable-next-line @typescript-eslint/no-redeclare
@@ -88,6 +92,7 @@ export const EnvironmentCommand = createCommands(EnvironmentCommandPrefix, {
   DeleteConfig: "deleteConfig",
   SaveConfig: "saveConfig",
   OpenExtension: "openExtension",
+  OpenMigrationGuide: "openMigrationGuide",
 } as const);
 // eslint-disable-next-line @typescript-eslint/no-redeclare
 export type EnvironmentCommand = ObjectValues<typeof EnvironmentCommand>;

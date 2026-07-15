@@ -30,18 +30,22 @@ import { getPrometheusCompletionProvider } from "./codeCompletions/prometheus";
 import { getScreensCompletionProvider } from "./codeCompletions/screensMeta";
 import { getTopologyCompletionProvider } from "./codeCompletions/topology";
 import { getWmiCompletionProvider } from "./codeCompletions/wmi";
+import { getDqlCodeLensProvider } from "./codeLens/dqlCodeLens";
 import { getJmxWizardCodeLensProvider } from "./codeLens/jmxWizard";
+import { getPlatformUaLensProvider } from "./codeLens/platformUaLens";
 import { getPrometheusCodeLensProvider } from "./codeLens/prometheusScraper";
 import { getScreenLensProvider } from "./codeLens/screenCodeLens";
 import { getSelectorCodeLensProvider } from "./codeLens/selectorCodeLens";
 import { getSimulatorLensProvider } from "./codeLens/simulatorCodeLens";
 import { getSnmpCodeLensProvider } from "./codeLens/snmpCodeLens";
+import { registerDqlCommands } from "./codeLens/utils/dqlUtils";
 import { registerSelectorCommands } from "./codeLens/utils/selectorUtils";
 import { getWmiCodeLensProvider } from "./codeLens/wmiCodeLens";
 import { activateExtensionWorkflow } from "./commandPalette/activateExtension";
 import { buildExtensionWorkflow, fastModeBuildWorkflow } from "./commandPalette/buildExtension";
 import { convertJmxExtensionWorkflow } from "./commandPalette/convertJMXExtension";
 import { convertPythonExtensionWorkflow } from "./commandPalette/convertPythonExtension";
+import { convertScreensWorkflow } from "./commandPalette/convertScreens";
 import { createSmartscapeTopologyWorkflow } from "./commandPalette/convertTopology";
 import { createAlertWorkflow } from "./commandPalette/createAlert";
 import { createMonitoringConfigurationWorkflow } from "./commandPalette/createConfiguration";
@@ -58,6 +62,7 @@ import {
   MANIFEST_DOC_SELECTOR,
   OPENPIPELINE_DOC_SELECTOR,
   QUICK_FIX_PROVIDER_METADATA,
+  SCREENS_DOC_SELECTOR,
   TEMP_CONFIG_DOC_SELECTOR,
 } from "./constants";
 import { getSnmpHoverProvider } from "./hover/snmpHover";
@@ -66,17 +71,12 @@ import { getFastModeStatusBar } from "./statusBar/fastMode";
 import { SimulatorManager } from "./statusBar/simulator";
 import { registerTenantsViewCommands } from "./treeViews/commands/environments";
 import { registerWorkspaceViewCommands } from "./treeViews/commands/workspaces";
-import { getTenantsTreeDataProvider } from "./treeViews/tenantsTreeView";
+import { checkTenantSetup, getTenantsTreeDataProvider } from "./treeViews/tenantsTreeView";
 import { getWorkspacesTreeDataProvider } from "./treeViews/workspacesTreeView";
 import { initializeCache } from "./utils/caching";
 import { isExtensionsWorkspace } from "./utils/conditionCheckers";
 import { updateDiagnosticsCollection } from "./utils/diagnostics";
-import {
-  getAllTenants,
-  getAllWorkspaces,
-  initializeGlobalStorage,
-  migrateFromLegacyExtension,
-} from "./utils/fileSystem";
+import { getAllTenants, getAllWorkspaces, initializeGlobalStorage } from "./utils/fileSystem";
 import logger from "./utils/logging";
 import { getWebviewPanelManager } from "./webviews/webview-panel-manager";
 
@@ -98,11 +98,6 @@ export async function activate(context: vscode.ExtensionContext) {
   const extensionVersion = (context.extension.packageJSON as { version: string }).version;
   logger.info(`dynatrace-extensions (version ${extensionVersion}) is activating...`, ...fnLogTrace);
 
-  // TODO: Code soon to be removed from project
-  if (vscode.extensions.getExtension("DynatracePlatformExtensions.dt-ext-copilot")) {
-    await migrateFromLegacyExtension();
-  }
-
   // Set custom context properties for tree views
   setContextProperty("numWorkspaces", getAllWorkspaces().length);
   setContextProperty("extensionWorkspace", await isExtensionsWorkspace(false));
@@ -120,9 +115,14 @@ export async function activate(context: vscode.ExtensionContext) {
     ...registerTreeViews(),
     ...registerCodeActionsProviders(),
     ...registerSelectorCommands(),
+    ...registerDqlCommands(),
     ...registerCodeLensProviders(),
     ...registerDiagnosticsEventListeners(),
-    ...registerSerializersForPanels([ViewType.MetricResults, ViewType.WmiQueryResults]),
+    ...registerSerializersForPanels([
+      ViewType.MetricResults,
+      ViewType.WmiQueryResults,
+      ViewType.DqlQueryResults,
+    ]),
     getFastModeStatusBar(),
     getConnectionStatusBar(),
     vscode.languages.registerHoverProvider(MANIFEST_DOC_SELECTOR, getSnmpHoverProvider()),
@@ -130,6 +130,9 @@ export async function activate(context: vscode.ExtensionContext) {
       await fastModeBuildWorkflow(doc);
     }),
   );
+
+  // Check and notify on invalid legacy setups
+  getAllTenants().forEach(t => checkTenantSetup(t, true));
 
   await handlePendingInitialization();
 
@@ -175,6 +178,7 @@ const registerCommandPaletteWorkflows = (): vscode.Disposable[] => [
     createMonitoringConfigurationWorkflow,
   ),
   registerWorkflowCommand(GlobalCommand.CreateSmartscapeTopology, createSmartscapeTopologyWorkflow),
+  registerWorkflowCommand(GlobalCommand.ConvertScreens, convertScreensWorkflow),
   registerWorkflowCommand(GlobalCommand.DownloadSupportArchive, downloadSupportArchiveWorkflow),
 ];
 
@@ -255,6 +259,8 @@ const registerCodeLensProviders = () => [
   registerCodeLensProvider(getScreenLensProvider()),
   registerCodeLensProvider(getWmiCodeLensProvider()),
   registerCodeLensProvider(getSnmpCodeLensProvider()),
+  registerCodeLensProvider(getDqlCodeLensProvider(), SCREENS_DOC_SELECTOR),
+  registerCodeLensProvider(getPlatformUaLensProvider(), SCREENS_DOC_SELECTOR),
 ];
 
 const registerCodeLensProvider = (

@@ -15,22 +15,27 @@ on:
 
 jobs:
   test:
-    runs-on: ubuntu-latest
+    runs-on: [self-hosted, radu]
     steps:
       - name: Checkout
-        uses: actions/checkout@v4
+        uses: actions/checkout@v6
       - name: Install Node
-        uses: actions/setup-node@v4
+        uses: actions/setup-node@v6
         with:
-          node-version: 20.x
-      - name: Install Linux deps
-        run: sudo apt install xvfb -y
+          node-version: 24
+      - name: Setup JFrog CLI
+        uses: jfrog/setup-jfrog-cli@v5
+        env:
+          JF_URL: ${{ secrets.JF_URL }}
+          JF_ACCESS_TOKEN: ${{ secrets.JF_TOKEN }}
+      - name: Point npm at the internal registry
+        run: jf npmc --repo-resolve=npm-dynatrace-release-v
       - name: Install all
         run: npm run install:all
       - name: Build everything
         run: npm run build:all
       - name: Run Unit tests
         run: npm run test:unit
-      - name: Run E2E tests
-        run: xvfb-run -a npm run test:e2e
-
+      # Temporary disable E2E tests until runner infra properly setup
+      # - name: Run E2E tests
+      #   run: xvfb-run -a npm run test:e2e

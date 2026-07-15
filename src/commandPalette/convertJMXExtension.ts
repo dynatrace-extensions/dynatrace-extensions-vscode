@@ -21,7 +21,7 @@ import jszip from "jszip";
 import vscode from "vscode";
 import yaml from "yaml";
 import { slugify } from "../codeActions/utils/snippetBuildingUtils";
-import { Dynatrace } from "../dynatrace-api/dynatrace";
+import { DynatraceClient } from "../dynatrace-api/dynatrace";
 import {
   ChartDto,
   ChartMetric,
@@ -498,7 +498,7 @@ async function convertV1UiToScreens(
             title: `${elem.title}`,
             description: `${elem.description}`,
             series: newSeries,
-          } as ChartDto);
+          });
         }
         return newElem;
       } else {
@@ -511,9 +511,8 @@ async function convertV1UiToScreens(
   if (technology !== "UNKNOWN") {
     // Prepare conditions
     const injectionConditions: string[] = [
-      // eslint-disable-next-line no-secrets/no-secrets
       `metricAvailable|metric=dsfm:extension.status:filter(and(eq("dt.extension.name","custom:${extensionName}"),in("dt.entity.host", entitySelector("type(host),toRelationships.isProcessOf(entityId($(entityId)))"))))|lastWrittenWithinDays=5`,
-      // eslint-disable-next-line no-secrets/no-secrets
+
       `entityAttribute|softwareTechnologies=${technology}`,
     ];
 
@@ -771,7 +770,7 @@ export async function extractv1ExtensionFromLocal(): Promise<[ExtensionV1 | unde
  */
 export async function extractV1FromRemote(
   extensionType: "JMX" | "Python",
-  dt?: Dynatrace,
+  dt?: DynatraceClient,
 ): Promise<[ExtensionV1 | undefined, string]> {
   // TODO - move this to a shared file, as it is used by Python extensions as well
 
@@ -820,7 +819,7 @@ export async function extractV1FromRemote(
  * @param dt Dynatrace Client API
  * @param outputPath optional path where to save the manifest
  */
-export async function convertJMXExtension(dt?: Dynatrace, outputPath?: string) {
+export async function convertJMXExtension(dt?: DynatraceClient, outputPath?: string) {
   const fnLogTrace = [...logTrace, "convertJMXExtension"];
   logger.info("Executing Covert JMX command", ...fnLogTrace);
   // User chooses if they want to use a local file or browse from the Dynatrace environment
@@ -856,7 +855,6 @@ export async function convertJMXExtension(dt?: Dynatrace, outputPath?: string) {
       saveLabel: "Save",
       title: "Save JMX v2 extension.yaml",
       filters: {
-        // eslint-disable-next-line @typescript-eslint/naming-convention
         "JMX v2 extension": ["yaml"],
       },
       defaultUri: vscode.Uri.file(`${slugify(jmxV2Extension.name)}.yaml`),

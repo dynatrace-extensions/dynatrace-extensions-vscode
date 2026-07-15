@@ -39,7 +39,6 @@ class WmiCompletionProvider implements vscode.CompletionItemProvider {
 
       // Check that we found a query definition before proceeding
       if (closestQueryLine) {
-        /* eslint-disable-next-line no-secrets/no-secrets */
         // The line would look something like 'query: SELECT Name FROM Win32_OperatingSystem
         // So we grab the portion after 'query:'
         const queryString = closestQueryLine.split("query:")[1].trim();

@@ -14,24 +14,26 @@
   limitations under the License.
  */
 
-import React, { useCallback, useEffect, useMemo, useState } from "react";
+import {
+  SimulationConfig,
+  SimulatorData,
+  SimulatorStatus,
+  SimulatorCommand,
+  ExecutionSummary,
+} from "@common";
+import { Button } from "@dynatrace/strato-components/buttons";
+import { ProgressBar } from "@dynatrace/strato-components/content";
 import { Container, Flex } from "@dynatrace/strato-components/layouts";
 import { Heading } from "@dynatrace/strato-components/typography";
-import { ProgressBar } from "@dynatrace/strato-components/content";
-import { Button } from "@dynatrace/strato-components/buttons";
 import { TitleBar } from "@dynatrace/strato-components-preview/layouts";
-import {
-  DataTableV2,
-  type DataTableV2ColumnDef,
-} from "@dynatrace/strato-components-preview/tables";
+import { DataTable, type DataTableColumnDef } from "@dynatrace/strato-components-preview/tables";
 import Colors from "@dynatrace/strato-design-tokens/colors";
 import { ActionIcon, DescriptionIcon, EpicIcon } from "@dynatrace/strato-icons";
-import { SimulationConfig, SimulatorData, SimulatorStatus } from "@common";
+import React, { useCallback, useEffect, useMemo, useState } from "react";
 import { triggerCommand } from "../../utils/app-utils";
 import { MandatoryCheckModal } from "./MandatoryCheckModal";
 import { SettingsForm } from "./SettingsForm";
 import { StateButton, SettingsButton } from "./SimulatorButtons";
-import { SimulatorCommand, ExecutionSummary } from "@common";
 
 export const SimulatorExecutions = ({
   summaries,
@@ -54,7 +56,7 @@ export const SimulatorExecutions = ({
     return b.startTime.getTime() - a.startTime.getTime();
   }, []);
 
-  const tableColumns = useMemo<DataTableV2ColumnDef<ExecutionSummary>[]>(
+  const tableColumns = useMemo<DataTableColumnDef<ExecutionSummary>[]>(
     () => [
       {
         id: "workspace",
@@ -114,7 +116,7 @@ export const SimulatorExecutions = ({
   );
 
   const tableData = useMemo<ExecutionSummary[]>(
-    () => summaries.sort(sortByTimestamp),
+    () => summaries.toSorted(sortByTimestamp),
     [summaries, sortByTimestamp],
   );
 
@@ -179,12 +181,12 @@ export const SimulatorExecutions = ({
         )}
         <Flex flexDirection='column'>
           <Heading level={4}>Simulator execution history</Heading>
-          <DataTableV2 sortable fullWidth columns={tableColumns} data={tableData}>
-            <DataTableV2.EmptyState>
+          <DataTable sortable fullWidth columns={tableColumns} data={tableData}>
+            <DataTable.EmptyState>
               {'Click "Start" to start your first simulation'}
-            </DataTableV2.EmptyState>
-            <DataTableV2.Pagination defaultPageSize={10} defaultPageIndex={1} />
-            <DataTableV2.RowActions>
+            </DataTable.EmptyState>
+            <DataTable.Pagination defaultPageSize={10} defaultPageIndex={1} />
+            <DataTable.RowActions>
               {(row: ExecutionSummary) => (
                 <Button onClick={handleOpenLog.bind(undefined, row.logPath)}>
                   <Button.Prefix>
@@ -192,8 +194,8 @@ export const SimulatorExecutions = ({
                   </Button.Prefix>
                 </Button>
               )}
-            </DataTableV2.RowActions>
-          </DataTableV2>
+            </DataTable.RowActions>
+          </DataTable>
         </Flex>
       </Flex>
       <MandatoryCheckModal

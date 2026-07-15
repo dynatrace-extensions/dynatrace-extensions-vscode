@@ -15,12 +15,15 @@
  */
 
 import path from "path";
-import { Utils } from "@common";
+import { EnvironmentCommand, Utils } from "@common";
 import vscode from "vscode";
-import { Dynatrace } from "../dynatrace-api/dynatrace";
+import { DynatraceClient, createDynatraceClient } from "../dynatrace-api/dynatrace";
 import {
   DeployedExtension,
+  DeploymentModel,
   DynatraceTenant,
+  DynatraceTenantDto,
+  IconPath,
   MonitoringConfiguration,
   TenantsTreeDataProvider,
   TenantsTreeItem,
@@ -33,24 +36,93 @@ import { createSingletonProvider } from "../utils/singleton";
 
 const ICONS_PATH = path.join(__filename, "..", "..", "src", "assets", "icons");
 const ICONS = {
-  DEPLOYED_EXTENSION: {
-    light: path.join(ICONS_PATH, "deployed_extension_light.png"),
-    dark: path.join(ICONS_PATH, "deployed_extension_dark.png"),
+  DEPLOYED_EXTENSION_SAAS: {
+    light: vscode.Uri.file(path.join(ICONS_PATH, "deployed_extension_saas.png")),
+    dark: vscode.Uri.file(path.join(ICONS_PATH, "deployed_extension_saas.png")),
   },
-  ENVIRONMENT: {
-    light: path.join(ICONS_PATH, "platform_light.png"),
-    dark: path.join(ICONS_PATH, "platform_dark.png"),
+  DEPLOYED_EXTENSION_MANAGED: {
+    light: vscode.Uri.file(path.join(ICONS_PATH, "deployed_extension_managed.png")),
+    dark: vscode.Uri.file(path.join(ICONS_PATH, "deployed_extension_managed.png")),
   },
-  ENVIRONMENT_CURRENT: {
-    light: path.join(ICONS_PATH, "platform_current_light.png"),
-    dark: path.join(ICONS_PATH, "platform_current_dark.png"),
+  SAAS_TENANT: {
+    light: vscode.Uri.file(path.join(ICONS_PATH, "saas_light.png")),
+    dark: vscode.Uri.file(path.join(ICONS_PATH, "saas_dark.png")),
   },
-} satisfies Record<string, { light: string; dark: string }>;
+  MANAGED_TENANT: {
+    light: vscode.Uri.file(path.join(ICONS_PATH, "managed_light.png")),
+    dark: vscode.Uri.file(path.join(ICONS_PATH, "managed_dark.png")),
+  },
+  SAAS_TENANT_CURRENT: {
+    light: vscode.Uri.file(path.join(ICONS_PATH, "saas_current_light.png")),
+    dark: vscode.Uri.file(path.join(ICONS_PATH, "saas_current_dark.png")),
+  },
+  MANAGED_TENANT_CURRENT: {
+    light: vscode.Uri.file(path.join(ICONS_PATH, "managed_current_light.png")),
+    dark: vscode.Uri.file(path.join(ICONS_PATH, "managed_current_dark.png")),
+  },
+  SAAS_TENANT_INVALID: {
+    light: vscode.Uri.file(path.join(ICONS_PATH, "saas_invalid.png")),
+    dark: vscode.Uri.file(path.join(ICONS_PATH, "saas_invalid.png")),
+  },
+} satisfies Record<string, IconPath>;
 type ConfigStatus = "ERROR" | "OK" | "UNKNOWN";
 const CONFIG_STATUS_COLORS: Record<ConfigStatus, string> = {
   ERROR: "🔴",
   OK: "🟢",
   UNKNOWN: "⚫",
+};
+
+export const checkTenantSetup = (
+  tenant: DynatraceTenantDto,
+  notify: boolean = false,
+): string | null => {
+  let issue = null;
+  if (
+    tenant.url.includes("live.dynatrace.com") ||
+    tenant.url.includes("sprint.dynatracelabs.com") ||
+    tenant.url.includes("dev.dynatracelabs.com")
+  ) {
+    issue = "Tenant is using a legacy URL. Update it to a .apps domain and use a Platform Token";
+  } else if (tenant.deploymentModel === "saas") {
+    const dtToken = decryptToken(tenant.token);
+    if (dtToken.startsWith("dt0c01") || dtToken.startsWith("dt0s01")) {
+      issue = "Tenant has a legacy token. Update it to a Platform Token";
+    }
+  }
+  if (issue && notify) {
+    logger.notify("WARN", `${tenant.label}: ${issue}`, {
+      actions: [
+        {
+          title: "Edit",
+          run: async () => {
+            const treeItem = await getTenantById(tenant.id);
+            if (!treeItem) {
+              logger.warn(`Could not resolve tree item for tenant ${tenant.id}`);
+              return;
+            }
+            await vscode.commands.executeCommand(EnvironmentCommand.Edit, treeItem);
+          },
+        },
+        {
+          title: "Migration guide",
+          run: () => vscode.commands.executeCommand(EnvironmentCommand.OpenMigrationGuide),
+        },
+      ],
+    });
+  }
+  return issue;
+};
+
+const getTenantIconAndTooltip = (tenant: DynatraceTenantDto): [IconPath, string] => {
+  const setupIssue = checkTenantSetup(tenant);
+
+  if (setupIssue) {
+    return [ICONS.SAAS_TENANT_INVALID, setupIssue];
+  }
+  if (tenant.deploymentModel === "saas") {
+    return [tenant.current ? ICONS.SAAS_TENANT_CURRENT : ICONS.SAAS_TENANT, tenant.id];
+  }
+  return [tenant.current ? ICONS.MANAGED_TENANT_CURRENT : ICONS.MANAGED_TENANT, tenant.id];
 };
 
 /**
@@ -72,16 +144,41 @@ export const getConnectedTenant = async () => {
   const tenant = await getTenantsTreeDataProvider()
     .getChildren()
     .then(children =>
-      children.filter(
-        (c): c is DynatraceTenant => c.contextValue === "currentDynatraceEnvironment",
+      children.filter((c): c is DynatraceTenant =>
+        c.contextValue.startsWith("currentDynatraceEnvironment"),
       ),
     )
     .then(children => children.pop());
   return tenant;
 };
 
+/**
+ * Finds a tenant tree item by its id, or undefined if not present.
+ */
+export const getTenantById = async (id: string): Promise<DynatraceTenant | undefined> => {
+  const children = await getTenantsTreeDataProvider().getChildren();
+  return children.find(
+    (c): c is DynatraceTenant =>
+      (c.contextValue === "dynatraceEnvironment" ||
+        c.contextValue === "currentDynatraceEnvironment" ||
+        c.contextValue === "dynatraceEnvironmentNonCompliant" ||
+        c.contextValue === "currentDynatraceEnvironmentNonCompliant") &&
+      c.id === id,
+  );
+};
+
 export const refreshTenantsTreeView = () => {
   getTenantsTreeDataProvider().refresh();
+};
+
+export const isConnectedToSaaS = async (): Promise<boolean> => {
+  const tenant = await getConnectedTenant();
+  return tenant?.deploymentModel === "saas";
+};
+
+export const isConnectedToManaged = async (): Promise<boolean> => {
+  const tenant = await getConnectedTenant();
+  return tenant?.deploymentModel === "managed";
 };
 
 /**
@@ -104,8 +201,8 @@ class TenantsTreeDataProviderImpl implements TenantsTreeDataProvider {
   constructor() {
     this.getChildren()
       .then(children =>
-        children.filter(
-          (c): c is DynatraceTenant => c.contextValue === "currentDynatraceEnvironment",
+        children.filter((c): c is DynatraceTenant =>
+          c.contextValue.startsWith("currentDynatraceEnvironment"),
         ),
       )
       .then(children => children.pop())
@@ -148,6 +245,8 @@ class TenantsTreeDataProviderImpl implements TenantsTreeDataProvider {
         // For Dynatrace Environments, Extensions are the children items
         case "dynatraceEnvironment":
         case "currentDynatraceEnvironment":
+        case "dynatraceEnvironmentNonCompliant":
+        case "currentDynatraceEnvironmentNonCompliant":
           await element.dt.extensionsV2
             .list()
             .then(list =>
@@ -159,6 +258,7 @@ class TenantsTreeDataProviderImpl implements TenantsTreeDataProvider {
                     extension.version,
                     element.dt,
                     element.url,
+                    element.deploymentModel,
                   ),
                 ),
               ),
@@ -182,6 +282,7 @@ class TenantsTreeDataProviderImpl implements TenantsTreeDataProvider {
                     element.id,
                     status.status,
                     element.dt,
+                    element.deploymentModel,
                   );
                 }),
               );
@@ -197,11 +298,10 @@ class TenantsTreeDataProviderImpl implements TenantsTreeDataProvider {
 
     // If no item specified, grab all environments from global storage
     return getAllTenants().map(tenant => {
-      const { id, url, apiUrl, label, current, token } = tenant;
-      if (current) {
+      if (tenant.current) {
         showConnectedStatusBar(tenant).catch(Utils.noOp);
       }
-      return createDynatraceTenantTreeItem(url, decryptToken(token), id, label, current, apiUrl);
+      return createDynatraceTenantTreeItem(tenant);
     });
   }
 }
@@ -216,32 +316,30 @@ export const getTenantsTreeDataProvider = createSingletonProvider<TenantsTreeDat
 /**
  * Creates a TreeItem object that represents a Dynatrace (SaaS, Managed, Platform) tenant registered
  * with the VSCode Extension.
- * @param url the URL to this tenant
- * @param token a Dynatrace API Token to use when authenticating with this tenant
- * @param id the id of this tenant
- * @param label an optional label for displaying this tenant (defaults to id)
- * @param current whether this tenant should be used for API operations currently
+ * @param tenant the tenant object
  */
-const createDynatraceTenantTreeItem = (
-  url: string,
-  token: string,
-  id: string,
-  label?: string,
-  current: boolean = false,
-  apiUrl?: string,
-): DynatraceTenant =>
-  ({
+const createDynatraceTenantTreeItem = (tenant: DynatraceTenantDto): DynatraceTenant => {
+  const { label, id, url, token, deploymentModel, current } = tenant;
+  const dtToken = decryptToken(token);
+  const [iconPath, tooltip] = getTenantIconAndTooltip(tenant);
+  const setupIssue = checkTenantSetup(tenant);
+  const baseContextValue = current ? "currentDynatraceEnvironment" : "dynatraceEnvironment";
+  const contextValue: DynatraceTenant["contextValue"] = setupIssue
+    ? `${baseContextValue}NonCompliant`
+    : baseContextValue;
+  return {
     ...new vscode.TreeItem(label ?? id, vscode.TreeItemCollapsibleState.Collapsed),
-    url: url,
-    apiUrl: apiUrl ?? url,
-    token: token,
-    id: id,
-    dt: new Dynatrace(apiUrl ?? url, token),
-    tooltip: id,
-    current: current,
-    contextValue: current ? "currentDynatraceEnvironment" : "dynatraceEnvironment",
-    iconPath: current ? ICONS.ENVIRONMENT_CURRENT : ICONS.ENVIRONMENT,
-  }) as DynatraceTenant;
+    url,
+    token: dtToken,
+    id,
+    dt: createDynatraceClient(url, dtToken, deploymentModel),
+    tooltip,
+    current,
+    deploymentModel,
+    contextValue,
+    iconPath,
+  } as DynatraceTenant;
+};
 
 /**
  * Creates a TreeItem object that represents an Extension 2.0 that is deployed to the connected
@@ -255,8 +353,9 @@ const createDeployedExtension = (
   collapsibleState: vscode.TreeItemCollapsibleState,
   extensionName: string,
   extensionVersion: string,
-  dt: Dynatrace,
+  dt: DynatraceClient,
   tenantUrl: string,
+  deploymentModel: DeploymentModel,
 ): DeployedExtension =>
   ({
     ...new vscode.TreeItem(`${extensionName} (${extensionVersion})`, collapsibleState),
@@ -265,7 +364,9 @@ const createDeployedExtension = (
     tenantUrl: tenantUrl,
     extensionVersion: extensionVersion,
     contextValue: "deployedExtension",
-    iconPath: ICONS.DEPLOYED_EXTENSION,
+    iconPath:
+      deploymentModel === "saas" ? ICONS.DEPLOYED_EXTENSION_SAAS : ICONS.DEPLOYED_EXTENSION_MANAGED,
+    deploymentModel,
   }) as DeployedExtension;
 
 /**
@@ -284,7 +385,8 @@ const createMonitoringConfiguration = (
   description: string,
   extensionName: string,
   monitoringStatus: ConfigStatus,
-  dt: Dynatrace,
+  dt: DynatraceClient,
+  deploymentModel: DeploymentModel,
 ): MonitoringConfiguration =>
   ({
     ...new vscode.TreeItem(
@@ -295,5 +397,6 @@ const createMonitoringConfiguration = (
     extensionName: extensionName,
     contextValue: "monitoringConfiguration",
     iconPath: new vscode.ThemeIcon("gear"),
-    dt: dt,
+    dt,
+    deploymentModel,
   }) as MonitoringConfiguration;

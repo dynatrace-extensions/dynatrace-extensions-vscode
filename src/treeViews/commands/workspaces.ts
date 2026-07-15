@@ -76,7 +76,7 @@ export const registerWorkspaceViewCommands = (): vscode.Disposable[] => {
 async function deleteWorkspace(workspace: WorkspaceTreeItem) {
   const fnLogTrace = ["treeViews", "commands", "workspaces", "deleteWorkspace"];
   const confirm = await showQuickPickConfirm({
-    title: `Delete workspace ${workspace.label?.toString() ?? workspace.id}?`,
+    title: `Delete workspace ${typeof workspace.label === "string" ? workspace.label : workspace.label?.label ?? workspace.id}?`,
     ignoreFocusOut: true,
   });
 

@@ -30,12 +30,15 @@ import {
 import os from "os";
 import path from "path";
 import { ExecutionSummary, RemoteTarget } from "@common";
-import { copySync } from "fs-extra";
 import { glob } from "glob";
 import JSZip from "jszip";
 import vscode from "vscode";
 import { getActivationContext } from "../extension";
-import { DynatraceTenantDto, ExtensionWorkspaceDto } from "../interfaces/treeViews";
+import {
+  DeploymentModel,
+  DynatraceTenantDto,
+  ExtensionWorkspaceDto,
+} from "../interfaces/treeViews";
 import { parseJSON } from "./jsonParsing";
 import logger from "./logging";
 
@@ -201,28 +204,55 @@ export function findWorkspace(
 
 /**
  * Gets metadata of all Dynatrace tenants currently registered in the global storage.
+ * Performs backward-compatible migration: infers deploymentModel from URL if missing,
+ * and drops the legacy apiUrl field.
  */
 export function getAllTenants(): DynatraceTenantDto[] {
-  return parseJSON(readFileSync(getTenantsJsonPath()).toString());
+  const raw = parseJSON<Record<string, unknown>[]>(readFileSync(getTenantsJsonPath()).toString());
+  return raw.map(entry => {
+    const url = typeof entry.url === "string" ? entry.url : "";
+    const deploymentModel: DeploymentModel =
+      (entry.deploymentModel as DeploymentModel) ?? (url.includes(".apps.") ? "saas" : "managed");
+    return {
+      id: typeof entry.id === "string" ? entry.id : "",
+      url,
+      token: typeof entry.token === "string" ? entry.token : "",
+      current: Boolean(entry.current),
+      label:
+        typeof entry.label === "string"
+          ? entry.label
+          : typeof entry.id === "string"
+            ? entry.id
+            : "",
+      deploymentModel,
+    };
+  });
 }
 
 /**
  * Saves the metadata of a tenant in the global storage. Previous values are overwritten.
- * @param url URL for browser pages of the tenant
- * @param apiUrl URL for API calls to the tenant
- * @param token API Token for Dynatrace API Calls. Note: must be encrypted already.
+ * @param url URL for the tenant (used for both display and API calls)
+ * @param token API/Platform Token for Dynatrace API Calls. Note: must be encrypted already.
  * @param name An optional name/label for this environment
  * @param current if true, this will be set as the currently used environment
+ * @param deploymentModel the deployment model of the tenant
  */
 export async function registerTenant(
   url: string,
-  apiUrl: string,
   token: string,
   name?: string,
   current: boolean = false,
+  deploymentModel: DeploymentModel = "managed",
 ) {
   const id = url.includes("/e/") ? url.split("/e/")[1] : url.split("https://")[1].substring(0, 8);
-  const tenant: DynatraceTenantDto = { id, url, apiUrl, token, current, label: name ?? id };
+  const tenant: DynatraceTenantDto = {
+    id,
+    url,
+    token,
+    current,
+    label: name ?? id,
+    deploymentModel,
+  };
 
   // If this will be the currently used environment, deactivate others
   let tenants = getAllTenants();
@@ -507,6 +537,24 @@ export function getExtensionWorkspaceDir(): string | undefined {
 }
 
 /**
+ * Discovers and returns the paths of the OpenPipeline pipeline definition files in the extension folder, if any
+ * @returns Array of paths
+ */
+export const getPipelineFiles = (): string[] => {
+  const extensionDir = getExtensionWorkspaceDir();
+  if (!extensionDir) {
+    return [];
+  }
+  const pipelineDir = path.join(extensionDir, "openpipeline");
+  if (!existsSync(pipelineDir)) {
+    return [];
+  }
+  return readdirSync(pipelineDir)
+    .filter(file => file.endsWith(".pipeline.json"))
+    .map(file => path.join(pipelineDir, file));
+};
+
+/**
  * Resolves relative paths correctly. This is needed because VS Code extensions do not have
  * correct awareness of path relativity - they are all rooted in vscode installation directory
  * e.g. "C:\Program Files\Microsoft VS Code"
@@ -694,115 +742,6 @@ export function createUniqueFileName(dir: string, prefix: string, initialFileNam
 }
 
 /**
- * Migrates from the legacy `dt-ext-copilot` extension to the current `dynatrace_extensions`.
- * This involves migrating all global & workspace level storage and settings.
- */
-export async function migrateFromLegacyExtension() {
-  const context = getActivationContext();
-  await vscode.window.withProgress(
-    { location: vscode.ProgressLocation.Notification },
-    async progress => {
-      progress.report({ message: "Migrating workspaces and environments" });
-      const globalStoragePath = context.globalStorageUri.fsPath;
-      const legacyGlobalStoragePath = path.resolve(
-        globalStoragePath,
-        "..",
-        "dynatraceplatformextensions.dt-ext-copilot",
-      );
-      copySync(legacyGlobalStoragePath, globalStoragePath, { overwrite: true });
-
-      // Convert all environments to new format with apiUrl attribute
-      const environments = getAllTenants();
-      if (environments.length > 0) {
-        writeFileSync(
-          path.resolve(globalStoragePath, "dynatraceEnvironments.json"),
-          JSON.stringify(environments.map(e => ({ ...{ ...e }, apiUrl: e.url }))),
-        );
-      }
-
-      progress.report({ message: "Migrating workspace data" });
-      const genericWorkspaceStorage = path.resolve(context.storageUri?.fsPath ?? "", "..", "..");
-      // Move over all data stored in workspaces
-      const workspaces = getAllWorkspaces();
-      workspaces.forEach(workspace => {
-        const legacyWorkspaceStorage = path.resolve(
-          genericWorkspaceStorage,
-          workspace.id,
-          "DynatracePlatformExtensions.dt-ext-copilot",
-        );
-        const workspaceStorage = path.resolve(
-          genericWorkspaceStorage,
-          workspace.id,
-          "DynatracePlatformExtensions.dynatrace-extensions",
-        );
-        copySync(legacyWorkspaceStorage, workspaceStorage, { overwrite: true });
-      });
-
-      progress.report({ message: "Migrating global settings" });
-      // Change prefix on all global settings
-      const settingsKeys = [
-        "metricSelectorsCodeLens",
-        "entitySelectorsCodeLens",
-        "wmiCodeLens",
-        "screenCodeLens",
-        "fastDevelopmentMode",
-        "diagnostics.all",
-        "diagnostics.extensionName",
-        "diagnostics.metricKeys",
-        "diagnostics.cardKeys",
-        "diagnostics.snmp",
-        "developerCertkeyLocation",
-        "rootOrCaCertificateLocation",
-        "certificateCommonName",
-        "certificateOrganization",
-        "certificateOrganizationUnit",
-        "certificateStateOrProvince",
-        "certificateCountryCode",
-      ];
-      const legacyConfig = vscode.workspace.getConfiguration("dynatrace", null);
-      const config = vscode.workspace.getConfiguration("dynatraceExtensions", null);
-      for (const key of settingsKeys) {
-        const legacyValue = legacyConfig.inspect(key)?.globalValue;
-        if (legacyValue) {
-          await config.update(key, legacyValue, true);
-        }
-      }
-
-      progress.report({ message: "Migrating workspace settings" });
-      for (const workspace of workspaces) {
-        const settingsFilePath = path.resolve(workspace.folder, ".vscode", "settings.json");
-        // For any workspace that has settings
-        if (existsSync(settingsFilePath)) {
-          // Change the old ID for new one
-          let settingsContent = readFileSync(settingsFilePath).toString();
-          settingsContent = settingsContent.replace(/dt-ext-copilot/g, "dynatrace-extensions");
-          // Update all settings keys
-          for (const key of settingsKeys) {
-            settingsContent = settingsContent.replace(
-              `dynatrace.${key}`,
-              `dynatraceExtensions.${key}`,
-            );
-          }
-          writeFileSync(settingsFilePath, settingsContent);
-        }
-      }
-
-      // Forget Copilot ever existed
-      progress.report({ message: "Uninstalling legacy extension" });
-      await vscode.commands
-        .executeCommand(
-          "workbench.extensions.uninstallExtension",
-          "DynatracePlatformExtensions.dt-ext-copilot",
-        )
-        .then(async () => {
-          await vscode.commands.executeCommand("workbench.action.reloadWindow");
-        });
-    },
-  );
-  logger.notify("INFO", "Migration from legacy version complete.");
-}
-
-/**
  * Returns the path where extension's snmp folder should be.
  * Does not check if it exists.
  */
@@ -845,7 +784,7 @@ export const bundleFolder = (zip: JSZip, folderPath: string, prev: string = ""):
     } else {
       const zipPath = `${prev}${entryName}`;
       const content = readFileSync(entryPath);
-      zip.file(zipPath, content, { unixPermissions: "644" });
+      zip.file(zipPath, content as unknown as Uint8Array, { unixPermissions: "644" });
     }
   });
   return zip;

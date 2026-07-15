@@ -6,7 +6,7 @@
     "module": "commonjs",
     "lib": ["es2020"],
     "allowJs": true,
-    "checkJs": true,
+    "checkJs": false,
     "strict": true,
     "noImplicitThis": true,
     "noImplicitAny": true,
@@ -14,6 +14,7 @@
     "esModuleInterop": true,
     "resolveJsonModule": true,
     "typeRoots": ["./types", "./node_modules/@types"],
+    "types": ["jest"],
     "noEmit": true,
     "isolatedModules": true,
     "paths": {

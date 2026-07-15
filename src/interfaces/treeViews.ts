@@ -15,7 +15,9 @@
  */
 
 import vscode from "vscode";
-import { Dynatrace } from "../dynatrace-api/dynatrace";
+import { DynatraceClient } from "../dynatrace-api/dynatrace";
+
+export type DeploymentModel = "saas" | "managed";
 
 export interface ExtensionWorkspaceDto {
   name: string;
@@ -32,15 +34,17 @@ export interface ExtensionWorkspace {
 export interface DynatraceTenantDto {
   id: string;
   url: string;
-  apiUrl: string;
   token: string;
   current: boolean;
   label: string;
+  deploymentModel: DeploymentModel;
 }
 
 type TenantsTreeContextValue =
   | "dynatraceEnvironment"
   | "currentDynatraceEnvironment"
+  | "dynatraceEnvironmentNonCompliant"
+  | "currentDynatraceEnvironmentNonCompliant"
   | "monitoringConfiguration"
   | "deployedExtension";
 
@@ -48,15 +52,20 @@ export interface TenantsTreeItemBase extends vscode.TreeItem {
   label: string;
   id: string;
   contextValue: TenantsTreeContextValue;
-  dt: Dynatrace;
+  dt: DynatraceClient;
+  deploymentModel: DeploymentModel;
 }
 
 export interface DynatraceTenant extends TenantsTreeItemBase {
   url: string;
-  apiUrl: string;
   token: string;
   current: boolean;
-  contextValue: "currentDynatraceEnvironment" | "dynatraceEnvironment";
+  deploymentModel: DeploymentModel;
+  contextValue:
+    | "currentDynatraceEnvironment"
+    | "dynatraceEnvironment"
+    | "currentDynatraceEnvironmentNonCompliant"
+    | "dynatraceEnvironmentNonCompliant";
 }
 
 export interface MonitoringConfiguration extends TenantsTreeItemBase {
@@ -89,4 +98,15 @@ export interface WorkspacesTreeDataProvider extends vscode.TreeDataProvider<Work
   refresh: () => void;
   getTreeItem: (element: WorkspaceTreeItem) => vscode.TreeItem;
   getChildren: (element?: WorkspaceTreeItem) => WorkspaceTreeItem[];
+}
+
+export interface IconPath {
+  /**
+   * The icon path for the light theme.
+   */
+  light: string | vscode.Uri;
+  /**
+   * The icon path for the dark theme.
+   */
+  dark: string | vscode.Uri;
 }

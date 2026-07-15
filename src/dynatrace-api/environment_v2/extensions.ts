@@ -25,11 +25,12 @@ import {
   JMXProcess,
   MBeanListDto,
 } from "../interfaces/extensions";
+import { ExtensionsServiceV2Interface } from "../interfaces/services";
 
 /**
  * Implementation of the Extensions V2 API
  */
-export class ExtensionsServiceV2 {
+export class ExtensionsServiceV2 implements ExtensionsServiceV2Interface {
   private readonly endpoint = "/api/v2/extensions";
   private readonly schemaEndpoint = "/api/v2/extensions/schemas";
   private readonly discoveryEndpoint = "/api/v2/extensions/discovery/jmx/processes";

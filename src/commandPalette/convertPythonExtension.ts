@@ -96,7 +96,6 @@ export async function convertPythonExtension(dt?: Dynatrace, outputPath?: string
       saveLabel: "Save",
       title: "Save Python extension activationSchema.json",
       filters: {
-        // eslint-disable-next-line @typescript-eslint/naming-convention
         "Python v2 extension activation schema": ["json"],
       },
       defaultUri: vscode.Uri.file("activationSchema.json"),

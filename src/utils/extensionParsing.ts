@@ -19,7 +19,12 @@
  ********************************************************************************/
 
 import { FeatureSetDoc } from "../interfaces/extensionDocs";
-import { DatasourceGroup, DatasourceName, ExtensionStub } from "../interfaces/extensionMeta";
+import {
+  DatasourceGroup,
+  DatasourceName,
+  DetailsSettings,
+  ExtensionStub,
+} from "../interfaces/extensionMeta";
 import logger from "./logging";
 
 const logTrace = ["utils", "extensionParsing"];
@@ -972,7 +977,8 @@ type CardMeta = {
     | "EVENTS"
     | "METRIC_TABLE"
     | "HEALTH_CARD"
-    | "INJECTIONS";
+    | "INJECTIONS"
+    | "CARD_GROUP";
 };
 
 /**
@@ -991,7 +997,9 @@ export function getReferencedCardsMeta(screenIdx: number, extension: ExtensionSt
     unparsedCards.push(...listSettingsCards.filter(c => c.type !== "INJECTIONS"));
   }
 
-  const detailsSettingsCards = extension.screens?.[screenIdx].detailsSettings?.layout?.cards;
+  const detailsSettingsCards = (
+    extension.screens?.[screenIdx].detailsSettings as DetailsSettings | undefined
+  )?.layout?.cards;
   if (detailsSettingsCards) {
     unparsedCards.push(...detailsSettingsCards.filter(c => c.type !== "INJECTIONS"));
   }

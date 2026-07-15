@@ -16,11 +16,12 @@
 
 import { HttpClient } from "../http_client";
 import { ActiveGate } from "../interfaces/activegates";
+import { ActiveGatesServiceInterface } from "../interfaces/services";
 
 /**
  * Implementation of the ActiveGates API
  */
-export class ActiveGatesService {
+export class ActiveGatesService implements ActiveGatesServiceInterface {
   private readonly endpoint = "/api/v2/activegates";
   private readonly httpClient: HttpClient;
 

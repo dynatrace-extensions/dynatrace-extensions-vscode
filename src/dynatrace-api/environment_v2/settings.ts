@@ -15,17 +15,13 @@
  */
 
 import { HttpClient } from "../http_client";
-import {
-  SchemaStub,
-  SettingsObject,
-  SettingsObjectCreate,
-  SettingsObjectUpdate,
-} from "../interfaces/settings";
+import { SettingsServiceInterface } from "../interfaces/services";
+import { SchemaStub, SettingsObject } from "../interfaces/settings";
 
 /**
  * Implementation of the Settings 2.0 API
  */
-export class SettingsService {
+export class SettingsService implements SettingsServiceInterface {
   private readonly schemasEndpoint = "/api/v2/settings/schemas";
   private readonly objectsEndpoint = "/api/v2/settings/objects";
   private readonly httpClient: HttpClient;
@@ -70,22 +66,6 @@ export class SettingsService {
   }
 
   /**
-   * Updates an existing settings object.
-   * @param objectId The ID of the required settings object.
-   * @param payload The updated details of the settings object.
-   * @param signal cancellation signal
-   * @returns
-   */
-  async putObject(objectId: string, payload: SettingsObjectUpdate, signal?: AbortSignal) {
-    return this.httpClient.makeRequest({
-      path: `${this.objectsEndpoint}/${objectId}`,
-      method: "PUT",
-      body: payload as unknown as Record<string, unknown>,
-      signal,
-    });
-  }
-
-  /**
    * Fetches a single settings schema by its ID.
    * @param schemaId The full schema ID (e.g., "builtin:openpipeline.metrics.pipelines")
    * @param signal cancellation signal
@@ -94,29 +74,6 @@ export class SettingsService {
   async getSchema(schemaId: string, signal?: AbortSignal): Promise<unknown> {
     return this.httpClient.makeRequest({
       path: `${this.schemasEndpoint}/${schemaId}`,
-      signal,
-    });
-  }
-
-  /**
-   * Creates a new settings object.
-   * You can upload several objects at once. In that case each object returns its own response code.
-   * @param payload Contains the settings objects to be created.
-   * @param validateOnly If true, the request runs only validation of the submitted settings objects
-   * without saving them.
-   * @param signal cancellation signal
-   * @returns
-   */
-  async postObject(
-    payload: SettingsObjectCreate[],
-    validateOnly: boolean = false,
-    signal?: AbortSignal,
-  ) {
-    return this.httpClient.makeRequest({
-      path: `${this.objectsEndpoint}`,
-      method: "POST",
-      body: payload as unknown as Record<string, unknown>,
-      params: { validateOnly },
       signal,
     });
   }
