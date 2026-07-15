@@ -1098,6 +1098,7 @@
     "yaml": "^2.8.3"
   },
   "overrides": {
+    "@achrinza/node-ipc": ">=9.2.10 <10",
     "jws": ">=4.0.1",
     "qs": ">=6.15.2",
     "follow-redirects": ">=1.16.0",
