@@ -971,6 +971,8 @@ export const buildDefaultDqlTable = (
       { builtInAction: "DOWNLOAD_PAGE" },
       { builtInAction: "DOWNLOAD_SELECTED" },
       { builtInAction: "DOWNLOAD_ALL" },
+    ],
+    actions: [
       {
         displayName: "Configure extension",
         appId: "dynatrace.extensions.manager",
