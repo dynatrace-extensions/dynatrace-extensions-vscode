@@ -1,12 +1,13 @@
 # Change Log
 
-## Version 3.0.0 (unreleased)
+## Version 3.0.0 (27.07.2026)
 
 ### ⚠️ Breaking changes
 
 - Existing SaaS Tenant connections will no longer work. These will show up in red, and you should edit each one adjusting the following details:
   1. The URL must use a Platform domain (`*.apps.*`)
   2. The token must be a [Platform Token](https://docs.dynatrace.com/docs/shortlink/platform-tokens) (`dt0s16.*`) with the following scopes: `storage:buckets:read`, `storage:metrics:read`, `storage:entities:read`, `storage:logs:read`, `storage:smartscape:read`, `extensions:definitions:read`, `extensions:definitions:write`, `extensions:configurations:read`, `extensions:configurations:write`, `extensions:discovery.jmx:read`, `settings:objects:read`, `settings:schemas:read`, `credential-vault:entries:read`, `credential-vault:entries:write`, `credential-vault:entries:admin`
+      * a [documentation article](https://docs.dynatrace.com/docs/shortlink/vscode-tenant-config-update) also accompanies this change
 
 ### 🚀 Improved in this version:
 
