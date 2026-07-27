@@ -4,42 +4,7 @@ on: workflow_dispatch
 
 jobs:
   build:
-    strategy:
-      matrix:
-        include:
-        - os: windows-latest
-          platform: win32
-          arch: x64
-          npm_config_arch: x64
-        - os: ubuntu-latest
-          platform: linux
-          arch: x64
-          npm_config_arch: x64
-        - os: ubuntu-latest
-          platform: linux
-          arch: arm64
-          npm_config_arch: arm64
-        - os: ubuntu-latest
-          platform: linux
-          arch: armhf
-          npm_config_arch: arm
-        - os: ubuntu-latest
-          platform: alpine
-          arch: x64
-          npm_config_arch: x64
-        - os: ubuntu-latest
-          platform: alpine
-          arch: arm64
-          npm_config_arch: arm64
-        - os: macos-latest
-          platform: darwin
-          arch: x64
-          npm_config_arch: x64
-        - os: macos-latest
-          platform: darwin
-          arch: arm64
-          npm_config_arch: arm64
-    runs-on: ${{ matrix.os }}
+    runs-on: [self-hosted, radu]
     steps:
       - name: Checkout
         uses: actions/checkout@v6
@@ -47,34 +12,65 @@ jobs:
         uses: actions/setup-node@v6
         with:
           node-version: 24
-      - name: Install extension
-        run: npm run install:all
+      - name: Setup JFrog CLI
+        uses: jfrog/setup-jfrog-cli@v5
         env:
-          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-          npm_config_arch: ${{ matrix.npm_config_arch }}
+          JF_URL: ${{ secrets.JF_URL }}
+          JF_ACCESS_TOKEN: ${{ secrets.JF_TOKEN }}
+      - name: Point npm at the internal registry
+        run: jf npmc --repo-resolve=npm-dynatrace-release-v
+      - name: Install all
+        run: npm run install:all
       - name: Build everything
         run: npm run build:all
-      - shell: pwsh
-        run: echo "target=${{ matrix.platform }}-${{ matrix.arch }}" >> $env:GITHUB_ENV
-      - name: Package
-        run: npx vsce package --target ${{ env.target }}
+      - name: Package all targets
+        run: |
+          for target in \
+            win32-x64 \
+            linux-x64 \
+            linux-arm64 \
+            linux-armhf \
+            alpine-x64 \
+            alpine-arm64 \
+            darwin-x64 \
+            darwin-arm64; do
+            echo "Packaging $target"
+            npx vsce package --target "$target"
+          done
       - uses: actions/upload-artifact@v7
         with:
-            name: ${{ env.target }}
-            path: "*.vsix"
-            archive: false
+          name: vsix-packages
+          path: "*.vsix"
+          archive: false
 
   publish:
-    runs-on: ubuntu-latest
+    runs-on: [self-hosted, radu]
     needs: build
     if: success()
     steps:
+      - name: Install Node
+        uses: actions/setup-node@v6
+        with:
+          node-version: 24
+      - name: Setup JFrog CLI
+        uses: jfrog/setup-jfrog-cli@v5
+        env:
+          JF_URL: ${{ secrets.JF_URL }}
+          JF_ACCESS_TOKEN: ${{ secrets.JF_TOKEN }}
+      - name: Point npm at the internal registry
+        run: jf npmc --repo-resolve=npm-dynatrace-release-v
       - uses: actions/download-artifact@v8
       - name: Publish to VSCode Marketplace
-        run: npx vsce publish --packagePath $(find . -iname *.vsix)
+        run: |
+          for vsix in $(find . -iname '*.vsix'); do
+            npx vsce publish --packagePath "$vsix"
+          done
         env:
           VSCE_PAT: ${{ secrets.VSCE_PAT }}
       - name: Publish to OpenVSX
-        run: npx ovsx publish --packagePath $(find . -iname *.vsix)
+        run: |
+          for vsix in $(find . -iname '*.vsix'); do
+            npx ovsx publish --packagePath "$vsix"
+          done
         env:
           OVSX_PAT: ${{ secrets.OVSX_PAT }}
