@@ -41,7 +41,6 @@ jobs:
         with:
           name: vsix-packages
           path: "*.vsix"
-          archive: false
 
   publish:
     runs-on: [self-hosted, radu]
