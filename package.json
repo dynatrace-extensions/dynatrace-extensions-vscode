@@ -1061,7 +1061,7 @@
     "@types/vscode": "^1.71.0",
     "@vscode/test-electron": "^2.4.0",
     "@vscode/vsce": "^2.29.0",
-    "esbuild": "^0.28.0",
+    "esbuild": "^0.28.1",
     "eslint": "^9",
     "eslint-config-prettier": "^9",
     "eslint-plugin-import": "^2.32.0",
@@ -1085,9 +1085,9 @@
     "@dynatrace-sdk/client-settings": "^1.0.0",
     "@dynatrace-sdk/http-client": "^1.4.0",
     "@dynatrace/unified-analysis": "^1.3.6",
-    "axios": "^1.16.1",
+    "axios": "^1.18.0",
     "chalk": "^4.1.2",
-    "form-data": "^4.0.4",
+    "form-data": "^4.0.6",
     "fs-extra": "^11.2.0",
     "glob": "^13.0.0",
     "jszip": "^3.10.1",
@@ -1104,11 +1104,13 @@
     "follow-redirects": ">=1.16.0",
     "picomatch": ">=2.3.2",
     "uuid": ">=11.1.1",
+    "brace-expansion": ">=5.0.8",
+    "js-yaml": ">=4.3.0",
+    "linkify-it": ">=5.0.2",
+    "markdown-it": ">=14.2.0",
+    "tmp": ">=0.2.6",
     "cosmiconfig": {
       "yaml": ">=1.10.3"
-    },
-    "glob": {
-      "brace-expansion": ">=5.0.6"
     }
   }
 }
