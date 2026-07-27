@@ -35,7 +35,7 @@ jobs:
             darwin-x64 \
             darwin-arm64; do
             echo "Packaging $target"
-            npx vsce package --target "$target"
+            npx vsce package --no-dependencies --target "$target"
           done
       - uses: actions/upload-artifact@v7
         with:
