@@ -1,5 +1,13 @@
 # Change Log
 
+## Version 3.0.1 (28.07.2026)
+
+### 🪲 Fixed in this version
+
+- [Download extension (init workspace) does not work on SaaS](https://github.com/dynatrace-extensions/dynatrace-extensions-vscode/issues/320)
+
+---
+
 ## Version 3.0.0 (27.07.2026)
 
 ### ⚠️ Breaking changes

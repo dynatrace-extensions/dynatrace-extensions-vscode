@@ -359,7 +359,9 @@ export class SdkExtensionsServiceV2 implements ExtensionsServiceV2Interface {
   ) {
     try {
       if (downloadPackage) {
-        return await this.retryHandler.execute(
+        // The SDK returns a Binary wrapper here, not a raw ArrayBuffer. Unwrap it so callers
+        // receive the same ArrayBuffer contract as the classic API client (JSZip needs this).
+        const binary = await this.retryHandler.execute(
           () =>
             this.definitions.extensionDetails({
               extensionName,
@@ -369,6 +371,7 @@ export class SdkExtensionsServiceV2 implements ExtensionsServiceV2Interface {
             }),
           signal,
         );
+        return await binary.get("array-buffer");
       }
       return await this.retryHandler.execute(
         () =>
