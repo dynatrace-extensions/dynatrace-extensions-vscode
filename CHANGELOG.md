@@ -1,5 +1,13 @@
 # Change Log
 
+## Version 3.0.2 (06.08.2026)
+
+### 🪲 Fixed in this version
+
+- [Smartscape v2 extraction: suggest the required `EXT_` prefix for custom extension node types](https://github.com/dynatrace-extensions/dynatrace-extensions-vscode/issues/323)
+
+---
+
 ## Version 3.0.1 (28.07.2026)
 
 ### 🪲 Fixed in this version
