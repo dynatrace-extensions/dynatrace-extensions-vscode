@@ -103,9 +103,10 @@ describe("convertTopology", () => {
       const nodeTypes = processors.map((p: OpenPipelineProcessor) => p.smartscapeNode?.nodeType);
       const uniqueNodeTypes = [...new Set(nodeTypes.filter((t): t is string => !!t))];
 
-      expect(uniqueNodeTypes).toContain("CLOUDHUB_ORG");
-      expect(uniqueNodeTypes).toContain("CLOUDHUB_ENV");
-      expect(uniqueNodeTypes).toContain("CLOUDHUB_APP");
+      // External extensions get the required "EXT_" prefix by default
+      expect(uniqueNodeTypes).toContain("EXT_CLOUDHUB_ORG");
+      expect(uniqueNodeTypes).toContain("EXT_CLOUDHUB_ENV");
+      expect(uniqueNodeTypes).toContain("EXT_CLOUDHUB_APP");
     });
 
     it("should replace hyphens with underscores in suggested type names", async () => {
@@ -135,7 +136,66 @@ describe("convertTopology", () => {
       metricsProcessors.forEach(processor => {
         const nodeType = processor.smartscapeNode?.nodeType;
         expect(nodeType).not.toContain("-");
-        expect(nodeType).toBe("DT.ENTITY.CLOUD_APPLICATION");
+        expect(nodeType).toBe("EXT_DT.ENTITY.CLOUD_APPLICATION");
+      });
+    });
+
+    it("should not add the EXT_ prefix for internal extensions", async () => {
+      const types: TopologyType[] = [
+        {
+          name: "cloud-application",
+          displayName: "Cloud Application",
+          rules: [
+            {
+              idPattern: "app_{app.id}",
+              instanceNamePattern: "{app.name}",
+              sources: [{ sourceType: "Metrics", condition: "$prefix(cloud.app)" }],
+              attributes: [],
+            },
+          ],
+        },
+      ];
+
+      // Internal extensions pass an empty prefix
+      const { metricsProcessors } = await createProcessorsFromTopology(
+        types,
+        [{ key: "cloud.app.cpu", metadata: { displayName: "CPU" } }],
+        autoInputCallback,
+        undefined,
+        "",
+      );
+
+      expect(metricsProcessors.length).toBeGreaterThan(0);
+      metricsProcessors.forEach(processor => {
+        expect(processor.smartscapeNode?.nodeType).toBe("CLOUD_APPLICATION");
+      });
+    });
+
+    it("should not double-prefix names that already start with a valid prefix", async () => {
+      const types: TopologyType[] = [
+        {
+          name: "EXT_already-prefixed",
+          displayName: "Already Prefixed",
+          rules: [
+            {
+              idPattern: "app_{app.id}",
+              instanceNamePattern: "{app.name}",
+              sources: [{ sourceType: "Metrics", condition: "$prefix(cloud.app)" }],
+              attributes: [],
+            },
+          ],
+        },
+      ];
+
+      const { metricsProcessors } = await createProcessorsFromTopology(
+        types,
+        [{ key: "cloud.app.cpu", metadata: { displayName: "CPU" } }],
+        autoInputCallback,
+      );
+
+      expect(metricsProcessors.length).toBeGreaterThan(0);
+      metricsProcessors.forEach(processor => {
+        expect(processor.smartscapeNode?.nodeType).toBe("EXT_ALREADY_PREFIXED");
       });
     });
 

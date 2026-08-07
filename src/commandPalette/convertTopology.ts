@@ -26,12 +26,19 @@ import {
   OpenPipeline,
 } from "../interfaces/extensionMeta";
 import { getCachedParsedExtension } from "../utils/caching";
+import { checkDtInternalProperties } from "../utils/conditionCheckers";
 import { updateYamlNode } from "../utils/dashboards";
 import { getExtensionFilePath } from "../utils/fileSystem";
 import logger from "../utils/logging";
 
 // Fields that are not allowed to be extracted in OpenPipeline
 const BLOCKED_FIELDS = ["dt.security_context"];
+
+// Smartscape node types must start with one of these prefixes. Custom (external)
+// extensions must use "EXT_"; internal Dynatrace extensions register their own
+// node types and must not carry a prefix.
+const EXTERNAL_NODE_TYPE_PREFIX = "EXT_";
+const NODE_TYPE_PREFIXES = ["EXT_", "CUSTOM_"];
 
 // OpenPipeline file names
 const METRIC_PIPELINE_FILE = "metrics.pipeline.json";
@@ -94,10 +101,16 @@ export async function createSmartscapeTopologyWorkflow() {
 
   const inputCallback = inputModeChoice.value === "auto" ? autoInputCallback : vscodeInputCallback;
 
+  // External (custom) extensions require the "EXT_" prefix on node types, while
+  // internal Dynatrace extensions must not carry it.
+  const isInternal = await checkDtInternalProperties();
+  const typePrefix = isInternal ? "" : EXTERNAL_NODE_TYPE_PREFIX;
+
   try {
     const { pipelineExtensionYaml, pipelineDocs } = await convertTopologyToOpenPipeline(
       extension,
       inputCallback,
+      typePrefix,
     );
 
     const files: string[] = [];
@@ -153,6 +166,7 @@ const cleanExtensionName = (extensionName: string): string => {
 export const convertTopologyToOpenPipeline = async (
   extension: ExtensionStub,
   inputCallback: InputCallback,
+  typePrefix: string = EXTERNAL_NODE_TYPE_PREFIX,
 ): Promise<{
   pipelineExtensionYaml: OpenPipeline;
   pipelineDocs: OpenPipelineDocs;
@@ -176,6 +190,7 @@ export const convertTopologyToOpenPipeline = async (
       extension.metrics,
       inputCallback,
       typeNameMapping,
+      typePrefix,
     );
     metricsNodeProcessors = result.metricsProcessors;
     logsNodeProcessors = result.logsProcessors;
@@ -187,6 +202,7 @@ export const convertTopologyToOpenPipeline = async (
       extension.topology.relationships,
       typeNameMapping,
       inputCallback,
+      typePrefix,
     );
     metricsEdgeProcessors = edgeResult.metricsProcessors;
     logsEdgeProcessors = edgeResult.logsProcessors;
@@ -310,6 +326,7 @@ export const createProcessorsFromRelationships = async (
   }>,
   typeNameMapping: Map<string, string>,
   inputCallback: InputCallback,
+  typePrefix: string = EXTERNAL_NODE_TYPE_PREFIX,
 ): Promise<{
   metricsProcessors: OpenPipelineProcessor[];
   logsProcessors: OpenPipelineProcessor[];
@@ -325,7 +342,7 @@ export const createProcessorsFromRelationships = async (
     if (!fromTypeName) {
       const userInput = await inputCallback(
         `Enter new name for source type "${relationship.fromType}"`,
-        suggestNewTypeName(relationship.fromType),
+        suggestNewTypeName(relationship.fromType, typePrefix),
       );
       if (!userInput) {
         throw Error("User cancelled the operation");
@@ -338,7 +355,7 @@ export const createProcessorsFromRelationships = async (
     if (!toTypeName) {
       const userInput = await inputCallback(
         `Enter new name for target type "${relationship.toType}"`,
-        suggestNewTypeName(relationship.toType),
+        suggestNewTypeName(relationship.toType, typePrefix),
       );
       if (!userInput) {
         throw Error("User cancelled the operation");
@@ -517,6 +534,7 @@ export const createProcessorsFromTopology = async (
   metrics: MetricMetadata[] | undefined,
   inputCallback: InputCallback,
   typeNameMapping?: Map<string, string>,
+  typePrefix: string = EXTERNAL_NODE_TYPE_PREFIX,
 ): Promise<{
   metricsProcessors: OpenPipelineProcessor[];
   logsProcessors: OpenPipelineProcessor[];
@@ -532,7 +550,7 @@ export const createProcessorsFromTopology = async (
   // while asking the user for input when necessary
   for (const type of types) {
     // Show a input for the user to select the new name
-    const suggestedName = suggestNewTypeName(type.name);
+    const suggestedName = suggestNewTypeName(type.name, typePrefix);
     const newName = await inputCallback(`Enter new name for type "${type.name}"`, suggestedName);
 
     if (!newName) {
@@ -726,10 +744,21 @@ const processLogsSource = async (
   return processors;
 };
 
-const suggestNewTypeName = (currentName: string): string => {
+const suggestNewTypeName = (
+  currentName: string,
+  typePrefix: string = EXTERNAL_NODE_TYPE_PREFIX,
+): string => {
   // Entities names should be uppercase and separated by '_'
   // Example: cloudhub:org becomes CLOUDHUB_ORG, cloud-application becomes CLOUD_APPLICATION
-  return currentName.toUpperCase().replace(/[:-]/g, "_");
+  const normalizedName = currentName.toUpperCase().replace(/[:-]/g, "_");
+
+  // Smartscape node types must start with "EXT_" or "CUSTOM_". Apply the prefix for
+  // external extensions, but don't double-prefix a name that already carries one.
+  if (!typePrefix || NODE_TYPE_PREFIXES.some(prefix => normalizedName.startsWith(prefix))) {
+    return normalizedName;
+  }
+
+  return `${typePrefix}${normalizedName}`;
 };
 
 /**
