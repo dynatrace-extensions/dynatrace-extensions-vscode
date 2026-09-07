@@ -29,7 +29,7 @@ import { glob } from "glob";
 import JSZip from "jszip";
 import * as semver from "semver";
 import vscode from "vscode";
-import { Dynatrace } from "../dynatrace-api/dynatrace";
+import { DynatraceClient } from "../dynatrace-api/dynatrace";
 import { DynatraceAPIError } from "../dynatrace-api/errors";
 import { getActivationContext } from "../extension";
 import { showFastModeStatusBar } from "../statusBar/fastMode";
@@ -195,7 +195,7 @@ const clearFilePathMemo = async (manifestFilePath?: string) => {
 };
 
 const dtMemo = async () => {
-  const value = await useMemo<Dynatrace | undefined>(getDynatraceClient, []);
+  const value = await useMemo<DynatraceClient | undefined>(getDynatraceClient, []);
   return value;
 };
 
@@ -538,7 +538,7 @@ async function uploadAndActivate(
  */
 const ensureVersionUploadPossible = async (
   extensionName: string,
-  dt: Dynatrace,
+  dt: DynatraceClient,
   signal: AbortSignal,
 ) => {
   const fnLogTrace = [...logTrace, "ensureVersionUploadPossible"];
@@ -566,7 +566,7 @@ const ensureVersionUploadPossible = async (
 /**
  * Uploads an extension package to the Dynatrace tenant.
  */
-const uploadExtension = async (fileName: string, dt: Dynatrace, signal: AbortSignal) => {
+const uploadExtension = async (fileName: string, dt: DynatraceClient, signal: AbortSignal) => {
   const fnLogTrace = [...logTrace, "uploadExtension"];
   const workspaceStorage = getWorkspaceStorage();
   const file = readFileSync(path.resolve(workspaceStorage, fileName));

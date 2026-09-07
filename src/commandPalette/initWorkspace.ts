@@ -30,7 +30,7 @@ import axios from "axios";
 import { moveSync } from "fs-extra";
 import JSZip from "jszip";
 import vscode from "vscode";
-import { Dynatrace } from "../dynatrace-api/dynatrace";
+import { DynatraceClient } from "../dynatrace-api/dynatrace";
 import { getActivationContext } from "../extension";
 import { getDynatraceClient } from "../treeViews/tenantsTreeView";
 import { refreshWorkspacesTreeView } from "../treeViews/workspacesTreeView";
@@ -128,7 +128,7 @@ export const initWorkspaceWorkflow = async () => {
  * @param dt Dynatrace API Client
  * @param callback optional callback function to call once initialization complete
  */
-export async function initWorkspace(dt: Dynatrace, callback?: () => unknown) {
+export async function initWorkspace(dt: DynatraceClient, callback?: () => unknown) {
   const fnLogTrace = [...logTrace, "initWorkspace"];
   logger.info("Executing Initialize Workspace command", ...fnLogTrace);
   const context = getActivationContext();
@@ -629,7 +629,7 @@ async function changeSchemaExampleExtension(fnLogTrace: string[]) {
  * @param rootPath path to the workspace root folder
  * @returns
  */
-async function existingExtensionSetup(dt: Dynatrace, rootPath: string) {
+async function existingExtensionSetup(dt: DynatraceClient, rootPath: string) {
   const fnLogTrace = [...logTrace, "existingExtensionSetup"];
   logger.debug("Setting up workspace with an existing extension", ...fnLogTrace);
 

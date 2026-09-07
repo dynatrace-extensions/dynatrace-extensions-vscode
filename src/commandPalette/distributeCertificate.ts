@@ -16,7 +16,7 @@
 
 import { readFileSync } from "fs";
 import vscode from "vscode";
-import { Dynatrace } from "../dynatrace-api/dynatrace";
+import { DynatraceClient } from "../dynatrace-api/dynatrace";
 import { DynatraceAPIError } from "../dynatrace-api/errors";
 import { getActivationContext } from "../extension";
 import { getDynatraceClient } from "../treeViews/tenantsTreeView";
@@ -54,7 +54,7 @@ export const distributeCertificateWorkflow = async () => {
  * @param dt Dynatrace API Client
  * @returns boolean - the success of the command
  */
-export async function distributeCertificate(dt: Dynatrace) {
+export async function distributeCertificate(dt: DynatraceClient) {
   const fnLogTrace = ["commandPalette", "distributeCertificate"];
   logger.info("Executing Distribute Certificate command", ...fnLogTrace);
 

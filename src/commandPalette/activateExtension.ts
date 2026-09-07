@@ -15,7 +15,7 @@
  */
 
 import vscode from "vscode";
-import { Dynatrace } from "../dynatrace-api/dynatrace";
+import { DynatraceClient } from "../dynatrace-api/dynatrace";
 import { DynatraceAPIError } from "../dynatrace-api/errors";
 import { getConnectedTenant, getDynatraceClient } from "../treeViews/tenantsTreeView";
 import { getCachedParsedExtension } from "../utils/caching";
@@ -49,7 +49,7 @@ export const activateExtensionWorkflow = async (version?: string) => {
  * @param cachedData provider for cacheable data
  * @param version optional version to activate
  */
-export async function activateExtension(dt: Dynatrace, tenantUrl: string, version?: string) {
+export async function activateExtension(dt: DynatraceClient, tenantUrl: string, version?: string) {
   const fnLogTrace = ["commandPalette", "activateExtension"];
   const extensionFile = getExtensionFilePath();
   if (!extensionFile) {
