@@ -234,7 +234,7 @@ context.subscriptions.push(
 
 A dual-transport API client layer for interacting with Dynatrace environments. Supports two deployment models:
 - **Managed** — Uses the existing `HttpClient` (Axios-based) for Dynatrace Managed environments
-- **SaaS** — Uses Dynatrace SDK clients (`@dynatrace-internal/client-extensions`, `@dynatrace-sdk/client-environment-v2`) for the Dynatrace SaaS platform
+- **SaaS** — Uses Dynatrace SDK clients (`@dynatrace-sdk/client-extensions-v2`, `@dynatrace-sdk/client-settings`) for the Dynatrace SaaS platform
 
 Both implementations conform to the `DynatraceClient` interface, so upstream consumers are deployment-model agnostic.
 
@@ -303,12 +303,12 @@ A `DeploymentModel` discriminator (`"saas" | "managed"`) is stored on each tenan
 5. **SDK client factory** (`sdk/sdkClientFactory.ts`) — Creates `PlatformHttpClient` and SDK client instances (SaaS only)
 
    - Injects Bearer token and user-agent into a shared `PlatformHttpClient`
-   - Returns typed clients: `DefinitionsClient`, `ConfigurationsClient`, `SchemaClient`, `EnvironmentClient`, `DiscoveryClient`, `SettingsObjectsClient`, `SettingsSchemasClient`
+   - Returns typed clients: `ExtensionsClient`, `SchemasClient`, `DiscoveryClient`, `SettingsObjectsClient`, `SettingsSchemasClient`, `CredentialVaultEntriesClient`, `QueryAssistanceClient`, `QueryExecutionClient`
 
 6. **SDK adapters** (`sdk/extensionsAdapter.ts`, `sdk/settingsAdapter.ts`) — Map SDK client responses to existing DTO types
 
-   - `SdkExtensionsServiceV2` — Adapts `@dynatrace-internal/client-extensions` to the `ExtensionsServiceV2Interface`
-   - `SdkSettingsService` — Adapts `@dynatrace-sdk/client-environment-v2` settings clients to `SettingsServiceInterface`
+   - `SdkExtensionsServiceV2` — Adapts `@dynatrace-sdk/client-extensions-v2` to the `ExtensionsServiceV2Interface`
+   - `SdkSettingsService` — Adapts `@dynatrace-sdk/client-settings` clients to `SettingsServiceInterface`
 
 7. **SDK stubs** (`sdk/stubs.ts`) — Placeholder implementations for services not yet available on SaaS
 

@@ -4,7 +4,7 @@ Dual-transport API client layer for Dynatrace API operations. This is **not** a 
 
 The layer supports two deployment models:
 - **Managed** — Axios-based `HttpClient` for Dynatrace Managed environments (REST APIs)
-- **SaaS** — Dynatrace SDK clients for the SaaS platform (`@dynatrace-internal/client-extensions`, `@dynatrace-sdk/client-environment-v2`)
+- **SaaS** — Dynatrace SDK clients for the SaaS platform (`@dynatrace-sdk/client-extensions-v2`, `@dynatrace-sdk/client-settings`, `@dynatrace-sdk/client-query`, `@dynatrace-sdk/client-credential-vault`)
 
 Both paths implement the `DynatraceClient` interface so that upstream consumers are deployment-model agnostic.
 
@@ -27,9 +27,10 @@ dynatrace-api/
 │   └── extensions.ts         #   ExtensionsServiceV1
 ├── sdk/                      # SaaS platform transport
 │   ├── sdkClientFactory.ts   #   Creates PlatformHttpClient + SDK client instances
-│   ├── sdkDynatraceClient.ts #   SaaSDynatraceClient implementing DynatraceClient
-│   ├── extensionsAdapter.ts  #   Adapts @dynatrace-internal/client-extensions → ExtensionsServiceV2Interface
-│   ├── settingsAdapter.ts    #   Adapts @dynatrace-sdk/client-environment-v2 → SettingsServiceInterface
+│   ├── extensionsAdapter.ts  #   Adapts @dynatrace-sdk/client-extensions-v2 → ExtensionsServiceV2Interface
+│   ├── settingsAdapter.ts    #   Adapts @dynatrace-sdk/client-settings → SettingsServiceInterface
+│   ├── credentialVaultAdapter.ts # Adapts @dynatrace-sdk/client-credential-vault → CredentialVaultServiceInterface
+│   ├── dqlAdapter.ts         #   Adapts @dynatrace-sdk/client-query → DqlServiceInterface
 │   └── stubs.ts              #   Stub implementations for services not yet available on SaaS
 └── interfaces/               # Request/response DTOs and service contracts
     ├── services.ts           #   Service interfaces (shared contract between Managed and SaaS)

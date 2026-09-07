@@ -16,7 +16,7 @@
 
 import { AxiosError, AxiosResponse, ResponseType, Method } from "axios";
 
-interface ConstraintViolation {
+export interface ConstraintViolation {
   parameterLocation: "HEADER" | "PATH" | "PAYLOAD_BODY" | "QUERY";
   location: string;
   message: string;

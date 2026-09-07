@@ -1079,8 +1079,8 @@
     "typescript-eslint": "^8"
   },
   "dependencies": {
-    "@dynatrace-internal/client-extensions": "^0.8.0",
     "@dynatrace-sdk/client-credential-vault": "^0.0.1",
+    "@dynatrace-sdk/client-extensions-v2": "^3.1.0",
     "@dynatrace-sdk/client-query": "^1.24.0",
     "@dynatrace-sdk/client-settings": "^1.0.0",
     "@dynatrace-sdk/http-client": "^1.4.0",
