@@ -26,6 +26,7 @@ import {
   LayoutElement,
   Message,
   Tab,
+  TabsLayoutElement,
   VERSION,
 } from "@dynatrace/unified-analysis/documents";
 import * as vscode from "vscode";
@@ -44,7 +45,6 @@ import {
   OutputDocument,
   ScreenConversionContext,
   ScreenConversionResult,
-  TabsLayoutElement,
 } from "../interfaces/screenConversion";
 import { getCachedParsedExtension } from "../utils/caching";
 import { checkWorkspaceOpen, isExtensionsWorkspace } from "../utils/conditionCheckers";
@@ -470,13 +470,19 @@ function buildEntityDetailsDefinition(
     return null;
   }
 
-  // Header
+  // Header. `Header` only carries a subtitle since UA 1.4.0 (the `title` field was removed),
+  // so the YAML title becomes the subtitle and any description has nowhere left to go.
   let header: Header | undefined = undefined;
   if (settings.staticContent?.header) {
-    header = {
-      title: settings.staticContent.header.title,
-      subtitle: settings.staticContent.header.description,
-    };
+    header = { subtitle: settings.staticContent.header.title };
+    if (settings.staticContent.header.description) {
+      addWarning(
+        warnings,
+        "skipped-out-of-scope",
+        "header.description is dropped (the new format has a single subtitle field)",
+        "detailsSettings",
+      );
+    }
   }
 
   // Breadcrumbs warning

@@ -883,7 +883,7 @@ export function convertDqlTableCard(
   const element: DqlTable = {
     type: "dql-table",
     id: card.key,
-    title: card.displayName ?? card.key,
+    cardTitle: card.displayName ?? card.key,
     dqlQuery,
     columns,
   };
@@ -957,7 +957,7 @@ export const buildDefaultDqlTable = (
   return {
     type: "dql-table",
     id: `${nodeType}-default-table`,
-    title: `${nodeType} nodes`,
+    cardTitle: `${nodeType} nodes`,
     displaySearch: false,
     interactiveRows: "id",
     tableMode: "normal",

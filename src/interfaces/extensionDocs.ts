@@ -173,7 +173,7 @@ export interface OpenPipelineSource {
   };
 }
 
-export {
+export type {
   AlertDoc,
   DashboardDoc,
   FeatureSetDoc,

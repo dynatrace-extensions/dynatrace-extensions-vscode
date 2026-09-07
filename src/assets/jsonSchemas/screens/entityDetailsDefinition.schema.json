@@ -91,9 +91,6 @@
     "Header": {
       "type": "object",
       "properties": {
-        "title": {
-          "type": "string"
-        },
         "subtitle": {
           "type": "string"
         },
@@ -160,7 +157,7 @@
           "description": "Intent ID to invoke."
         },
         "intentPayload": {
-          "$ref": "#/definitions/Record%3Cstring%2Cstring%3E",
+          "$ref": "#/definitions/Record%3Cstring%2Cany%3E",
           "description": "Optional intent payload key-value pairs."
         }
       },
@@ -249,11 +246,8 @@
       "additionalProperties": false,
       "description": "Tests whether the extension that shipped this document is installed and meets optional version, feature-set, and host-activation requirements.\n\n- `aboveOrEqualVersion` / `belowOrEqualVersion`: semver strings checked against   the version field inside the first matching monitoring configuration's value.\n- `featureSets`: OR semantics — passes when ANY listed name appears in any   monitoring configuration's `value.featureSets` array (case-insensitive).\n- `activatedOnHost`: when `true`, narrows the evaluated monitoring configurations   to those whose scope matches the current entity ID. Version and featureSets   checks are then applied only on that host-scoped subset. Returns `false` when   no configuration matches the current entity.\n\nThe extension identity comes from the document's `originExtensionId` metadata (resolved at runtime) — there is no `extensionId` field on the condition itself."
     },
-    "Record<string,string>": {
-      "type": "object",
-      "additionalProperties": {
-        "type": "string"
-      }
+    "Record<string,any>": {
+      "type": "object"
     },
     "HealthAlertGroup": {
       "type": "object",
@@ -476,9 +470,6 @@
           "$ref": "#/definitions/HorizontalLayout"
         },
         {
-          "$ref": "#/definitions/Filtering"
-        },
-        {
           "$ref": "#/definitions/Message"
         },
         {
@@ -543,22 +534,6 @@
       "type": "object",
       "additionalProperties": false,
       "properties": {
-        "maxTableHeight": {
-          "type": "number",
-          "description": "Maximal height of the scroll table. If not provided, scroll table tries to take all remaining space on the viewport (from the top of component to the bottom of the viewport).",
-          "deprecated": "Use `cardWrapperOptions.maxHeight` instead. Will be removed in next major version."
-        },
-        "minTableHeight": {
-          "type": "number",
-          "description": "Minimal height of the scroll table if the mechanism that fills remaining space on the viewport is used (`maxTableHeight: undefined`). If `minTableHeight` is bigger than remaining space - table will have `minTableHeight` height. It does not enforce minimal height for table if there is not enough rows.",
-          "default": 300,
-          "deprecated": "Use `cardWrapperOptions.minHeight` instead. Will be removed in next major version."
-        },
-        "customBottomPadding": {
-          "type": "number",
-          "description": "Custom bottom padding for calculating max height (from the bottom of Dql Table to the window bottom)",
-          "deprecated": "Use `cardWrapperOptions.customBottomPadding` instead. Will be removed in next major version."
-        },
         "tableMode": {
           "type": "string",
           "enum": [
@@ -574,7 +549,7 @@
             "spinner",
             "skeleton"
           ],
-          "description": "Mode of loading in Dql Table. \"spinner\" is spinner inside the Dql Table with visible header and \"skeleton\" is skeleton instead of Dql Table. Default is Spinner.",
+          "description": "Controls the loading indicator style. `'spinner'` shows a spinner overlay while keeping the table header visible; `'skeleton'` replaces the table with a skeleton placeholder.",
           "default": "spinner"
         },
         "fieldsMode": {
@@ -586,17 +561,21 @@
           "description": "Fields mode for DQL table. In 'strict' mode, only fields defined in columns are fetched. In 'loose' mode, all fields returned by the query are fetched.",
           "default": "loose"
         },
-        "title": {
+        "headingAs": {
           "type": "string",
-          "description": "Title of the card."
-        },
-        "description": {
-          "type": "string",
-          "description": "Description of the card."
+          "enum": [
+            "h1",
+            "h2",
+            "h3",
+            "h4",
+            "h5",
+            "h6"
+          ],
+          "description": "The semantic HTML heading element for the card title. Decouples visual level from document structure."
         },
         "dqlQuery": {
           "$ref": "#/definitions/DqlTableQuery",
-          "description": "The base DQL query. If not provided, customAppFunctionName must be provided to fetch data."
+          "description": "The DQL query powering the table. Defines the data source, joins, and the field that uniquely identifies each row (`idField`)."
         },
         "columns": {
           "type": "array",
@@ -618,12 +597,12 @@
           "items": {
             "$ref": "#/definitions/DqlTablePerspective"
           },
-          "description": "The UA column perspectives.",
+          "description": "Named column sets users can switch between. Each perspective selects a subset of columns and optional default sorting. When omitted, no perspective switcher is shown.",
           "default": []
         },
         "defaultPerspective": {
           "type": "string",
-          "description": "The default perspective."
+          "description": "Name of the perspective to activate on first load. Must match a `name` from `perspectives`. When omitted, the first perspective is used."
         },
         "expandableRowSchema": {
           "$ref": "#/definitions/ExpandableContentLayoutElement",
@@ -644,11 +623,13 @@
         },
         "generateDqlOptions": {
           "$ref": "#/definitions/GenerateDqlOptions",
-          "description": "Configure DQL generation such as limits, lookup execution order etc."
+          "description": "Configure DQL generation such as limits, lookup execution order etc.",
+          "default": "{{ lookupExecutionOrder: 'leftFirst', limit: 1000, groupLimit: 100 }}"
         },
         "toolbarItems": {
           "$ref": "#/definitions/DqlTableToolbarActions",
-          "description": "Custom DataTable.Toolbar items."
+          "description": "Toolbar action buttons above the table. Accepts built-in action names (for example, `COLUMN_VISIBILITY` or `LINE_WRAP`) and custom `IntentAction` entries.",
+          "default": []
         },
         "expandableContentHeight": {
           "type": "number",
@@ -668,15 +649,16 @@
             "string",
             "boolean"
           ],
-          "description": "ID field, used for highlighting active row, based on detailsId search param. Or boolean only for highlighting the row. Or object with link property to enable proper link semantics (supports Ctrl+click, Cmd+click, middle-click for opening in new tabs)."
+          "description": "Controls row highlighting and entity-detail linking. Pass the row field name that uniquely identifies the entity to enable detail-panel navigation, or `true` to highlight the active row without linking to a detail panel. Set `false` to disable both highlighting and detail linking entirely. When omitted, defaults to `dqlQuery.idField`."
         },
         "cellActions": {
           "$ref": "#/definitions/DqlTableCellActions",
-          "description": "Cell actions evaluated for each column. Default:  {@link  UACommonCellActions  } * Set `null` to disable table-wide actions. When using `ObsDrilldownActionMenu` (actions v3), `contextMenuType=\"cell\"` attribute have to be passed to the component in order to display actions. To have different cell actions per columns: disable table-wide actions with `cellactions: null` and provide `cellActions` in the column schemas. GUIDEline requires each column to have at least \"Copy\" action."
+          "description": "Context-menu actions per cell. Accepts an `ActionsV3` config.",
+          "default": "UACommonDrilldownCellActions"
         },
         "rowActions": {
           "$ref": "#/definitions/DqlTableRowActions",
-          "description": "Table row actions."
+          "description": "Action buttons at the trailing edge of each row. Accepts built-in or custom `IntentAction` entries via an `ActionsV3` config."
         },
         "displaySearch": {
           "type": "boolean",
@@ -691,16 +673,20 @@
           "$ref": "#/definitions/DqlTableGroupingConfig",
           "description": "Grouping configuration for the table."
         },
-        "actions": {
-          "$ref": "#/definitions/CardActions",
-          "description": "A list of actions."
-        },
         "alertGroups": {
           "type": "array",
           "items": {
             "$ref": "#/definitions/HealthAlertGroup"
           },
           "description": "Health alert group definitions. Mapped to `healthIndicatorsConfig` at runtime."
+        },
+        "cardTitle": {
+          "type": "string",
+          "description": "Card title displayed in the card header."
+        },
+        "cardDescription": {
+          "type": "string",
+          "description": "Card description displayed below the card title."
         },
         "conditions": {
           "type": "array",
@@ -715,19 +701,12 @@
         },
         "id": {
           "type": "string"
-        },
-        "cardTitle": {
-          "type": "string"
-        },
-        "cardDescription": {
-          "type": "string"
         }
       },
       "required": [
         "columns",
         "dqlQuery",
         "id",
-        "title",
         "type"
       ]
     },
@@ -761,7 +740,7 @@
               }
             ]
           },
-          "description": "Lookup queries. Allows to add additional queries to the table. Every lookup must work independently and can only match properties from main query."
+          "description": "Lookup queries. Allows to add additional queries to the table."
         }
       },
       "required": [
@@ -951,11 +930,13 @@
         },
         "dataLazyLoaded": {
           "type": "boolean",
-          "description": "Data is lazy loaded when given cell becomes visible."
+          "description": "Data is lazy loaded when given cell becomes visible.",
+          "default": false
         },
         "disableDownload": {
           "type": "boolean",
-          "description": "Remove the column from the download file even if it is visible in the table."
+          "description": "Remove the column from the download file even if it is visible in the table.",
+          "default": false
         },
         "displayName": {
           "type": "string",
@@ -984,7 +965,16 @@
             "log-content",
             "markdown"
           ],
-          "description": "The column type. Column types other than `text` are aligned to the right. Column type affects the default sorting for:  - text: case-insensitive `lower(field)`  - array: by array length `arraySize(field)`  By default  {@link  field  } is used, unless overriden with  {@link  customSortField  } .  Sorting can be fully overridden by  {@link  customSortFn  } ,  {@link  customSortDql  } . NOTE: for records - remember to provide  {@link  customSortDql  } like `myRecord[myInnerField]` and  {@link  customSortFn  } e.g. with  {@link  tableColumnRecordSorter  } ."
+          "description": "The column type. Column types other than `text` are aligned to the right. Column type affects the default sorting for:  - text: case-insensitive `lower(field)`  - array: by array length `arraySize(field)`  By default  {@link  field  } is used, unless overriden with  {@link  customSortField  } .  Sorting can be fully overridden by  {@link  customSortFn  } ,  {@link  customSortDql  } . NOTE: for records - remember to provide  {@link  customSortDql  } like `myRecord[myInnerField]` and  {@link  customSortFn  } e.g. with  {@link  tableColumnRecordSorter  } .",
+          "default": "text"
+        },
+        "alignment": {
+          "type": "string",
+          "enum": [
+            "right",
+            "left"
+          ],
+          "description": "Overrides the default alignment derived from  {@link  type  } ."
         },
         "widthType": {
           "type": "string",
@@ -993,23 +983,28 @@
             "auto",
             "ratio"
           ],
-          "description": "The column width type."
+          "description": "The column width type.",
+          "default": "Column width falls back to 'content'."
         },
         "widthValue": {
           "type": "number",
-          "description": "The value of the column width."
+          "description": "The value of the column width.",
+          "default": "1 (widthType=ratio), unset (widthType=pixels) - the column then falls back to `'content'` sizing"
         },
         "sortable": {
           "type": "boolean",
-          "description": "Indicates if column is sortable or not - the value is true by default. GUIDEline enforces all column to be sortable. Disable only if it is not possible to sort. Note: DQL queries must return proper data types to ensure correct sorting (e.g. numerical, chronological)."
+          "description": "Indicates if column is sortable or not - the value is true by default. GUIDEline enforces all column to be sortable. Disable only if it is not possible to sort. Note: DQL queries must return proper data types to ensure correct sorting (e.g. numerical, chronological).",
+          "default": true
         },
         "minWidth": {
           "type": "number",
-          "description": "Min column width in pixels. If empty it will be calculated based on column type."
+          "description": "Min column width in pixels. If empty it will be calculated based on column type.",
+          "default": "120 (type=text), 80 (type=number), 120 (type=date), none (any other type)"
         },
         "defaultColumn": {
           "type": "boolean",
-          "description": "Default columns cannot be hidden by the \"Configure visible columns\" menu. Defaults to `true`."
+          "description": "Default columns cannot be hidden by the \"Configure visible columns\" menu.",
+          "default": false
         },
         "perspectives": {
           "type": "array",
@@ -1024,15 +1019,23 @@
         },
         "customSortField": {
           "type": "string",
-          "description": "Custom sorting field used to find lookup serving the value to sort. It's useful if lookup for data is expensive, and you can provide another lookup - optimized for sorting only. Example: lookup that reads last 6 hours for micro chart vs lookup that reads last value for that metric. It must match with field used in  {@link  customSortDql  } . By default  {@link  field  } is used. We wrap that field in lower(toString(myField)) to make comparison case-insensitive."
+          "description": "Custom sorting field used to find lookup serving the value to sort. It's useful if lookup for data is expensive, and you can provide another lookup - optimized for sorting only. Example: lookup that reads last 6 hours for micro chart vs lookup that reads last value for that metric. It must match with field used in  {@link  customSortDql  } . By default  {@link  field  } is used. We wrap that field in lower(toString(myField)) to make comparison case-insensitive.",
+          "default": "The value of {@link field }"
         },
         "showLineWrap": {
           "type": "boolean",
-          "description": "Enable/Disable Line wrap option in column header. Default: false"
+          "description": "Enable/Disable Line wrap option in column header.",
+          "default": false
         },
         "sortDescFirst": {
           "type": "boolean",
-          "description": "If true, first click on column header will sort descending instead of ascending. This is enabled by default for numeric columns."
+          "description": "If true, first click on column header will sort descending instead of ascending. This is enabled by default for numeric columns.",
+          "default": "true (type=number), false (any other type)"
+        },
+        "wrapInDefaultCell": {
+          "type": "boolean",
+          "description": "When set to `false`, the converter will not wrap the rendered content in Strato's `DataTable.DefaultCell`. The renderer becomes responsible for returning the cell wrapper.",
+          "default": true
         },
         "preferenceMode": {
           "type": "string",
@@ -1627,7 +1630,8 @@
         },
         "defaultColumn": {
           "type": "boolean",
-          "description": "Default columns cannot be hidden by the \"Configure visible columns\" menu. Defaults to `true`."
+          "description": "Default columns cannot be hidden by the \"Configure visible columns\" menu.",
+          "default": false
         },
         "widthType": {
           "type": "string",
@@ -1636,11 +1640,13 @@
             "auto",
             "ratio"
           ],
-          "description": "The column width type."
+          "description": "The column width type.",
+          "default": "Column width falls back to 'content'."
         },
         "widthValue": {
           "type": "number",
-          "description": "The value of the column width."
+          "description": "The value of the column width.",
+          "default": "1 (widthType=ratio), unset (widthType=pixels) - the column then falls back to `'content'` sizing"
         }
       },
       "additionalProperties": false
@@ -1654,7 +1660,8 @@
         },
         "displayName": {
           "type": "string",
-          "description": "Optional display name."
+          "description": "Optional display name.",
+          "default": "The value of {@link name }"
         },
         "description": {
           "type": "string",
@@ -2151,6 +2158,11 @@
           "type": "boolean",
           "description": "If true and expandable rows are enabled - grouping rows will be expandable.",
           "default": false
+        },
+        "hideGroupBySelector": {
+          "type": "boolean",
+          "description": "If true, the group by selector will be hidden, despite grouping is supported in this DQL Table. Use with controlled state for grouping.",
+          "default": false
         }
       },
       "additionalProperties": false,
@@ -2190,9 +2202,6 @@
         ]
       }
     },
-    "CardActions": {
-      "$ref": "#/definitions/Actions"
-    },
     "HorizontalLayout": {
       "type": "object",
       "properties": {
@@ -2216,532 +2225,6 @@
       ],
       "additionalProperties": false
     },
-    "Filtering": {
-      "type": "object",
-      "additionalProperties": false,
-      "properties": {
-        "filters": {
-          "type": "array",
-          "items": {
-            "anyOf": [
-              {
-                "$ref": "#/definitions/DqlFilter"
-              },
-              {
-                "$ref": "#/definitions/BuiltInFilter"
-              }
-            ]
-          },
-          "description": "List of filters."
-        },
-        "disabled": {
-          "type": "boolean",
-          "description": "If true, filter field, facets and segments are disabled."
-        },
-        "items": {
-          "type": "array",
-          "items": {
-            "$ref": "#/definitions/LayoutElement"
-          },
-          "description": "Elements to be wrapped in the filtering context."
-        },
-        "dqlQueryContext": {
-          "$ref": "#/definitions/DqlQueryContext",
-          "description": "DQL query context to enable dependent filtering in dynamic value suggestions."
-        },
-        "enableGeneralSearchFilter": {
-          "type": "boolean",
-          "description": "If true, the general search filter (* ~) will be enabled in the filter field. To make this filter work, the DQL Table main query must contain a \"generalSearchPipe\" variable included before fields pipe.",
-          "default": false
-        },
-        "conditions": {
-          "type": "array",
-          "items": {
-            "$ref": "#/definitions/Condition"
-          },
-          "description": "If provided, the element is only rendered when ALL conditions are met."
-        },
-        "type": {
-          "type": "string",
-          "const": "filtering"
-        },
-        "id": {
-          "type": "string"
-        },
-        "cardTitle": {
-          "type": "string"
-        },
-        "cardDescription": {
-          "type": "string"
-        }
-      },
-      "required": [
-        "filters",
-        "id",
-        "type"
-      ]
-    },
-    "DqlFilter": {
-      "anyOf": [
-        {
-          "$ref": "#/definitions/DqlTextFilter"
-        },
-        {
-          "$ref": "#/definitions/DqlNumericFilter"
-        }
-      ]
-    },
-    "DqlTextFilter": {
-      "type": "object",
-      "additionalProperties": false,
-      "properties": {
-        "type": {
-          "type": "string",
-          "const": "text",
-          "description": "Filter data type. Default: 'text'"
-        },
-        "query": {
-          "type": "string",
-          "description": "DQL query pattern used for evaluating query expression when selecting filter values. Supported placeholders: `$operation(field)` - replaced by the actual operation using `field` and `$value` as operands `$value` - replaced by value from all value suggestions `$key` - replaced by key from key-value suggestions\n\nOperations for the `$operation(field)` placeholder: `comparison` - `field == $value` or `cluster.name == \"GKE CP KLU\"` `inclusion` - `in(field, $value)` or `in(cluster.name, \"GKE CP KLU\", \"autopilot\")` `like` - `startsWith(field, $value)` or `startsWith(cluster.name, \"GKE\")`\n\nQuery can also be passed as a function, where the calling app can generate a filter query based the specific values. If multiple queries are returned they get connected with logical OR."
-        },
-        "operatorSpecificQuery": {
-          "$ref": "#/definitions/Partial%3CRecord%3CDqlTextFilterOperator%2Cstring%3E%3E",
-          "description": "Operator specific queries (similar to 'query')."
-        },
-        "quickFilterSearch": {
-          "type": "boolean",
-          "description": "If 'true', the filter has an extra search field."
-        },
-        "dynamicSuggestions": {
-          "$ref": "#/definitions/DqlFilterDynamicSuggestion",
-          "description": "Dynamic value suggestion definition."
-        },
-        "staticSuggestions": {
-          "type": "array",
-          "items": {
-            "$ref": "#/definitions/DqlFilterPredefinedValue"
-          },
-          "description": "Static value suggestions."
-        },
-        "displayCount": {
-          "type": "boolean",
-          "description": "Whether to display the count of matching records next to each filter suggestion. When enabled, requires additional configuration:\n- For static suggestions: provide a `query` property in `staticSuggestions`\n- For dynamic suggestions: provide a `suggestionField` property in `dynamicSuggestions`"
-        },
-        "conditions": {
-          "type": "array",
-          "items": {
-            "$ref": "#/definitions/Condition"
-          },
-          "description": "If provided, the element is only rendered when ALL conditions are met."
-        },
-        "id": {
-          "type": "string",
-          "description": "Unique filter id."
-        },
-        "semDictKey": {
-          "type": "string",
-          "description": "{@link  SemanticDictionaryConstants  } or  {@link  ObsCustomKnownFields  } key. Used to connect filters, DQL table columns and properties."
-        },
-        "title": {
-          "type": "string",
-          "description": "Title."
-        },
-        "groupTitle": {
-          "type": "string",
-          "description": "Group title (shown in quick filter accordion). Resolved automatically if `semDictKey` is provided."
-        },
-        "defaultFilter": {
-          "type": "boolean",
-          "description": "If 'true', any text user typed will be suggested as value of that filter.",
-          "default": false
-        },
-        "quickFilter": {
-          "type": "boolean",
-          "description": "If 'true', this filter is also shown in Facets.",
-          "default": false
-        },
-        "quickFilterExpanded": {
-          "type": "boolean",
-          "description": "If 'true', the filter is expanded (and therefore data is loaded) by default. If 'false', the filter is collapsed and data is not loaded until user expands it. User choice is persisted in local storage (resets on new app version).",
-          "default": true
-        },
-        "quickFilterVisible": {
-          "type": "boolean",
-          "description": "If 'true', this filter is visible by default in Facets. If 'false', user needs to use Visibility settings modal to show it. User choice is persisted in local storage (resets on new app version).",
-          "default": true
-        },
-        "inlineMetricFilter": {
-          "type": "boolean",
-          "description": "If 'true', this filter's DQL expression is placed at the `$(inlineMetricFilter)` variable position in the query as a comma-prefixed inline expression (e.g. `, matchesValue(status, \"ERROR\")`). The query must contain a `$(inlineMetricFilter)` placeholder for the expression to be injected. When no inline metric filters are selected, the placeholder is replaced with an empty string.",
-          "default": false
-        },
-        "fieldIds": {
-          "anyOf": [
-            {
-              "type": "string"
-            },
-            {
-              "type": "array",
-              "items": {
-                "type": "string"
-              }
-            }
-          ],
-          "description": "Field ids (used for generating queries with UA dql table config)."
-        },
-        "maskValueInTracking": {
-          "type": "boolean",
-          "description": "If 'true', the filter value will be masked in tracking.",
-          "default": false
-        },
-        "allowedOperators": {
-          "type": "array",
-          "items": {
-            "$ref": "#/definitions/FilterFieldComparisonOperators"
-          },
-          "description": "Specifies which comparison operators are available for this filter. When provided, overrides the default operators determined by filter type and query configuration. Keep in mind that some operators can be filtered out if they are not supported by given filter type."
-        }
-      },
-      "required": [
-        "fieldIds",
-        "id",
-        "title"
-      ]
-    },
-    "Partial<Record<DqlTextFilterOperator,string>>": {
-      "type": "object",
-      "properties": {
-        "exists": {
-          "type": "string"
-        },
-        "equals": {
-          "type": "string"
-        },
-        "contains": {
-          "type": "string"
-        },
-        "starts-with": {
-          "type": "string"
-        },
-        "ends-with": {
-          "type": "string"
-        }
-      },
-      "additionalProperties": false
-    },
-    "DqlFilterDynamicSuggestion": {
-      "type": "object",
-      "properties": {
-        "valueExtractor": {
-          "type": "string",
-          "enum": [
-            "string",
-            "key-value"
-          ],
-          "description": "Dql result converter."
-        },
-        "valueFormatter": {
-          "type": "string",
-          "enum": [
-            "upper-camel-case",
-            "lower-camel-case",
-            "upper-snake-case",
-            "snake-case",
-            "sentence-case"
-          ],
-          "description": "Value formatter."
-        },
-        "dql": {
-          "type": "string",
-          "description": "DQL query to fetch value suggestions. The query must expose the `suggestion` field. In order to display count of records, expose `suggestionCount` field. The `$search` placeholder can be used for user-input."
-        },
-        "suggestionFilter": {
-          "type": "string",
-          "description": "Filter overriding the default selected filter dql for dynamic value suggestions."
-        },
-        "suggestionField": {
-          "type": "string",
-          "description": "The DQL field containing the suggestions."
-        },
-        "mapping": {
-          "type": "array",
-          "items": {
-            "$ref": "#/definitions/DqlFilterPredefinedValue"
-          },
-          "description": "Value and query mapping (for select filter only)."
-        },
-        "countField": {
-          "type": "number",
-          "description": "Value of record count displayed next to the name of the filter"
-        }
-      },
-      "required": [
-        "valueExtractor"
-      ],
-      "additionalProperties": false
-    },
-    "DqlFilterPredefinedValue": {
-      "type": "object",
-      "properties": {
-        "query": {
-          "type": "string",
-          "description": "The filter query that is inserted into DQL queries"
-        },
-        "text": {
-          "type": "string",
-          "description": "Value suggestions type"
-        },
-        "value": {
-          "type": "string",
-          "description": "The filter value that is inserted into DQL queries"
-        },
-        "color": {
-          "type": "string"
-        }
-      },
-      "required": [
-        "text"
-      ],
-      "additionalProperties": false,
-      "description": "Content of this file is autogenerated by `tooling/documents/generate-document-types.mjs` script. Please rerun this script in case of any changes in related UI schema. Source file: `lib/src/shared/types/dql-filters/DqlFilterPredefinedValue.ts`. Schema name: `DqlFilterPredefinedValue`."
-    },
-    "FilterFieldComparisonOperators": {
-      "type": "string",
-      "enum": [
-        "equals",
-        "not-equals",
-        "less-than",
-        "less-or-equal",
-        "greater-than",
-        "greater-or-equal",
-        "exists",
-        "not-exists",
-        "in",
-        "not in",
-        "starts-with",
-        "ends-with",
-        "contains",
-        "not-starts-with",
-        "not-ends-with",
-        "not-contains",
-        "matches-phrase",
-        "not-matches-phrase",
-        "search"
-      ]
-    },
-    "DqlNumericFilter": {
-      "type": "object",
-      "additionalProperties": false,
-      "properties": {
-        "type": {
-          "type": "string",
-          "const": "number",
-          "description": "Filter data type. Default: 'text'"
-        },
-        "units": {
-          "type": "array",
-          "items": {
-            "type": "string"
-          },
-          "description": "List of possible units. return units.time.nanosecond; FilterField supports only:   - units.time.millisecond (ms)   - units.time.second (s)   - units.time.minute (m)   - units.time.hour (h)   - units.time.day (d)"
-        },
-        "baseUnit": {
-          "type": "string",
-          "description": "Base unit for the filter. Used to calculate multiplier for the numeric value. It's required if `units` are provided."
-        },
-        "conditions": {
-          "type": "array",
-          "items": {
-            "$ref": "#/definitions/Condition"
-          },
-          "description": "If provided, the element is only rendered when ALL conditions are met."
-        },
-        "id": {
-          "type": "string",
-          "description": "Unique filter id."
-        },
-        "semDictKey": {
-          "type": "string",
-          "description": "{@link  SemanticDictionaryConstants  } or  {@link  ObsCustomKnownFields  } key. Used to connect filters, DQL table columns and properties."
-        },
-        "title": {
-          "type": "string",
-          "description": "Title."
-        },
-        "groupTitle": {
-          "type": "string",
-          "description": "Group title (shown in quick filter accordion). Resolved automatically if `semDictKey` is provided."
-        },
-        "defaultFilter": {
-          "type": "boolean",
-          "description": "If 'true', any text user typed will be suggested as value of that filter.",
-          "default": false
-        },
-        "quickFilter": {
-          "type": "boolean",
-          "description": "If 'true', this filter is also shown in Facets.",
-          "default": false
-        },
-        "quickFilterExpanded": {
-          "type": "boolean",
-          "description": "If 'true', the filter is expanded (and therefore data is loaded) by default. If 'false', the filter is collapsed and data is not loaded until user expands it. User choice is persisted in local storage (resets on new app version).",
-          "default": true
-        },
-        "quickFilterVisible": {
-          "type": "boolean",
-          "description": "If 'true', this filter is visible by default in Facets. If 'false', user needs to use Visibility settings modal to show it. User choice is persisted in local storage (resets on new app version).",
-          "default": true
-        },
-        "inlineMetricFilter": {
-          "type": "boolean",
-          "description": "If 'true', this filter's DQL expression is placed at the `$(inlineMetricFilter)` variable position in the query as a comma-prefixed inline expression (e.g. `, matchesValue(status, \"ERROR\")`). The query must contain a `$(inlineMetricFilter)` placeholder for the expression to be injected. When no inline metric filters are selected, the placeholder is replaced with an empty string.",
-          "default": false
-        },
-        "fieldIds": {
-          "anyOf": [
-            {
-              "type": "string"
-            },
-            {
-              "type": "array",
-              "items": {
-                "type": "string"
-              }
-            }
-          ],
-          "description": "Field ids (used for generating queries with UA dql table config)."
-        },
-        "maskValueInTracking": {
-          "type": "boolean",
-          "description": "If 'true', the filter value will be masked in tracking.",
-          "default": false
-        },
-        "allowedOperators": {
-          "type": "array",
-          "items": {
-            "$ref": "#/definitions/FilterFieldComparisonOperators"
-          },
-          "description": "Specifies which comparison operators are available for this filter. When provided, overrides the default operators determined by filter type and query configuration. Keep in mind that some operators can be filtered out if they are not supported by given filter type."
-        }
-      },
-      "required": [
-        "fieldIds",
-        "id",
-        "title",
-        "type"
-      ]
-    },
-    "BuiltInFilter": {
-      "type": "object",
-      "properties": {
-        "builtInFilter": {
-          "$ref": "#/definitions/BuiltInFilterType"
-        }
-      },
-      "required": [
-        "builtInFilter"
-      ],
-      "additionalProperties": false,
-      "description": "A reference to a built-in filter, used in document filter arrays alongside regular DqlFilter definitions.\n\nExample: ```ts filters: [   { builtInFilter: 'ALERT_STATUS_FILTER' },   { builtInFilter: 'ALERT_STATUS_WITH_WARNINGS_FILTER' },   { id: 'name', title: 'Service name', fieldIds: 'entity.name' }, ] ```"
-    },
-    "BuiltInFilterType": {
-      "type": "string",
-      "enum": [
-        "ALERT_STATUS_FILTER",
-        "ALERT_STATUS_WITH_WARNINGS_FILTER"
-      ],
-      "description": "A string literal union of built-in filter identifiers. Each value maps to a pre-configured runtime DqlFilter resolved during document-to-UI-schema mapping."
-    },
-    "DqlQueryContext": {
-      "type": "object",
-      "properties": {
-        "query": {
-          "type": "string",
-          "description": "Base table query. Provides values for main dimensions."
-        },
-        "lookups": {
-          "type": "array",
-          "items": {
-            "$ref": "#/definitions/DqlLookup"
-          },
-          "description": "Lookup queries. Joins additional data sources into the main query."
-        },
-        "additionalCommands": {
-          "type": "array",
-          "items": {
-            "$ref": "#/definitions/DqlAdditionalCommand"
-          },
-          "description": "Additional commands. Compute derived fields from existing results."
-        }
-      },
-      "required": [
-        "query"
-      ],
-      "additionalProperties": false,
-      "description": "Serializable version of UADqlQueryDto from"
-    },
-    "DqlLookup": {
-      "type": "object",
-      "properties": {
-        "query": {
-          "type": "string",
-          "description": "Lookup DQL query."
-        },
-        "sourceField": {
-          "type": "string",
-          "description": "Field in the main query to join on."
-        },
-        "lookupField": {
-          "type": "string",
-          "description": "Field in the lookup query to join on."
-        },
-        "fields": {
-          "type": "array",
-          "items": {
-            "type": "string"
-          },
-          "description": "Fields to include from the lookup result."
-        }
-      },
-      "required": [
-        "query",
-        "sourceField",
-        "lookupField",
-        "fields"
-      ],
-      "additionalProperties": false,
-      "description": "Serializable version of UADqlLookup from"
-    },
-    "DqlAdditionalCommand": {
-      "type": "object",
-      "properties": {
-        "dependencies": {
-          "type": "array",
-          "items": {
-            "type": "string"
-          },
-          "description": "Fields that this command depends on (must be resolved first)."
-        },
-        "fields": {
-          "type": "array",
-          "items": {
-            "type": "string"
-          },
-          "description": "Fields produced by this command."
-        },
-        "query": {
-          "type": "string",
-          "description": "DQL command string (e.g. '| fieldsAdd ...' or '| expand ...')."
-        }
-      },
-      "required": [
-        "dependencies",
-        "fields",
-        "query"
-      ],
-      "additionalProperties": false,
-      "description": "Serializable version of UADqlAdditionalCommand from"
-    },
     "Message": {
       "type": "object",
       "additionalProperties": false,
@@ -2757,6 +2240,19 @@
           ],
           "description": "A content of a message."
         },
+        "headingAs": {
+          "type": "string",
+          "enum": [
+            "h1",
+            "h2",
+            "h3",
+            "h4",
+            "h5",
+            "h6"
+          ],
+          "description": "The semantic HTML heading element for the card title. Decouples visual level from document structure.",
+          "default": "h1"
+        },
         "conditions": {
           "type": "array",
           "items": {
@@ -2769,12 +2265,6 @@
           "const": "message"
         },
         "id": {
-          "type": "string"
-        },
-        "cardTitle": {
-          "type": "string"
-        },
-        "cardDescription": {
           "type": "string"
         }
       },
@@ -2817,6 +2307,9 @@
       ],
       "additionalProperties": false
     },
+    "CardActions": {
+      "$ref": "#/definitions/Actions"
+    },
     "MessageSchema": {
       "type": "object",
       "properties": {
@@ -2853,11 +2346,13 @@
       "properties": {
         "dqlQuery": {
           "type": "string",
-          "description": "DQL query used to fetch metadata."
+          "description": "DQL query used to fetch metadata.",
+          "default": "smartscapeNodes \"*\" | filter id == toSmartscapeId($(nodeId))"
         },
         "overrideMetadataRegistry": {
           "$ref": "#/definitions/Record%3Cstring%2CMetadataFieldConfig%3E",
-          "description": "Override metadata registry."
+          "description": "Override metadata registry.",
+          "default": {}
         },
         "keyCellActions": {
           "$ref": "#/definitions/MetadataCellActions",
@@ -2867,9 +2362,9 @@
           "$ref": "#/definitions/MetadataCellActions",
           "description": "Custom value cell actions function. Returned cell actions will be applied to all cells in a value column."
         },
-        "actions": {
-          "$ref": "#/definitions/CardActions",
-          "description": "A list of actions."
+        "cardDescription": {
+          "type": "string",
+          "description": "Card description displayed below the card title. Might be used as legend for custom suffix."
         },
         "conditions": {
           "type": "array",
@@ -2883,12 +2378,6 @@
           "const": "metadata"
         },
         "id": {
-          "type": "string"
-        },
-        "cardTitle": {
-          "type": "string"
-        },
-        "cardDescription": {
           "type": "string"
         }
       },
@@ -3031,7 +2520,8 @@
         },
         "searchEnabled": {
           "type": "boolean",
-          "description": "Enable a search field above sections to filter charts by display name. Defaults to `false`."
+          "description": "Enable a search field above sections to filter charts by display name. Defaults to `false`.",
+          "default": false
         },
         "mode": {
           "type": "string",
@@ -3039,7 +2529,21 @@
             "NORMAL",
             "COMPACT"
           ],
-          "description": "Visualization mode of the chart group.\n\n- `'NORMAL'` — full-size charts with axes, legends, and tooltips.   Recommended for time series and multi-metric visualizations.\n- `'COMPACT'` — only `SINGLE_VALUE` charts are rendered; all other visualization types are filtered out.   Charts use a reduced height with no headers, axes, or legends.   Best suited for KPI/sparkline overview panels.\n\nDefaults to `'NORMAL'`."
+          "description": "Visualization mode of the chart group.\n\n- `'NORMAL'` — full-size charts with axes, legends, and tooltips.   Recommended for time series and multi-metric visualizations.\n- `'COMPACT'` — only `SINGLE_VALUE` charts are rendered; all other visualization types are filtered out.   Charts use a reduced height with no headers, axes, or legends.   Best suited for KPI/sparkline overview panels.\n\nDefaults to `'NORMAL'`.",
+          "default": "NORMAL"
+        },
+        "headingAs": {
+          "type": "string",
+          "enum": [
+            "h1",
+            "h2",
+            "h3",
+            "h4",
+            "h5",
+            "h6"
+          ],
+          "description": "The semantic HTML heading element for the card title. Decouples visual level from document structure.",
+          "default": "h1"
         },
         "expandedSectionIds": {
           "type": "array",
@@ -3054,7 +2558,13 @@
         },
         "swapChartsEnabled": {
           "type": "boolean",
-          "description": "Whether the chart-swap dropdown is enabled. When `true`, charts beyond visible slots are accessible via a swap dropdown in each chart header. When `false`, all visible charts are shown without a dropdown. Defaults to `true`."
+          "description": "Whether the chart-swap dropdown is enabled. When `true`, charts beyond visible slots are accessible via a swap dropdown in each chart header. When `false`, all visible charts are shown without a dropdown. Defaults to `true`.",
+          "default": true
+        },
+        "showMoreEnabled": {
+          "type": "boolean",
+          "description": "Whether the \"Show more\" button is rendered when hidden charts remain. When `false`, hidden charts stay accessible only through the chart-swap dropdown. Defaults to `true`.",
+          "default": true
         },
         "colorPalette": {
           "anyOf": [
@@ -3074,6 +2584,14 @@
           },
           "description": "Health alert groups used to generate health indicators config at runtime. Mapped to StandaloneIndicatorsConfig during document-to-schema conversion."
         },
+        "cardTitle": {
+          "type": "string",
+          "description": "Card title displayed in the card header."
+        },
+        "cardDescription": {
+          "type": "string",
+          "description": "Card description displayed below the card title."
+        },
         "conditions": {
           "type": "array",
           "items": {
@@ -3086,12 +2604,6 @@
           "const": "chart-group"
         },
         "id": {
-          "type": "string"
-        },
-        "cardTitle": {
-          "type": "string"
-        },
-        "cardDescription": {
           "type": "string"
         }
       },
@@ -3213,7 +2725,8 @@
             "area",
             "bar"
           ],
-          "description": "The chart variant to use for rendering. Maps directly to the Strato `TimeseriesChart` `variant` prop.\n- `'line'` – classic line chart (default when omitted).\n- `'area'` – stacked area chart.\n- `'bar'`  – stacked column / bar chart."
+          "description": "The chart variant to use for rendering. Maps directly to the Strato `TimeseriesChart` `variant` prop.\n- `'line'` – classic line chart (default when omitted).\n- `'area'` – stacked area chart.\n- `'bar'`  – stacked column / bar chart.",
+          "default": "line"
         },
         "axesSettings": {
           "$ref": "#/definitions/ChartAxes",
@@ -3221,11 +2734,25 @@
         },
         "chartProps": {
           "$ref": "#/definitions/TimeseriesChartDocumentProps",
-          "description": "Additional Strato TimeseriesChart props forwarded to the underlying chart. Props that are managed internally by the component are omitted to prevent accidental breakage (data, variant, colorPalette, gapPolicy, onZoomChange, seriesActions, children)."
+          "description": "Additional Strato TimeseriesChart props forwarded to the underlying chart. Props that are managed internally by the component are omitted to prevent accidental breakage (data, variant, colorPalette, gapPolicy, onZoomChange, seriesActions, children).",
+          "default": "{{}}"
         },
         "metrics": {
           "$ref": "#/definitions/Record%3Cstring%2CChartTimeseriesMetricVisualization%3E",
           "description": "Per-metric visualization settings, keyed by DQL response field name (e.g., the alias from `timeseries { cpu = avg(dt.host.cpu.usage) }` → key is `'cpu'`,  or the expression from `timeseries avg(dt.host.cpu.usage)` → key is `'avg(dt.host.cpu.usage)'`). Each metric can produce multiple series via `by:` dimensions; use  {@link  TimeseriesMetricVisualization.seriesOverrides  } for per-dimension styling."
+        },
+        "forecastSettings": {
+          "$ref": "#/definitions/ChartForecastSettings",
+          "description": "Configuration of the Davis AI forecast for this chart. When `showForecast` is `true`, the data fetching path switches from direct DQL to the Davis Analyzers API, which returns both historical data and a predicted band rendered as a shaded area beyond the current timeframe. Applies to the chart as a whole — forecasting cannot be configured per metric."
+        },
+        "connectGaps": {
+          "type": "boolean",
+          "description": "If `true`, gaps in the timeseries data will be connected with a line instead of showing empty space. Applies to the chart as a whole — gap handling cannot be configured per metric."
+        },
+        "flatLineMinMaxSettings": {
+          "$ref": "#/definitions/ChartFlatLineMinMaxSettings",
+          "description": "The custom flat line min-max settings to be used on the Y-axis when all data points equal 0. Applies to the chart as a whole — cannot be configured per metric.",
+          "default": "{{}}"
         },
         "hideMetricNameInLegend": {
           "type": "boolean",
@@ -3283,7 +2810,7 @@
             }
           },
           "additionalProperties": false,
-          "description": "X-axis configuration (label only). `min` and `max` are omitted because they are computed internally from the active timeframe and forecast data."
+          "description": "X-axis configuration. `min` and `max` are omitted because they are computed internally from the active timeframe and forecast data. NOTE: only `label` is currently honoured. Every other prop of `TimeseriesChartXAxisProps` is dropped by the V2 → V1 bridge, which renders the x-axis from `{ displayName, visible }` alone."
         },
         "yAxes": {
           "type": "array",
@@ -3309,7 +2836,8 @@
             },
             "additionalProperties": false
           },
-          "description": "Y-axes configuration. Multiple entries allow left/right dual-axis charts. `scale` is omitted because the component always uses `'linear'` scale."
+          "description": "Y-axes configuration. Multiple entries allow left/right dual-axis charts. `scale` is omitted because the component always uses `'linear'` scale. `formatter` is omitted for the same reason: the V1 `YAxis` has no slot for it, so it could never be applied. NOTE: axes are matched to metrics by order, not by query id.",
+          "default": []
         }
       },
       "additionalProperties": false,
@@ -3381,22 +2909,6 @@
           },
           "description": "Per-dimension overrides for individual series within this metric. Each override is matched by dimension value against the series name."
         },
-        "forecastSettings": {
-          "$ref": "#/definitions/ChartForecastSettings",
-          "description": "Configuration of the Davis AI forecast for this metric. When `showForecast` is `true`, the data fetching path switches from direct DQL to the Davis Analyzers API, which returns both historical data and a predicted band rendered as a shaded area beyond the current timeframe. Only supported for `TIMESERIES_CHART` visualizations."
-        },
-        "connectGaps": {
-          "type": "boolean",
-          "description": "If `true`, gaps in the timeseries data will be connected with a line instead of showing empty space."
-        },
-        "flatLineMinMaxSettings": {
-          "$ref": "#/definitions/ChartFlatLineMinMaxSettings",
-          "description": "The custom flat line min-max settings to be used on the Graph Chart Y-axis when all data points equal 0."
-        },
-        "inputUnit": {
-          "type": "string",
-          "description": "The unit the raw metric data comes in. Used as the source unit when the consuming app performs unit conversion (e.g., converting milliseconds to seconds). Accepts a Strato Unit token or a unit path string (e.g., `'units.time.millisecond'`)."
-        },
         "overrideUnit": {
           "type": "string",
           "description": "Strato unit to override the unit returned by the metric query for display purposes. Accepts a Strato Unit token or a unit path string (e.g., `'units.data.byte'`)."
@@ -3467,11 +2979,13 @@
         },
         "flatLineCustomMin": {
           "type": "number",
-          "description": "Custom min value which will be applied to chart YAxis when all data points value equals 0. The default value is 0."
+          "description": "Custom min value which will be applied to chart YAxis when all data points value equals 0.",
+          "default": 0
         },
         "flatLineCustomMax": {
           "type": "number",
-          "description": "Custom max value which will be applied to chart YAxis when all data points value equals 0. The default value is 100."
+          "description": "Custom max value which will be applied to chart YAxis when all data points value equals 0.",
+          "default": 100
         }
       },
       "additionalProperties": false,
@@ -3482,7 +2996,8 @@
       "properties": {
         "hideLegend": {
           "type": "boolean",
-          "description": "Whether the chart legend is hidden."
+          "description": "Whether the chart legend is hidden.",
+          "default": true
         },
         "colorPalette": {
           "anyOf": [
@@ -3588,16 +3103,18 @@
         }
       ]
     },
+    "Record<string,string>": {
+      "type": "object",
+      "additionalProperties": {
+        "type": "string"
+      }
+    },
     "ChartSingleValueVisualization": {
       "type": "object",
       "properties": {
         "type": {
           "type": "string",
           "const": "SINGLE_VALUE"
-        },
-        "field": {
-          "type": "string",
-          "description": "The DQL response field name to visualize. Optional when the query returns a single value field. Required when the query returns multiple value fields and you need to pick one."
         },
         "metric": {
           "$ref": "#/definitions/ChartSingleValueMetricVisualization",
@@ -3668,10 +3185,6 @@
           ],
           "description": "A fold transformation to format the Single Value displayed value."
         },
-        "inputUnit": {
-          "type": "string",
-          "description": "The unit the raw metric data comes in. Used as the source unit when the consuming app performs unit conversion (e.g., converting milliseconds to seconds). Accepts a Strato Unit token or a unit path string (e.g., `'units.time.millisecond'`)."
-        },
         "overrideUnit": {
           "type": "string",
           "description": "Strato unit to override the unit returned by the metric query for display purposes. Accepts a Strato Unit token or a unit path string (e.g., `'units.data.byte'`)."
@@ -3704,7 +3217,8 @@
         },
         "color": {
           "type": "string",
-          "description": "Color of a chart. Eg. string 'Colors.Text.Neutral.Default' (will be deprecated) or token Colors.Text.Neutral.Default."
+          "description": "Color of a chart. Eg. string 'Colors.Text.Neutral.Default' (will be deprecated) or token Colors.Text.Neutral.Default.",
+          "default": "{{ Colors.Charts.Status.Neutral.Default }}"
         },
         "sparklineColor": {
           "type": "string",
@@ -3712,7 +3226,8 @@
         },
         "maximumFractionDigits": {
           "type": "number",
-          "description": "A maximum fraction digits for an unit. Default 2."
+          "description": "A maximum fraction digits for an unit.",
+          "default": 2
         },
         "sparklineProps": {
           "$ref": "#/definitions/SparklineDocumentProps",
@@ -3875,10 +3390,6 @@
           },
           "description": "Per-series overrides for individual bars. Each override is matched by name against the bar / category name."
         },
-        "inputUnit": {
-          "type": "string",
-          "description": "Unit configuration for the metric values."
-        },
         "overrideUnit": {
           "type": "string",
           "description": "Strato unit to override the unit returned by the metric query for display purposes."
@@ -3915,8 +3426,8 @@
         "valueRepresentation": {
           "type": "string",
           "enum": [
-            "absolute",
-            "relative"
+            "relative",
+            "absolute"
           ],
           "description": "Relative values indicate the proportion that a given dimension contributes to the sum (100%) of a given category. Absolute values present the data as is."
         },
@@ -3930,7 +3441,8 @@
             "grouped",
             "single"
           ],
-          "description": "The tooltip settings. The tooltip can be hidden, show the values for all categories (`grouped`), or only show the hovered category (`single`). Defaults to `single`."
+          "description": "The tooltip settings. The tooltip can be hidden, show the values for all categories (`grouped`), or only show the hovered category (`single`).",
+          "default": "single"
         },
         "truncationMode": {
           "type": "string",
@@ -3943,7 +3455,8 @@
         },
         "showDownloadButton": {
           "type": "boolean",
-          "description": "Whether to show a download button. Defaults to false. This allows the user to download a csv file of the data presented in the chart."
+          "description": "Whether to show a download button. This allows the user to download a csv file of the data presented in the chart.",
+          "default": false
         },
         "loading": {
           "type": "boolean",
@@ -3968,7 +3481,8 @@
       "properties": {
         "hidden": {
           "type": "boolean",
-          "description": "Hides or shows the legend. Per default, the legend is shown"
+          "description": "Hides or shows the legend.",
+          "default": false
         },
         "position": {
           "type": "string",
@@ -4005,10 +3519,6 @@
           },
           "description": "Per-series overrides for individual slices. Each override is matched by name against the slice name."
         },
-        "inputUnit": {
-          "type": "string",
-          "description": "Unit configuration for the metric values."
-        },
         "overrideUnit": {
           "type": "string",
           "description": "Strato unit to override the unit returned by the metric query for display purposes."
@@ -4033,6 +3543,10 @@
         "legendProps": {
           "$ref": "#/definitions/PieChartLegendDocumentProps",
           "description": "Optional property to override legend props of Strato LegendProps config."
+        },
+        "sliceGrouping": {
+          "$ref": "#/definitions/ChartSliceGroupingSettings",
+          "description": "Buckets small slices as \"Other\" in the intent payload. Omit to disable; `{}` uses defaults."
         }
       },
       "additionalProperties": false
@@ -4099,6 +3613,28 @@
       },
       "additionalProperties": false
     },
+    "ChartSliceGroupingSettings": {
+      "type": "object",
+      "properties": {
+        "thresholdType": {
+          "type": "string",
+          "enum": [
+            "relative",
+            "absolute",
+            "number-of-slices"
+          ]
+        },
+        "thresholdValue": {
+          "type": "number",
+          "description": "Percentage (0-100) for 'relative', raw value for 'absolute', max slice count for 'number-of-slices'."
+        },
+        "label": {
+          "type": "string"
+        }
+      },
+      "additionalProperties": false,
+      "description": "Content of this file is autogenerated by `tooling/documents/generate-document-types.mjs` script. Please rerun this script in case of any changes in related UI schema. Source file: `lib/src/shared/types/schemas/shared/chart.ui-schema.ts`. Schema name: `SliceGroupingSettings`."
+    },
     "ChartDonutChartVisualization": {
       "type": "object",
       "properties": {
@@ -4116,10 +3652,6 @@
             "$ref": "#/definitions/ChartSeriesOverride"
           },
           "description": "Per-series overrides for individual slices. Each override is matched by name against the slice name."
-        },
-        "inputUnit": {
-          "type": "string",
-          "description": "Unit configuration for the metric values."
         },
         "overrideUnit": {
           "type": "string",
@@ -4170,6 +3702,10 @@
             "absolute"
           ],
           "description": "Display the label with a relative or absolute value."
+        },
+        "sliceGrouping": {
+          "$ref": "#/definitions/ChartSliceGroupingSettings",
+          "description": "Buckets small slices as \"Other\" in the intent payload. Omit to disable; `{}` uses defaults."
         }
       },
       "additionalProperties": false
@@ -4210,10 +3746,6 @@
         "type": {
           "type": "string",
           "const": "METER_BAR_CHART"
-        },
-        "field": {
-          "type": "string",
-          "description": "The DQL response field name to visualize. Optional when the query returns a single value field."
         },
         "metric": {
           "$ref": "#/definitions/ChartMeterBarMetricVisualization",
@@ -4284,10 +3816,6 @@
           ],
           "description": "A fold transformation to format the displayed value."
         },
-        "inputUnit": {
-          "type": "string",
-          "description": "The unit the raw metric data comes in. Used as the source unit when the consuming app performs unit conversion (e.g., converting milliseconds to seconds). Accepts a Strato Unit token or a unit path string (e.g., `'units.time.millisecond'`)."
-        },
         "overrideUnit": {
           "type": "string",
           "description": "Strato unit to override the unit returned by the metric query for display purposes. Accepts a Strato Unit token or a unit path string (e.g., `'units.data.byte'`)."
@@ -4312,7 +3840,8 @@
           "items": {
             "$ref": "#/definitions/ChartMeterBarChartThreshold"
           },
-          "description": "The threshold(s) for this meter bar"
+          "description": "The threshold(s) for this meter bar",
+          "default": []
         },
         "showThresholdLegend": {
           "type": "boolean",
@@ -4349,11 +3878,13 @@
             "size24",
             "auto"
           ],
-          "description": "The size (height) of the bar (not of the chart). If not set by the user, it will default to 'size8' if the chart group is in compact mode, or 'auto' otherwise"
+          "description": "The size (height) of the bar (not of the chart). If not set by the user, it will default to 'size8' if the chart group is in compact mode, or 'auto' otherwise",
+          "default": "'size8' (mode=COMPACT), 'auto' (mode=NORMAL)"
         },
         "showLabel": {
           "type": "boolean",
-          "description": "Whether to show the label (displayName) or not. Defaults to true."
+          "description": "Whether to show the label (displayName) or not.",
+          "default": true
         },
         "colorPalette": {
           "anyOf": [
@@ -4414,10 +3945,6 @@
           },
           "description": "Per-series overrides for individual segments. Each override is matched by name against the segment name."
         },
-        "inputUnit": {
-          "type": "string",
-          "description": "Unit configuration for the metric values."
-        },
         "overrideUnit": {
           "type": "string",
           "description": "Strato unit to override the unit returned by the metric query for display purposes."
@@ -4471,11 +3998,13 @@
             "size24",
             "auto"
           ],
-          "description": "The size (height) of the bar (not of the chart). If not set by the user, it will default to 'size8' if the chart group is in compact mode, or 'auto' otherwise"
+          "description": "The size (height) of the bar (not of the chart). If not set by the user, it will default to 'size8' if the chart group is in compact mode, or 'auto' otherwise",
+          "default": "'size8' (mode=COMPACT), 'auto' (mode=NORMAL)"
         },
         "showLabel": {
           "type": "boolean",
-          "description": "Whether to show the label (displayName) or not. Defaults to true."
+          "description": "Whether to show the label (displayName) or not.",
+          "default": true
         },
         "colorPalette": {
           "anyOf": [
@@ -4570,7 +4099,8 @@
         },
         "defaultExpanded": {
           "type": "boolean",
-          "description": "Whether the accordion section is expanded by default (uncontrolled mode). Ignored when `expandedSectionIds` is provided on the root schema. Defaults to `true` for the first section, `false` for the rest."
+          "description": "Whether the accordion section is expanded by default (uncontrolled mode). Ignored when `expandedSectionIds` is provided on the root schema. Defaults to `true` for the first section, `false` for the rest.",
+          "default": "true (first section), false (any other section)"
         },
         "defaultVisibleChartsNumber": {
           "type": "number",
@@ -4578,7 +4108,13 @@
         },
         "swapChartsEnabled": {
           "type": "boolean",
-          "description": "Whether the chart-swap dropdown is enabled. When `true`, charts beyond visible slots are accessible via a swap dropdown in each chart header. When `false`, all visible charts are shown without a dropdown. Defaults to `true`."
+          "description": "Whether the chart-swap dropdown is enabled. When `true`, charts beyond visible slots are accessible via a swap dropdown in each chart header. When `false`, all visible charts are shown without a dropdown. Defaults to `true`.",
+          "default": true
+        },
+        "showMoreEnabled": {
+          "type": "boolean",
+          "description": "Whether the \"Show more\" button is rendered when hidden charts remain. When `false`, hidden charts stay accessible only through the chart-swap dropdown. Defaults to `true`.",
+          "default": true
         },
         "colorPalette": {
           "anyOf": [
@@ -4599,28 +4135,46 @@
     },
     "Logs": {
       "type": "object",
+      "additionalProperties": false,
       "properties": {
+        "entityFilter": {
+          "type": "string"
+        },
+        "conditions": {
+          "type": "array",
+          "items": {
+            "$ref": "#/definitions/Condition"
+          },
+          "description": "If provided, the element is only rendered when ALL conditions are met."
+        },
         "type": {
           "type": "string",
           "const": "logs"
         },
         "id": {
           "type": "string"
-        },
-        "entityFilter": {
-          "type": "string"
         }
       },
       "required": [
-        "type",
+        "entityFilter",
         "id",
-        "entityFilter"
-      ],
-      "additionalProperties": false
+        "type"
+      ]
     },
     "Events": {
+      "$ref": "#/definitions/CoreElement%3C%22events%22%3E"
+    },
+    "CoreElement<\"events\">": {
       "type": "object",
+      "additionalProperties": false,
       "properties": {
+        "conditions": {
+          "type": "array",
+          "items": {
+            "$ref": "#/definitions/Condition"
+          },
+          "description": "If provided, the element is only rendered when ALL conditions are met."
+        },
         "type": {
           "type": "string",
           "const": "events"
@@ -4630,14 +4184,25 @@
         }
       },
       "required": [
-        "type",
-        "id"
+        "id",
+        "type"
       ],
-      "additionalProperties": false
+      "description": "Base element type for all serializable UI schema elements."
     },
     "AlertsTable": {
+      "$ref": "#/definitions/CoreElement%3C%22alerts-table%22%3E"
+    },
+    "CoreElement<\"alerts-table\">": {
       "type": "object",
+      "additionalProperties": false,
       "properties": {
+        "conditions": {
+          "type": "array",
+          "items": {
+            "$ref": "#/definitions/Condition"
+          },
+          "description": "If provided, the element is only rendered when ALL conditions are met."
+        },
         "type": {
           "type": "string",
           "const": "alerts-table"
@@ -4647,14 +4212,25 @@
         }
       },
       "required": [
-        "type",
-        "id"
+        "id",
+        "type"
       ],
-      "additionalProperties": false
+      "description": "Base element type for all serializable UI schema elements."
     },
     "Ownership": {
+      "$ref": "#/definitions/CoreElement%3C%22ownership%22%3E"
+    },
+    "CoreElement<\"ownership\">": {
       "type": "object",
+      "additionalProperties": false,
       "properties": {
+        "conditions": {
+          "type": "array",
+          "items": {
+            "$ref": "#/definitions/Condition"
+          },
+          "description": "If provided, the element is only rendered when ALL conditions are met."
+        },
         "type": {
           "type": "string",
           "const": "ownership"
@@ -4664,10 +4240,10 @@
         }
       },
       "required": [
-        "type",
-        "id"
+        "id",
+        "type"
       ],
-      "additionalProperties": false
+      "description": "Base element type for all serializable UI schema elements."
     },
     "CustomCard": {
       "type": "object",
@@ -4681,6 +4257,14 @@
           "$ref": "#/definitions/Record%3Cstring%2Cunknown%3E",
           "description": "Static properties forwarded to the custom card, readable via `useUAContext().schema.cardProps`."
         },
+        "cardTitle": {
+          "type": "string",
+          "description": "Card title displayed in the card header. Readable via `useUAContext().schema.cardTitle`."
+        },
+        "cardDescription": {
+          "type": "string",
+          "description": "Card description displayed below the card title. Readable via `useUAContext().schema.cardDescription`."
+        },
         "conditions": {
           "type": "array",
           "items": {
@@ -4693,12 +4277,6 @@
           "const": "custom"
         },
         "id": {
-          "type": "string"
-        },
-        "cardTitle": {
-          "type": "string"
-        },
-        "cardDescription": {
           "type": "string"
         }
       },
@@ -4714,7 +4292,7 @@
     },
     "Version": {
       "type": "string",
-      "const": "1.3.6"
+      "const": "1.4.3"
     },
     "DqlConditionsContext": {
       "type": "object",

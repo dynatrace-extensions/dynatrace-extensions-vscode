@@ -18,3 +18,4 @@ graphify-out
 .claude/commands/jira-refine.md
 .claude/commands/jira-deliver.md
 .venv
+*.tsbuildinfo

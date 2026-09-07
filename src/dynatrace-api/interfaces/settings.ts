@@ -34,4 +34,4 @@ interface SettingsObject {
   created: number;
 }
 
-export { SettingsObject, SchemaStub };
+export type { SettingsObject, SchemaStub };
