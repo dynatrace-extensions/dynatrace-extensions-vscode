@@ -27,6 +27,7 @@ import path from "path";
 import { GlobalCommand } from "@common";
 import { glob } from "glob";
 import JSZip from "jszip";
+import * as semver from "semver";
 import vscode from "vscode";
 import { Dynatrace } from "../dynatrace-api/dynatrace";
 import { DynatraceAPIError } from "../dynatrace-api/errors";
@@ -394,18 +395,9 @@ const getExtraPlatformsOnlyParameter = () => {
 };
 
 const doesSDKSupportVersioning = (sdkVersionOutput: string): boolean => {
-  let response = false;
-  const versionSplit = sdkVersionOutput.split(" ");
-  const version = versionSplit[versionSplit.length - 1].trim();
-  version.split(".").forEach((num, index) => {
-    if (index === 0 && parseInt(num) > 1) {
-      response = true;
-    }
-    if (index === 1 && parseInt(num) > 7) {
-      response = true;
-    }
-  });
-  return response;
+  const outSplit = sdkVersionOutput.split(" ");
+  const version = outSplit[outSplit.length - 1].trim();
+  return semver.gt(version, "1.7.0");
 };
 
 const getPythonVersionsParameter = () => {
