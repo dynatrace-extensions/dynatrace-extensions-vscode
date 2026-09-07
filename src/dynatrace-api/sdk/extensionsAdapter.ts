@@ -15,14 +15,12 @@
  */
 
 import {
-  ConfigurationsClient,
-  DefinitionsClient,
   DiscoveryClient,
-  EnvironmentClient,
   ExtensionMonitoringConfiguration as SdkMonitoringConfig,
+  ExtensionsClient,
   MonitoringConfiguration,
-  SchemaClient,
-} from "@dynatrace-internal/client-extensions";
+  SchemasClient,
+} from "@dynatrace-sdk/client-extensions-v2";
 import { wrapSdkError } from "../errors";
 import {
   ExtensionMonitoringConfiguration,
@@ -41,10 +39,8 @@ export class SdkExtensionsServiceV2 implements ExtensionsServiceV2Interface {
   private readonly retryHandler: RateLimitRetryHandler;
 
   constructor(
-    private readonly definitions: DefinitionsClient,
-    private readonly configurations: ConfigurationsClient,
-    private readonly schema: SchemaClient,
-    private readonly environment: EnvironmentClient,
+    private readonly extensions: ExtensionsClient,
+    private readonly schemas: SchemasClient,
     private readonly discovery: DiscoveryClient,
     retryHandler?: RateLimitRetryHandler,
   ) {
@@ -54,10 +50,10 @@ export class SdkExtensionsServiceV2 implements ExtensionsServiceV2Interface {
   async listSchemaVersions(signal?: AbortSignal): Promise<string[]> {
     try {
       const res = await this.retryHandler.execute(
-        () => this.schema.listSchemas(signal ? { abortSignal: signal } : undefined),
+        () => this.schemas.listSchemaVersions(signal ? { abortSignal: signal } : undefined),
         signal,
       );
-      return res.versions.reverse();
+      return [...res.items].reverse();
     } catch (err) {
       throw wrapSdkError(err);
     }
@@ -67,14 +63,14 @@ export class SdkExtensionsServiceV2 implements ExtensionsServiceV2Interface {
     try {
       const res = await this.retryHandler.execute(
         () =>
-          this.schema.listSchemaFiles({
+          this.schemas.listSchemaVersionFiles({
             schemaVersion: version,
             acceptType: "application/json; charset=utf-8",
             abortSignal: signal,
           }),
         signal,
       );
-      return res.files;
+      return res.items;
     } catch (err) {
       throw wrapSdkError(err);
     }
@@ -88,7 +84,7 @@ export class SdkExtensionsServiceV2 implements ExtensionsServiceV2Interface {
     try {
       const res = await this.retryHandler.execute(
         () =>
-          this.schema.getSchemaFile({
+          this.schemas.getSchemaVersionFile({
             schemaVersion: version,
             fileName,
             abortSignal: signal,
@@ -103,23 +99,15 @@ export class SdkExtensionsServiceV2 implements ExtensionsServiceV2Interface {
 
   async listVersions(extensionName: string, signal?: AbortSignal): Promise<MinimalExtension[]> {
     try {
-      const allExtensions: MinimalExtension[] = [];
-      let nextPageKey: string | undefined;
-      do {
-        const pageKey = nextPageKey;
-        const res = await this.retryHandler.execute(
-          () =>
-            this.definitions.listExtensionVersions({
-              extensionName,
-              pageKey,
-              abortSignal: signal,
-            }),
-          signal,
-        );
-        allExtensions.push(...res.extensions);
-        nextPageKey = res.nextPageKey ?? undefined;
-      } while (nextPageKey);
-      return allExtensions;
+      return await this.collectPages(
+        pageKey =>
+          this.extensions.listExtensionVersions({
+            extensionName,
+            pageKey,
+            abortSignal: signal,
+          }),
+        signal,
+      );
     } catch (err) {
       throw wrapSdkError(err);
     }
@@ -129,7 +117,7 @@ export class SdkExtensionsServiceV2 implements ExtensionsServiceV2Interface {
     try {
       return await this.retryHandler.execute(
         () =>
-          this.definitions.removeExtension({
+          this.extensions.deleteExtensionVersion({
             extensionName,
             extensionVersion: version,
             abortSignal: signal,
@@ -142,14 +130,17 @@ export class SdkExtensionsServiceV2 implements ExtensionsServiceV2Interface {
   }
 
   async upload(file: Buffer, validateOnly = false, signal?: AbortSignal) {
+    // The SDK exposes validation and upload as two distinct operations.
     try {
+      const body = new Blob([new Uint8Array(file)]);
+      if (validateOnly) {
+        return await this.retryHandler.execute(
+          () => this.extensions.validateExtension({ body, abortSignal: signal }),
+          signal,
+        );
+      }
       return await this.retryHandler.execute(
-        () =>
-          this.definitions.uploadExtension({
-            body: new Blob([new Uint8Array(file)]),
-            validateOnly,
-            abortSignal: signal,
-          }),
+        () => this.extensions.uploadExtension({ body, abortSignal: signal }),
         signal,
       );
     } catch (err) {
@@ -161,7 +152,7 @@ export class SdkExtensionsServiceV2 implements ExtensionsServiceV2Interface {
     try {
       return await this.retryHandler.execute(
         () =>
-          this.environment.updateExtensionEnvironmentConfiguration({
+          this.extensions.updateExtensionEnvironmentConfiguration({
             extensionName,
             body: { version },
             abortSignal: signal,
@@ -175,23 +166,17 @@ export class SdkExtensionsServiceV2 implements ExtensionsServiceV2Interface {
 
   async list(name?: string, signal?: AbortSignal): Promise<MinimalExtension[]> {
     try {
-      const allExtensions: MinimalExtension[] = [];
-      let nextPageKey: string | undefined;
-      do {
-        const pageKey = nextPageKey;
-        const res = await this.retryHandler.execute(
-          () =>
-            this.definitions.listExtensionInfos({
-              name: name ?? undefined,
-              pageKey,
-              abortSignal: signal,
-            }),
-          signal,
-        );
-        allExtensions.push(...res.extensions);
-        nextPageKey = res.nextPageKey ?? undefined;
-      } while (nextPageKey);
-      return allExtensions;
+      // The SDK replaced the dedicated `name` parameter with a filter expression.
+      const filter = name ? `contains(name, "${name}")` : undefined;
+      return await this.collectPages(
+        (pageKey, isFirstPage) =>
+          this.extensions.listExtensions({
+            filter: isFirstPage ? filter : undefined,
+            pageKey,
+            abortSignal: signal,
+          }),
+        signal,
+      );
     } catch (err) {
       throw wrapSdkError(err);
     }
@@ -204,25 +189,18 @@ export class SdkExtensionsServiceV2 implements ExtensionsServiceV2Interface {
     signal?: AbortSignal,
   ): Promise<ExtensionMonitoringConfiguration[]> {
     try {
-      const allConfigs: SdkMonitoringConfig[] = [];
-      let nextPageKey: string | undefined;
-      do {
-        const pageKey = nextPageKey;
-        const res = await this.retryHandler.execute(
-          () =>
-            this.configurations.extensionMonitoringConfigurations({
-              extensionName,
-              version,
-              active: activeOnly,
-              pageKey,
-              abortSignal: signal,
-            }),
-          signal,
-        );
-        allConfigs.push(...res.items);
-        nextPageKey = res.nextPageKey ?? undefined;
-      } while (nextPageKey);
-      return allConfigs.map(mapSdkMonitoringConfig);
+      const filter = buildMonitoringConfigurationFilter(version, activeOnly);
+      const configs = await this.collectPages<SdkMonitoringConfig>(
+        (pageKey, isFirstPage) =>
+          this.extensions.listExtensionMonitoringConfigurations({
+            extensionName,
+            filter: isFirstPage ? filter : undefined,
+            pageKey,
+            abortSignal: signal,
+          }),
+        signal,
+      );
+      return configs.map(mapSdkMonitoringConfig);
     } catch (err) {
       throw wrapSdkError(err);
     }
@@ -236,7 +214,7 @@ export class SdkExtensionsServiceV2 implements ExtensionsServiceV2Interface {
     try {
       const res = await this.retryHandler.execute(
         () =>
-          this.configurations.getExtensionMonitoringConfigurationStatus({
+          this.extensions.getExtensionMonitoringConfigurationStatus({
             extensionName,
             configurationId,
             abortSignal: signal,
@@ -260,7 +238,7 @@ export class SdkExtensionsServiceV2 implements ExtensionsServiceV2Interface {
     try {
       await this.retryHandler.execute(
         () =>
-          this.configurations.removeMonitoringConfiguration({
+          this.extensions.deleteExtensionMonitoringConfiguration({
             extensionName,
             configurationId,
             abortSignal: signal,
@@ -280,7 +258,7 @@ export class SdkExtensionsServiceV2 implements ExtensionsServiceV2Interface {
     try {
       const res = await this.retryHandler.execute(
         () =>
-          this.configurations.monitoringConfigurationDetails({
+          this.extensions.getExtensionMonitoringConfigurationDetails({
             extensionName,
             configurationId,
             abortSignal: signal,
@@ -302,7 +280,7 @@ export class SdkExtensionsServiceV2 implements ExtensionsServiceV2Interface {
     try {
       return await this.retryHandler.execute(
         () =>
-          this.configurations.updateMonitoringConfiguration({
+          this.extensions.updateExtensionMonitoringConfiguration({
             extensionName,
             configurationId,
             body: configurationDetails,
@@ -321,11 +299,15 @@ export class SdkExtensionsServiceV2 implements ExtensionsServiceV2Interface {
     signal?: AbortSignal,
   ) {
     try {
+      // The REST API accepts a list of configurations, the SDK only a single one.
+      const body = (
+        Array.isArray(configurationDetails) ? configurationDetails[0] : configurationDetails
+      ) as MonitoringConfiguration;
       return await this.retryHandler.execute(
         () =>
-          this.configurations.createMonitoringConfiguration({
+          this.extensions.createExtensionMonitoringConfiguration({
             extensionName,
-            body: [configurationDetails as unknown as MonitoringConfiguration],
+            body,
             abortSignal: signal,
           }),
         signal,
@@ -339,7 +321,7 @@ export class SdkExtensionsServiceV2 implements ExtensionsServiceV2Interface {
     try {
       return await this.retryHandler.execute(
         () =>
-          this.definitions.extensionConfigurationSchema({
+          this.extensions.getExtensionConfigurationSchema({
             extensionName,
             extensionVersion,
             abortSignal: signal,
@@ -363,7 +345,7 @@ export class SdkExtensionsServiceV2 implements ExtensionsServiceV2Interface {
         // receive the same ArrayBuffer contract as the classic API client (JSZip needs this).
         const binary = await this.retryHandler.execute(
           () =>
-            this.definitions.extensionDetails({
+            this.extensions.getExtensionDetails({
               extensionName,
               extensionVersion,
               acceptType: "application/octet-stream",
@@ -375,7 +357,7 @@ export class SdkExtensionsServiceV2 implements ExtensionsServiceV2Interface {
       }
       return await this.retryHandler.execute(
         () =>
-          this.definitions.extensionDetails({
+          this.extensions.getExtensionDetails({
             extensionName,
             extensionVersion,
             acceptType: "application/json; charset=utf-8",
@@ -390,11 +372,11 @@ export class SdkExtensionsServiceV2 implements ExtensionsServiceV2Interface {
 
   async listJMXProcesses(signal?: AbortSignal): Promise<JMXProcess[]> {
     try {
-      const containers = await this.retryHandler.execute(
+      const res = await this.retryHandler.execute(
         () => this.discovery.listJmxProcesses(signal ? { abortSignal: signal } : undefined),
         signal,
       );
-      return containers.map(c => ({
+      return res.items.map(c => ({
         id: c.id ?? "",
         name: c.name ?? "",
         properties: {
@@ -427,6 +409,49 @@ export class SdkExtensionsServiceV2 implements ExtensionsServiceV2Interface {
       throw wrapSdkError(err);
     }
   }
+
+  /**
+   * Walks all pages of a paginated SDK endpoint and returns the flattened items.
+   * Subsequent pages must be requested with the page key alone — the API rejects any
+   * other query parameter alongside it — hence the `isFirstPage` flag.
+   */
+  private async collectPages<T>(
+    fetchPage: (
+      pageKey: string | undefined,
+      isFirstPage: boolean,
+    ) => Promise<{ items: T[]; nextPageKey?: string | null }>,
+    signal?: AbortSignal,
+  ): Promise<T[]> {
+    const allItems: T[] = [];
+    let nextPageKey: string | undefined;
+    do {
+      const pageKey = nextPageKey;
+      const res = await this.retryHandler.execute(
+        () => fetchPage(pageKey, pageKey === undefined),
+        signal,
+      );
+      allItems.push(...res.items);
+      nextPageKey = res.nextPageKey ?? undefined;
+    } while (nextPageKey);
+    return allItems;
+  }
+}
+
+/**
+ * Builds the filter expression replacing the former `version` and `active` query parameters.
+ */
+function buildMonitoringConfigurationFilter(
+  version?: string,
+  activeOnly?: boolean,
+): string | undefined {
+  const clauses: string[] = [];
+  if (version) {
+    clauses.push(`version = "${version}"`);
+  }
+  if (activeOnly !== undefined) {
+    clauses.push(`active = ${activeOnly}`);
+  }
+  return clauses.length > 0 ? clauses.join(" AND ") : undefined;
 }
 
 /**

@@ -15,18 +15,11 @@
  */
 
 import {
-  ChartGroup,
   ChartTimeseriesMetricVisualization,
-  DqlTable,
   EntityDetailsDefinitionDocument,
   EntityDetailsInjectionDocument,
-  Filtering,
-  HorizontalLayout,
   InvExDefinitionDocument,
   InvExInjectionDocument,
-  Message,
-  Metadata,
-  VerticalLayout,
 } from "@dynatrace/unified-analysis/documents";
 import { ScreenStub } from "./extensionMeta";
 
@@ -170,13 +163,3 @@ export type DqlTableColumnWidthType = "pixels" | "auto" | "ratio";
 
 /** MessageCard text color */
 export type MessageColor = "INFO" | "WARNING" | "CRITICAL";
-
-/** Need to compile ourselves because UA doesn't export these */
-export type TabsLayoutElement = FullySupportedElements | DqlTable;
-export type FullySupportedElements =
-  | VerticalLayout
-  | HorizontalLayout
-  | Filtering
-  | Message
-  | Metadata
-  | ChartGroup;

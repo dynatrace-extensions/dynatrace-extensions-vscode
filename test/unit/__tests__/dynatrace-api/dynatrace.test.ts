@@ -23,10 +23,8 @@ import { SaaSDynatraceClient } from "../../../../src/dynatrace-api/dynatrace";
 jest.mock("../../../../src/dynatrace-api/http_client");
 jest.mock("../../../../src/dynatrace-api/sdk/sdkClientFactory", () => ({
   createSdkClients: () => ({
-    definitions: {},
-    configurations: {},
-    schema: {},
-    environment: {},
+    extensions: {},
+    schemas: {},
     discovery: {},
     settingsObjects: {},
     settingsSchemas: {},

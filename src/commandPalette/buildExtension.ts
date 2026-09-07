@@ -27,8 +27,9 @@ import path from "path";
 import { GlobalCommand } from "@common";
 import { glob } from "glob";
 import JSZip from "jszip";
+import * as semver from "semver";
 import vscode from "vscode";
-import { Dynatrace } from "../dynatrace-api/dynatrace";
+import { DynatraceClient } from "../dynatrace-api/dynatrace";
 import { DynatraceAPIError } from "../dynatrace-api/errors";
 import { getActivationContext } from "../extension";
 import { showFastModeStatusBar } from "../statusBar/fastMode";
@@ -194,7 +195,7 @@ const clearFilePathMemo = async (manifestFilePath?: string) => {
 };
 
 const dtMemo = async () => {
-  const value = await useMemo<Dynatrace | undefined>(getDynatraceClient, []);
+  const value = await useMemo<DynatraceClient | undefined>(getDynatraceClient, []);
   return value;
 };
 
@@ -394,18 +395,9 @@ const getExtraPlatformsOnlyParameter = () => {
 };
 
 const doesSDKSupportVersioning = (sdkVersionOutput: string): boolean => {
-  let response = false;
-  const versionSplit = sdkVersionOutput.split(" ");
-  const version = versionSplit[versionSplit.length - 1].trim();
-  version.split(".").forEach((num, index) => {
-    if (index === 0 && parseInt(num) > 1) {
-      response = true;
-    }
-    if (index === 1 && parseInt(num) > 7) {
-      response = true;
-    }
-  });
-  return response;
+  const outSplit = sdkVersionOutput.split(" ");
+  const version = outSplit[outSplit.length - 1].trim();
+  return semver.gt(version, "1.7.0");
 };
 
 const getPythonVersionsParameter = () => {
@@ -546,7 +538,7 @@ async function uploadAndActivate(
  */
 const ensureVersionUploadPossible = async (
   extensionName: string,
-  dt: Dynatrace,
+  dt: DynatraceClient,
   signal: AbortSignal,
 ) => {
   const fnLogTrace = [...logTrace, "ensureVersionUploadPossible"];
@@ -574,7 +566,7 @@ const ensureVersionUploadPossible = async (
 /**
  * Uploads an extension package to the Dynatrace tenant.
  */
-const uploadExtension = async (fileName: string, dt: Dynatrace, signal: AbortSignal) => {
+const uploadExtension = async (fileName: string, dt: DynatraceClient, signal: AbortSignal) => {
   const fnLogTrace = [...logTrace, "uploadExtension"];
   const workspaceStorage = getWorkspaceStorage();
   const file = readFileSync(path.resolve(workspaceStorage, fileName));

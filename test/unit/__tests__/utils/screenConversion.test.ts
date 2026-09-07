@@ -345,7 +345,7 @@ describe("Screen Conversion Utils", () => {
       expect(result).not.toBeNull();
       expect(defined(result).type).toBe("dql-table");
       expect(defined(result).id).toBe("disks-table");
-      expect(defined(result).title).toBe("Analyze Disks");
+      expect(defined(result).cardTitle).toBe("Analyze Disks");
 
       const dqlQuery = defined(result).dqlQuery as Record<string, unknown>;
       expect(dqlQuery.idField).toBe("disk");

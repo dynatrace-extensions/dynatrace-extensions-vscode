@@ -17,7 +17,7 @@
 import { writeFileSync } from "fs";
 import path from "path";
 import vscode from "vscode";
-import { Dynatrace } from "../dynatrace-api/dynatrace";
+import { DynatraceClient } from "../dynatrace-api/dynatrace";
 import { getDynatraceClient } from "../treeViews/tenantsTreeView";
 import { pushManifestTextForParsing } from "../utils/caching";
 import { getExtensionWorkspaceDir } from "../utils/fileSystem";
@@ -61,7 +61,7 @@ export const convertPythonExtensionWorkflow = async (outputPath?: string) => {
  * @param dt Dynatrace Client API
  * @param outputPath optional path where to save the manifest
  */
-export async function convertPythonExtension(dt?: Dynatrace, outputPath?: string) {
+export async function convertPythonExtension(dt?: DynatraceClient, outputPath?: string) {
   const fnLogTrace = ["commandPalette", "convertPythonExtension"];
   logger.info("Executing Convert Python Extension command", ...fnLogTrace);
   // User chooses if they want to use a local file or browse from the Dynatrace environment

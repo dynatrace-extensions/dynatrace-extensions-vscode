@@ -184,7 +184,7 @@ export const myCommandWorkflow = async () => {
 
 **Dynatrace API Client**
 
-The project packages a dual-transport API client layer in `/src/dynatrace-api` that supports two deployment models: Managed (Axios-based `HttpClient` for REST APIs) and SaaS (Dynatrace SDK clients via `@dynatrace-internal/client-extensions` and `@dynatrace-sdk/client-environment-v2`). Both paths implement the `DynatraceClient` interface so upstream consumers are deployment-model agnostic. A factory function `createDynatraceClient()` routes to the appropriate implementation.
+The project packages a dual-transport API client layer in `/src/dynatrace-api` that supports two deployment models: Managed (Axios-based `HttpClient` for REST APIs) and SaaS (Dynatrace SDK clients via `@dynatrace-sdk/client-extensions-v2` and `@dynatrace-sdk/client-settings`). Both paths implement the `DynatraceClient` interface so upstream consumers are deployment-model agnostic. A factory function `createDynatraceClient()` routes to the appropriate implementation.
 
 For Managed, each folder represents an API (e.g. configuration, environment) and each file within represents an API endpoint (e.g. monitored entities). For SaaS, adapter classes in `sdk/` map SDK clients to the same service interfaces. Interfaces are shared and kept in the `/src/dynatrace-api/interfaces` folder and do not necessarily need to be 100% complete.
 

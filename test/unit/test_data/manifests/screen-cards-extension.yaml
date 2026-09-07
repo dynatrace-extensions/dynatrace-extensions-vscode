@@ -1,0 +1,90 @@
+name: custom:screen.cards.test
+version: "0.0.1"
+minDynatraceVersion: "1.279.0"
+author:
+  name: Your Name Here
+
+screens:
+  # Screen 0 - every reference resolves, so no diagnostics are expected
+  - entityType: test:queue
+    propertiesCard:
+      displayOnlyConfigured: false
+      properties:
+        - type: ATTRIBUTE
+          attribute:
+            # Same value as a card key below, but not a card - must not be flagged
+            key: queue_stats
+    detailsSettings:
+      - target: BOTH
+        layout:
+          autoGenerate: false
+          cards:
+            - type: CHART_GROUP
+              key: queue_stats
+            - type: DQL_TABLE
+              key: queue_list_vpn_dql
+            - type: CARD_GROUP
+              displayName: Grouped
+              cards:
+                - type: MESSAGE
+                  key: queue_message
+                - type: CARD_GROUP
+                  displayName: Nested
+                  cards:
+                    - type: LOGS
+                      key: queue_logs
+            - type: INJECTIONS
+              key: queue_injection_point
+            - type: SOME_FUTURE_CARD
+              key: queue_future
+      - target: CLASSIC
+        layout:
+          autoGenerate: false
+          cards:
+            - type: EVENTS
+              key: queue_events
+    chartsCards:
+      - key: queue_stats
+        displayName: Queue statistics
+        charts: []
+    dqlTableCards:
+      - key: queue_list_vpn_dql
+        displayName: VPNs
+    messageCards:
+      - key: queue_message
+        message:
+          text: Hello
+    logsCards:
+      - key: queue_logs
+    eventsCards:
+      - key: queue_events
+
+  # Screen 1 - one genuine error and one genuine warning
+  - entityType: test:vpn
+    propertiesCard:
+      displayOnlyConfigured: false
+      properties:
+        - type: ATTRIBUTE
+          attribute:
+            # Decoy sharing the name of an unreferenced card defined further down
+            key: vpn_unused
+    listInjections:
+      - type: CHART_GROUP
+        key: vpn_injected_elsewhere
+        entitySelectorTemplate: type(test:host)
+    detailsSettings:
+      target: BOTH
+      layout:
+        autoGenerate: false
+        cards:
+          - type: CHART_GROUP
+            key: vpn_stats
+          - type: DQL_TABLE
+            key: vpn_missing_dql
+    chartsCards:
+      - key: vpn_stats
+        displayName: VPN statistics
+        charts: []
+      - key: vpn_unused
+        displayName: Unused
+        charts: []

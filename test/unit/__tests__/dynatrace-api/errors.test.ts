@@ -69,6 +69,60 @@ describe("wrapSdkError", () => {
     expect(wrapped.errorParams.code).toBe(403);
   });
 
+  it("extracts message, code and constraint violations from an SDK error envelope", () => {
+    const sdkError = {
+      isClientRequestError: true,
+      message: "Client error",
+      response: { status: 400 },
+      body: {
+        error: {
+          code: 400,
+          message: "Extension versions quantity limit reached",
+          details: {
+            constraintViolations: [{ message: "too many versions", path: "version" }],
+          },
+        },
+      },
+    };
+
+    const wrapped = wrapSdkError(sdkError);
+
+    expect(wrapped.message).toBe("Extension versions quantity limit reached");
+    expect(wrapped.errorParams.message).toBe("Extension versions quantity limit reached");
+    expect(wrapped.errorParams.code).toBe(400);
+    expect(wrapped.errorParams.constraintViolations).toEqual([
+      {
+        parameterLocation: "PAYLOAD_BODY",
+        location: "",
+        message: "too many versions",
+        path: "version",
+      },
+    ]);
+  });
+
+  it("falls back to the HTTP status when the envelope carries no code", () => {
+    const sdkError = {
+      isClientRequestError: true,
+      message: "Client error",
+      response: { status: 429 },
+      body: { error: { message: "Too many requests" } },
+    };
+
+    const wrapped = wrapSdkError(sdkError);
+
+    expect(wrapped.errorParams.code).toBe(429);
+  });
+
+  it("falls back to the SDK error message when there is no envelope", () => {
+    const sdkError = { isClientRequestError: true, message: "Client error", response: {} };
+
+    const wrapped = wrapSdkError(sdkError);
+
+    expect(wrapped.message).toBe("Client error");
+    expect(wrapped.errorParams.code).toBe(0);
+    expect(wrapped.errorParams.constraintViolations).toEqual([]);
+  });
+
   it("always includes empty constraintViolations array", () => {
     const wrapped = wrapSdkError(new Error("test"));
 

@@ -18,7 +18,7 @@ import { lstatSync, readdirSync, readFileSync } from "fs";
 import path from "path";
 import JSZip from "jszip";
 import vscode from "vscode";
-import { Dynatrace } from "../dynatrace-api/dynatrace";
+import { DynatraceClient } from "../dynatrace-api/dynatrace";
 import { DynatraceAPIError } from "../dynatrace-api/errors";
 import { ExtensionStub } from "../interfaces/extensionMeta";
 import { getConnectedTenant, getDynatraceClient } from "../treeViews/tenantsTreeView";
@@ -57,7 +57,7 @@ export const uploadExtensionWorkflow = async () => {
  * @param tenantUrl Base URL to the Dynatrace environment
  * @returns void
  */
-export async function uploadExtension(dt: Dynatrace, tenantUrl: string) {
+export async function uploadExtension(dt: DynatraceClient, tenantUrl: string) {
   const fnLogTrace = ["commandPalette", "uploadExtension"];
   logger.info("Executing Upload Extension command", ...fnLogTrace);
   // Get the most recent entry in dist folder

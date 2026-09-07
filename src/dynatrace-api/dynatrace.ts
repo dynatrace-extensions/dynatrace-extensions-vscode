@@ -115,10 +115,8 @@ export class SaaSDynatraceClient implements DynatraceClient {
     const retryHandler = new RateLimitRetryHandler(rateLimitConfig);
 
     this.extensionsV2 = new SdkExtensionsServiceV2(
-      clients.definitions,
-      clients.configurations,
-      clients.schema,
-      clients.environment,
+      clients.extensions,
+      clients.schemas,
       clients.discovery,
       retryHandler,
     );

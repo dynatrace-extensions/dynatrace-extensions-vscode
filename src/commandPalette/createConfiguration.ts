@@ -18,7 +18,7 @@ import { readFileSync, readdirSync, writeFileSync } from "fs";
 import path from "path";
 import { SimulationLocation, SimulationLocations } from "@common";
 import vscode from "vscode";
-import { Dynatrace } from "../dynatrace-api/dynatrace";
+import { DynatraceClient } from "../dynatrace-api/dynatrace";
 import {
   MinimalConfiguration,
   getConfigurationDetailsViaFile,
@@ -59,7 +59,7 @@ export const createMonitoringConfigurationWorkflow = async () => {
  * code completions for customizing the generated template.
  * @param dt Dyntrace client
  */
-export async function createMonitoringConfiguration(dt: Dynatrace) {
+export async function createMonitoringConfiguration(dt: DynatraceClient) {
   const fnLogTrace = ["commandPalette", "createConfiguration", "createMonitoringConfiguration"];
   logger.info("Executing Create Configuration command", ...fnLogTrace);
   const workspaceRoot = vscode.workspace.workspaceFolders?.[0].uri.fsPath;

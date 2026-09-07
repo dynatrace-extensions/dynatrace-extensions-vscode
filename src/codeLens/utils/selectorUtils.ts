@@ -16,7 +16,7 @@
 
 import { PanelDataType, ViewType, MetricSeriesCollection, CodeLensCommand } from "@common";
 import vscode from "vscode";
-import { Dynatrace } from "../../dynatrace-api/dynatrace";
+import { DynatraceClient } from "../../dynatrace-api/dynatrace";
 import { DynatraceAPIError } from "../../dynatrace-api/errors";
 import { Entity } from "../../dynatrace-api/interfaces/monitoredEntities";
 import { ExtensionStub } from "../../interfaces/extensionMeta";
@@ -86,7 +86,7 @@ export const registerSelectorCommands = () => {
 export async function validateSelector(
   selector: string,
   selectorType: "metric" | "entity",
-  dt: Dynatrace,
+  dt: DynatraceClient,
 ): Promise<ValidationStatus> {
   if (selectorType === "metric") {
     return dt.metrics
@@ -131,7 +131,7 @@ export async function validateSelector(
 export async function runSelector(
   selector: string,
   selectorType: "metric" | "entity",
-  dt: Dynatrace,
+  dt: DynatraceClient,
   oc: vscode.OutputChannel,
   statusCallback: (selector: string, status: ValidationStatus) => void,
 ) {

@@ -14,23 +14,19 @@
   limitations under the License.
  */
 
-import {
-  ConfigurationsClient,
-  DefinitionsClient,
-  DiscoveryClient,
-  EnvironmentClient,
-  SchemaClient,
-} from "@dynatrace-internal/client-extensions";
 import { CredentialVaultEntriesClient } from "@dynatrace-sdk/client-credential-vault";
+import {
+  DiscoveryClient,
+  ExtensionsClient,
+  SchemasClient,
+} from "@dynatrace-sdk/client-extensions-v2";
 import { QueryAssistanceClient, QueryExecutionClient } from "@dynatrace-sdk/client-query";
 import { SettingsObjectsClient, SettingsSchemasClient } from "@dynatrace-sdk/client-settings";
 import { PlatformHttpClient } from "@dynatrace-sdk/http-client";
 
 export interface SdkClients {
-  definitions: DefinitionsClient;
-  configurations: ConfigurationsClient;
-  schema: SchemaClient;
-  environment: EnvironmentClient;
+  extensions: ExtensionsClient;
+  schemas: SchemasClient;
   discovery: DiscoveryClient;
   queryAssistance: QueryAssistanceClient;
   queryExecution: QueryExecutionClient;
@@ -54,10 +50,8 @@ export function createSdkClients(baseUrl: string, platformToken: string): SdkCli
   });
 
   return {
-    definitions: new DefinitionsClient(httpClient),
-    configurations: new ConfigurationsClient(httpClient),
-    schema: new SchemaClient(httpClient),
-    environment: new EnvironmentClient(httpClient),
+    extensions: new ExtensionsClient(httpClient),
+    schemas: new SchemasClient(httpClient),
     discovery: new DiscoveryClient(httpClient),
     queryAssistance: new QueryAssistanceClient(httpClient),
     queryExecution: new QueryExecutionClient(httpClient),

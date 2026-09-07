@@ -55,4 +55,4 @@ interface DynamicFilters {
   tagSuggestionTypes?: string[];
 }
 
-export { Dashboard };
+export type { Dashboard };

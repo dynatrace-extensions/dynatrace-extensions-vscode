@@ -86,4 +86,4 @@ interface Entity {
   displayName: string;
 }
 
-export { Entity, EntityTypeList, EntityType };
+export type { Entity, EntityTypeList, EntityType };

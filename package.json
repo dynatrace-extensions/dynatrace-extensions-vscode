@@ -8,7 +8,7 @@
     "email": "extensions@dynatrace.com",
     "url": "https://info.dynatrace.com/global_all_wp_dynatrace_services_platform_extensions_fact_sheet_13656_fulfillment.html"
   },
-  "version": "3.0.2",
+  "version": "3.0.3",
   "repository": {
     "type": "git",
     "url": "https://github.com/dynatrace-extensions/dynatrace-extensions-vscode.git"
@@ -1034,7 +1034,7 @@
     "esbuild-base": "esbuild ./src/extension.ts --bundle --outfile=out/main.js --external:vscode --external:@tanstack/react-query-devtools --format=cjs --platform=node --alias:@common=./common",
     "esbuild": "npm run esbuild-base -- --sourcemap",
     "esbuild-watch": "npm run esbuild-base -- --sourcemap --watch",
-    "compile": "tsc -p ./",
+    "compile": "tsc -b ./",
     "watch": "tsc -watch -p ./",
     "pretest": "npm run compile && npm run lint",
     "lint": "eslint src",
@@ -1058,6 +1058,7 @@
     "@types/jest": "^29.5.12",
     "@types/node": "^24.0.0",
     "@types/node-forge": "^1.3.11",
+    "@types/semver": "^7.8.0",
     "@types/vscode": "^1.71.0",
     "@vscode/test-electron": "^2.4.0",
     "@vscode/vsce": "^2.29.0",
@@ -1079,12 +1080,12 @@
     "typescript-eslint": "^8"
   },
   "dependencies": {
-    "@dynatrace-internal/client-extensions": "^0.8.0",
     "@dynatrace-sdk/client-credential-vault": "^0.0.1",
+    "@dynatrace-sdk/client-extensions-v2": "^3.1.0",
     "@dynatrace-sdk/client-query": "^1.24.0",
     "@dynatrace-sdk/client-settings": "^1.0.0",
     "@dynatrace-sdk/http-client": "^1.4.0",
-    "@dynatrace/unified-analysis": "^1.3.6",
+    "@dynatrace/unified-analysis": "^1.4.3",
     "axios": "^1.18.0",
     "chalk": "^4.1.2",
     "form-data": "^4.0.6",
@@ -1095,6 +1096,7 @@
     "open": "^10.1.0",
     "pidtree": "^0.6.0",
     "rxjs": "^7.8.1",
+    "semver": "^7.8.5",
     "yaml": "^2.8.3"
   },
   "overrides": {

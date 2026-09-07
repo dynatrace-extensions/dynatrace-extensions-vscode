@@ -47,6 +47,7 @@ import {
 } from "../utils/caching";
 import { checkDtInternalProperties } from "../utils/conditionCheckers";
 import {
+  getCardDefinitionSection,
   getDefinedCardsMeta,
   getDimensionsFromDataSource,
   getMetricsFromDataSource,
@@ -54,8 +55,10 @@ import {
 } from "../utils/extensionParsing";
 import { isOidReadable, isTable, oidFromMetriValue, OidInformation } from "../utils/snmp";
 import {
+  CardKeyRange,
+  CardKeyRole,
   getBlockItemIndexAtLine,
-  getListItemIndexes,
+  getCardKeyRanges,
   getNextElementIdx,
   isSameList,
 } from "../utils/yamlParsing";
@@ -236,7 +239,6 @@ const diagnoseCardKeys = async (
   document: vscode.TextDocument,
   extension: ExtensionStub,
 ): Promise<vscode.Diagnostic[]> => {
-  const content = document.getText();
   const diagnostics: vscode.Diagnostic[] = [];
 
   // Honor the user's settings and bail early if no screens
@@ -249,30 +251,44 @@ const diagnoseCardKeys = async (
     return [];
   }
 
-  const screenBounds = getListItemIndexes("screens", content);
+  const cardKeyRanges = getCardKeyRanges(document.getText());
+
   extension.screens.forEach((_, idx) => {
     const refCards = getReferencedCardsMeta(idx, extension);
     const defCards = getDefinedCardsMeta(idx, extension);
+    const referencedKeys = new Set(refCards.map(c => c.key));
+    const definedKeys = new Set(defCards.map(c => c.key));
+
     refCards
-      .filter(rc => defCards.findIndex(dc => dc.key === rc.key) === -1)
+      .filter(
+        rc =>
+          rc.requiresDefinition &&
+          // Container types and card categories we don't know about have no definition
+          // section to check against. Flagging those would be a false positive.
+          getCardDefinitionSection(rc.type) !== undefined &&
+          !definedKeys.has(rc.key),
+      )
       .forEach(rc => {
-        const keyStart = content.indexOf(`key: ${rc.key}`, screenBounds[idx].start);
         diagnostics.push(
-          createExtensionDiagnostic(
-            document.positionAt(keyStart),
-            document.positionAt(keyStart + `key: ${rc.key}`.length),
+          ...createCardKeyDiagnostics(
+            document,
+            cardKeyRanges[idx],
+            rc.key,
+            "reference",
             REFERENCED_CARD_NOT_DEFINED,
           ),
         );
       });
+
     defCards
-      .filter(dc => refCards.findIndex(rc => rc.key === dc.key) === -1)
+      .filter(dc => !referencedKeys.has(dc.key))
       .forEach(dc => {
-        const keyStart = content.indexOf(`key: ${dc.key}`, screenBounds[idx].start);
         diagnostics.push(
-          createExtensionDiagnostic(
-            document.positionAt(keyStart),
-            document.positionAt(keyStart + `key: ${dc.key}`.length),
+          ...createCardKeyDiagnostics(
+            document,
+            cardKeyRanges[idx],
+            dc.key,
+            "definition",
             DEFINED_CARD_NOT_REFERENCED,
           ),
         );
@@ -281,6 +297,28 @@ const diagnoseCardKeys = async (
 
   return diagnostics;
 };
+
+/**
+ * Creates a card key diagnostic for every place the given key appears in the expected role.
+ * A key that cannot be located in the document (e.g. it came from a yaml alias) produces no
+ * diagnostic at all, rather than one anchored to an arbitrary position.
+ */
+const createCardKeyDiagnostics = (
+  document: vscode.TextDocument,
+  cardKeyRanges: CardKeyRange[] | undefined,
+  cardKey: string,
+  role: CardKeyRole,
+  diagnostic: ExtensionDiagnosticDto,
+): vscode.Diagnostic[] =>
+  (cardKeyRanges ?? [])
+    .filter(r => r.key === cardKey && r.role === role)
+    .map(r =>
+      createExtensionDiagnostic(
+        document.positionAt(r.start),
+        document.positionAt(r.end),
+        diagnostic,
+      ),
+    );
 
 /**
  * Provide diagnostics related to variables within an extension.
