@@ -39,6 +39,6 @@ body:
         - label: Screenshots
         - label: Extension manifest file
         - label: YAML snippets
-        - label: Support archive ([see here](https://developer.dynatrace.com/extensions-v2/dynatrace-extensions-vscode/troubleshooting/#collect-a-log-archive))
+        - label: Support archive ([see here](https://docs.dynatrace.com/docs/ingest-from/extensions/develop-your-extensions/addon-for-vscode/troubleshooting#collect-a-log-archive))
           required: true
 ---
