@@ -967,154 +967,180 @@ export function getEntityChartCardKeys(screenIdx: number, extension: ExtensionSt
   return [];
 }
 
-type CardMeta = {
-  key: string;
-  type:
-    | "ENTITIES_LIST"
-    | "CHART_GROUP"
-    | "MESSAGE"
-    | "LOGS"
-    | "EVENTS"
-    | "METRIC_TABLE"
-    | "HEALTH_CARD"
-    | "INJECTIONS"
-    | "CARD_GROUP";
+/**
+ * Screen-level sections that hold card definitions, mapped to the `type` used when a card
+ * from that section is referenced inside a screen layout.
+ */
+const CARD_TYPE_BY_SECTION = {
+  entitiesListCards: "ENTITIES_LIST",
+  chartsCards: "CHART_GROUP",
+  messageCards: "MESSAGE",
+  logsCards: "LOGS",
+  eventsCards: "EVENTS",
+  metricTableCards: "METRIC_TABLE",
+  healthCards: "HEALTH",
+  dqlTableCards: "DQL_TABLE",
+} as const;
+
+export type CardSection = keyof typeof CARD_TYPE_BY_SECTION;
+
+/**
+ * Reverse of {@link CARD_TYPE_BY_SECTION}. `HEALTH_CARD` is accepted alongside `HEALTH`
+ * because both spellings have been seen in the wild for health cards.
+ */
+const CARD_SECTION_BY_TYPE: Record<string, CardSection> = {
+  ...Object.fromEntries(
+    Object.entries(CARD_TYPE_BY_SECTION).map(([section, type]) => [type, section as CardSection]),
+  ),
+  HEALTH_CARD: "healthCards",
 };
 
 /**
- * Extracts all the cards defined within layouts of a given screen as short representations.
+ * Card types that only structure a layout. They carry no key of their own and have no
+ * definition anywhere in the screen.
+ */
+const CONTAINER_CARD_TYPES = ["CARD_GROUP"];
+
+/**
+ * Returns the screen section that must hold the definition of a card referenced with the
+ * given layout `type`, or undefined when the type is structural (e.g. `INJECTIONS`) or is
+ * not a card category we know about.
+ */
+export function getCardDefinitionSection(cardType: string): CardSection | undefined {
+  return CARD_SECTION_BY_TYPE[cardType];
+}
+
+/** Whether the given yaml property is a known screen section holding card definitions. */
+export function isCardDefinitionSection(sectionName: string): sectionName is CardSection {
+  return sectionName in CARD_TYPE_BY_SECTION;
+}
+
+export interface CardMeta {
+  key: string;
+  type: string;
+}
+
+export interface ReferencedCardMeta extends CardMeta {
+  /**
+   * False when the reference is resolved against another entity's screen at render time, so
+   * the definition cannot be expected within this screen.
+   */
+  requiresDefinition: boolean;
+}
+
+export interface DefinedCardMeta extends CardMeta {
+  /** The screen section the definition was found in, e.g. "chartsCards". */
+  section: string;
+}
+
+/** A card reference as it appears in a layout. Shape is shared by list and details screens. */
+interface CardRefStub {
+  key?: string;
+  type?: string;
+  entitySelectorTemplate?: string;
+  cards?: CardRefStub[];
+}
+
+/**
+ * Extracts all the cards referenced within layouts of a given screen as short representations.
  * The screen must be referenced by index within the screens list.
  * @param screenIdx index of the screen in list
  * @param extension extension.yaml serialized as object
  * @returns list of card metadatas
  */
-export function getReferencedCardsMeta(screenIdx: number, extension: ExtensionStub): CardMeta[] {
-  const unparsedCards = [];
-  const parsedCards: CardMeta[] = [];
-
-  const listSettingsCards = extension.screens?.[screenIdx].listSettings?.layout?.cards;
-  if (listSettingsCards) {
-    unparsedCards.push(...listSettingsCards.filter(c => c.type !== "INJECTIONS"));
+export function getReferencedCardsMeta(
+  screenIdx: number,
+  extension: ExtensionStub,
+): ReferencedCardMeta[] {
+  const screen = extension.screens?.[screenIdx];
+  if (!screen) {
+    return [];
   }
 
-  const detailsSettingsCards = (
-    extension.screens?.[screenIdx].detailsSettings as DetailsSettings | undefined
-  )?.layout?.cards;
-  if (detailsSettingsCards) {
-    unparsedCards.push(...detailsSettingsCards.filter(c => c.type !== "INJECTIONS"));
-  }
+  // detailsSettings may be a single object or a list of target-specific objects
+  const detailsSettings = (
+    Array.isArray(screen.detailsSettings) ? screen.detailsSettings : [screen.detailsSettings]
+  ).filter((s): s is DetailsSettings => s !== undefined);
 
-  const detailsInjectionsCards = extension.screens?.[screenIdx].detailsInjections;
-  if (detailsInjectionsCards) {
-    unparsedCards.push(...detailsInjectionsCards);
-  }
+  const layoutCards: CardRefStub[] = [
+    ...(screen.listSettings?.layout?.cards ?? []),
+    ...detailsSettings.flatMap(s => s.layout?.cards ?? []),
+    ...(screen.listInjections ?? []),
+    ...(screen.detailsInjections ?? []),
+  ];
 
-  const listInjectionCards = extension.screens?.[screenIdx].listInjections;
-  if (listInjectionCards) {
-    unparsedCards.push(...listInjectionCards);
-  }
-
-  unparsedCards.forEach(card => {
-    if (parsedCards.findIndex(c => c.key === card.key) === -1) {
-      // Only add valid cards. User may have mis-typed keys.
-      if (!card.entitySelectorTemplate) {
-        parsedCards.push({ key: card.key, type: card.type });
-      }
-    }
-  });
+  const parsedCards: ReferencedCardMeta[] = [];
+  collectReferencedCards(layoutCards, parsedCards);
 
   return parsedCards;
 }
 
 /**
- * Extracts all the cards as short representations, with details taken from each card's definition.
+ * Flattens layout card references into {@link ReferencedCardMeta}, descending into container
+ * cards so that their children count as references too.
+ */
+function collectReferencedCards(cardRefs: CardRefStub[], collected: ReferencedCardMeta[]) {
+  for (const cardRef of cardRefs) {
+    if (cardRef.type && CONTAINER_CARD_TYPES.includes(cardRef.type)) {
+      collectReferencedCards(cardRef.cards ?? [], collected);
+      continue;
+    }
+    // User may have mis-typed the yaml; only keep references we can match on
+    if (typeof cardRef.key !== "string" || cardRef.key === "") {
+      continue;
+    }
+    if (collected.findIndex(c => c.key === cardRef.key) !== -1) {
+      continue;
+    }
+    collected.push({
+      key: cardRef.key,
+      type: cardRef.type ?? "",
+      requiresDefinition: !cardRef.entitySelectorTemplate,
+    });
+  }
+}
+
+/**
+ * Extracts all the cards defined within a given screen as short representations.
  * The screen must be referenced by index within the screens list.
+ *
+ * Definition sections are discovered from the manifest itself rather than hardcoded, so card
+ * categories added to the schema later are picked up without a code change here.
  * @param screenIdx index of the screen in list
  * @param extension extension.yaml serialized as object
- * @param cardType optional - narrow down to single section of the yaml.
+ * @param section optional - narrow down to a single section of the yaml.
  * @returns list of card metadatas
  */
 export function getDefinedCardsMeta(
   screenIdx: number,
   extension: ExtensionStub,
-  cardType?:
-    | "entitiesListCards"
-    | "chartsCards"
-    | "healthCards"
-    | "eventsCards"
-    | "logsCards"
-    | "messageCards"
-    | "metricTableCards",
-): CardMeta[] {
-  const cards: CardMeta[] = [];
+  section?: CardSection,
+): DefinedCardMeta[] {
+  const screen = extension.screens?.[screenIdx];
+  if (!screen) {
+    return [];
+  }
 
-  if (!cardType || cardType === "entitiesListCards") {
-    const elc = extension.screens?.[screenIdx].entitiesListCards;
-    if (elc) {
-      elc.forEach(card => {
-        if (cards.findIndex(c => c.key === card.key) === -1) {
-          cards.push({ key: card.key, type: "ENTITIES_LIST" });
-        }
-      });
+  const cards: DefinedCardMeta[] = [];
+
+  for (const [sectionName, sectionValue] of Object.entries(screen)) {
+    if (!sectionName.endsWith("Cards") || !Array.isArray(sectionValue)) {
+      continue;
     }
-  }
-  if (!cardType || cardType === "chartsCards") {
-    const cc = extension.screens?.[screenIdx].chartsCards;
-    if (cc) {
-      cc.forEach(card => {
-        if (cards.findIndex(c => c.key === card.key) === -1) {
-          cards.push({ key: card.key, type: "CHART_GROUP" });
-        }
-      });
+    if (section && sectionName !== section) {
+      continue;
     }
-  }
-  if (!cardType || cardType === "messageCards") {
-    const mc = extension.screens?.[screenIdx].messageCards;
-    if (mc) {
-      mc.forEach(card => {
-        if (cards.findIndex(c => c.key === card.key) === -1) {
-          cards.push({ key: card.key, type: "MESSAGE" });
-        }
-      });
-    }
-  }
-  if (!cardType || cardType === "logsCards") {
-    const lc = extension.screens?.[screenIdx].logsCards;
-    if (lc) {
-      lc.forEach(card => {
-        if (cards.findIndex(c => c.key === card.key) === -1) {
-          cards.push({ key: card.key, type: "LOGS" });
-        }
-      });
-    }
-  }
-  if (!cardType || cardType === "eventsCards") {
-    const ec = extension.screens?.[screenIdx].eventsCards;
-    if (ec) {
-      ec.forEach(card => {
-        if (cards.findIndex(c => c.key === card.key) === -1) {
-          cards.push({ key: card.key, type: "EVENTS" });
-        }
-      });
-    }
-  }
-  if (!cardType || cardType === "metricTableCards") {
-    const mtc = extension.screens?.[screenIdx].metricTableCards;
-    if (mtc) {
-      mtc.forEach(card => {
-        if (cards.findIndex(c => c.key === card.key) === -1) {
-          cards.push({ key: card.key, type: "METRIC_TABLE" });
-        }
-      });
-    }
-  }
-  if (!cardType || cardType === "healthCards") {
-    const mtc = extension.screens?.[screenIdx].healthCards;
-    if (mtc) {
-      mtc.forEach(card => {
-        if (cards.findIndex(c => c.key === card.key) === -1) {
-          cards.push({ key: card.key, type: "HEALTH_CARD" });
-        }
+    for (const card of sectionValue as { key?: unknown }[]) {
+      if (typeof card?.key !== "string" || card.key === "") {
+        continue;
+      }
+      if (cards.findIndex(c => c.key === card.key) !== -1) {
+        continue;
+      }
+      cards.push({
+        key: card.key,
+        type: CARD_TYPE_BY_SECTION[sectionName as CardSection] ?? sectionName,
+        section: sectionName,
       });
     }
   }

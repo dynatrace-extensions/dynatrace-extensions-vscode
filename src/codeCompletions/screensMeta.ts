@@ -17,7 +17,13 @@
 import vscode from "vscode";
 import { ExtensionStub } from "../interfaces/extensionMeta";
 import { getCachedParsedExtension } from "../utils/caching";
-import { getReferencedCardsMeta, getDefinedCardsMeta } from "../utils/extensionParsing";
+import {
+  getCardDefinitionSection,
+  getDefinedCardsMeta,
+  getReferencedCardsMeta,
+  isCardDefinitionSection,
+  type CardSection,
+} from "../utils/extensionParsing";
 import { createSingletonProvider } from "../utils/singleton";
 import { getBlockItemIndexAtLine, getParentBlocks } from "../utils/yamlParsing";
 
@@ -47,26 +53,10 @@ class ScreensCompletionProvider implements vscode.CompletionItemProvider {
       }
 
       // In card definitions, suggestions include keys from layout (if any)
-      const listableCards = [
-        "entitiesListCards",
-        "chartsCards",
-        "eventsCards",
-        "logsCards",
-        "messageCards",
-      ];
-      if (listableCards.includes(parentBlocks[parentBlocks.length - 1])) {
+      const section = parentBlocks[parentBlocks.length - 1];
+      if (isCardDefinitionSection(section)) {
         completions.push(
-          ...this.createCardKeyCompletions(
-            "definition",
-            screenIdx,
-            parsedExtension,
-            parentBlocks[parentBlocks.length - 1] as
-              | "entitiesListCards"
-              | "chartsCards"
-              | "eventsCards"
-              | "logsCards"
-              | "messageCards",
-          ),
+          ...this.createCardKeyCompletions("definition", screenIdx, parsedExtension, section),
         );
       }
     }
@@ -87,18 +77,16 @@ class ScreensCompletionProvider implements vscode.CompletionItemProvider {
     location: "definition" | "layout",
     screenIdx: number,
     extension: ExtensionStub,
-    cardType?: "entitiesListCards" | "chartsCards" | "eventsCards" | "logsCards" | "messageCards",
+    section?: CardSection,
   ): vscode.CompletionItem[] {
     const completions: vscode.CompletionItem[] = [];
 
     if (location === "definition") {
-      const cardsInserted = getDefinedCardsMeta(screenIdx, extension, cardType).map(c => c.key);
+      const cardsInserted = getDefinedCardsMeta(screenIdx, extension, section).map(c => c.key);
       getReferencedCardsMeta(screenIdx, extension)
         .filter(
-          // Stupid way of matching card types between yaml key and yaml value
           card =>
-            card.type.substring(0, 4).toLowerCase() === cardType?.substring(0, 4) &&
-            !cardsInserted.includes(card.key),
+            getCardDefinitionSection(card.type) === section && !cardsInserted.includes(card.key),
         )
         .forEach(card => {
           const cardCompletion = new vscode.CompletionItem(

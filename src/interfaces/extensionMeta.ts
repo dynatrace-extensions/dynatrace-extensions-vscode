@@ -38,6 +38,10 @@ export const DetailInjectionCardType = {
   LOGS: "LOGS",
   EVENTS: "EVENTS",
   METRIC_TABLE: "METRIC_TABLE",
+  DQL_TABLE: "DQL_TABLE",
+  HEALTH: "HEALTH",
+  PROBLEMS: "PROBLEMS",
+  BREAK_LINE: "BREAK_LINE",
   INJECTIONS: "INJECTIONS",
   CARD_GROUP: "CARD_GROUP",
 } as const;
@@ -179,7 +183,10 @@ export interface ListScreenCard extends Conditional {
   key: string;
   entitySelectorTemplate?: string;
   target?: string;
-  type: "ENTITIES_LIST" | "CHART_GROUP" | "MESSAGE" | "INJECTIONS" | "CARD_GROUP";
+  type: "ENTITIES_LIST" | "CHART_GROUP" | "MESSAGE" | "DQL_TABLE" | "INJECTIONS" | "CARD_GROUP";
+  /** Populated only when type === "CARD_GROUP". See {@link DetailsScreenCard.cards}. */
+  displayName?: string;
+  cards?: ListScreenCard[];
 }
 
 export interface DetailsScreenCard extends Conditional {

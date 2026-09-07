@@ -19,7 +19,7 @@
  ********************************************************************************/
 
 import vscode from "vscode";
-import yaml from "yaml";
+import yaml, { isMap, isPair, isScalar, isSeq, visit } from "yaml";
 
 export function parseYAML<T>(data: string): T {
   return yaml.parse(data) as T;
@@ -253,4 +253,84 @@ export function getBlockRange(
 
   // At this point, end of block must be end of file
   return { startIndex, endIndex: document.getText().length - 1 };
+}
+
+/** The role a `key: <value>` entry plays for a card within a screen. */
+export type CardKeyRole = "reference" | "definition";
+
+export interface CardKeyRange {
+  key: string;
+  role: CardKeyRole;
+  /** Offset of the first character of the key's value within the document. */
+  start: number;
+  /** Offset just after the last character of the key's value. */
+  end: number;
+}
+
+/** Screen properties whose value is a list of card references. */
+const CARD_REFERENCE_LISTS = ["cards", "listInjections", "detailsInjections"];
+
+/**
+ * Locates every card key within every screen of an extension.yaml, together with the role the
+ * key plays (a reference from a layout, or the key of a card definition).
+ *
+ * This works on the yaml syntax tree so that ranges are exact and only keys that genuinely
+ * belong to a card are returned - unlike a text search, which also matches attribute keys,
+ * metric keys, and cards belonging to a different screen.
+ * @param content extension.yaml text content
+ * @returns card key ranges, grouped by the index of the screen they belong to
+ */
+export function getCardKeyRanges(content: string): CardKeyRange[][] {
+  // The document is parsed straight from the editor buffer, so it may be mid-edit
+  let screens: unknown;
+  try {
+    screens = yaml.parseDocument(content).get("screens");
+  } catch {
+    return [];
+  }
+  if (!isSeq(screens)) {
+    return [];
+  }
+
+  return screens.items.map(screen => {
+    if (!isMap(screen)) {
+      return [];
+    }
+
+    const ranges: CardKeyRange[] = [];
+    visit(screen, {
+      Pair(_, pair, path) {
+        if (!isScalar(pair.key) || pair.key.value !== "key") return;
+        if (!isScalar(pair.value) || typeof pair.value.value !== "string") return;
+
+        const role = getCardKeyRole(path);
+        if (!role || !pair.value.range) return;
+
+        const [start, end] = pair.value.range;
+        ranges.push({ key: pair.value.value, role, start, end });
+      },
+    });
+    return ranges;
+  });
+}
+
+/**
+ * Given the ancestor chain of a `key` pair, works out whether the pair's owner is a card and,
+ * if so, whether that card is a layout reference or a definition. The chain ends in the map
+ * holding the pair, the sequence holding that map, and the pair naming that sequence.
+ */
+function getCardKeyRole(
+  path: readonly (yaml.Document | yaml.Node | yaml.Pair)[],
+): CardKeyRole | undefined {
+  const owningSeq = path[path.length - 2];
+  const owningPair = path[path.length - 3];
+  if (!isSeq(owningSeq) || !isPair(owningPair) || !isScalar(owningPair.key)) {
+    return undefined;
+  }
+
+  const listName = String(owningPair.key.value);
+  if (CARD_REFERENCE_LISTS.includes(listName)) {
+    return "reference";
+  }
+  return listName.endsWith("Cards") ? "definition" : undefined;
 }
