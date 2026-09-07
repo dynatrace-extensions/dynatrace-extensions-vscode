@@ -5,6 +5,7 @@
 ### 🚀 Improved in this version:
 
 - `dt-sdk` version comparison is more accurate (full semver parsing)
+- unified analysis schemas and conversion use the latest package version `1.4.3`
 
 ### 🪲 Fixed in this version:
 
