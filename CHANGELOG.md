@@ -1,5 +1,22 @@
 # Change Log
 
+## Version 3.0.3 (07.09.2026)
+
+### 🚀 Improved in this version:
+
+- `dt-sdk` version comparison is more accurate (full semver parsing)
+
+### 🪲 Fixed in this version:
+
+- [DQLTable and other card diagnostics not working correctly](https://github.com/dynatrace-extensions/dynatrace-extensions-vscode/issues/326)
+
+### 🔒 Security patches:
+
+- https://github.com/dynatrace-extensions/dynatrace-extensions-vscode/security/dependabot/222
+- https://github.com/dynatrace-extensions/dynatrace-extensions-vscode/security/dependabot/216
+
+---
+
 ## Version 3.0.2 (06.08.2026)
 
 ### 🪲 Fixed in this version
