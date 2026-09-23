@@ -1030,7 +1030,6 @@
     }
   },
   "scripts": {
-    "vscode:prepublish": "npm run esbuild-base -- --minify",
     "esbuild-base": "esbuild ./src/extension.ts --bundle --outfile=out/main.js --external:vscode --external:@tanstack/react-query-devtools --format=cjs --platform=node --alias:@common=./common",
     "esbuild": "npm run esbuild-base -- --sourcemap",
     "esbuild-watch": "npm run esbuild-base -- --sourcemap --watch",
@@ -1042,7 +1041,7 @@
     "test:e2e": "jest --selectProjects=E2E --runInBand",
     "test:unit": "jest --selectProjects=Unit --runInBand",
     "generate:schemas": "node scripts/generate-screen-schemas.js",
-    "build": "npm run generate:schemas && npm run pretest && npm run vscode:prepublish",
+    "build": "npm run generate:schemas && npm run pretest && node esbuild.config.js --minify",
     "install:all": "npm install && cd webview-ui && npm install",
     "build:webview": "cd webview-ui && npm run build",
     "build:all": "npm run build:webview && npm run build",
@@ -1063,6 +1062,7 @@
     "@vscode/test-electron": "^2.4.0",
     "@vscode/vsce": "^2.29.0",
     "esbuild": "^0.28.1",
+    "esbuild-vsce-utils": "^1.0.0",
     "eslint": "^9",
     "eslint-config-prettier": "^9",
     "eslint-plugin-import": "^2.32.0",
