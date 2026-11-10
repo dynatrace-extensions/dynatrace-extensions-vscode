@@ -1,5 +1,13 @@
 # Change Log
 
+## Version 3.0.4 (10.11.2026)
+
+### 🪲 Fixed in this version:
+
+- Extension packages are built with DEFLATE compression. Files were stored uncompressed, so extensions with large assets (for example MIB files) could exceed the 25 MiB upload limit
+
+---
+
 ## Version 3.0.3 (07.09.2026)
 
 ### 🚀 Improved in this version:

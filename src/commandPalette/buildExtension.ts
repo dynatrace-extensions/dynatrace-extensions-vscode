@@ -58,6 +58,12 @@ import { runCommand, runCommandWithOutput } from "../utils/subprocesses";
 import { ConfirmOption, showConfirmationInformationMessage } from "../utils/vscode";
 
 const logTrace = ["commandPalette", "buildExtension"];
+// JSZip stores entries uncompressed by default, which can push packages over the upload limit
+const zipOptions: JSZip.JSZipGeneratorOptions<"nodebuffer"> = {
+  type: "nodebuffer",
+  platform: "UNIX",
+  compression: "DEFLATE",
+};
 
 /**
  * A workflow that builds an extension 2.0 package from the user's workspace.
@@ -432,7 +438,7 @@ async function assembleStandard(manifestFileContent: string, extensionVersion: s
     const innerZip = new JSZip();
     bundleFolder(innerZip, await getManifestDirPath());
     const innerZipPath = path.resolve(workspaceStorage, "extension.zip");
-    const innerZipArchive = await innerZip.generateAsync({ type: "nodebuffer", platform: "UNIX" });
+    const innerZipArchive = await innerZip.generateAsync(zipOptions);
     writeFileSync(innerZipPath, innerZipArchive);
     logger.info(`Built the inner archive: ${innerZipPath}`, ...fnLogTrace);
 
@@ -447,7 +453,7 @@ async function assembleStandard(manifestFileContent: string, extensionVersion: s
     const outerZipPath = path.resolve(workspaceStorage, zipFileName);
     outerZip.file("extension.zip", innerZipArchive);
     outerZip.file("extension.zip.sig", signature);
-    const outerZipArchive = await outerZip.generateAsync({ type: "nodebuffer", platform: "UNIX" });
+    const outerZipArchive = await outerZip.generateAsync(zipOptions);
     writeFileSync(outerZipPath, outerZipArchive);
     logger.info(`Wrote initial outer zip at: ${outerZipPath}`, ...fnLogTrace);
   } catch (err) {
